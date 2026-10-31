@@ -11,8 +11,6 @@
 
 #### Built on [Firestorm](https://github.com/dailydrip/firestorm), a community-funded project from [DailyDrip](https://www.dailydrip.com).
 
-[![Build Status](https://semaphoreci.com/api/v1/dailydrip/firestorm/branches/master/badge.svg)](https://semaphoreci.com/dailydrip/firestorm)
-
 Firefly builds on the Firestorm Forum project, which reached version 0.10, nearly
 ready for a 1.0 release. You can view the original Firestorm forum at
 <http://forum.firestormforum.org>.
