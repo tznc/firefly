@@ -27,7 +27,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -69,9 +69,8 @@ jobs:
           mix assets.build
 
       - name: Run tests (including browser tests)
-        env:
-          CHROMEDRIVER_PATH: ${{ env.CHROMEWEBDRIVER }}/chromedriver
-        run: mix test --include feature
+        # CHROMEWEBDRIVER is preinstalled on GitHub's Ubuntu runners, matching their Chrome.
+        run: CHROMEDRIVER_PATH="$CHROMEWEBDRIVER/chromedriver" mix test --include feature
 
   dialyzer:
     name: Dialyzer
