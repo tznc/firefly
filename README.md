@@ -9,8 +9,6 @@
 
 ### An open-source forum engine, with an Elixir+Phoenix backend and an Elm frontend.
 
-#### Built on [Firestorm](https://github.com/dailydrip/firestorm), a community-funded project from [DailyDrip](https://www.dailydrip.com).
-
 Firefly builds on the Firestorm Forum project, which reached version 0.10, nearly
 ready for a 1.0 release. You can view the original Firestorm forum at
 <http://forum.firestormforum.org>.
