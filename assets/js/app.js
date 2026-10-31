@@ -1,24 +1,26 @@
-import "phoenix_html";
+// Phoenix and LiveView client
+import "phoenix_html"
+import {Socket} from "phoenix"
+import {LiveSocket} from "phoenix_live_view"
+import topbar from "../vendor/topbar"
+import Hooks from "./hooks"
 
-// == COMPONENTS ==
-import Posts from "./components/posts";
-import Attachments from "./components/attachments";
-import Times from "./components/times";
-import Analytics from "./components/analytics";
-// == END COMPONENTS ==
+const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+const liveSocket = new LiveSocket("/live", Socket, {
+  longPollFallbackMs: 2500,
+  params: {_csrf_token: csrfToken},
+  hooks: Hooks,
+  uploaders: Hooks.Uploaders,
+})
 
-// == USING COMPONENTS ==
-// ==== POSTS ====
-// Decorate posts
-Posts.decorate();
-// Preview markdown
-Posts.preview();
-// Handle attachments for posts
-Attachments.mount();
-// Report to Segment
-Analytics.report();
-// ==== END POSTS ====
-//
-// Pretty up times
-Times.humanize();
-// == END USING COMPONENTS ==
+// Show progress bar on live navigation and form submits
+topbar.config({barColors: {0: "#db3440"}, shadowColor: "rgba(0, 0, 0, .3)"})
+window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
+window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+liveSocket.connect()
+
+// expose liveSocket on window for web console debug logs and latency simulation:
+// >> liveSocket.enableDebug()
+// >> liveSocket.enableLatencySim(1000)
+window.liveSocket = liveSocket

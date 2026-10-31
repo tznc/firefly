@@ -57,21 +57,13 @@ defmodule FirestormWeb.Forums.User do
     end
   end
 
+  @doc """
+  The user's Gravatar, falling back to a generated identicon. Users without an
+  email get an identicon derived from their username.
+  """
   def avatar_url(%__MODULE__{email: email, username: username}, size \\ 256) do
-    if email do
-      gravatar_url(email, username, size)
-    else
-      adorable_url(username, size)
-    end
-  end
-
-  defp gravatar_url(email, username, size) do
-    email
-    |> Exgravatar.gravatar_url(d: adorable_url(username, size), s: size)
-  end
-
-  defp adorable_url(username, size) do
-    "https://api.adorable.io/avatars/#{size}/#{username}@adorable.png"
+    (email || "#{username}@users.firestorm.invalid")
+    |> Exgravatar.gravatar_url(d: "identicon", s: size)
   end
 
   defp put_password_hash(changeset) do

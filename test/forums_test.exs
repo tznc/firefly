@@ -262,6 +262,29 @@ defmodule FirestormWeb.ForumsTest do
       assert thread.title == Forums.get_thread!(category, thread.id).title
     end
 
+    test "delete_thread/1 deletes a thread that has been viewed and watched", %{
+      category: category,
+      user: user
+    } do
+      thread = fixture(:thread, category, user, @create_thread_attrs)
+      [post] = Repo.preload(thread, :posts).posts
+      {:ok, _} = Forums.view(user, post)
+      {:ok, _} = Forums.watch(user, thread)
+
+      assert {:ok, %Thread{}} = Forums.delete_thread(thread)
+      assert Forums.get_thread(thread.id) == nil
+    end
+
+    test "delete_category/1 deletes the category's threads too", %{
+      category: category,
+      user: user
+    } do
+      thread = fixture(:thread, category, user, @create_thread_attrs)
+
+      assert {:ok, %Category{}} = Forums.delete_category(category)
+      assert Forums.get_thread(thread.id) == nil
+    end
+
     test "delete_thread/1 deletes the thread", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
       assert {:ok, %Thread{}} = Forums.delete_thread(thread)
@@ -334,6 +357,30 @@ defmodule FirestormWeb.ForumsTest do
                Forums.create_post(thread, user, %{body: ""})
 
       assert %{body: ["can't be blank"]} = errors_on(changeset)
+    end
+  end
+
+  describe "User.avatar_url/2" do
+    test "uses Gravatar with an identicon fallback" do
+      url =
+        FirestormWeb.Forums.User.avatar_url(
+          %User{email: "josh@dailydrip.com", username: "knewter"},
+          64
+        )
+
+      assert url =~ "gravatar.com/avatar/"
+      assert url =~ "d=identicon"
+      assert url =~ "s=64"
+    end
+
+    test "gives users without an email a stable identicon" do
+      user = %User{email: nil, username: "knewter"}
+      assert FirestormWeb.Forums.User.avatar_url(user) =~ "d=identicon"
+
+      assert FirestormWeb.Forums.User.avatar_url(user) ==
+               FirestormWeb.Forums.User.avatar_url(user)
+
+      refute FirestormWeb.Forums.User.avatar_url(user) =~ "adorable"
     end
   end
 

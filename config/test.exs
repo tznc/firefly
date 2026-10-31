@@ -14,11 +14,11 @@ config :firestorm_web, FirestormWeb.Repo,
   pool_size: System.schedulers_online() * 2,
   ownership_timeout: 30_000
 
-# The server runs during tests so Wallaby feature tests can drive it.
+# We don't run a server during test.
 config :firestorm_web, FirestormWeb.Web.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "+r1xPk7Kz3gV0h7uN6pXqM1y2dJw8dW1H5rB0oYzq6c2Wc5yR6eLx9oQp3sZt4uV",
-  server: true
+  server: false
 
 # Print only warnings and errors during test
 config :logger, level: :warning
@@ -29,16 +29,9 @@ config :phoenix, :plug_init_mode, :runtime
 # Start notification server in app start
 config :firestorm_web, notifications_enabled: false
 
-config :firestorm_web, sql_sandbox: true
-
 config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.TestAdapter
 
 config :bamboo, :refute_timeout, 10
-
-config :wallaby,
-  otp_app: :firestorm_web,
-  driver: Wallaby.Chrome,
-  screenshot_on_failure: true
 
 config :bcrypt_elixir, :log_rounds, 4
 
@@ -48,6 +41,5 @@ config :firestorm_web, :aws,
   bucket: "firestorm-test",
   region: "us-east-1"
 
-if chromedriver = System.get_env("CHROMEDRIVER_PATH") do
-  config :wallaby, chromedriver: [path: chromedriver, headless: true]
-end
+# Enable helpful, but potentially expensive runtime checks
+config :phoenix_live_view, enable_expensive_runtime_checks: true

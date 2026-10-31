@@ -16,21 +16,16 @@ config :firestorm_web, FirestormWeb.Repo, migration_timestamps: [type: :naive_da
 # Start notification server in app start
 config :firestorm_web, notifications_enabled: true
 
-# Path prefixes from which to serve web assets
-config :firestorm_web,
-  js_path_prefix: "",
-  css_path_prefix: "",
-  image_path_prefix: ""
-
 # Configures the endpoint
 config :firestorm_web, FirestormWeb.Web.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: FirestormWeb.Web.ErrorView, json: FirestormWeb.Web.ErrorView],
+    formats: [html: FirestormWeb.Web.ErrorHTML, json: FirestormWeb.Web.ErrorJSON],
     layout: false
   ],
-  pubsub_server: FirestormWeb.PubSub
+  pubsub_server: FirestormWeb.PubSub,
+  live_view: [signing_salt: "kQ4vL1xZ8fPm3Rt7"]
 
 # Configures Elixir's Logger
 config :logger, :default_formatter,
@@ -49,23 +44,37 @@ config :ueberauth, Ueberauth,
 
 config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.LocalAdapter
 
+# Kaffy admin UI, mounted at /admin for users with the "admin" role
+config :kaffy,
+  otp_app: :firestorm_web,
+  ecto_repo: FirestormWeb.Repo,
+  router: FirestormWeb.Web.Router,
+  admin_title: "Firestorm Admin",
+  admin_logo: [url: "/images/firestorm-logo.png", style: "max-height: 40px"],
+  admin_logo_mini: "/images/firestorm-logo.png",
+  home_page: [kaffy: :dashboard],
+  resources: &FirestormWeb.Admin.resources/1
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.28.2",
   firestorm_web: [
     args:
-      ~w(js/app.js --bundle --target=es2020 --outdir=../priv/static/js --external:/fonts/* --external:/images/*),
+      ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
     cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
-# Configure dart_sass (the version is required)
-config :dart_sass,
-  version: "1.107.1",
-  default: [
-    args:
-      ~w(--load-path=node_modules --silence-deprecation=import --silence-deprecation=global-builtin css/app.scss ../priv/static/css/app.css),
-    cd: Path.expand("../assets", __DIR__)
+# Configure tailwind (the version is required)
+config :tailwind,
+  version: "4.3.3",
+  firestorm_web: [
+    args: ~w(
+      --input=assets/css/app.css
+      --output=priv/static/assets/css/app.css
+    ),
+    cd: Path.expand("..", __DIR__),
+    env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
 # Import environment specific config. This must remain at the bottom

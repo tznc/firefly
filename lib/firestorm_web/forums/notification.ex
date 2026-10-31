@@ -4,9 +4,7 @@ defmodule FirestormWeb.Forums.Notification do
   """
 
   use Ecto.Schema
-  import FirestormWeb.Web.Router.Helpers, only: [category_thread_url: 4]
   alias FirestormWeb.Forums.{User, Thread, Post}
-  alias FirestormWeb.Web.Endpoint
   import Ecto.Changeset
 
   schema "forums_notifications" do
@@ -31,7 +29,7 @@ defmodule FirestormWeb.Forums.Notification do
   end
 
   defp thread_url(thread) do
-    category_thread_url(Endpoint, :show, thread.category_id, thread.id)
+    FirestormWeb.Web.Paths.thread_url(thread)
   end
 
   def changeset(%__MODULE__{} = notification, attrs) do

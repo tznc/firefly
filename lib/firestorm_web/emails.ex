@@ -4,10 +4,6 @@ defmodule FirestormWeb.Emails do
   """
 
   import Bamboo.Email
-  import FirestormWeb.Web.Router.Helpers, only: [category_thread_url: 4]
-  import Phoenix.HTML
-  import PhoenixHTMLHelpers.Link
-  alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Markdown
   alias FirestormWeb.Forums.{Post, Thread, User}
 
@@ -30,9 +26,7 @@ defmodule FirestormWeb.Emails do
     "notifier.firestormforum.org"
   end
 
-  def thread_url(thread) do
-    category_thread_url(Endpoint, :show, thread.category_id, thread.id)
-  end
+  defdelegate thread_url(thread), to: FirestormWeb.Web.Paths
 
   def post_url(thread, post) do
     "#{thread_url(thread)}#post-#{post.id}"
@@ -40,7 +34,7 @@ defmodule FirestormWeb.Emails do
 
   defp html_body_for(%Thread{} = thread, %Post{} = post) do
     """
-    <p>The Firestorm thread #{thread.title |> link(to: thread_url(thread)) |> safe_to_string} has received #{"a reply" |> link(to: post_url(thread, post)) |> safe_to_string}:</p>
+    <p>The Firestorm thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", post_url(thread, post))}:</p>
     <hr />
     #{Markdown.render(post.body)}
     """
@@ -52,4 +46,10 @@ defmodule FirestormWeb.Emails do
     #{post.body}
     """
   end
+
+  defp link(text, url) do
+    ~s(<a href="#{escape(url)}">#{escape(text)}</a>)
+  end
+
+  defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 end

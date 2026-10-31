@@ -1,6 +1,6 @@
 ![Firestorm](./firestorm-logo.png)
 
-### An open-source forum engine, with an Elixir+Phoenix backend and an Elm frontend.
+### An open-source forum engine built with Elixir, Phoenix and LiveView.
 
 #### A community-funded project from [DailyDrip](https://www.dailydrip.com).
 
@@ -14,6 +14,9 @@ for a 1.0 release. You can view the running forum at
 
 Requirements: Elixir 1.20 / Erlang/OTP 29, Node.js 26 and PostgreSQL 18 (see `.tool-versions`).
 
+The web UI is Phoenix LiveView styled with Tailwind CSS and daisyUI; the JSON
+API lives under `/api/v1`.
+
 ```sh
 npm ci --prefix assets
 mix setup        # deps, database, seeds, assets
@@ -22,12 +25,16 @@ mix phx.server   # http://localhost:4000
 
 Or with Docker: `docker compose up`.
 
+### Admin
+
+`/admin` is a [Kaffy](https://github.com/aesmail/kaffy) admin UI, available to
+users with the `admin` role (the seeds create `admin` / `password`).
+
 ### Tests
 
 ```sh
-mix test                    # unit + controller tests
-mix test --include feature  # also browser tests (needs Chrome + chromedriver; set CHROMEDRIVER_PATH if not on $PATH)
-mix precommit               # compile --warnings-as-errors, format, credo, test
+mix test        # contexts, LiveViews, API and channels
+mix precommit   # compile --warnings-as-errors, format, credo, test
 ```
 
 ## Clients

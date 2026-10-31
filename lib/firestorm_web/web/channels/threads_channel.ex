@@ -1,7 +1,7 @@
 defmodule FirestormWeb.Web.ThreadsChannel do
   use FirestormWeb.Web, :channel
   alias FirestormWeb.Store.ReplenishResponse
-  alias FirestormWeb.Web.Api.V1.FetchView
+  alias FirestormWeb.Web.Api.V1.FetchJSON
 
   intercept(["update"])
 
@@ -10,7 +10,7 @@ defmodule FirestormWeb.Web.ThreadsChannel do
   end
 
   def handle_out("update", %ReplenishResponse{} = msg, socket) do
-    push(socket, "update", FetchView.render("index.json", msg))
+    push(socket, "update", FetchJSON.index(msg))
     {:noreply, socket}
   end
 end

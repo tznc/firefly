@@ -58,6 +58,11 @@ defmodule FirestormWeb.Forums do
   def get_user!(id), do: Repo.get!(User, id)
 
   @doc """
+  Gets a single user, or nil if it does not exist.
+  """
+  def get_user(id), do: Repo.get(User, id)
+
+  @doc """
   Gets a single user by username. Maybe.
   """
   def get_user_by_username(username), do: Repo.get_by(User, %{username: username})
@@ -233,6 +238,7 @@ defmodule FirestormWeb.Forums do
     %Category{}
     |> Category.changeset(attrs)
     |> Repo.insert()
+    |> tap_ok(&broadcast("forums:categories", {:category_created, &1}))
   end
 
   @doc """
@@ -251,6 +257,7 @@ defmodule FirestormWeb.Forums do
     category
     |> Category.changeset(attrs)
     |> Repo.update()
+    |> tap_ok(&broadcast("forums:categories", {:category_updated, &1}))
   end
 
   @doc """
@@ -266,7 +273,9 @@ defmodule FirestormWeb.Forums do
 
   """
   def delete_category(%Category{} = category) do
-    Repo.delete(category)
+    category
+    |> Repo.delete()
+    |> tap_ok(&broadcast("forums:categories", {:category_deleted, &1}))
   end
 
   @doc """
@@ -476,6 +485,7 @@ defmodule FirestormWeb.Forums do
         }
 
         :ok = Endpoint.broadcast!("categories:#{thread.category_id}", "update", payload)
+        broadcast_thread(:thread_created, thread)
         {:ok, thread}
 
       e ->
@@ -499,6 +509,7 @@ defmodule FirestormWeb.Forums do
     thread
     |> Thread.changeset(attrs)
     |> Repo.update()
+    |> tap_ok(&broadcast_thread(:thread_updated, &1))
   end
 
   @doc """
@@ -514,7 +525,9 @@ defmodule FirestormWeb.Forums do
 
   """
   def delete_thread(%Thread{} = thread) do
-    Repo.delete(thread)
+    thread
+    |> Repo.delete()
+    |> tap_ok(&broadcast_thread(:thread_deleted, &1))
   end
 
   @doc """
@@ -612,6 +625,8 @@ defmodule FirestormWeb.Forums do
       }
 
       :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
+      broadcast("forums:thread:#{post.thread_id}", {:post_created, post})
+      broadcast_thread(:thread_activity, post.thread)
       {:ok, post}
     end
   end
@@ -880,4 +895,34 @@ defmodule FirestormWeb.Forums do
     |> RoleMembership.changeset(%{user_id: user.id, role_id: role.id})
     |> Repo.insert()
   end
+
+  ## Live events
+  #
+  # LiveViews subscribe to these topics to update in real time:
+  #
+  #   * "forums:categories"       - {:category_created | :category_updated | :category_deleted, category}
+  #   * "forums:category:<id>"    - {:thread_created | :thread_updated | :thread_deleted | :thread_activity, thread}
+  #   * "forums:threads"          - the same thread events, for every category
+  #   * "forums:thread:<id>"      - {:post_created, post} and the thread events for that thread
+
+  @pubsub FirestormWeb.PubSub
+
+  @doc "Subscribes the caller to a forums topic (see the list above)."
+  def subscribe(topic), do: Phoenix.PubSub.subscribe(@pubsub, topic)
+
+  defp broadcast(topic, message), do: Phoenix.PubSub.broadcast(@pubsub, topic, message)
+
+  defp broadcast_thread(event, %Thread{} = thread) do
+    message = {event, thread}
+    broadcast("forums:threads", message)
+    broadcast("forums:category:#{thread.category_id}", message)
+    broadcast("forums:thread:#{thread.id}", message)
+  end
+
+  defp tap_ok({:ok, value} = result, fun) do
+    fun.(value)
+    result
+  end
+
+  defp tap_ok(result, _fun), do: result
 end

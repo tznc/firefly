@@ -27,4 +27,14 @@ defmodule FirestormWeb.OEmbed do
       {:ok, result}
     end
   end
+
+  @doc "The HTML for an oEmbed result (photos become an escaped <img> tag)."
+  def to_html(%OEmbed.Photo{url: url}) do
+    src = url |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+    ~s(<img src="#{src}">)
+  end
+
+  def to_html(%OEmbed.Video{html: html}), do: html
+  def to_html(%OEmbed.Rich{html: html}), do: html
+  def to_html(_), do: ""
 end

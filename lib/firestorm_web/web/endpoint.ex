@@ -11,9 +11,10 @@ defmodule FirestormWeb.Web.Endpoint do
     same_site: "Lax"
   ]
 
-  if Application.compile_env(:firestorm_web, :sql_sandbox) do
-    plug(Phoenix.Ecto.SQL.Sandbox)
-  end
+  socket("/live", Phoenix.LiveView.Socket,
+    websocket: [connect_info: [session: @session_options]],
+    longpoll: [connect_info: [session: @session_options]]
+  )
 
   socket("/socket", FirestormWeb.Web.UserSocket,
     websocket: [timeout: 45_000, check_origin: false],
@@ -24,13 +25,15 @@ defmodule FirestormWeb.Web.Endpoint do
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
+  # Kaffy's admin UI assets
+  plug(Plug.Static, at: "/kaffy", from: :kaffy, gzip: false, only: ~w(assets))
+
   plug(
     Plug.Static,
     at: "/",
     from: :firestorm_web,
     gzip: false,
-    only:
-      ~w(css fonts images js favicon.ico robots.txt android-icon-192x192.png android-icon-144x144.png android-icon-96x96.png android-icon-72x72.png android-icon-48x48.png android-icon-36x36.png manifest.json favicon.ico favicon-96x96.png favicon-32x32.png favicon-16x16.png ms-icon-70x70.png ms-icon-310x310.png ms-icon-150x150.png ms-icon-144x144.png apple-icon-precomposed.png apple-icon.png apple-icon-76x76.png apple-icon-72x72.png apple-icon-60x60.png apple-icon-57x57.png apple-icon-180x180.png apple-icon-152x152.png apple-icon-144x144.png apple-icon-120x120.png apple-icon-114x114.png)
+    only: FirestormWeb.Web.static_paths()
   )
 
   # Code reloading can be explicitly enabled under the

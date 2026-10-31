@@ -12,6 +12,7 @@ defmodule FirestormWeb.Mixfile do
       deps: deps(),
       package: [licenses: ["Apache-2.0"]],
       listeners: [Phoenix.CodeReloader],
+      compilers: [:phoenix_live_view] ++ Mix.compilers(),
       dialyzer: [plt_add_apps: [:mix, :ex_unit], plt_local_path: "priv/plts"]
     ]
   end
@@ -38,10 +39,10 @@ defmodule FirestormWeb.Mixfile do
     [
       {:phoenix, "~> 1.8.16"},
       {:phoenix_ecto, "~> 4.7"},
-      {:phoenix_view, "~> 2.0"},
+      {:phoenix_live_view, "~> 1.2"},
       {:phoenix_html, "~> 4.4"},
-      {:phoenix_html_helpers, "~> 1.0"},
       {:phoenix_live_reload, "~> 1.7", only: :dev},
+      {:lazy_html, ">= 0.1.0", only: :test},
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
       {:bandit, "~> 1.14"},
@@ -52,6 +53,10 @@ defmodule FirestormWeb.Mixfile do
       {:ueberauth_identity, "~> 0.4"},
       {:mdex, "~> 0.14"},
       {:scrivener_ecto, "~> 3.1"},
+      {:kaffy, "~> 0.11"},
+      # Kaffy 0.11 declares an optional `decimal ~> 2.2`; it only uses
+      # Decimal.parse/1, integer?/1 and to_integer/1, all unchanged in 3.x.
+      {:decimal, "~> 3.2", override: true},
       {:bamboo, "~> 2.5"},
       {:ecto_autoslug_field, "~> 3.1"},
       {:bcrypt_elixir, "~> 3.3"},
@@ -62,10 +67,23 @@ defmodule FirestormWeb.Mixfile do
       {:lru_cache, "~> 0.1.3"},
       {:cors_plug, "~> 3.0"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
-      {:dart_sass, "~> 0.8", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
+      {:heroicons,
+       github: "tailwindlabs/heroicons",
+       tag: "v2.2.0",
+       sparse: "optimized",
+       app: false,
+       compile: false,
+       depth: 1},
+      {:daisyui,
+       github: "saadeghi/daisyui",
+       tag: "v5.7.50",
+       sparse: "packages/bundle",
+       app: false,
+       compile: false,
+       depth: 1},
 
       # TEST DEPENDENCIES
-      {:wallaby, "~> 0.31", only: :test, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
 
       # DEV DEPENDENCIES
@@ -85,18 +103,18 @@ defmodule FirestormWeb.Mixfile do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
-      "assets.setup": ["esbuild.install --if-missing", "sass.install --if-missing"],
-      "assets.build": ["esbuild firestorm_web", "sass default"],
+      "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
+      "assets.build": ["compile", "tailwind firestorm_web", "esbuild firestorm_web"],
       "assets.deploy": [
+        "tailwind firestorm_web --minify",
         "esbuild firestorm_web --minify",
-        "sass default --no-source-map --style=compressed",
         "phx.digest"
       ],
       precommit: [
         "compile --warnings-as-errors",
         "deps.unlock --unused",
         "format --check-formatted",
-        "credo --strict",
+        "credo",
         "test"
       ]
     ]

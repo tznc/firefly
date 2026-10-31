@@ -68,9 +68,7 @@ jobs:
           mix assets.setup
           mix assets.build
 
-      - name: Run tests (including browser tests)
-        # CHROMEWEBDRIVER is preinstalled on GitHub's Ubuntu runners, matching their Chrome.
-        run: CHROMEDRIVER_PATH="$CHROMEWEBDRIVER/chromedriver" mix test --include feature
+      - run: mix test
 
   dialyzer:
     name: Dialyzer

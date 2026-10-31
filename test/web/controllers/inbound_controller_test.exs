@@ -23,7 +23,7 @@ defmodule FirestormWeb.InboundControllerTest do
 
       conn =
         conn
-        |> post(inbound_path(conn, :sendgrid), inbound_email(user.email, otp_is_cool.id))
+        |> post(~p"/inbound/sendgrid", inbound_email(user.email, otp_is_cool.id))
 
       assert response(conn, 200) =~ "ok"
       thread = Forums.get_thread!(elixir, otp_is_cool.id)

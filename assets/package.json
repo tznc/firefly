@@ -3,13 +3,6 @@
   "private": true,
   "license": "Apache-2.0",
   "dependencies": {
-    "http-client": "^4.3.1",
-    "jquery": "^4.0.0",
-    "moment": "^2.31.0",
     "prismjs": "^1.30.0"
-  },
-  "devDependencies": {
-    "normalize-scss": "^8.0.0",
-    "purecss": "^3.1.0"
   }
 }

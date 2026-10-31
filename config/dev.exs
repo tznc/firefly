@@ -21,7 +21,7 @@ config :firestorm_web, FirestormWeb.Web.Endpoint,
   secret_key_base: "Q1bBtoEs8F2+MsssVU8zHXvhJBVFDI/4EFEINldDXBlVsBkNr30gi4WIGNwds+YO",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:firestorm_web, ~w(--sourcemap=inline --watch)]},
-    sass: {DartSass, :install_and_run, [:default, ~w(--embed-source-map --watch)]}
+    tailwind: {Tailwind, :install_and_run, [:firestorm_web, ~w(--watch)]}
   ]
 
 # Watch static and templates for browser reloading.
@@ -31,7 +31,7 @@ config :firestorm_web, FirestormWeb.Web.Endpoint,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/firestorm_web/web/(views|templates)/.*(ex|eex)$"
+      ~r"lib/firestorm_web/web/(controllers|live|components)/.*(ex|heex)$"
     ]
   ]
 
@@ -41,6 +41,13 @@ config :logger, :default_formatter, format: "[$level] $message\n"
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
 config :phoenix, :stacktrace_depth, 20
+
+config :phoenix_live_view,
+  # Include debug annotations and locations in rendered markup.
+  debug_heex_annotations: true,
+  debug_attributes: true,
+  # Enable helpful, but potentially expensive runtime checks
+  enable_expensive_runtime_checks: true
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime

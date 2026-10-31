@@ -6,6 +6,6 @@ defmodule FirestormWeb.Web.Api.V1.UploadSignatureController do
 
     conn
     |> put_status(201)
-    |> render("show.json", upload_signature: signature)
+    |> render(:show, upload_signature: signature)
   end
 end

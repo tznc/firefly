@@ -1,7 +1,7 @@
 defmodule FirestormWeb.Web.StoreChannelTest do
   use FirestormWeb.Web.ChannelCase
   alias FirestormWeb.Web.StoreChannel
-  alias FirestormWeb.Web.Api.V1.FetchView
+  alias FirestormWeb.Web.Api.V1.FetchJSON
   alias FirestormWeb.Store.{ReplenishResponse, ReplenishRequest}
   alias FirestormWeb.Forums
 
@@ -92,7 +92,7 @@ defmodule FirestormWeb.Web.StoreChannelTest do
   end
 
   def assert_response(ref, response) do
-    expected = FetchView.render("index.json", response)
+    expected = FetchJSON.index(response)
     assert_reply ref, :ok, ^expected
   end
 end

@@ -1,7 +1,7 @@
 defmodule FirestormWeb.Web.StoreChannel do
   use FirestormWeb.Web, :channel
   alias FirestormWeb.Store.{ReplenishResponse, ReplenishRequest}
-  alias FirestormWeb.Web.Api.V1.FetchView
+  alias FirestormWeb.Web.Api.V1.FetchJSON
   alias FirestormWeb.{Repo, Forums}
 
   def join("store:fetch", _payload, socket) do
@@ -30,7 +30,7 @@ defmodule FirestormWeb.Web.StoreChannel do
 
     {:reply,
      {:ok,
-      FetchView.render("index.json", %ReplenishResponse{
+      FetchJSON.index(%ReplenishResponse{
         categories: categories,
         threads: threads,
         posts: posts,
@@ -65,7 +65,7 @@ defmodule FirestormWeb.Web.StoreChannel do
 
     {:reply,
      {:ok,
-      FetchView.render("index.json", %ReplenishResponse{
+      FetchJSON.index(%ReplenishResponse{
         categories: categories,
         threads: threads,
         posts: posts,

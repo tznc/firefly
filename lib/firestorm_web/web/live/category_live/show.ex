@@ -1,0 +1,75 @@
+defmodule FirestormWeb.Web.CategoryLive.Show do
+  @moduledoc "A category's threads, most recently active first; updates live."
+  use FirestormWeb.Web, :live_view
+
+  alias FirestormWeb.Forums
+
+  @impl true
+  def mount(%{"id" => id}, _session, socket) do
+    category = Forums.get_category!(id)
+    if connected?(socket), do: Forums.subscribe("forums:category:#{category.id}")
+
+    {:ok,
+     socket
+     |> assign(:page_title, category.title)
+     |> assign(:category, category)
+     |> load_threads()}
+  end
+
+  @impl true
+  def handle_info({_event, _thread}, socket), do: {:noreply, load_threads(socket)}
+
+  @impl true
+  def handle_event("delete", _params, %{assigns: %{current_user: nil}} = socket) do
+    {:noreply, put_flash(socket, :error, "You must be logged in to access this page.")}
+  end
+
+  def handle_event("delete", _params, socket) do
+    {:ok, _} = Forums.delete_category(socket.assigns.category)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "Category deleted successfully.")
+     |> push_navigate(to: ~p"/categories")}
+  end
+
+  defp load_threads(socket) do
+    assign(
+      socket,
+      :threads,
+      Forums.recent_threads(socket.assigns.category, socket.assigns.current_user)
+    )
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app {Layouts.shell(assigns)}>
+      <.page_header title={@category.title} navigate={~p"/categories/#{@category}"}>
+        <:actions>
+          <.link navigate={~p"/categories/#{@category}/threads/new"} class="btn btn-primary btn-sm">
+            <.icon name="hero-plus" class="size-4" /> New Thread
+          </.link>
+          <.link
+            :if={@current_user}
+            navigate={~p"/categories/#{@category}/edit"}
+            class="btn btn-ghost btn-sm"
+          >
+            Edit
+          </.link>
+          <button
+            :if={@current_user}
+            phx-click="delete"
+            data-confirm="Delete this category and all of its threads?"
+            class="btn btn-ghost btn-sm text-error"
+          >
+            Delete
+          </button>
+        </:actions>
+      </.page_header>
+
+      <.thread_list threads={@threads} />
+    </Layouts.app>
+    """
+  end
+end

@@ -1,15 +1,12 @@
 defmodule FirestormWeb.Web.Plugs.CurrentUser do
   @moduledoc """
-  A `Plug` to assign `:current_user` based on the session
+  A `Plug` to assign `:current_user` based on the session.
   """
 
   import Plug.Conn
-  import FirestormWeb.Web.Session, only: [current_user: 1]
+  alias FirestormWeb.Web.Session
 
   def init(options), do: options
 
-  def call(conn, _opts) do
-    conn
-    |> assign(:current_user, current_user(conn))
-  end
+  def call(conn, _opts), do: assign(conn, :current_user, Session.current_user(conn))
 end

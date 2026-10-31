@@ -1,6 +1,6 @@
 defmodule FirestormWeb.Web.Plugs.RequireAdmin do
   @moduledoc """
-  A `Plug` to redirect to `pages/index` if the current user is not an admin.
+  A `Plug` that redirects to the home page unless the current user is an admin.
   """
 
   import Plug.Conn
