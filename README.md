@@ -59,4 +59,4 @@ All of the patrons that made it possible are listed in [the PATRONS file](PATRON
 
 ## License
 
-Firestorm is [MIT Licensed](./LICENSE).
+Licensed under the [Apache License 2.0](./LICENSE). Contains code from Firestorm, originally MIT licensed by DailyDrip; see [NOTICE](./NOTICE).

@@ -10,6 +10,7 @@ defmodule FirestormWeb.Mixfile do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      package: [licenses: ["Apache-2.0"]],
       listeners: [Phoenix.CodeReloader],
       dialyzer: [plt_add_apps: [:mix, :ex_unit], plt_local_path: "priv/plts"]
     ]
