@@ -18,10 +18,14 @@ defmodule FirestormWeb.Web do
 
   def controller do
     quote do
-      use Phoenix.Controller, namespace: FirestormWeb.Web
+      use Phoenix.Controller,
+        formats: [html: "View", json: "View"],
+        layouts: [html: {FirestormWeb.Web.LayoutView, :app}]
+
+      use Gettext, backend: FirestormWeb.Web.Gettext
+
       import Plug.Conn
       import FirestormWeb.Web.Router.Helpers
-      import FirestormWeb.Web.Gettext
       import FirestormWeb.Web.Session
       import FirestormWeb.Web.Policy
     end
@@ -37,19 +41,19 @@ defmodule FirestormWeb.Web do
       import Phoenix.Controller,
         only: [
           get_csrf_token: 0,
-          get_flash: 1,
-          get_flash: 2,
           view_module: 1,
           action_name: 1,
           current_path: 1
         ]
 
       # Use all HTML functionality (forms, tags, etc)
-      use Phoenix.HTML
+      import Phoenix.HTML
+      import Phoenix.HTML.Form
+      use PhoenixHTMLHelpers
+      use Gettext, backend: FirestormWeb.Web.Gettext
 
       import FirestormWeb.Web.Router.Helpers
       import FirestormWeb.Web.ErrorHelpers
-      import FirestormWeb.Web.Gettext
       import FirestormWeb.Web.Session
       import FirestormWeb.Web.ViewHelpers
       import FirestormWeb.Web.TagHelpers
@@ -63,7 +67,7 @@ defmodule FirestormWeb.Web do
 
   def router do
     quote do
-      use Phoenix.Router
+      use Phoenix.Router, helpers: true
       import Plug.Conn
       import Phoenix.Controller
     end
@@ -72,7 +76,7 @@ defmodule FirestormWeb.Web do
   def channel do
     quote do
       use Phoenix.Channel
-      import FirestormWeb.Web.Gettext
+      use Gettext, backend: FirestormWeb.Web.Gettext
     end
   end
 

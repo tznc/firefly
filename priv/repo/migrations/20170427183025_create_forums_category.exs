@@ -7,6 +7,5 @@ defmodule FirestormWeb.Repo.Migrations.CreateFirestormWeb.Forums.Category do
 
       timestamps()
     end
-
   end
 end

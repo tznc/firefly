@@ -11,7 +11,7 @@ defmodule FirestormWeb.Forums.Watch do
     field(:assoc_id, :integer)
     field(:user_id, :integer)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = watch, attrs) do

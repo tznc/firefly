@@ -1,24 +1,33 @@
-use Mix.Config
+import Config
 
+# Configure your database
+#
+# The MIX_TEST_PARTITION environment variable can be used
+# to provide built-in test partitioning in CI environment.
+config :firestorm_web, FirestormWeb.Repo,
+  username: System.get_env("POSTGRES_USER", "postgres"),
+  password: System.get_env("POSTGRES_PASSWORD", "postgres"),
+  hostname: System.get_env("POSTGRES_HOST", "localhost"),
+  port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+  database: "firestorm_web_test#{System.get_env("MIX_TEST_PARTITION")}",
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: System.schedulers_online() * 2,
+  ownership_timeout: 30_000
+
+# The server runs during tests so Wallaby feature tests can drive it.
 config :firestorm_web, FirestormWeb.Web.Endpoint,
-  http: [port: 4001],
+  http: [ip: {127, 0, 0, 1}, port: 4002],
+  secret_key_base: "+r1xPk7Kz3gV0h7uN6pXqM1y2dJw8dW1H5rB0oYzq6c2Wc5yR6eLx9oQp3sZt4uV",
   server: true
 
 # Print only warnings and errors during test
-config :logger, level: :warn
+config :logger, level: :warning
+
+# Initialize plugs at runtime for faster test compilation
+config :phoenix, :plug_init_mode, :runtime
 
 # Start notification server in app start
 config :firestorm_web, notifications_enabled: false
-
-# Configure your database
-config :firestorm_web, FirestormWeb.Repo,
-  adapter: Ecto.Adapters.Postgres,
-  username: System.get_env("POSTGRES_USER") || "postgres",
-  password: System.get_env("POSTGRES_PASSWORD") || "postgres",
-  database: "firestorm_web_test",
-  hostname: System.get_env("POSTGRES_HOST") || "localhost",
-  pool: Ecto.Adapters.SQL.Sandbox,
-  ownership_timeout: 30_000
 
 config :firestorm_web, sql_sandbox: true
 
@@ -26,7 +35,19 @@ config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.TestAdapter
 
 config :bamboo, :refute_timeout, 10
 
-config :wallaby, screenshot_on_failure: true
+config :wallaby,
+  otp_app: :firestorm_web,
+  driver: Wallaby.Chrome,
+  screenshot_on_failure: true
 
-config :comeonin, :bcrypt_log_rounds, 4
-config :comeonin, :pbkdf2_rounds, 1
+config :bcrypt_elixir, :log_rounds, 4
+
+config :firestorm_web, :aws,
+  access_key_id: "test-access-key-id",
+  secret_access_key: "test-secret-access-key",
+  bucket: "firestorm-test",
+  region: "us-east-1"
+
+if chromedriver = System.get_env("CHROMEDRIVER_PATH") do
+  config :wallaby, chromedriver: [path: chromedriver, headless: true]
+end

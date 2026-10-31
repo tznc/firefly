@@ -5,7 +5,11 @@ defmodule FirestormWeb.ForumsTest do
   alias FirestormWeb.Forums.{User, Category, Thread}
 
   @create_user_attrs %{email: "some email", name: "some name", username: "some username"}
-  @update_user_attrs %{email: "some updated email", name: "some updated name", username: "some updated username"}
+  @update_user_attrs %{
+    email: "some updated email",
+    name: "some updated name",
+    username: "some updated username"
+  }
   @invalid_user_attrs %{email: nil, name: nil, username: nil}
 
   @create_category_attrs %{title: "some title"}
@@ -17,10 +21,12 @@ defmodule FirestormWeb.ForumsTest do
   @invalid_thread_attrs %{title: nil}
 
   def fixture(type, attrs \\ %{})
+
   def fixture(:user, attrs) do
     {:ok, user} = Forums.create_user(attrs)
     user
   end
+
   def fixture(:category, attrs) do
     {:ok, category} = Forums.create_category(attrs)
     category
@@ -83,17 +89,18 @@ defmodule FirestormWeb.ForumsTest do
     assert %Ecto.Changeset{} = Forums.change_user(user)
   end
 
-  describe "is_admin?" do
+  describe "admin?" do
     test "returns true for users with an 'admin' role" do
       {:ok, admin} = Forums.create_role("admin")
       {:ok, user} = Forums.create_user(@create_user_attrs)
       {:ok, _} = Forums.add_role(user, admin)
-      assert Forums.is_admin?(user)
+      assert Forums.admin?(user)
     end
+
     test "returns false for users without an 'admin' role" do
       {:ok, _admin} = Forums.create_role("admin")
       {:ok, user} = Forums.create_user(@create_user_attrs)
-      refute Forums.is_admin?(user)
+      refute Forums.admin?(user)
     end
   end
 
@@ -153,66 +160,89 @@ defmodule FirestormWeb.ForumsTest do
     test "list_threads/1 returns all threads", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
       expected = [thread.title]
+
       result =
         category
-        |> Forums.list_threads
-        |> Enum.map(&(&1.title))
+        |> Forums.list_threads()
+        |> Enum.map(& &1.title)
 
       assert expected == result
     end
 
-  test "recent_threads/1 returns a category's threads ordered by most recent post", %{category: category, user: user} do
-    threads =
-      for num <- ~w(First Second Third Fourth Fifth) do
-        fixture(:thread, category, user, %{title: "#{num} thread", body: "#{num} thread body"})
+    test "recent_threads/1 returns a category's threads ordered by most recent post", %{
+      category: category,
+      user: user
+    } do
+      threads =
+        for num <- ~w(First Second Third Fourth Fifth) do
+          fixture(:thread, category, user, %{title: "#{num} thread", body: "#{num} thread body"})
+        end
+
+      for thread <- threads do
+        for n <- [2, 3, 4] do
+          fixture(:post, thread, user, %{body: "Post #{n} in #{thread.title}"})
+        end
       end
-    for thread <- threads do
-      for n <- [2, 3, 4] do
-        fixture(:post, thread, user, %{body: "Post #{n} in #{thread.title}"})
-      end
+
+      [thread1, thread2, thread3, thread4, thread5] = threads
+      :timer.sleep(1)
+      fixture(:post, thread1, user, %{body: "last post in thread1"})
+      fixture(:post, thread3, user, %{body: "last post in thread2"})
+      fixture(:post, thread5, user, %{body: "last post in thread3"})
+      other_category = fixture(:category, %{title: "other category"})
+
+      other_thread =
+        fixture(:thread, other_category, user, %{title: "other thread", body: "other thread body"})
+
+      _other_thread_post = fixture(:post, other_thread, user, %{body: "Other thread last post"})
+
+      recent_threads =
+        category
+        |> Forums.recent_threads()
+
+      thread_ids =
+        recent_threads
+        |> Enum.map(& &1.id)
+
+      expected_ids = [thread5.id, thread3.id, thread1.id, thread4.id, thread2.id]
+      assert expected_ids == thread_ids
     end
-    [thread1, thread2, thread3, thread4, thread5] = threads
-    :timer.sleep 1
-    fixture(:post, thread1, user, %{body: "last post in thread1"})
-    fixture(:post, thread3, user, %{body: "last post in thread2"})
-    fixture(:post, thread5, user, %{body: "last post in thread3"})
-    other_category = fixture(:category, %{title: "other category"})
-    other_thread = fixture(:thread, other_category, user, %{title: "other thread", body: "other thread body"})
-    _other_thread_post = fixture(:post, other_thread, user, %{body: "Other thread last post"})
-
-    recent_threads =
-      category
-      |> Forums.recent_threads()
-
-    thread_ids =
-      recent_threads
-      |> Enum.map(&(&1.id))
-
-    expected_ids = [thread5.id, thread3.id, thread1.id, thread4.id, thread2.id]
-    assert expected_ids == thread_ids
-  end
 
     test "get_thread! returns the thread with given id", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
       assert Forums.get_thread!(category, thread.id).title == thread.title
     end
 
-    test "create_thread/2 with valid data creates a thread and its first post", %{category: category, user: user} do
-      assert {:ok, %Thread{} = thread} = Forums.create_thread(category, user, @create_thread_attrs)
+    test "create_thread/2 with valid data creates a thread and its first post", %{
+      category: category,
+      user: user
+    } do
+      assert {:ok, %Thread{} = thread} =
+               Forums.create_thread(category, user, @create_thread_attrs)
+
       assert thread.title == "some title"
       first_post = hd(thread.posts)
       assert first_post.thread_id == thread.id
       assert first_post.body == "some body"
     end
 
-    test "create_thread/1 with invalid data returns error changeset", %{category: category, user: user} do
-      assert {:error, %Ecto.Changeset{}} = Forums.create_thread(category, user, @invalid_thread_attrs)
+    test "create_thread/1 with invalid data returns error changeset", %{
+      category: category,
+      user: user
+    } do
+      assert {:error, %Ecto.Changeset{}} =
+               Forums.create_thread(category, user, @invalid_thread_attrs)
     end
 
     test "create_thread/2 automatically generates a slug", %{category: category, user: user} do
-      assert {:ok, %Thread{} = thread} = Forums.create_thread(category, user, @create_thread_attrs)
+      assert {:ok, %Thread{} = thread} =
+               Forums.create_thread(category, user, @create_thread_attrs)
+
       assert thread.slug == "some-title"
-      assert {:ok, %Thread{} = thread} = Forums.create_thread(category, user, @create_thread_attrs)
+
+      assert {:ok, %Thread{} = thread} =
+               Forums.create_thread(category, user, @create_thread_attrs)
+
       assert thread.slug == "some-title-1"
     end
 
@@ -223,7 +253,10 @@ defmodule FirestormWeb.ForumsTest do
       assert thread.title == "some updated title"
     end
 
-    test "update_thread/2 with invalid data returns error changeset", %{category: category, user: user} do
+    test "update_thread/2 with invalid data returns error changeset", %{
+      category: category,
+      user: user
+    } do
       thread = fixture(:thread, category, user, @create_thread_attrs)
       assert {:error, %Ecto.Changeset{}} = Forums.update_thread(thread, @invalid_thread_attrs)
       assert thread.title == Forums.get_thread!(category, thread.id).title
@@ -253,6 +286,7 @@ defmodule FirestormWeb.ForumsTest do
         nickname: "knewter",
         email: "josh@dailydrip.com"
       }
+
       result = Forums.login_or_register_from_github(auth_info)
       assert {:ok, user} = result
       assert user.email == "josh@dailydrip.com"
@@ -262,8 +296,9 @@ defmodule FirestormWeb.ForumsTest do
       auth_info = %{
         name: nil,
         nickname: "knewter",
-        email: nil,
+        email: nil
       }
+
       result = Forums.login_or_register_from_github(auth_info)
       assert {:ok, user} = result
       assert user.name == "knewter"
@@ -277,6 +312,7 @@ defmodule FirestormWeb.ForumsTest do
       nickname: "knewter",
       email: "josh@dailydrip.com"
     }
+
     Forums.login_or_register_from_github(auth_info)
     result = Forums.login_or_register_from_github(auth_info)
     assert {:ok, user} = result
@@ -291,6 +327,51 @@ defmodule FirestormWeb.ForumsTest do
       assert post.thread_id == thread.id
       assert post.user_id == user.id
       assert post.body == "Some body"
+    end
+
+    test "creating an invalid post returns an error changeset", %{thread: thread, user: user} do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Forums.create_post(thread, user, %{body: ""})
+
+      assert %{body: ["can't be blank"]} = errors_on(changeset)
+    end
+  end
+
+  describe "login_or_register_from_identity/1" do
+    test "registers a new user with a hashed password" do
+      assert {:ok, user} =
+               Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+
+      assert user.username == "newbie"
+      assert is_binary(user.password_hash)
+      refute user.password_hash == "s3cret!"
+      assert Bcrypt.verify_pass("s3cret!", user.password_hash)
+    end
+
+    test "logs in an existing user with the right password" do
+      {:ok, %{id: id}} =
+        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+
+      assert {:ok, %{id: ^id}} =
+               Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+    end
+
+    test "rejects an existing user with the wrong password" do
+      {:ok, _} =
+        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+
+      assert {:error, _} =
+               Forums.login_or_register_from_identity(%{username: "newbie", password: "wrong"})
+    end
+
+    test "rejects a password login for a user without a password (e.g. GitHub users)" do
+      _ = fixture(:user, %{username: "octocat", email: "octo@example.com", name: "Octo"})
+
+      assert {:error, _} =
+               Forums.login_or_register_from_identity(%{
+                 username: "octocat",
+                 password: "anything"
+               })
     end
   end
 
@@ -327,7 +408,10 @@ defmodule FirestormWeb.ForumsTest do
 
     test "getting a user's notifications", %{user: user} do
       body = "You are looking dapper today!"
-      {:ok, _} = Forums.notify(user, %{subject: "Some subject", body: body, url: "http://www.slashdot.org"})
+
+      {:ok, _} =
+        Forums.notify(user, %{subject: "Some subject", body: body, url: "http://www.slashdot.org"})
+
       [first_notification | _] = Forums.notifications_for(user)
       assert body == first_notification.body
     end
@@ -337,10 +421,12 @@ defmodule FirestormWeb.ForumsTest do
     category = fixture(:category, @create_category_attrs)
     {:ok, category: category}
   end
+
   def create_thread(%{category: category, user: user}) do
     thread = fixture(:thread, category, user, @create_thread_attrs)
     {:ok, thread: thread}
   end
+
   def create_user(_) do
     user = fixture(:user, @create_user_attrs)
     {:ok, user: user}

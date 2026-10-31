@@ -1,8 +1,7 @@
 defmodule FirestormWeb.Web.ThreadController do
   use FirestormWeb.Web, :controller
 
-  alias FirestormWeb.Repo
-  alias FirestormWeb.Forums
+  alias FirestormWeb.{Forums, Repo}
   alias FirestormWeb.Forums.Thread
 
   plug(
@@ -11,7 +10,7 @@ defmodule FirestormWeb.Web.ThreadController do
   )
 
   def action(conn, _) do
-    if(conn.params["category_id"]) do
+    if conn.params["category_id"] do
       category = Forums.get_category!(conn.params["category_id"])
       args = [conn, conn.params, category]
       apply(__MODULE__, action_name(conn), args)

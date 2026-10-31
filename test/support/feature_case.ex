@@ -7,12 +7,13 @@ defmodule FirestormWeb.Web.FeatureCase do
     def log_in_as(session, user) do
       session
       |> visit("/")
-      |> Browser.set_cookie("current_user", user.id)
+      |> Browser.set_cookie("current_user", to_string(user.id))
     end
   end
 
   using do
     quote do
+      @moduletag :feature
       use Wallaby.DSL
 
       alias FirestormWeb.Repo
@@ -33,13 +34,8 @@ defmodule FirestormWeb.Web.FeatureCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(FirestormWeb.Repo)
-
-    unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(FirestormWeb.Repo, {:shared, self()})
-    end
-
-    metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(FirestormWeb.Repo, self())
+    pid = FirestormWeb.DataCase.setup_sandbox(tags)
+    metadata = Phoenix.Ecto.SQL.Sandbox.metadata_for(FirestormWeb.Repo, pid)
     {:ok, session} = Wallaby.start_session(metadata: metadata)
     {:ok, session: session}
   end

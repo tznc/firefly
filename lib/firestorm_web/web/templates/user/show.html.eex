@@ -55,4 +55,4 @@
   <% end %>
 </ol>
 
-<%= pagination_links @posts_page %>
+<%= pagination_links @conn, @posts_page %>

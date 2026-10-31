@@ -11,7 +11,7 @@ defmodule FirestormWeb.Forums.RoleMembership do
     belongs_to(:role, Role)
     belongs_to(:user, User)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = role_membership, attrs \\ %{}) do

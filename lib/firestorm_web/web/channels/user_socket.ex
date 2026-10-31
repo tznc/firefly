@@ -8,10 +8,6 @@ defmodule FirestormWeb.Web.UserSocket do
   channel("threads:*", FirestormWeb.Web.ThreadsChannel)
   channel("categories:*", FirestormWeb.Web.CategoriesChannel)
 
-  ## Transports
-  transport(:websocket, Phoenix.Transports.WebSocket, timeout: 45_000, check_origin: false)
-  # transport :longpoll, Phoenix.Transports.LongPoll
-
   # Socket params are passed from the client and can
   # be used to verify and authenticate a user. After
   # verification, you can put default assigns into
@@ -23,7 +19,7 @@ defmodule FirestormWeb.Web.UserSocket do
   #
   # See `Phoenix.Token` documentation for examples in
   # performing token verification on connect.
-  def connect(_params, socket) do
+  def connect(_params, socket, _connect_info) do
     {:ok, socket}
   end
 

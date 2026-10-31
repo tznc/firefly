@@ -1,5 +1,6 @@
 defmodule FirestormWeb.Web.Api.V1.PostController do
   use FirestormWeb.Web, :controller
+  require Logger
   alias FirestormWeb.Forums
 
   def create(conn, %{"post" => post_params, "thread_id" => thread_id}) do
@@ -8,10 +9,10 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
          {:ok, post} <- Forums.create_post(thread, user, %{body: post_params["body"]}) do
       conn
       |> put_status(201)
-      |> render("show.json", post)
+      |> render(:show, post: post)
     else
-      x ->
-        IO.inspect(x)
+      error ->
+        Logger.debug("Failed to create post via API: #{inspect(error)}")
 
         conn
         |> put_status(:unprocessable_entity)

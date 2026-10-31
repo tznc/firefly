@@ -6,6 +6,7 @@ defmodule FirestormWeb.Web.Api.V1.UploadSignatureControllerTest do
       "filename" => "image.jpg",
       "mimetype" => "image/jpeg"
     }
+
     conn = post conn, "/api/v1/upload_signature", upload: upload
     response = json_response(conn, 201)["data"]
     assert response

@@ -1,4 +1,8 @@
 defmodule FirestormWeb.Forums.Policy do
+  @moduledoc """
+  Authorization rules for the Forums context (see `Bodyguard.Policy`).
+  """
+
   @behaviour Bodyguard.Policy
 
   def authorize(:edit_user, %{id: user_id}, %{user: %{id: user_id}}) do

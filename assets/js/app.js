@@ -1,12 +1,4 @@
-require("../css/app.scss");
-import "../../deps/phoenix_html/priv/static/phoenix_html";
-
-// == POLYFILLS ==
-// polyfill es6 promises
-require("es6-promise");
-// polyfill fetch browser api
-require("isomorphic-fetch");
-// == END POLYFILLS ==
+import "phoenix_html";
 
 // == COMPONENTS ==
 import Posts from "./components/posts";

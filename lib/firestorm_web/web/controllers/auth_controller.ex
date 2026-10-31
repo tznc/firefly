@@ -5,7 +5,7 @@ defmodule FirestormWeb.Web.AuthController do
 
   def login(conn, _params) do
     conn
-    |> put_layout("login.html")
+    |> put_layout(html: {FirestormWeb.Web.LayoutView, :login})
     |> render("login.html")
   end
 
@@ -32,22 +32,7 @@ defmodule FirestormWeb.Web.AuthController do
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, params) do
     case auth.provider do
       :github ->
-        with %{name: name, nickname: nickname, email: email} <- auth.info do
-          case Forums.login_or_register_from_github(%{
-                 name: name,
-                 nickname: nickname,
-                 email: email
-               }) do
-            {:ok, user} ->
-              conn
-              |> ok_login(user)
-
-            {:error, reason} ->
-              conn
-              |> put_flash(:error, reason)
-              |> redirect(to: "/")
-          end
-        end
+        github_callback(conn, auth.info)
 
       :identity ->
         case Forums.login_or_register_from_identity(%{
@@ -78,6 +63,18 @@ defmodule FirestormWeb.Web.AuthController do
               changeset: changeset
             )
         end
+    end
+  end
+
+  defp github_callback(conn, %{name: name, nickname: nickname, email: email}) do
+    case Forums.login_or_register_from_github(%{name: name, nickname: nickname, email: email}) do
+      {:ok, user} ->
+        ok_login(conn, user)
+
+      {:error, reason} ->
+        conn
+        |> put_flash(:error, reason)
+        |> redirect(to: "/")
     end
   end
 

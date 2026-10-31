@@ -12,7 +12,7 @@ defmodule FirestormWeb.Forums.Thread do
   schema "forums_threads" do
     field(:title, :string)
     field(:slug, ThreadTitleSlug.Type)
-    field(:first_post, {:map, %Post{}}, virtual: true)
+    field(:first_post, :any, virtual: true)
     field(:posts_count, :integer, virtual: true)
     field(:completely_read?, :boolean, virtual: true)
     belongs_to(:category, Category)
@@ -26,7 +26,7 @@ defmodule FirestormWeb.Forums.Thread do
       join_keys: [assoc_id: :id, user_id: :id]
     )
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = thread, attrs \\ %{}) do

@@ -12,7 +12,7 @@ defmodule FirestormWeb.Forums.Role do
     has_many(:role_memberships, RoleMembership)
     many_to_many(:users, User, join_through: RoleMembership)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = role, attrs \\ %{}) do

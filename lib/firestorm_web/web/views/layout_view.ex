@@ -90,8 +90,15 @@ defmodule FirestormWeb.Web.LayoutView do
       Application.get_env(:firestorm_web, :js_path_prefix) <> "/js/app.js\"></script>"
   end
 
+  # `css/app.css` is built by Sass; `js/app.css` holds the CSS imported from
+  # JavaScript (i.e. Prism themes), as bundled by esbuild.
   def css_link_tag do
+    css_prefix = Application.get_env(:firestorm_web, :css_path_prefix)
+    js_prefix = Application.get_env(:firestorm_web, :js_path_prefix)
+
     "<link rel=\"stylesheet\" type=\"text/css\" href=\"" <>
-      Application.get_env(:firestorm_web, :css_path_prefix) <> "/css/app.css\" />"
+      css_prefix <>
+      "/css/app.css\" />" <>
+      "<link rel=\"stylesheet\" type=\"text/css\" href=\"" <> js_prefix <> "/js/app.css\" />"
   end
 end

@@ -12,7 +12,7 @@ defmodule FirestormWeb.Forums.View do
     field(:assoc_id, :integer)
     field(:user_id, :integer)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = view, attrs) do

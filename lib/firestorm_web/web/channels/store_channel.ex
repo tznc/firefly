@@ -1,23 +1,13 @@
 defmodule FirestormWeb.Web.StoreChannel do
   use FirestormWeb.Web, :channel
-  # use Appsignal.Instrumentation.Decorators
   alias FirestormWeb.Store.{ReplenishResponse, ReplenishRequest}
   alias FirestormWeb.Web.Api.V1.FetchView
   alias FirestormWeb.{Repo, Forums}
 
-  def join("store:fetch", payload, socket) do
-    if authorized?(payload) do
-      {:ok, socket}
-    else
-      {:error, %{reason: "unauthorized"}}
-    end
+  def join("store:fetch", _payload, socket) do
+    {:ok, socket}
   end
 
-  defp authorized?(_) do
-    true
-  end
-
-  # @decorate channel_action()
   def handle_in("fetch_home_data", _, socket) do
     # TODO: Make this not awful
     categories = Forums.list_categories()
@@ -48,9 +38,13 @@ defmodule FirestormWeb.Web.StoreChannel do
       })}, socket}
   end
 
-  # @decorate channel_action()
   def handle_in("fetch", replenish_request, socket) do
-    replenish_request = Poison.decode!(Poison.encode!(replenish_request), as: %ReplenishRequest{})
+    replenish_request = %ReplenishRequest{
+      categories: Map.get(replenish_request, "categories", []),
+      threads: Map.get(replenish_request, "threads", []),
+      posts: Map.get(replenish_request, "posts", []),
+      users: Map.get(replenish_request, "users", [])
+    }
 
     # TODO: Make this not awful
     categories =

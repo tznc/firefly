@@ -14,7 +14,7 @@ defmodule FirestormWeb.Forums.Category do
     field(:slug, CategoryTitleSlug.Type)
     has_many(:threads, Thread)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = category, attrs \\ %{}) do

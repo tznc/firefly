@@ -1,4 +1,8 @@
 defmodule FirestormWeb.Store.ReplenishRequest do
+  @moduledoc """
+  A request from a client for categories, threads, users and posts by id.
+  """
+
   defstruct categories: [], threads: [], users: [], posts: []
 
   @typep finder :: integer | String.t()
@@ -10,19 +14,19 @@ defmodule FirestormWeb.Store.ReplenishRequest do
           posts: list(finder)
         }
 
-  def request_category(request, category_id) do
-    %__MODULE__{request | categories: [category_id | request.categories]}
+  def request_category(%__MODULE__{} = request, category_id) do
+    %{request | categories: [category_id | request.categories]}
   end
 
-  def request_thread(request, thread_id) do
-    %__MODULE__{request | threads: [thread_id | request.threads]}
+  def request_thread(%__MODULE__{} = request, thread_id) do
+    %{request | threads: [thread_id | request.threads]}
   end
 
-  def request_user(request, user_id) do
-    %__MODULE__{request | users: [user_id | request.users]}
+  def request_user(%__MODULE__{} = request, user_id) do
+    %{request | users: [user_id | request.users]}
   end
 
-  def request_post(request, post_id) do
-    %__MODULE__{request | posts: [post_id | request.posts]}
+  def request_post(%__MODULE__{} = request, post_id) do
+    %{request | posts: [post_id | request.posts]}
   end
 end

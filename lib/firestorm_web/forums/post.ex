@@ -23,7 +23,7 @@ defmodule FirestormWeb.Forums.Post do
 
     field(:oembeds, :any, virtual: true)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = post, attrs \\ %{}) do

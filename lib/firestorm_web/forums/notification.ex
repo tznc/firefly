@@ -4,7 +4,6 @@ defmodule FirestormWeb.Forums.Notification do
   """
 
   use Ecto.Schema
-  require FirestormWeb.Web.Router
   import FirestormWeb.Web.Router.Helpers, only: [category_thread_url: 4]
   alias FirestormWeb.Forums.{User, Thread, Post}
   alias FirestormWeb.Web.Endpoint
@@ -16,7 +15,7 @@ defmodule FirestormWeb.Forums.Notification do
     field(:url, :string)
     belongs_to(:user, User)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def thread_new_post_notification(%Thread{} = thread, %Post{} = post) do

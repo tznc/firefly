@@ -25,7 +25,7 @@ defmodule FirestormWeb.Web.Session do
         false
 
       u ->
-        Forums.is_admin?(u)
+        Forums.admin?(u)
     end
   end
 

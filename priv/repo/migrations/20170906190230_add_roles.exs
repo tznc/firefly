@@ -7,6 +7,7 @@ defmodule FirestormWeb.Repo.Migrations.AddRoles do
 
       timestamps()
     end
+
     create unique_index(:forums_roles, [:name])
   end
 end

@@ -1,14 +1,20 @@
-FROM elixir:1.7.3
-ENV DEBIAN_FRONTEND=noninteractive
+# Development image (used by docker-compose.yml).
+FROM hexpm/elixir:1.20.5-erlang-29.1.2-debian-trixie-20261027-slim
 
-RUN mix local.hex --force
-RUN mix local.rebar --force
-RUN mix archive.install https://github.com/phoenixframework/archives/raw/master/phx_new.ez --force
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8
 
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
-apt-get install -y nodejs
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends build-essential git ca-certificates curl nodejs npm inotify-tools && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN mkdir /firestorm
-ADD . /firestorm
+RUN mix local.hex --force && mix local.rebar --force
+
 WORKDIR /firestorm
+COPY mix.exs mix.lock ./
 RUN mix deps.get
+
+COPY assets/package.json assets/package-lock.json ./assets/
+RUN npm ci --prefix assets
+
+COPY . .

@@ -8,7 +8,8 @@ defmodule FirestormWeb.Web.CategoryControllerTest do
   @invalid_attrs %{title: nil}
 
   setup do
-    {:ok, user} = Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+    {:ok, user} =
+      Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
 
     {:ok, user: user, conn: Phoenix.ConnTest.build_conn()}
   end
@@ -20,7 +21,7 @@ defmodule FirestormWeb.Web.CategoryControllerTest do
 
   test "lists categories on index", %{conn: conn} do
     {:ok, category} = Forums.create_category(@create_attrs)
-    conn = get conn, category_path(conn, :index)
+    conn = get(conn, category_path(conn, :index))
     assert html_response(conn, 200) =~ category.title
   end
 
@@ -52,11 +53,14 @@ defmodule FirestormWeb.Web.CategoryControllerTest do
     assert %{id: id} = redirected_params(conn)
     assert redirected_to(conn) == category_path(conn, :show, id)
 
-    conn = get conn, category_path(conn, :show, id)
+    conn = get(conn, category_path(conn, :show, id))
     assert html_response(conn, 200) =~ "some title"
   end
 
-  test "does not create category and renders errors when data is invalid", %{conn: conn, user: user} do
+  test "does not create category and renders errors when data is invalid", %{
+    conn: conn,
+    user: user
+  } do
     conn =
       conn
       |> log_in_as(user)
@@ -67,7 +71,7 @@ defmodule FirestormWeb.Web.CategoryControllerTest do
 
   test "renders form for editing chosen category", %{conn: conn} do
     category = fixture(:category)
-    conn = get conn, category_path(conn, :edit, category)
+    conn = get(conn, category_path(conn, :edit, category))
     assert html_response(conn, 200) =~ "Edit Category"
   end
 
@@ -76,7 +80,7 @@ defmodule FirestormWeb.Web.CategoryControllerTest do
     conn = put conn, category_path(conn, :update, category), category: @update_attrs
     assert redirected_to(conn) == category_path(conn, :show, category)
 
-    conn = get conn, category_path(conn, :show, category)
+    conn = get(conn, category_path(conn, :show, category))
     assert html_response(conn, 200) =~ "some updated title"
   end
 
@@ -88,10 +92,11 @@ defmodule FirestormWeb.Web.CategoryControllerTest do
 
   test "deletes chosen category", %{conn: conn} do
     category = fixture(:category)
-    conn = delete conn, category_path(conn, :delete, category)
+    conn = delete(conn, category_path(conn, :delete, category))
     assert redirected_to(conn) == category_path(conn, :index)
+
     assert_error_sent 404, fn ->
-      get conn, category_path(conn, :show, category)
+      get(conn, category_path(conn, :show, category))
     end
   end
 end

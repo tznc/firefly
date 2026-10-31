@@ -18,7 +18,7 @@ defmodule FirestormWeb.Web.ChannelCase do
   using do
     quote do
       # Import conveniences for testing with channels
-      use Phoenix.ChannelTest
+      import Phoenix.ChannelTest
 
       # The default endpoint for testing
       @endpoint FirestormWeb.Web.Endpoint
@@ -26,11 +26,7 @@ defmodule FirestormWeb.Web.ChannelCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(FirestormWeb.Repo)
-
-    unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(FirestormWeb.Repo, {:shared, self()})
-    end
+    FirestormWeb.DataCase.setup_sandbox(tags)
 
     :ok
   end

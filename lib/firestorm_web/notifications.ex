@@ -17,7 +17,7 @@ defmodule FirestormWeb.Notifications do
       iex> {:ok, pid} = FirestormWeb.Notifications.start_link()
 
   """
-  def start_link() do
+  def start_link(_opts \\ []) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 

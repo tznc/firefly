@@ -1,11 +1,24 @@
 defmodule FirestormWeb.Web.Endpoint do
   use Phoenix.Endpoint, otp_app: :firestorm_web
 
-  if Application.get_env(:firestorm_web, :sql_sandbox) do
+  # The session will be stored in the cookie and signed,
+  # this means its contents can be read but not tampered with.
+  # Set :encryption_salt if you would also like to encrypt it.
+  @session_options [
+    store: :cookie,
+    key: "_firestorm_web_key",
+    signing_salt: "YhYEFZld",
+    same_site: "Lax"
+  ]
+
+  if Application.compile_env(:firestorm_web, :sql_sandbox) do
     plug(Phoenix.Ecto.SQL.Sandbox)
   end
 
-  socket("/socket", FirestormWeb.Web.UserSocket)
+  socket("/socket", FirestormWeb.Web.UserSocket,
+    websocket: [timeout: 45_000, check_origin: false],
+    longpoll: false
+  )
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -26,48 +39,24 @@ defmodule FirestormWeb.Web.Endpoint do
     socket("/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket)
     plug(Phoenix.LiveReloader)
     plug(Phoenix.CodeReloader)
+    plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :firestorm_web)
   end
 
   plug(Plug.RequestId)
-  plug(Plug.Logger)
+  plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
 
   plug(
     Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    json_decoder: Poison
+    json_decoder: Phoenix.json_library()
   )
 
   plug(Plug.MethodOverride)
   plug(Plug.Head)
 
-  # The session will be stored in the cookie and signed,
-  # this means its contents can be read but not tampered with.
-  # Set :encryption_salt if you would also like to encrypt it.
-  plug(
-    Plug.Session,
-    store: :cookie,
-    key: "_firestorm_web_key",
-    signing_salt: "YhYEFZld"
-  )
-
-  if Application.get_env(:firestorm_web, :use_pryin) do
-    plug(PryIn.Plug)
-  end
+  plug(Plug.Session, @session_options)
 
   plug(CORSPlug)
-  # use Appsignal.Phoenix
   plug(FirestormWeb.Web.Router)
-
-  @doc """
-  Dynamically loads configuration from the system environment
-  on startup.
-
-  It receives the endpoint configuration from the config files
-  and must return the updated configuration.
-  """
-  def load_from_system_env(config) do
-    port = System.get_env("PORT") || raise "expected the PORT environment variable to be set"
-    {:ok, Keyword.put(config, :http, [:inet6, port: port])}
-  end
 end

@@ -1,28 +1,42 @@
 defmodule FirestormWeb.Markdown do
   @moduledoc """
-  Sanitize a string's HTML, then render the string as markdown in the FirestormWeb style.
+  Render a string as markdown in the FirestormWeb style, then sanitize the
+  resulting HTML.
+
+  Rendering is done by `MDEx` (CommonMark + GitHub Flavored Markdown) with:
+
+    * bare URL autolinking
+    * emoji shortcodes (i.e. `:poop:`) replaced with their emoji counterpart
+    * soft line breaks rendered as `<br>`
+    * `<pre class="line-numbers">` code blocks with `language-*` classes, for
+      proper support from https://prismjs.com/plugins/line-numbers/
+
+  Raw HTML is allowed in the input, but the output is always run through an
+  allow-list sanitizer, so scripts, event handlers and `javascript:` URLs are
+  stripped.
   """
 
-  def render(body) do
-    body
-    |> as_html!()
-  end
+  @options [
+    extension: [
+      autolink: true,
+      strikethrough: true,
+      table: true,
+      tagfilter: true,
+      shortcodes: true
+    ],
+    parse: [smart: false],
+    render: [hardbreaks: true, unsafe: true],
+    syntax_highlight: nil,
+    sanitize: MDEx.Document.default_sanitize_options()
+  ]
 
-  defp as_html!(body) do
-    body
-    |> HtmlSanitizeEx.markdown_html()
-    |> Earmark.as_html!(earmark_options())
-  end
+  @spec render(String.t() | nil) :: String.t()
+  def render(nil), do: ""
 
-  def earmark_options() do
-    %Earmark.Options{
-      # Prefix the `code` tag language class, as in `language-elixir`, for
-      # proper support from http://prismjs.com/
-      code_class_prefix: "language-",
-      renderer: FirestormWeb.Markdown.HtmlRenderer,
-      gfm: true,
-      breaks: true,
-      smartypants: false
-    }
+  def render(body) when is_binary(body) do
+    body
+    |> MDEx.to_html!(@options)
+    # Safe to do after sanitizing: any literal `<pre>` in user text is escaped.
+    |> String.replace("<pre>", ~s(<pre class="line-numbers">))
   end
 end

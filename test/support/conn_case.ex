@@ -18,26 +18,21 @@ defmodule FirestormWeb.Web.ConnCase do
   using do
     quote do
       # Import conveniences for testing with connections
-      use Phoenix.ConnTest
+      import Plug.Conn
+      import Phoenix.ConnTest
       import FirestormWeb.Web.Router.Helpers
 
       # The default endpoint for testing
       @endpoint FirestormWeb.Web.Endpoint
 
-      def log_in_as(conn, user) do
-        conn =
-          build_conn()
-          |> Plug.Test.init_test_session(%{current_user: user.id})
+      def log_in_as(_conn, user) do
+        Plug.Test.init_test_session(build_conn(), %{current_user: user.id})
       end
     end
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(FirestormWeb.Repo)
-
-    unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(FirestormWeb.Repo, {:shared, self()})
-    end
+    FirestormWeb.DataCase.setup_sandbox(tags)
 
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end

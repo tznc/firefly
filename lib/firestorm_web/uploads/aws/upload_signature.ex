@@ -1,7 +1,4 @@
 defmodule FirestormWeb.Uploads.AWS.UploadSignature do
-  alias FirestormWeb.Web.Endpoint
-  require Endpoint
-
   @moduledoc """
   Generate an upload signature to allow the client to upload directly to S3.
   """
@@ -10,31 +7,27 @@ defmodule FirestormWeb.Uploads.AWS.UploadSignature do
   @aws_request "aws4_request"
 
   def signature(filename, mimetype) do
-    Endpoint.instrument(:pryin, %{key: "UploadSignature.signature"}, fn ->
-      policy = policy(filename, mimetype)
+    policy = policy(filename, mimetype)
 
-      %{
-        key: filename,
-        date: get_date(),
-        content_type: mimetype,
-        acl: "public-read",
-        success_action_status: "201",
-        action: bucket_url(),
-        aws_access_key_id: aws_config()[:access_key_id],
-        policy: policy,
-        credential: credential(),
-        signature: sign(policy)
-      }
-    end)
+    %{
+      key: filename,
+      date: get_date(),
+      content_type: mimetype,
+      acl: "public-read",
+      success_action_status: "201",
+      action: bucket_url(),
+      aws_access_key_id: aws_config()[:access_key_id],
+      policy: policy,
+      credential: credential(),
+      signature: sign(policy)
+    }
   end
 
-  def get_date() do
-    datetime = Timex.now()
-    {:ok, t} = Timex.format(datetime, "%Y%m%d", :strftime)
-    t
+  def get_date do
+    Calendar.strftime(DateTime.utc_now(), "%Y%m%d")
   end
 
-  defp credential() do
+  defp credential do
     credential(aws_config()[:access_key_id], get_date())
   end
 
@@ -53,41 +46,39 @@ defmodule FirestormWeb.Uploads.AWS.UploadSignature do
         %{success_action_status: "201"}
       ]
     }
-    |> Poison.encode!()
+    |> Jason.encode!()
     |> Base.encode64()
   end
 
   defp min_from_now(minutes) do
-    import Timex
-
-    now()
-    |> shift(minutes: minutes)
-    |> format!("{ISO:Extended:Z}")
+    DateTime.utc_now()
+    |> DateTime.add(minutes * 60, :second)
+    |> DateTime.to_iso8601()
   end
 
   defp sign(policy) do
-    :sha
-    |> :crypto.hmac(secret_access_key(), policy)
+    :hmac
+    |> :crypto.mac(:sha, secret_access_key(), policy)
     |> Base.encode64()
   end
 
-  defp bucket_name() do
+  defp bucket_name do
     aws_config()[:bucket]
   end
 
-  defp region() do
+  defp region do
     aws_config()[:region]
   end
 
-  defp secret_access_key() do
+  defp secret_access_key do
     aws_config()[:secret_access_key]
   end
 
-  defp bucket_url() do
+  defp bucket_url do
     "https://s3-#{region()}.amazonaws.com/#{bucket_name()}"
   end
 
-  defp aws_config() do
+  defp aws_config do
     Application.get_env(:firestorm_web, :aws)
   end
 end

@@ -2,13 +2,9 @@ defmodule FirestormWeb.Application do
   @moduledoc false
 
   use Application
-  import Supervisor.Spec
 
-  # See http://elixir-lang.org/docs/stable/elixir/Application.html
-  # for more information on OTP Applications
+  @impl true
   def start(_type, _args) do
-    # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: FirestormWeb.Supervisor]
 
     Supervisor.start_link(
@@ -17,27 +13,30 @@ defmodule FirestormWeb.Application do
     )
   end
 
-  defp default_children() do
+  @impl true
+  def config_change(changed, _new, removed) do
+    FirestormWeb.Web.Endpoint.config_change(changed, removed)
+    :ok
+  end
+
+  defp default_children do
     [
       # Start the Ecto repository
-      supervisor(FirestormWeb.Repo, []),
-      # Start the endpoint when the application starts
-      supervisor(FirestormWeb.Web.Endpoint, []),
+      FirestormWeb.Repo,
+      # Start the PubSub system
+      {Phoenix.PubSub, name: FirestormWeb.PubSub},
       # Add an LRU Cache for storing OEmbed results for a given URL, storing at
       # most 5000 results at a time in the cache.
-      worker(LruCache, [:oembed_cache, 5_000])
+      %{id: LruCache, start: {LruCache, :start_link, [:oembed_cache, 5_000]}},
+      # Start the endpoint when the application starts
+      FirestormWeb.Web.Endpoint
     ]
   end
 
-  defp children(false) do
-    default_children()
-  end
+  defp children(false), do: default_children()
 
   defp children(_) do
-    default_children() ++
-      [
-        # Start the notifications server
-        worker(FirestormWeb.Notifications, [])
-      ]
+    # Start the notifications server
+    default_children() ++ [FirestormWeb.Notifications]
   end
 end

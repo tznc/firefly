@@ -6,7 +6,7 @@ defmodule FirestormWeb.Emails do
   import Bamboo.Email
   import FirestormWeb.Web.Router.Helpers, only: [category_thread_url: 4]
   import Phoenix.HTML
-  import Phoenix.HTML.Link
+  import PhoenixHTMLHelpers.Link
   alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Markdown
   alias FirestormWeb.Forums.{Post, Thread, User}
@@ -40,9 +40,7 @@ defmodule FirestormWeb.Emails do
 
   defp html_body_for(%Thread{} = thread, %Post{} = post) do
     """
-    <p>The Firestorm thread #{thread.title |> link(to: thread_url(thread)) |> safe_to_string} has received #{
-      "a reply" |> link(to: post_url(thread, post)) |> safe_to_string
-    }:</p>
+    <p>The Firestorm thread #{thread.title |> link(to: thread_url(thread)) |> safe_to_string} has received #{"a reply" |> link(to: post_url(thread, post)) |> safe_to_string}:</p>
     <hr />
     #{Markdown.render(post.body)}
     """
@@ -50,9 +48,7 @@ defmodule FirestormWeb.Emails do
 
   defp text_body_for(%Thread{} = thread, %Post{} = post) do
     """
-    The Firestorm thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{
-      post_url(thread, post)
-    }]:\n\n
+    The Firestorm thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{post_url(thread, post)}]:\n\n
     #{post.body}
     """
   end

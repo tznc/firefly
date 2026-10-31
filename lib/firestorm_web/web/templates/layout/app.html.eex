@@ -47,7 +47,7 @@
       <div class="pure-pusher-container">
         <!-- Stuff inside pure-pusher gets pushed if the drawer pushes content -->
         <div class="pure-pusher">
-          <%= render "_navigation.html", conn: @conn, view_module: @view_module, view_template: @view_template %>
+          <%= render "_navigation.html", conn: @conn %>
           <!-- Now our styles take over and we'll define the main content area -->
           <div class="layout-content">
             <div class="layout-drawer-tablet">
@@ -55,7 +55,7 @@
             </div>
             <!-- We made it to the main content! -->
             <div class="layout-content-main">
-              <%= for {key, val} <- get_flash(@conn) do %>
+              <%= for {key, val} <- @flash do %>
                 <p class="alert-box -<%= key %>" role="alert">
                   <%= val %>
                 </p>
@@ -64,7 +64,7 @@
                 And here's where we render a given view inside of the
                 template
               -->
-              <%= render @view_module, @view_template, assigns %>
+              <%= @inner_content %>
             </div>
           </div>
         </div>

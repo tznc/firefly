@@ -9,6 +9,5 @@ defmodule FirestormWeb.Repo.Migrations.CreateFirestormWeb.Forums.User do
 
       timestamps()
     end
-
   end
 end

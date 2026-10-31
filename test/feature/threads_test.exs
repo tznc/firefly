@@ -8,7 +8,9 @@ defmodule FirestormWeb.Feature.ThreadsTest do
     import Page.Thread.{New, Show}
     import Page.Category.Show, only: [new_thread_link: 0]
     {:ok, [elixir]} = create_categories(["Elixir"])
-    {:ok, user} = Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
+    {:ok, user} =
+      Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
 
     session
     |> log_in_as(user)
@@ -36,7 +38,10 @@ defmodule FirestormWeb.Feature.ThreadsTest do
     import Page.Post.New
 
     {:ok, [elixir]} = create_categories(["Elixir"])
-    {:ok, user} = Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
+    {:ok, user} =
+      Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
     {:ok, otp_is_cool} = Forums.create_thread(elixir, user, @otp_is_cool_parameters)
 
     session
@@ -49,15 +54,19 @@ defmodule FirestormWeb.Feature.ThreadsTest do
     |> assert_has(thread_title(@otp_is_cool_parameters[:title]))
     |> assert_has(post_item("I agree!"))
     |> assert_has(post_username("knewter", 1))
-       # There is only one that matches this because we put the first post's
-       # user info into the thread header.
+
+    # There is only one that matches this because we put the first post's
+    # user info into the thread header.
   end
 
   test "watching a thread", %{session: session} do
     import Page.Thread.Show
 
     {:ok, [elixir]} = create_categories(["Elixir"])
-    {:ok, user} = Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
+    {:ok, user} =
+      Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
     {:ok, otp_is_cool} = Forums.create_thread(elixir, user, @otp_is_cool_parameters)
 
     session
@@ -75,8 +84,15 @@ defmodule FirestormWeb.Feature.ThreadsTest do
 
     url = "https://www.youtube.com/watch?v=H686MDn4Lo8"
     {:ok, [elixir]} = create_categories(["Elixir"])
-    {:ok, user} = Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
-    {:ok, otp_is_cool} = Forums.create_thread(elixir, user, %{title: "Thread with oEmbed in the first post", body: "This is a cool video, check it out: #{url}"})
+
+    {:ok, user} =
+      Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
+    {:ok, otp_is_cool} =
+      Forums.create_thread(elixir, user, %{
+        title: "Thread with oEmbed in the first post",
+        body: "This is a cool video, check it out: #{url}"
+      })
 
     # Pre-populate the OEmbed cache to return an oembed for this URL:
     LruCache.put(:oembed_cache, url, %OEmbed.Video{html: "lolno"})
@@ -93,6 +109,7 @@ defmodule FirestormWeb.Feature.ThreadsTest do
         {:ok, category} = Forums.create_category(%{title: title})
         category
       end
+
     {:ok, categories}
   end
 end

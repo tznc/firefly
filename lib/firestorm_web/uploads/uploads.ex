@@ -15,7 +15,7 @@ defmodule FirestormWeb.Uploads do
   end
 
   defp file_path(filename) do
-    uuid = UUID.uuid4()
+    uuid = Ecto.UUID.generate()
     "uploads/#{uuid}/#{filename}"
   end
 end

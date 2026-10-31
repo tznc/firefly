@@ -3,6 +3,8 @@ defmodule FirestormWeb.Web.Api.V1.PostView do
   alias FirestormWeb.Forums.Post
   alias FirestormWeb.Markdown
 
+  def render("show.json", %{post: %Post{} = post}), do: render("show.json", post)
+
   def render("show.json", %Post{
         id: id,
         body: body,

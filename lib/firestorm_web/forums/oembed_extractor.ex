@@ -1,4 +1,8 @@
 defmodule FirestormWeb.Forums.OembedExtractor do
+  @moduledoc """
+  Finds the URLs in a post body and resolves their (cached) oEmbed data.
+  """
+
   @url_regex ~r(https?://[^ $\n]*)
 
   def get_embeds(body) do
@@ -16,7 +20,8 @@ defmodule FirestormWeb.Forums.OembedExtractor do
   Gathers anything in the string that looks like a link into a list of links.
   """
   def get_urls_from_string(string) do
-    Regex.scan(@url_regex, string)
+    @url_regex
+    |> Regex.scan(string)
     |> Enum.map(&hd/1)
   end
 end

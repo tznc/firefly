@@ -19,7 +19,12 @@ defmodule FirestormWeb.Feature.CategoriesTest do
       import Page.Category.{New, Index}
       alias Page.Category.Show
 
-      {:ok, user} = Forums.create_user(%{username: "knewter", name: "Josh Adams", email: "josh@dailydrip.com"})
+      {:ok, user} =
+        Forums.create_user(%{
+          username: "knewter",
+          name: "Josh Adams",
+          email: "josh@dailydrip.com"
+        })
 
       session
       |> log_in_as(user)
@@ -30,7 +35,6 @@ defmodule FirestormWeb.Feature.CategoriesTest do
       |> assert_has(Show.category_title("Erlang"))
     end
   end
-
 
   test "categories are listed", %{session: session} do
     import Page.Category.Index
@@ -46,7 +50,10 @@ defmodule FirestormWeb.Feature.CategoriesTest do
   test "category show shows posts count for threads", %{session: session} do
     import Page.Category.Show
     {:ok, [elixir, _elm]} = create_categories(["Elixir", "Elm"])
-    {:ok, user} = Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
+    {:ok, user} =
+      Forums.create_user(%{username: "knewter", email: "josh@dailydrip.com", name: "Josh Adams"})
+
     otp_is_cool_parameters = %{title: "OTP is cool", body: "Don't you think?"}
     {:ok, otp_is_cool} = Forums.create_thread(elixir, user, otp_is_cool_parameters)
     {:ok, _post} = Forums.create_post(otp_is_cool, user, %{body: "Yup"})
@@ -75,6 +82,7 @@ defmodule FirestormWeb.Feature.CategoriesTest do
         {:ok, category} = Forums.create_category(%{title: title})
         category
       end
+
     {:ok, categories}
   end
 end

@@ -1,95 +1,73 @@
 # This file is responsible for configuring your application
-# and its dependencies with the aid of the Mix.Config module.
+# and its dependencies with the aid of the Config module.
 #
 # This configuration file is loaded before any dependency and
 # is restricted to this project.
-use Mix.Config
+import Config
 
 # General application configuration
 config :firestorm_web,
-  ecto_repos: [FirestormWeb.Repo]
+  ecto_repos: [FirestormWeb.Repo],
+  generators: [timestamp_type: :naive_datetime_usec]
 
-# Should we send instrumentation to PryIn?
-config :firestorm_web, use_pryin: false
+# Ecto 2 stored microsecond timestamps; keep doing so for new migrations.
+config :firestorm_web, FirestormWeb.Repo, migration_timestamps: [type: :naive_datetime_usec]
 
 # Start notification server in app start
 config :firestorm_web, notifications_enabled: true
 
-config :ex_admin,
-  repo: FirestormWeb.Repo,
-  module: FirestormWeb.Web,
-  skin_color: :red,
-  modules: [
-    FirestormWeb.ExAdmin.Dashboard,
-    FirestormWeb.ExAdmin.Forums.Category,
-    FirestormWeb.ExAdmin.Forums.Thread,
-    FirestormWeb.ExAdmin.Forums.Post
-  ],
-  field_type_matching: %{
-    FirestormWeb.Forums.Slugs.CategoryTitleSlug.Type => :string,
-    FirestormWeb.Forums.Slugs.ThreadTitleSlug.Type => :string
-  }
-
-# Path prefixes from which to serve web assets (i.e. webpack dev mode path)
+# Path prefixes from which to serve web assets
 config :firestorm_web,
-  js_path_prefix: "http://localhost:8081",
-  css_path_prefix: "http://localhost:8081",
-  image_path_prefix: "http://localhost:8081/static"
+  js_path_prefix: "",
+  css_path_prefix: "",
+  image_path_prefix: ""
 
 # Configures the endpoint
 config :firestorm_web, FirestormWeb.Web.Endpoint,
   url: [host: "localhost"],
-  secret_key_base: "Q1bBtoEs8F2+MsssVU8zHXvhJBVFDI/4EFEINldDXBlVsBkNr30gi4WIGNwds+YO",
-  render_errors: [view: FirestormWeb.Web.ErrorView, accepts: ~w(html json)],
-  pubsub: [name: FirestormWeb.PubSub,
-           adapter: Phoenix.PubSub.PG2],
-  instrumenters: []
+  adapter: Bandit.PhoenixAdapter,
+  render_errors: [
+    formats: [html: FirestormWeb.Web.ErrorView, json: FirestormWeb.Web.ErrorView],
+    layout: false
+  ],
+  pubsub_server: FirestormWeb.PubSub
 
 # Configures Elixir's Logger
-config :logger, :console,
+config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
   metadata: [:request_id]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
 
 # Configures Ueberauth for OAuth stuff
 config :ueberauth, Ueberauth,
   providers: [
     github: {Ueberauth.Strategy.Github, [default_scope: ""]},
-    identity: {Ueberauth.Strategy.Identity, [
-      callback_methods: ["POST"]
-    ]},
+    identity: {Ueberauth.Strategy.Identity, [callback_methods: ["POST"]]}
   ]
 
-config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-  client_id: System.get_env("GITHUB_CLIENT_ID"),
-  client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.LocalAdapter
 
-config :firestorm_web, FirestormWeb.Mailer,
-  adapter: Bamboo.SendGridAdapter,
-  api_key: System.get_env("SENDGRID_API_KEY")
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.28.2",
+  firestorm_web: [
+    args:
+      ~w(js/app.js --bundle --target=es2020 --outdir=../priv/static/js --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
 
-# Configuration for AWS integration
-config :firestorm_web, :aws,
-  access_key_id: System.get_env("AWS_ACCESS_KEY_ID"),
-  secret_access_key: System.get_env("AWS_SECRET_ACCESS_KEY"),
-  bucket: System.get_env("AWS_S3_BUCKET"),
-  region: System.get_env("AWS_S3_REGION")
-
-config :scrivener_html,
-  routes_helper: FirestormWeb.Web.Router.Helpers,
-  view_style: :bootstrap_v4
-
-config :pryin,
-  api_key: System.get_env("PRYIN_API_KEY"),
-  otp_app: :firestorm,
-  enabled: false,
-  env: :dev
-
-config :firestorm_web, FirestormWeb.Repo,
-  loggers: [PryIn.EctoLogger, Ecto.LogEntry]
+# Configure dart_sass (the version is required)
+config :dart_sass,
+  version: "1.107.1",
+  default: [
+    args:
+      ~w(--load-path=node_modules --silence-deprecation=import --silence-deprecation=global-builtin css/app.scss ../priv/static/css/app.css),
+    cd: Path.expand("../assets", __DIR__)
+  ]
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
-import_config "#{Mix.env}.exs"
-
-config :xain, :after_callback, {Phoenix.HTML, :raw}
-
+import_config "#{config_env()}.exs"

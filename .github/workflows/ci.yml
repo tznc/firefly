@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: "1.20.5"
+  OTP_VERSION: "29.1.2"
+  NODE_VERSION: "26.13.0"
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: assets/package-lock.json
+
+      - name: Cache deps and _build
+        uses: actions/cache@v6
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - run: mix deps.get
+      - run: mix deps.unlock --check-unused
+      - run: mix compile --warnings-as-errors
+      - run: mix format --check-formatted
+      - run: mix credo
+      - run: mix hex.audit
+
+      - name: Build assets
+        run: |
+          npm ci --prefix assets
+          mix assets.setup
+          mix assets.build
+
+      - name: Run tests (including browser tests)
+        env:
+          CHROMEDRIVER_PATH: ${{ env.CHROMEWEBDRIVER }}/chromedriver
+        run: mix test --include feature
+
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Cache deps, _build and PLTs
+        uses: actions/cache@v6
+        with:
+          path: |
+            deps
+            _build
+            priv/plts
+          key: dialyzer-dev-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: dialyzer-dev-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - run: mix deps.get
+        env:
+          MIX_ENV: dev
+      - run: mkdir -p priv/plts
+      - run: mix dialyzer --format github
+        env:
+          MIX_ENV: dev

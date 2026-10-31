@@ -174,7 +174,8 @@ defmodule FirestormWeb.Forums do
         p in fragment(
           "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
           t.id
-        )
+        ),
+        on: true
       )
       |> order_by([t, p], desc: p.inserted_at)
       |> where([t, p], t.category_id in ^Enum.map(categories, & &1.id))
@@ -318,7 +319,8 @@ defmodule FirestormWeb.Forums do
       p in fragment(
         "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
         t.id
-      )
+      ),
+      on: true
     )
     |> order_by([t, p], desc: p.inserted_at)
     |> where(category_id: ^category.id)
@@ -338,22 +340,20 @@ defmodule FirestormWeb.Forums do
       first_post = Enum.at(thread.posts, 0)
       posts_count = length(thread.posts)
 
-      completely_read? =
-        if user do
-          # FIXME: This is insanely inefficient, lol?
-          thread.posts
-          |> Enum.all?(fn post -> post |> viewed_by?(user) end)
-        else
-          false
-        end
-
-      %Thread{
+      %{
         thread
         | first_post: first_post,
           posts_count: posts_count,
-          completely_read?: completely_read?
+          completely_read?: completely_read?(thread, user)
       }
     end)
+  end
+
+  defp completely_read?(_thread, nil), do: false
+
+  defp completely_read?(thread, user) do
+    # FIXME: This is insanely inefficient, lol?
+    Enum.all?(thread.posts, &viewed_by?(&1, user))
   end
 
   @doc """
@@ -557,10 +557,6 @@ defmodule FirestormWeb.Forums do
   end
 
   def login_or_register_from_identity(%{username: username, password: password}) do
-    import Comeonin.Bcrypt, only: [checkpw: 2]
-    alias FirestormWeb.Web.Endpoint
-    require Endpoint
-
     case get_user_by_username(username) do
       nil ->
         # No user, let's register one!
@@ -572,23 +568,14 @@ defmodule FirestormWeb.Forums do
         })
 
       user ->
-        # We'll check the password with checkpw against the user's stored
-        # password hash
-        Endpoint.instrument(
-          :pryin,
-          %{key: "Forums.login_or_register_from_identity#checkpw"},
-          fn ->
-            case checkpw(password, user.password_hash) do
-              true ->
-                # Everything checks out, success
-                {:ok, user}
-
-              _ ->
-                # User existed, we checked the password, but no dice
-                {:error, "No user found with that username or password"}
-            end
-          end
-        )
+        # We'll check the password against the user's stored password hash
+        if is_binary(user.password_hash) and Bcrypt.verify_pass(password, user.password_hash) do
+          # Everything checks out, success
+          {:ok, user}
+        else
+          # User existed, we checked the password, but no dice
+          {:error, "No user found with that username or password"}
+        end
     end
   end
 
@@ -612,21 +599,21 @@ defmodule FirestormWeb.Forums do
       |> Map.put(:thread_id, thread.id)
       |> Map.put(:user_id, user.id)
 
-    changeset = Post.changeset(%Post{}, attrs)
-    {:ok, post} = Repo.insert(changeset)
-    :ok = Notifications.post_created(post)
+    with {:ok, post} <- Repo.insert(Post.changeset(%Post{}, attrs)) do
+      :ok = Notifications.post_created(post)
 
-    post = Repo.preload(post, [:thread, :user])
+      post = Repo.preload(post, [:thread, :user])
 
-    payload = %ReplenishResponse{
-      categories: [],
-      threads: [post.thread],
-      users: [post.user],
-      posts: [post]
-    }
+      payload = %ReplenishResponse{
+        categories: [],
+        threads: [post.thread],
+        users: [post.user],
+        posts: [post]
+      }
 
-    :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
-    {:ok, post}
+      :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
+      {:ok, post}
+    end
   end
 
   @doc """
@@ -724,7 +711,7 @@ defmodule FirestormWeb.Forums do
     |> Repo.aggregate(:count, :id)
   end
 
-  defp watch_count(watchable, user = %User{}) do
+  defp watch_count(watchable, %User{} = user) do
     watchable
     |> watches()
     |> where([f], f.user_id == ^user.id)
@@ -744,7 +731,8 @@ defmodule FirestormWeb.Forums do
       p in fragment(
         "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
         t.id
-      )
+      ),
+      on: true
     )
     |> order_by([t, p], desc: p.inserted_at)
     |> select([t], t)
@@ -778,7 +766,8 @@ defmodule FirestormWeb.Forums do
       p in fragment(
         "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
         t.id
-      )
+      ),
+      on: true
     )
     |> where([t], t.id in ^thread_ids)
     |> order_by([t, p], desc: p.inserted_at)
@@ -818,7 +807,7 @@ defmodule FirestormWeb.Forums do
     |> Repo.aggregate(:count, :id)
   end
 
-  defp view_count(viewable, user = %User{}) do
+  defp view_count(viewable, %User{} = user) do
     viewable
     |> views()
     |> where([f], f.user_id == ^user.id)
@@ -867,9 +856,9 @@ defmodule FirestormWeb.Forums do
     %Post{post | oembeds: oembeds}
   end
 
-  defp generate_api_token(), do: UUID.uuid4()
+  defp generate_api_token(), do: Ecto.UUID.generate()
 
-  def is_admin?(%User{} = user) do
+  def admin?(%User{} = user) do
     user =
       user
       |> Repo.preload(:roles)

@@ -20,7 +20,7 @@ defmodule FirestormWeb.Forums.User do
     has_many(:role_memberships, RoleMembership)
     many_to_many(:roles, Role, join_through: RoleMembership, on_replace: :delete)
 
-    timestamps()
+    timestamps(type: :naive_datetime_usec)
   end
 
   def changeset(%__MODULE__{} = user, attrs \\ %{}) do
@@ -47,7 +47,7 @@ defmodule FirestormWeb.Forums.User do
   def add_roles(changeset, params) do
     import Ecto.Query
 
-    if Enum.count(Map.get(params, :roles, [])) > 0 do
+    if Map.get(params, :roles, []) != [] do
       ids = params[:roles]
       # FIXME: I don't love going out to the repo here
       roles = FirestormWeb.Repo.all(from(r in Role, where: r.id in ^ids))
@@ -78,7 +78,7 @@ defmodule FirestormWeb.Forums.User do
     case changeset do
       %Ecto.Changeset{valid?: true, changes: %{password: pass}} ->
         changeset
-        |> put_change(:password_hash, Comeonin.Bcrypt.hashpwsalt(pass))
+        |> put_change(:password_hash, Bcrypt.hash_pwd_salt(pass))
 
       _ ->
         changeset

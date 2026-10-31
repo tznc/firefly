@@ -19,7 +19,7 @@ defmodule FirestormWeb.Web.ViewHelpers do
   end
 
   def short_date(date) do
-    Timex.format!(date, "{Mshort} {D}, '{YY}")
+    Calendar.strftime(date, "%b %-d, '%y")
   end
 
   # Determine the hash of this category and produce a color class

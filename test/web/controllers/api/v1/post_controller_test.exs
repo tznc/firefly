@@ -1,5 +1,6 @@
 defmodule FirestormWeb.Web.Api.V1.PostControllerTest do
   use FirestormWeb.Web.ConnCase
+
   alias FirestormWeb.{
     Markdown,
     Forums
@@ -7,12 +8,15 @@ defmodule FirestormWeb.Web.Api.V1.PostControllerTest do
 
   test "POST /", %{conn: conn} do
     {:ok, elixir} = Forums.create_category(%{title: "Elixir"})
+
     {:ok, bob} =
       Forums.login_or_register_from_identity(%{username: "bob", password: "password"})
-    {:ok, otp_is_cool} = Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
+
+    {:ok, otp_is_cool} =
+      Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
 
     post = %{
-      "body" => "this is **neat**",
+      "body" => "this is **neat**"
     }
 
     conn =

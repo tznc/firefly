@@ -9,7 +9,7 @@ import {
   parse
 } from "http-client";
 
-import config from "config";
+import config from "./config";
 
 const commonStack = createStack(
   base(config.apiBaseUrl),

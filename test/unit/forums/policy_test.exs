@@ -9,9 +9,11 @@ defmodule FirestormWeb.Forums.PolicyTest do
     test "when current_user is some other user" do
       assert {:error, :unauthorized} = Policy.authorize(:edit_user, @alice, %{user: @bob})
     end
+
     test "when current_user is the user in question" do
       assert :ok = Policy.authorize(:edit_user, @alice, %{user: @alice})
     end
+
     test "when current_user is nil" do
       assert {:error, :unauthenticated} = Policy.authorize(:edit_user, nil, %{user: @bob})
     end

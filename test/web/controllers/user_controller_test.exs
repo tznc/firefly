@@ -4,7 +4,11 @@ defmodule FirestormWeb.Web.UserControllerTest do
   alias FirestormWeb.Forums
 
   @create_attrs %{email: "some email", name: "some name", username: "some username"}
-  @update_attrs %{email: "some updated email", name: "some updated name", username: "some updated username"}
+  @update_attrs %{
+    email: "some updated email",
+    name: "some updated name",
+    username: "some updated username"
+  }
   @invalid_attrs %{email: nil, name: nil, username: nil}
 
   def fixture(:user) do
@@ -22,6 +26,7 @@ defmodule FirestormWeb.Web.UserControllerTest do
 
   test "updates chosen user and redirects when data is valid", %{conn: conn} do
     user = fixture(:user)
+
     conn =
       conn
       |> log_in_as(user)
