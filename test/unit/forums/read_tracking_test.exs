@@ -26,8 +26,12 @@ defmodule FirestormWeb.Forums.ReadTrackingTest do
 
   defp find(threads, %Thread{id: id}), do: Enum.find(threads, &(&1.id == id))
 
-  test "a never-opened thread is new and fully unread", %{reader: reader, thread: thread} do
-    reply(thread, reader, "second")
+  test "a never-opened thread is new and fully unread", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    reply(thread, author, "second")
     listed = find(Forums.latest_threads(reader), thread)
 
     assert listed.new?
@@ -77,6 +81,47 @@ defmodule FirestormWeb.Forums.ReadTrackingTest do
     listed = find(Forums.latest_threads(nil), thread)
     refute listed.new?
     assert listed.unread_count == 0
+    # Nothing is "read" for anonymous visitors
+    refute listed.completely_read?
+  end
+
+  test "authors have read their own thread and posts, however they posted", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    listed = find(Forums.latest_threads(author), thread)
+    refute listed.new?
+    assert listed.completely_read?
+
+    {:ok, _} = Forums.mark_thread_read(reader, thread)
+    reply(thread, author, "a reply sent by email or the API")
+    reply(thread, reader, "my own reply")
+
+    assert Forums.unread_threads(reader) == []
+    assert find(Forums.unread_threads(author), thread).unread_count == 1
+  end
+
+  test "threads older than the New window aren't flagged new", %{reader: reader, thread: thread} do
+    Repo.update_all(from(t in Thread, where: t.id == ^thread.id),
+      set: [inserted_at: ~N[2020-01-01 00:00:00]]
+    )
+
+    listed = find(Forums.latest_threads(reader), thread)
+    refute listed.new?
+    assert listed.unread_count == 1
+  end
+
+  test "category lists are ordered by latest activity", %{
+    category: category,
+    author: author,
+    thread: older
+  } do
+    {:ok, newer} = Forums.create_thread(category, author, %{title: "Newer", body: "1"})
+    assert Enum.map(Forums.recent_threads(category), & &1.id) == [newer.id, older.id]
+
+    reply(older, author, "bump")
+    assert Enum.map(Forums.recent_threads(category), & &1.id) == [older.id, newer.id]
   end
 
   test "top ranks threads by posts in the period", %{

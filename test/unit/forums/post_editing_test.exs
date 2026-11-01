@@ -57,6 +57,33 @@ defmodule FirestormWeb.Forums.PostEditingTest do
     assert first.diff == [del: "first", ins: "second", eq: " draft"]
   end
 
+  test "an edit from a stale copy is refused, keeping the other edit", %{
+    author: author,
+    post: stale
+  } do
+    admin = admin_fixture()
+    {:ok, _} = Forums.update_post(stale, admin, %{body: "moderated"})
+
+    assert {:error, :edited_elsewhere} = Forums.update_post(stale, author, %{body: "mine"})
+    assert Repo.get!(FirestormWeb.Forums.Post, stale.id).body == "moderated"
+    assert [%PostRevision{body: "first draft"}] = Repo.all(PostRevision)
+
+    # Starting from the current version works, and records what it replaced
+    current = Repo.get!(FirestormWeb.Forums.Post, stale.id)
+    assert {:ok, _} = Forums.update_post(current, author, %{body: "mine"})
+    assert ["first draft", "moderated"] = Enum.map(Repo.all(PostRevision), & &1.body)
+  end
+
+  test "edits are pushed to the store channel too", %{author: author, post: post} do
+    FirestormWeb.Web.Endpoint.subscribe("threads:#{post.thread_id}")
+    {:ok, _} = Forums.update_post(post, author, %{body: "second draft"})
+
+    assert_receive %Phoenix.Socket.Broadcast{
+      event: "update",
+      payload: %{posts: [%{body: "second draft"}]}
+    }
+  end
+
   test "word diffs keep whitespace and line breaks" do
     assert Diff.words("a\nb c", "a\nb d") == [eq: "a\nb ", del: "c", ins: "d"]
     assert Diff.words("", "new") == [ins: "new"]
