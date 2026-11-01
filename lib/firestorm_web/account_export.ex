@@ -8,6 +8,12 @@ defmodule FirestormWeb.AccountExport do
   Other people appear only by public username: no one else's email, name,
   messages or post bodies. (Notification bodies, which quote other people's
   posts and messages, are left out for that reason.)
+
+  Nor does it show what the user may no longer read (see
+  `FirestormWeb.Forums.Policy`): their posts and threads in a category
+  they've lost access to are theirs and stay, but without the titles of
+  other people's threads or of the category; notifications and levels for
+  such threads and categories are left out.
   """
 
   import Ecto.Query
@@ -21,6 +27,7 @@ defmodule FirestormWeb.AccountExport do
     ConversationParticipant,
     Message,
     Notification,
+    Policy,
     Post,
     PostLike,
     PostRevision,
@@ -69,11 +76,12 @@ defmodule FirestormWeb.AccountExport do
     Post
     |> where([p], p.user_id == ^user.id)
     |> join(:inner, [p], t in assoc(p, :thread))
+    |> join(:left, [p, t], r in subquery(readable_thread_ids(user)), on: r.id == t.id)
     |> order_by([p], asc: p.id)
-    |> select([p, t], %{
+    |> select([p, t, r], %{
       id: p.id,
       thread_id: p.thread_id,
-      thread_title: t.title,
+      thread_title: fragment("CASE WHEN ? IS NULL THEN NULL ELSE ? END", r.id, t.title),
       body: p.body,
       inserted_at: p.inserted_at,
       edited_at: p.edited_at,
@@ -95,12 +103,13 @@ defmodule FirestormWeb.AccountExport do
     Thread
     |> join(:inner, [t], f in subquery(first_posts), on: f.thread_id == t.id)
     |> join(:inner, [t], c in Category, on: c.id == t.category_id)
+    |> join(:left, [t, f, c], r in subquery(readable_category_ids(user)), on: r.id == c.id)
     |> where([t, f], f.user_id == ^user.id)
     |> order_by([t], asc: t.id)
-    |> select([t, f, c], %{
+    |> select([t, f, c, r], %{
       id: t.id,
       title: t.title,
-      category: c.title,
+      category: fragment("CASE WHEN ? IS NULL THEN NULL ELSE ? END", r.id, c.title),
       inserted_at: t.inserted_at
     })
     |> Repo.all()
@@ -118,6 +127,11 @@ defmodule FirestormWeb.AccountExport do
   defp notifications(user) do
     Notification
     |> where([n], n.user_id == ^user.id)
+    |> where(
+      [n],
+      not is_nil(n.conversation_id) or n.kind in ^Notification.threadless_kinds() or
+        n.thread_id in subquery(from(r in subquery(readable_thread_ids(user)), select: r.id))
+    )
     |> order_by(asc: :id)
     |> select(
       [n],
@@ -193,6 +207,8 @@ defmodule FirestormWeb.AccountExport do
           from(w in "forums_threads_watches",
             join: t in Thread,
             on: t.id == w.assoc_id,
+            join: r in subquery(readable_thread_ids(user)),
+            on: r.id == t.id,
             where: w.user_id == ^user.id,
             order_by: w.assoc_id,
             select: %{thread_id: t.id, thread_title: t.title, level: w.level}
@@ -202,6 +218,7 @@ defmodule FirestormWeb.AccountExport do
         CategoryWatch
         |> where([w], w.user_id == ^user.id)
         |> join(:inner, [w], c in Category, on: c.id == w.assoc_id)
+        |> join(:inner, [w, c], r in subquery(readable_category_ids(user)), on: r.id == c.id)
         |> order_by([w, c], asc: c.title)
         |> select([w, c], %{category: c.title, level: w.level})
         |> Repo.all(),
@@ -213,6 +230,15 @@ defmodule FirestormWeb.AccountExport do
         |> select([w, t], %{tag: t.name, level: w.level})
         |> Repo.all()
     }
+  end
+
+  defp readable_thread_ids(user) do
+    query = from(t in Thread, as: :thread, select: %{id: t.id})
+    Policy.readable_threads(query, user)
+  end
+
+  defp readable_category_ids(user) do
+    Category |> select([c], %{id: c.id}) |> Policy.readable_categories(user)
   end
 
   defp read_positions(user) do

@@ -18,6 +18,10 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
       nil ->
         conn |> put_status(:not_found) |> json(%{"error" => "Thread not found"})
 
+      # A thread the user can't read doesn't exist, as far as they know.
+      {:error, :not_found} ->
+        conn |> put_status(:not_found) |> json(%{"error" => "Thread not found"})
+
       {:error, :closed} ->
         conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(:closed)})
 

@@ -10,7 +10,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
 
   @impl true
   def mount(%{"category_id" => category_id}, _session, socket) do
-    category = Forums.get_category!(category_id)
+    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
 
     {:ok,
      socket

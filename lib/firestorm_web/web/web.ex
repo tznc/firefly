@@ -28,6 +28,8 @@ defmodule FirestormWeb.Web do
     quote do
       use Phoenix.Channel
       use Gettext, backend: FirestormWeb.Web.Gettext
+
+      import FirestormWeb.Web.Authorization, only: [can?: 3]
     end
   end
 

@@ -73,7 +73,10 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
-  @doc "A category badge, colored from the category's slug."
+  @doc """
+  A category badge, colored from the category's slug, with a lock if it's
+  restricted (see `FirestormWeb.Forums.mark_restricted/1`).
+  """
   attr :category, :any, required: true
 
   def category_badge(assigns) do
@@ -83,8 +86,20 @@ defmodule FirestormWeb.Web.ForumComponents do
       class="badge badge-sm border-0 font-medium text-white"
       style={"background-color: #{category_color(@category)}"}
     >
-      {@category.title}
+      <.lock :if={Map.get(@category, :restricted)} class="size-3" />{@category.title}
     </.link>
+    """
+  end
+
+  @doc "The lock shown on restricted categories (only their members see them)."
+  attr :class, :string, default: "size-4"
+
+  def lock(assigns) do
+    ~H"""
+    <span class="restricted-lock" title="Restricted: only some groups can see this">
+      <.icon name="hero-lock-closed" class={["opacity-70", @class]} />
+      <span class="sr-only">(restricted)</span>
+    </span>
     """
   end
 
@@ -334,7 +349,8 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :thread, :any, required: true
   attr :headline, :boolean, default: false, doc: "show the thread title instead of the author"
   attr :can_edit, :boolean, default: false
-  attr :refs, :map, default: nil, doc: "`FirestormWeb.Mentions.refs/1` of the page's posts"
+  attr :viewer, :any, default: nil, doc: "the current user, to link categories they may read"
+  attr :refs, :map, default: nil, doc: "`FirestormWeb.Mentions.refs/2` of the page's posts"
   slot :actions
 
   def post(assigns) do
@@ -385,7 +401,7 @@ defmodule FirestormWeb.Web.ForumComponents do
             </div>
           </div>
         </header>
-        <.markdown id={"post-#{@post.id}-body"} body={@post.body} refs={@refs} />
+        <.markdown id={"post-#{@post.id}-body"} body={@post.body} viewer={@viewer} refs={@refs} />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
         <footer class="flex items-center justify-end gap-1">
           {render_slot(@actions)}
@@ -509,12 +525,13 @@ defmodule FirestormWeb.Web.ForumComponents do
   @doc "Markdown rendered (and sanitized) to HTML, with code highlighting."
   attr :id, :string, required: true
   attr :body, :string, required: true
+  attr :viewer, :any, default: nil, doc: "who reads it (see `FirestormWeb.Markdown.render/2`)"
   attr :refs, :map, default: nil, doc: "see `FirestormWeb.Markdown.render/2`"
 
   def markdown(assigns) do
     ~H"""
     <div id={@id} phx-hook="Highlight" class="post-body prose prose-sm max-w-none">
-      {Phoenix.HTML.raw(Markdown.render(@body, @refs))}
+      {Phoenix.HTML.raw(Markdown.render(@body, @refs || @viewer))}
     </div>
     """
   end

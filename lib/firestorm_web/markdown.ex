@@ -15,9 +15,11 @@ defmodule FirestormWeb.Markdown do
   `FirestormWeb.Quote`) get a `quote` class and an attribution header.
 
   `@username` mentions and `#category-slug` references that name an existing
-  user or category link to them (see `FirestormWeb.Mentions`). Rendering
-  several posts, pass `Mentions.refs/1` of all their bodies to `render/2` so
-  the names are looked up once.
+  user or category link to them (see `FirestormWeb.Mentions`); a restricted
+  category only links for a `viewer` who may read it (without one, as in
+  emails and the API, only categories everyone can read link). Rendering
+  several posts, pass `Mentions.refs/2` of all their bodies to `render/2`
+  instead of the viewer, so the names are looked up once.
 
   Raw HTML is allowed in the input, but the output is always run through an
   allow-list sanitizer, so scripts, event handlers and `javascript:` URLs are
@@ -47,15 +49,15 @@ defmodule FirestormWeb.Markdown do
   @doc false
   def options, do: @options
 
-  @spec render(String.t() | nil, Mentions.refs() | nil) :: String.t()
-  def render(body, refs \\ nil)
+  @spec render(String.t() | nil, Mentions.refs() | term) :: String.t()
+  def render(body, refs_or_viewer \\ nil)
 
-  def render(nil, _refs), do: ""
+  def render(nil, _refs_or_viewer), do: ""
 
-  def render(body, refs) when is_binary(body) do
+  def render(body, refs_or_viewer) when is_binary(body) do
     body
     |> Mentions.parse()
-    |> Mentions.link(refs)
+    |> Mentions.link(refs_or_viewer)
     |> MDEx.to_html!(@options)
     # Safe to do after sanitizing: any literal `<pre>` in user text is escaped.
     |> String.replace("<pre>", ~s(<pre class="line-numbers">))

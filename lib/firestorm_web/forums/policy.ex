@@ -12,7 +12,6 @@ defmodule FirestormWeb.Forums.Policy do
       once the post is deleted. (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
     * `:restore_post`, `:view_deleted_posts` - admins
-    * `:view_staff_log`, `:manage_site_settings` - admins
     * `:penalize_user` (silence or suspend; params: the user) - admins, on
       users who aren't admins
     * `:lift_penalty` (params: the user) - admins, on anyone (a penalized
@@ -24,19 +23,28 @@ defmodule FirestormWeb.Forums.Policy do
       participants, until they leave. Nobody else, admins included.
     * `:add_participants` - participants who started the conversation, and
       admin participants
-    * `:view_thread` - everyone, members or not (the one place to restrict
-      who can read a thread, e.g. for private categories; notifications such
-      as mentions check it). `readable_threads/2` is its query counterpart,
-      for lists such as search results: keep the two in step.
+    * `:view_staff_log`, `:manage_site_settings`, `:manage_groups` - admins
+    * `:view_category`, `:view_thread` (in its category) - everyone, members
+      or not, unless the category is restricted to roles (groups): then
+      members of one of those roles, and admins. A subcategory also needs its
+      parent's roles, if the parent is restricted. Every way of reading a
+      thread (pages, lists, search, notifications, email, the API) goes
+      through these rules or their query counterparts, `readable_threads/2`
+      and `readable_categories/2`: keep them in step.
   """
 
   @behaviour Bodyguard.Policy
 
-  alias FirestormWeb.{Forums, Messages, SiteSettings}
-  alias FirestormWeb.Forums.{Conversation, Post, Thread, User}
+  import Ecto.Query
+
+  alias FirestormWeb.{Forums, Messages, Repo, SiteSettings}
+  alias FirestormWeb.Forums.{Category, Conversation, Post, Role, RoleMembership, Thread, User}
 
   @impl true
-  def authorize(:view_thread, _user, %Thread{}), do: :ok
+  def authorize(:view_thread, user, %Thread{category_id: category_id}),
+    do: visible(user, category_id)
+
+  def authorize(:view_category, user, %Category{id: id}), do: visible(user, id)
 
   def authorize(_action, nil, _params), do: {:error, :unauthenticated}
 
@@ -86,7 +94,13 @@ defmodule FirestormWeb.Forums.Policy do
   end
 
   def authorize(action, %User{} = user, _params)
-      when action in [:restore_post, :view_deleted_posts, :view_staff_log, :manage_site_settings],
+      when action in [
+             :restore_post,
+             :view_deleted_posts,
+             :view_staff_log,
+             :manage_site_settings,
+             :manage_groups
+           ],
       do: admin(user)
 
   # Catch-all: deny everything else
@@ -103,10 +117,127 @@ defmodule FirestormWeb.Forums.Policy do
 
   defp admin(user), do: if(Forums.admin?(user), do: :ok, else: {:error, :unauthorized})
 
+  defp visible(user, category_id) do
+    if category_visible?(user, category_id), do: :ok, else: {:error, :unauthorized}
+  end
+
+  defp category_visible?(user, category_id) do
+    staff?(user) or
+      not Repo.exists?(where(hidden_category_ids(user), [c], c.id == ^category_id))
+  end
+
+  defp staff?(nil), do: false
+  defp staff?(%User{} = user), do: Forums.admin?(user)
+
+  @doc """
+  The `users` who may read `thread`, as the `:view_thread` rule decides for
+  each, in a query or two however many users there are (for the
+  notification fan-out). A thread in an unrestricted category: all of them.
+  """
+  def thread_readers(%Thread{category_id: category_id}, users) do
+    restricted =
+      Repo.all(
+        from(cr in "forums_category_roles",
+          join: c in Category,
+          on: c.id == ^category_id and (cr.category_id == c.id or cr.category_id == c.parent_id),
+          distinct: true,
+          select: cr.category_id
+        )
+      )
+
+    if restricted == [] or users == [] do
+      users
+    else
+      ids = Enum.map(users, & &1.id)
+
+      query =
+        from(u in User,
+          as: :user,
+          where: u.id in ^ids,
+          where: ^readers_condition(restricted),
+          select: u.id
+        )
+
+      readers = MapSet.new(Repo.all(query))
+
+      Enum.filter(users, &MapSet.member?(readers, &1.id))
+    end
+  end
+
+  # Admins, or members of one of the roles of every restricted category on
+  # the way (the category and its parent).
+  defp readers_condition(restricted) do
+    admin =
+      from(m in RoleMembership,
+        join: r in Role,
+        on: r.id == m.role_id,
+        where: m.user_id == parent_as(:user).id and r.name == "admin",
+        select: 1
+      )
+
+    member =
+      Enum.reduce(restricted, dynamic(true), fn category_id, acc ->
+        in_role =
+          from(m in RoleMembership,
+            join: cr in "forums_category_roles",
+            on: cr.role_id == m.role_id,
+            where: m.user_id == parent_as(:user).id and cr.category_id == ^category_id,
+            select: 1
+          )
+
+        dynamic(^acc and exists(in_role))
+      end)
+
+    dynamic(exists(admin) or ^member)
+  end
+
   @doc """
   Restricts `query` to threads `user` (or nil, a visitor) may read, as the
   `:view_thread` rule does for one thread. The query must bind the thread
-  as `:thread`. Everyone may read every thread for now.
+  as `:thread`.
   """
-  def readable_threads(query, _user), do: query
+  def readable_threads(query, user) do
+    if staff?(user),
+      do: query,
+      else: where(query, [thread: t], t.category_id not in subquery(hidden_category_ids(user)))
+  end
+
+  @doc """
+  Restricts a query of categories (the first binding) to those `user` may
+  read, as the `:view_category` rule does for one.
+  """
+  def readable_categories(query, user) do
+    if staff?(user),
+      do: query,
+      else: where(query, [c], c.id not in subquery(hidden_category_ids(user)))
+  end
+
+  @doc """
+  The ids of the categories closed to `user` (ignoring that admins see
+  everything), as a query: those restricted to roles the user isn't in,
+  and their subcategories. For a visitor (nil), every restricted category.
+  """
+  def hidden_category_ids(user) do
+    member_of =
+      from(cr in "forums_category_roles",
+        where: cr.role_id in subquery(role_ids(user)),
+        select: cr.category_id
+      )
+
+    closed =
+      from(cr in "forums_category_roles",
+        where: cr.category_id not in subquery(member_of),
+        select: cr.category_id
+      )
+
+    from(c in Category,
+      where: c.id in subquery(closed) or c.parent_id in subquery(closed),
+      select: c.id
+    )
+  end
+
+  defp role_ids(nil), do: from(m in RoleMembership, where: false, select: m.role_id)
+
+  defp role_ids(%User{id: user_id}),
+    do: from(m in RoleMembership, where: m.user_id == ^user_id, select: m.role_id)
 end

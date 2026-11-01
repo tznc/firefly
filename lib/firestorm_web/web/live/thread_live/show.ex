@@ -12,12 +12,16 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
+    viewer = socket.assigns.current_user
     thread = Forums.get_thread!(id)
+    # Raises (404) unless the viewer may read the thread where it is now.
+    category = Forums.get_visible_category!(thread.category_id, viewer)
+    thread = Forums.get_visible_thread!(category, id, viewer)
 
     # Links from before a move (notifications, emails, bookmarks) still carry
     # the old category: send them to the thread where it lives now.
     if to_string(thread.category_id) == category_id do
-      mount_thread(Forums.get_category!(category_id), thread, socket)
+      mount_thread(category, thread, socket)
     else
       {:ok, push_navigate(socket, to: ~p"/categories/#{thread.category_id}/threads/#{thread}")}
     end
@@ -37,25 +41,39 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   end
 
   @impl true
+  # Access is checked again before showing anything new: the thread may have
+  # been moved, or its category restricted, since the page opened.
   def handle_info({event, _post}, socket)
       when event in [
              :post_created,
              :post_updated,
              :post_deleted,
              :post_restored
-           ],
-      do: {:noreply, load_thread(socket, socket.assigns.thread)}
+           ] do
+    if can?(socket.assigns.current_user, :view_thread, socket.assigns.thread),
+      do: {:noreply, load_thread(socket, socket.assigns.thread)},
+      else: {:noreply, leave(socket)}
+  end
 
   # Likes are frequent: refresh just that post's likers, not the whole thread.
-  def handle_info({:post_likes_changed, post}, socket),
-    do: {:noreply, refresh_likers(socket, post)}
+  def handle_info({:post_likes_changed, post}, socket) do
+    if can?(socket.assigns.current_user, :view_thread, socket.assigns.thread),
+      do: {:noreply, refresh_likers(socket, post)},
+      else: {:noreply, leave(socket)}
+  end
 
   def handle_info({:thread_updated, thread}, socket) do
-    if thread.category_id == socket.assigns.category.id,
-      do: {:noreply, load_thread(socket, thread)},
-      else:
+    cond do
+      not can?(socket.assigns.current_user, :view_thread, thread) ->
+        {:noreply, leave(socket)}
+
+      thread.category_id == socket.assigns.category.id ->
+        {:noreply, load_thread(socket, thread)}
+
+      true ->
         {:noreply,
          push_navigate(socket, to: ~p"/categories/#{thread.category_id}/threads/#{thread}")}
+    end
   end
 
   def handle_info({:thread_deleted, _thread}, socket) do
@@ -66,6 +84,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   end
 
   def handle_info({_event, _thread}, socket), do: {:noreply, socket}
+
+  defp leave(socket) do
+    socket
+    |> put_flash(:error, "This thread is no longer available.")
+    |> push_navigate(to: ~p"/")
+  end
 
   @impl true
   def handle_event(event, _params, %{assigns: %{current_user: nil}} = socket)
@@ -195,7 +219,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:thread, thread)
     |> assign(:first_post, first_post)
     |> assign(:replies, replies)
-    |> assign(:refs, Mentions.refs(Enum.map(thread.posts, & &1.body)))
+    |> assign(:refs, Mentions.refs(Enum.map(thread.posts, & &1.body), user))
     |> assign(:level, Subscriptions.thread_level(user, thread))
     |> assign(:inherited_level, Subscriptions.inherited_level(user, thread))
     |> assign(:editable_ids, permitted_ids(user, thread, :edit_post))
@@ -207,7 +231,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:can_moderate?, can?(user, :moderate_thread))
     |> assign(
       :categories,
-      if(can?(user, :moderate_thread), do: Forums.list_categories(), else: [])
+      if(can?(user, :moderate_thread), do: Forums.list_categories(user), else: [])
     )
     |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
   end
@@ -343,6 +367,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           <.post
             post={@first_post}
             thread={@thread}
+            viewer={@current_user}
             refs={@refs}
             can_edit={MapSet.member?(@editable_ids, @first_post.id)}
           >
@@ -375,6 +400,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             :if={not Post.deleted?(post) or @admin?}
             post={post}
             thread={@thread}
+            viewer={@current_user}
             refs={@refs}
             can_edit={MapSet.member?(@editable_ids, post.id)}
           >

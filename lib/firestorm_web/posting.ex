@@ -8,7 +8,9 @@ defmodule FirestormWeb.Posting do
   the `:message` limit, so one account can't message crowds. Liking only
   checks penalties (`check(user, :like)`), as do other public writes that
   aren't posts (adding people to a conversation, editing a thread's title or
-  tags, editing one's profile).
+  tags, editing one's profile). Replying also needs the user to be able to
+  read the thread (`:not_found` otherwise, as if it didn't exist): a
+  reply-to address or API call outlives access to a category.
   """
   import Ecto.Query, only: [from: 2]
 
@@ -37,8 +39,17 @@ defmodule FirestormWeb.Posting do
     with :ok <- check(user), do: RateLimit.check_message(user)
   end
 
-  def check(%User{} = user, %FirestormWeb.Forums.Thread{id: thread_id}) do
-    if FirestormWeb.Forums.thread_closed?(thread_id), do: {:error, :closed}, else: check(user)
+  def check(%User{} = user, %FirestormWeb.Forums.Thread{id: thread_id} = thread) do
+    cond do
+      not Bodyguard.permit?(FirestormWeb.Forums, :view_thread, user, thread) ->
+        {:error, :not_found}
+
+      FirestormWeb.Forums.thread_closed?(thread_id) ->
+        {:error, :closed}
+
+      true ->
+        check(user)
+    end
   end
 
   @doc """
@@ -67,6 +78,7 @@ defmodule FirestormWeb.Posting do
   def message({:suspended, until}), do: "Your account is suspended #{Penalties.ends_text(until)}."
 
   def message(:closed), do: "This thread is closed to new replies."
+  def message(:not_found), do: "Thread not found."
   def message(:unconfirmed), do: "Please confirm your email address before posting."
   def message(:rate_limited), do: RateLimit.message()
 end

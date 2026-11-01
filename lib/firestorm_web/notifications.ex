@@ -5,6 +5,9 @@ defmodule FirestormWeb.Notifications do
     * a new thread notifies users watching or tracking its category
     * a new post notifies users watching or tracking the thread (or its
       category)
+    * only users who may read the thread (the `:view_thread` policy) are
+      notified of anything in it: watching a tag or category, or a thread
+      that has since moved, gives no access to restricted categories
     * a new or edited post notifies the users it @mentions (see
       `FirestormWeb.Mentions`), once per post: an edit only notifies users it
       newly mentions. Not the author, users who can't see the thread (the
@@ -30,6 +33,7 @@ defmodule FirestormWeb.Notifications do
     Conversation,
     Message,
     Notification,
+    Policy,
     Post,
     Subscriptions,
     Thread,
@@ -147,9 +151,13 @@ defmodule FirestormWeb.Notifications do
   defp fan_out(kind, thread, post, mentioned_ids) do
     already_read = Forums.users_who_read(thread, post)
 
-    for {user, level} <- Subscriptions.subscribers(thread),
+    subscribers = Subscriptions.subscribers(thread)
+    readers = readers(thread, Enum.map(subscribers, &elem(&1, 0)))
+
+    for {user, level} <- subscribers,
         user.id != post.user_id and user.id not in mentioned_ids and
-          not MapSet.member?(already_read, user.id) do
+          not MapSet.member?(already_read, user.id),
+        MapSet.member?(readers, user.id) do
       {:ok, notification} =
         Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
 
@@ -168,10 +176,13 @@ defmodule FirestormWeb.Notifications do
       |> select([n], n.user_id)
       |> Repo.all()
 
+    mentioned = Mentions.users(post.body)
+    readers = readers(thread, mentioned)
+
     new =
-      for user <- Mentions.users(post.body),
+      for user <- mentioned,
           user.id != post.user_id and user.id not in already,
-          Bodyguard.permit?(Forums, :view_thread, user, thread),
+          MapSet.member?(readers, user.id),
           Subscriptions.effective_thread_level(user, thread) != "muted" do
         {:ok, notification} =
           Forums.notify(user, Notification.for_post("mentioned", thread, post, post.user))
@@ -182,6 +193,11 @@ defmodule FirestormWeb.Notifications do
 
     already ++ new
   end
+
+  # The ids of those of `users` who may read the thread, decided for all of
+  # them at once rather than a :view_thread check (a few queries) each.
+  defp readers(thread, users),
+    do: thread |> Policy.thread_readers(users) |> MapSet.new(& &1.id)
 
   defp maybe_email(%User{} = user, notification, thread, post) do
     if email?(user, notification) do

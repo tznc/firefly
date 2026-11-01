@@ -70,26 +70,25 @@ defmodule FirestormWeb.Mentions do
 
   @doc """
   The users and categories that `bodies` mention, with one query for each, to
-  render them with (see `link/2`).
+  render them with (see `link/2`). Categories `viewer` (nil: anyone) may not
+  read are left out.
   """
-  @spec refs([String.t() | nil]) :: refs
-  def refs(bodies) do
+  @spec refs([String.t() | nil], term) :: refs
+  def refs(bodies, viewer \\ nil) do
     bodies
     |> Enum.reject(&is_nil/1)
     |> Enum.flat_map(&(&1 |> parse() |> texts(@unscanned)))
-    |> texts_refs()
+    |> texts_refs(viewer)
   end
 
   @doc """
   Links the mentions and category references in a parsed document to the
-  user profiles and categories they name, looked up in `refs` (or the
-  database). Unknown names stay plain text.
+  user profiles and categories they name: those in `refs` (see `refs/2`), or
+  looked up for a viewer (nil: anyone). Unknown names, and categories the
+  viewer may not read, stay plain text.
   """
-  @spec link(MDEx.Document.t(), refs | nil) :: MDEx.Document.t()
-  def link(document, refs \\ nil)
-
-  def link(%MDEx.Document{} = document, nil),
-    do: link(document, document |> texts(@unscanned) |> texts_refs())
+  @spec link(MDEx.Document.t(), refs | term) :: MDEx.Document.t()
+  def link(document, refs_or_viewer \\ nil)
 
   def link(%MDEx.Document{} = document, %{users: users, categories: categories}) do
     if users == %{} and categories == %{} do
@@ -101,11 +100,14 @@ defmodule FirestormWeb.Mentions do
     end
   end
 
-  defp texts_refs(texts) do
+  def link(%MDEx.Document{} = document, viewer),
+    do: link(document, document |> texts(@unscanned) |> texts_refs(viewer))
+
+  defp texts_refs(texts, viewer) do
     %{
       users: texts |> names("@") |> Forums.users_by_username(),
       categories:
-        texts |> names("#") |> Enum.map(&String.downcase/1) |> Forums.categories_by_slug()
+        texts |> names("#") |> Enum.map(&String.downcase/1) |> Forums.categories_by_slug(viewer)
     }
   end
 

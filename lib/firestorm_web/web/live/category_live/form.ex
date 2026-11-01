@@ -1,10 +1,13 @@
 defmodule FirestormWeb.Web.CategoryLive.Form do
-  @moduledoc "Creates or edits a category."
+  @moduledoc """
+  Creates or edits a category, including which groups (roles) it's
+  restricted to (see `FirestormWeb.Forums.Policy`).
+  """
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.Forums
+  alias FirestormWeb.{Forums, Groups, Repo}
   alias FirestormWeb.Forums.Category
 
   @impl true
@@ -20,9 +23,10 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
   end
 
   defp apply_action(socket, :new, _params) do
-    category = %Category{}
+    category = %Category{roles: []}
 
     socket
+    |> assign_roles(category)
     |> assign(:page_title, "New Category")
     |> assign(:category, category)
     |> assign(:parents, Forums.parent_category_options(category))
@@ -30,19 +34,30 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
-    category = Forums.get_category!(id)
+    category = id |> Forums.get_category!() |> Repo.preload(:roles)
 
     socket
+    |> assign_roles(category)
     |> assign(:page_title, "Edit #{category.title}")
     |> assign(:category, category)
     |> assign(:parents, Forums.parent_category_options(category))
     |> assign(:form, to_form(Forums.change_category(category)))
   end
 
+  defp assign_roles(socket, category) do
+    socket
+    |> assign(:roles, Enum.map(Groups.list_groups(), &{&1.name, &1.id}))
+    |> assign(:role_ids, Enum.map(category.roles, &to_string(&1.id)))
+  end
+
   @impl true
   def handle_event("validate", %{"category" => params}, socket) do
     changeset = Category.changeset(socket.assigns.category, params)
-    {:noreply, assign(socket, :form, to_form(changeset, action: :validate))}
+
+    {:noreply,
+     socket
+     |> assign(:role_ids, Enum.reject(params["role_ids"] || [], &(&1 == "")))
+     |> assign(:form, to_form(changeset, action: :validate))}
   end
 
   def handle_event("save", %{"category" => params}, socket) do
@@ -101,6 +116,26 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
             placeholder="#3b82f6 (blank: automatic)"
           />
           <.input field={@form[:position]} type="number" label="Position" min="0" />
+        </div>
+        <div>
+          <%!-- The hidden blank lets a submit with nothing selected clear the restriction. --%>
+          <input type="hidden" name="category[role_ids][]" value="" />
+          <.input
+            id="category_role_ids"
+            name="category[role_ids][]"
+            type="select"
+            multiple
+            label="Restricted to groups"
+            class="select h-24 w-full"
+            value={@role_ids}
+            options={@roles}
+          />
+          <p class="-mt-1 text-xs text-base-content/60">
+            <.icon name="hero-lock-closed" class="size-3" />
+            Only members of these groups (and admins) can see the category. None: everyone.
+            A subcategory also needs its parent's groups. Manage groups at
+            <.link navigate={~p"/staff/groups"} class="link">Groups</.link>.
+          </p>
         </div>
         <div class="flex justify-end gap-2">
           <.link navigate={~p"/categories"} class="btn btn-ghost">Cancel</.link>

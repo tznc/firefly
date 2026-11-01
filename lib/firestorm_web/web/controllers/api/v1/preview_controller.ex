@@ -5,6 +5,6 @@ defmodule FirestormWeb.Web.Api.V1.PreviewController do
   def create(conn, %{"post" => post_params}) do
     conn
     |> put_status(201)
-    |> render(:show, html: Markdown.render(post_params["body"]))
+    |> render(:show, html: Markdown.render(post_params["body"], conn.assigns[:current_user]))
   end
 end

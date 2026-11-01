@@ -9,8 +9,8 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
-    category = Forums.get_category!(category_id)
-    thread = Forums.get_thread!(category, id)
+    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Forums.get_visible_thread!(category, id, socket.assigns.current_user)
 
     if can?(socket.assigns.current_user, :update_thread, thread),
       do: mount_form(socket, category, thread),

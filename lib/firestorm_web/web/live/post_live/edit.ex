@@ -17,8 +17,8 @@ defmodule FirestormWeb.Web.PostLive.Edit do
         _session,
         socket
       ) do
-    category = Forums.get_category!(category_id)
-    thread = Forums.get_thread!(category, thread_id)
+    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Forums.get_visible_thread!(category, thread_id, socket.assigns.current_user)
     post = Forums.get_post!(thread, id)
     socket = assign(socket, category: category, thread: thread, post: post)
 
@@ -44,14 +44,17 @@ defmodule FirestormWeb.Web.PostLive.Edit do
 
   def handle_event("save", %{"post" => params}, socket) do
     user = socket.assigns.current_user
-    # The thread may have closed since the page opened.
+    # The thread may have closed, or moved out of the user's reach, since
+    # the page opened.
     thread = Forums.get_thread!(socket.assigns.thread.id)
     socket = assign(socket, :thread, thread)
 
-    with {:can_edit, true} <- {:can_edit, can_edit?(socket)},
+    with {:can_view, true} <- {:can_view, can?(user, :view_thread, thread)},
+         {:can_edit, true} <- {:can_edit, can_edit?(socket)},
          :ok <- Posting.check(user) do
       save(socket, user, params)
     else
+      {:can_view, false} -> {:noreply, leave(socket)}
       {:can_edit, false} -> {:noreply, deny(socket)}
       {:error, reason} -> {:noreply, put_flash(socket, :error, Posting.message(reason))}
     end
@@ -103,6 +106,12 @@ defmodule FirestormWeb.Web.PostLive.Edit do
 
   defp can_edit?(%{assigns: %{current_user: user, post: post, thread: thread}}),
     do: can?(user, :edit_post, %{post: post, thread: thread})
+
+  defp leave(socket) do
+    socket
+    |> put_flash(:error, "This thread is no longer available.")
+    |> push_navigate(to: ~p"/")
+  end
 
   defp deny(socket), do: put_flash(socket, :error, denied_message(socket.assigns.current_user))
 
