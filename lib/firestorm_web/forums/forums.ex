@@ -16,6 +16,7 @@ defmodule FirestormWeb.Forums do
     Post,
     Watch,
     View,
+    ThreadRead,
     Notification,
     OembedExtractor,
     Role,
@@ -197,6 +198,9 @@ defmodule FirestormWeb.Forums do
     User.changeset(user, %{})
   end
 
+  # How long a thread a user has never opened counts as "new".
+  @new_thread_days 14
+
   @doc """
   Returns the list of categories.
 
@@ -232,7 +236,6 @@ defmodule FirestormWeb.Forums do
       |> limit(3)
       |> select([t], t)
       |> Repo.all()
-      |> Repo.preload(posts: from(p in Post, order_by: p.inserted_at, preload: :user))
       |> decorate_threads(user)
 
     initial_threads_map =
@@ -349,7 +352,6 @@ defmodule FirestormWeb.Forums do
   def list_threads(category, user \\ nil) do
     Thread
     |> where([t], t.category_id == ^category.id)
-    |> preload(posts: :user)
     |> Repo.all()
     |> decorate_threads(user)
   end
@@ -367,47 +369,242 @@ defmodule FirestormWeb.Forums do
   """
   def recent_threads(category, user \\ nil) do
     Thread
-    |> join(
-      :left_lateral,
-      [t],
-      p in fragment(
-        "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
-        t.id
-      ),
-      on: true
-    )
-    |> order_by([t, p], desc: p.inserted_at)
     |> where(category_id: ^category.id)
-    |> select([t], t)
+    |> by_last_activity()
     |> Repo.all()
-    |> Repo.preload(posts: from(p in Post, order_by: p.inserted_at, preload: :user))
     |> decorate_threads(user)
   end
 
-  # Decorate a list of threads with:
-  # - first_post
-  # - posts_count
-  # - completely_read?
+  # Decorates threads with list data, in two queries for the whole list:
+  #   - first_post (with its user)
+  #   - posts_count, last_post_at
+  #   - for a user: unread_count, first_unread_post_id, new? (never opened) and
+  #     completely_read?
+  defp decorate_threads([], _user), do: []
+
   defp decorate_threads(threads, user) do
-    threads
-    |> Enum.map(fn thread ->
-      first_post = Enum.at(thread.posts, 0)
-      posts_count = length(thread.posts)
+    ids = Enum.map(threads, & &1.id)
+    stats = thread_stats(ids, user)
+    first_posts = first_posts(ids)
+
+    Enum.map(threads, fn thread ->
+      stat = Map.get(stats, thread.id, %{posts_count: 0, last_post_at: nil, read_post_id: nil})
+      read? = not is_nil(stat[:read_post_id])
+
+      {unread_count, first_unread} =
+        cond do
+          is_nil(user) -> {0, nil}
+          read? -> {stat.unread_count, stat.first_unread_post_id}
+          true -> {stat.posts_count, nil}
+        end
 
       %{
         thread
-        | first_post: first_post,
-          posts_count: posts_count,
-          completely_read?: completely_read?(thread, user)
+        | first_post: Map.get(first_posts, thread.id),
+          posts_count: stat.posts_count,
+          last_post_at: stat.last_post_at,
+          unread_count: unread_count,
+          first_unread_post_id: first_unread,
+          new?: not is_nil(user) and not read? and recent?(thread),
+          # Anonymous viewers have no read state, so nothing counts as read.
+          completely_read?: not is_nil(user) and read? and unread_count == 0
       }
     end)
   end
 
-  defp completely_read?(_thread, nil), do: false
+  # "New" only applies within the same window as the New list, so long-standing
+  # threads a user never opened don't all show the badge.
+  defp recent?(%Thread{inserted_at: inserted_at}),
+    do: NaiveDateTime.compare(inserted_at, new_since()) == :gt
 
-  defp completely_read?(thread, user) do
-    # FIXME: This is insanely inefficient, lol?
-    Enum.all?(thread.posts, &viewed_by?(&1, user))
+  defp new_since, do: NaiveDateTime.add(NaiveDateTime.utc_now(), -@new_thread_days, :day)
+
+  defp thread_stats(ids, user) do
+    user_id = if user, do: user.id, else: -1
+
+    Post
+    |> where([p], p.thread_id in ^ids)
+    |> join(:left, [p], r in ThreadRead, on: r.thread_id == p.thread_id and r.user_id == ^user_id)
+    |> group_by([p], p.thread_id)
+    |> select([p, r], {
+      p.thread_id,
+      %{
+        posts_count: count(p.id),
+        last_post_at: max(p.inserted_at),
+        read_post_id: max(r.last_read_post_id),
+        unread_count: filter(count(p.id), p.id > r.last_read_post_id),
+        first_unread_post_id: filter(min(p.id), p.id > r.last_read_post_id)
+      }
+    })
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  defp first_posts(ids) do
+    Post
+    |> where([p], p.thread_id in ^ids)
+    |> distinct([p], p.thread_id)
+    |> order_by([p], asc: p.thread_id, asc: p.inserted_at, asc: p.id)
+    |> preload(:user)
+    |> Repo.all()
+    |> Map.new(&{&1.thread_id, &1})
+  end
+
+  # Threads ordered by their latest post (most recently active first).
+  defp by_last_activity(query) do
+    query
+    |> join(
+      :left_lateral,
+      [t],
+      lp in fragment(
+        "SELECT max(inserted_at) AS at FROM forums_posts WHERE forums_posts.thread_id = ?",
+        t.id
+      ),
+      on: true,
+      as: :last_post
+    )
+    |> order_by([last_post: lp], desc_nulls_last: lp.at)
+  end
+
+  @doc "Every thread, most recently active first (the Latest list)."
+  def latest_threads(user_or_nil) do
+    Thread
+    |> by_last_activity()
+    |> preload(:category)
+    |> Repo.all()
+    |> decorate_threads(user_or_nil)
+  end
+
+  @doc """
+  Threads started in the last #{@new_thread_days} days that the user has never
+  opened, newest first.
+  """
+  def new_threads(%User{} = user) do
+    since = new_since()
+
+    query = from(t in Thread, as: :thread)
+
+    query
+    |> where([t], t.inserted_at > ^since)
+    |> where(
+      [t],
+      not exists(
+        from(r in ThreadRead,
+          where: r.thread_id == parent_as(:thread).id and r.user_id == ^user.id
+        )
+      )
+    )
+    |> order_by(desc: :inserted_at)
+    |> preload(:category)
+    |> Repo.all()
+    |> decorate_threads(user)
+  end
+
+  @doc "Threads the user has read before that have posts since, most recently active first."
+  def unread_threads(%User{} = user) do
+    query = from(t in Thread, as: :thread)
+
+    query
+    |> join(:inner, [t], r in ThreadRead,
+      as: :read,
+      on: r.thread_id == t.id and r.user_id == ^user.id
+    )
+    |> where(
+      exists(
+        from(p in Post,
+          where:
+            p.thread_id == parent_as(:thread).id and
+              p.id > parent_as(:read).last_read_post_id
+        )
+      )
+    )
+    |> by_last_activity()
+    |> preload(:category)
+    |> Repo.all()
+    |> decorate_threads(user)
+  end
+
+  @top_periods %{
+    "day" => 1,
+    "week" => 7,
+    "month" => 30,
+    "year" => 365,
+    "all" => nil
+  }
+
+  @doc "The periods `top_threads/2` accepts."
+  def top_periods, do: ~w(day week month year all)
+
+  @doc """
+  The most active threads: ranked by how many posts they got in the period
+  (`"day"`, `"week"`, `"month"`, `"year"` or `"all"`).
+  """
+  def top_threads(period, user_or_nil) when is_map_key(@top_periods, period) do
+    posts =
+      case @top_periods[period] do
+        nil ->
+          Post
+
+        days ->
+          since = NaiveDateTime.add(NaiveDateTime.utc_now(), -days, :day)
+          where(Post, [p], p.inserted_at > ^since)
+      end
+
+    ranked =
+      posts
+      |> group_by([p], p.thread_id)
+      |> select([p], %{thread_id: p.thread_id, posts: count(p.id), last_at: max(p.inserted_at)})
+
+    Thread
+    |> join(:inner, [t], r in subquery(ranked), on: r.thread_id == t.id)
+    |> order_by([t, r], desc: r.posts, desc: r.last_at)
+    |> limit(50)
+    |> preload(:category)
+    |> Repo.all()
+    |> decorate_threads(user_or_nil)
+  end
+
+  @doc "The user's read position in a thread, or nil if they've never opened it."
+  def thread_read(%User{id: user_id}, %Thread{id: thread_id}) do
+    Repo.get_by(ThreadRead, user_id: user_id, thread_id: thread_id)
+  end
+
+  def thread_read(nil, _thread), do: nil
+
+  @doc """
+  Marks the thread read up to its newest post. The position only moves forward.
+  """
+  def mark_thread_read(%User{} = user, %Thread{} = thread) do
+    last_post_id =
+      Post |> where([p], p.thread_id == ^thread.id) |> select([p], max(p.id)) |> Repo.one()
+
+    if last_post_id do
+      advance_read(user.id, thread.id, last_post_id)
+    else
+      {:ok, nil}
+    end
+  end
+
+  # Moves a read position forward to `post_id` (never backwards).
+  defp advance_read(user_id, thread_id, post_id) do
+    now = NaiveDateTime.utc_now()
+
+    on_conflict =
+      from(r in ThreadRead,
+        update: [
+          set: [
+            last_read_post_id:
+              fragment("GREATEST(?, EXCLUDED.last_read_post_id)", r.last_read_post_id),
+            updated_at: ^now
+          ]
+        ]
+      )
+
+    Repo.insert(
+      %ThreadRead{user_id: user_id, thread_id: thread_id, last_read_post_id: post_id},
+      on_conflict: on_conflict,
+      conflict_target: [:user_id, :thread_id]
+    )
   end
 
   @doc """
@@ -518,6 +715,8 @@ defmodule FirestormWeb.Forums do
 
     case thread_result do
       {:ok, thread} ->
+        {:ok, _} = mark_thread_read(user, thread)
+
         thread =
           thread
           |> Repo.preload([:category, posts: [:user]])
@@ -704,6 +903,8 @@ defmodule FirestormWeb.Forums do
     changeset = %Post{} |> Post.changeset(attrs) |> SpamGuard.validate_post(user)
 
     with {:ok, post} <- Repo.insert(changeset) do
+      # Authors have read what they wrote, whichever way they posted it.
+      {:ok, _} = advance_read(user.id, thread.id, post.id)
       :ok = Notifications.post_created(post)
 
       post = Repo.preload(post, [:thread, :user])
@@ -829,24 +1030,7 @@ defmodule FirestormWeb.Forums do
     |> Ecto.assoc(:watches)
   end
 
-  def home_threads(user_or_nil) do
-    Thread
-    |> join(
-      :left_lateral,
-      [t],
-      p in fragment(
-        "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
-        t.id
-      ),
-      on: true
-    )
-    |> order_by([t, p], desc: p.inserted_at)
-    |> select([t], t)
-    |> Repo.all()
-    |> Repo.preload(posts: from(p in Post, order_by: p.inserted_at, preload: :user))
-    |> Repo.preload(:category)
-    |> decorate_threads(user_or_nil)
-  end
+  def home_threads(user_or_nil), do: latest_threads(user_or_nil)
 
   def watched_threads(%User{} = user) do
     "forums_threads_watches"
@@ -866,18 +1050,9 @@ defmodule FirestormWeb.Forums do
 
   defp get_decorated_threads(thread_ids, user) do
     Thread
-    |> join(
-      :left_lateral,
-      [t],
-      p in fragment(
-        "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
-        t.id
-      ),
-      on: true
-    )
     |> where([t], t.id in ^thread_ids)
-    |> order_by([t, p], desc: p.inserted_at)
-    |> preload(category: [], posts: [:user])
+    |> by_last_activity()
+    |> preload(:category)
     |> Repo.all()
     |> decorate_threads(user)
   end
