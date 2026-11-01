@@ -137,6 +137,7 @@ defmodule FirestormWeb.Web.ForumComponents do
       label="Tags"
       placeholder={"Up to #{FirestormWeb.Forums.Tag.max_per_thread()} tags, e.g. otp, phoenix"}
       autocomplete="off"
+      phx-debounce="300"
     />
     """
   end

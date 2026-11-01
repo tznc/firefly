@@ -1,7 +1,9 @@
 defmodule FirestormWeb.Web.PostLive.Edit do
   @moduledoc """
   Edits a post's body (its author while the thread is open, or an admin).
-  The previous body is kept in the post's revision history.
+  The previous body is kept in the post's revision history. An unsaved
+  edit is kept as a draft (see `FirestormWeb.Web.Drafting`) until it's
+  saved or discarded.
   """
   use FirestormWeb.Web, :live_view
 
@@ -10,6 +12,8 @@ defmodule FirestormWeb.Web.PostLive.Edit do
   alias FirestormWeb.{Forums, Posting}
   alias FirestormWeb.Forums.Post
   alias FirestormWeb.Web.Editor
+
+  import FirestormWeb.Web.Drafting
 
   @impl true
   def mount(
@@ -28,10 +32,13 @@ defmodule FirestormWeb.Web.PostLive.Edit do
   end
 
   defp mount_form(socket) do
+    socket = assign_draft(socket, {:edit, socket.assigns.post})
+    restored = if draft = socket.assigns.draft, do: %{body: draft.body}, else: %{}
+
     {:ok,
      socket
      |> assign(:page_title, "Edit post - #{socket.assigns.thread.title}")
-     |> assign(:form, to_form(Post.edit_changeset(socket.assigns.post, %{})))
+     |> assign(:form, to_form(Post.edit_changeset(socket.assigns.post, restored)))
      |> Editor.allow_attachments(&handle_progress/3)
      |> Editor.mention_search()}
   end
@@ -39,7 +46,16 @@ defmodule FirestormWeb.Web.PostLive.Edit do
   @impl true
   def handle_event("validate", %{"post" => params}, socket) do
     changeset = Post.edit_changeset(socket.assigns.post, %{body: params["body"]})
-    {:noreply, assign(socket, :form, to_form(changeset, action: :validate))}
+
+    {:noreply,
+     socket
+     |> assign(:form, to_form(changeset, action: :validate))
+     |> autosave_edit(params["body"])}
+  end
+
+  def handle_event("discard_draft", _params, socket) do
+    form = to_form(Post.edit_changeset(socket.assigns.post, %{}))
+    {:noreply, socket |> discard_draft() |> assign(:form, form)}
   end
 
   def handle_event("save", %{"post" => params}, socket) do
@@ -65,6 +81,7 @@ defmodule FirestormWeb.Web.PostLive.Edit do
       {:ok, post} ->
         {:noreply,
          socket
+         |> discard_draft()
          |> put_flash(:info, "Post updated successfully.")
          |> push_navigate(to: thread_path(socket) <> "#post-#{post.id}")}
 
@@ -98,10 +115,17 @@ defmodule FirestormWeb.Web.PostLive.Edit do
       markdown = Editor.consume_attachment(socket, entry)
       body = Editor.append(socket.assigns.form[:body].value, markdown)
       changeset = Post.edit_changeset(socket.assigns.post, %{body: body})
-      {:noreply, assign(socket, :form, to_form(changeset))}
+      {:noreply, socket |> assign(:form, to_form(changeset)) |> autosave_edit(body)}
     else
       {:noreply, socket}
     end
+  end
+
+  # Only an actual change is worth keeping: back to the post's body, no draft.
+  defp autosave_edit(socket, body) do
+    if body == socket.assigns.post.body,
+      do: discard_draft(socket),
+      else: autosave(socket, %{body: body})
   end
 
   defp can_edit?(%{assigns: %{current_user: user, post: post, thread: thread}}),
@@ -132,6 +156,7 @@ defmodule FirestormWeb.Web.PostLive.Edit do
 
       <.form for={@form} id="post-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <Editor.body_editor field={@form[:body]} uploads={@uploads} />
+        <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">
           <.link
             navigate={~p"/categories/#{@category}/threads/#{@thread}" <> "#post-#{@post.id}"}
