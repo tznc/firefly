@@ -61,7 +61,12 @@ defmodule FirestormWeb.Notifications do
   end
 
   defp fan_out(kind, thread, post) do
-    for {user, level} <- Subscriptions.subscribers(thread), user.id != post.user_id do
+    # Skip anyone who has already read this post, e.g. because they had the
+    # thread open when it arrived.
+    already_read = Forums.users_who_read(thread, post)
+
+    for {user, level} <- Subscriptions.subscribers(thread),
+        user.id != post.user_id and not MapSet.member?(already_read, user.id) do
       {:ok, notification} =
         Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
 
@@ -75,10 +80,16 @@ defmodule FirestormWeb.Notifications do
     if user.email_notifications and User.confirmed?(user) and
          not Forums.unread_emailed_notification?(user, thread.id, notification.id) do
       user
-      |> Emails.thread_new_post_notification(thread, post)
+      |> email_for(notification.kind, thread, post)
       |> Mailer.deliver_now()
 
       Forums.notification_emailed(notification)
     end
   end
+
+  defp email_for(user, "new_thread", thread, post),
+    do: Emails.thread_created_notification(user, thread, post)
+
+  defp email_for(user, _kind, thread, post),
+    do: Emails.thread_new_post_notification(user, thread, post)
 end

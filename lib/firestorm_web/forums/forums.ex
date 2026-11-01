@@ -588,6 +588,15 @@ defmodule FirestormWeb.Forums do
     end
   end
 
+  @doc "The ids of users whose read position in `thread` is at or past `post`."
+  def users_who_read(%Thread{id: thread_id}, %Post{id: post_id}) do
+    ThreadRead
+    |> where([r], r.thread_id == ^thread_id and r.last_read_post_id >= ^post_id)
+    |> select([r], r.user_id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
   @doc "The user's read position in a thread, or nil if they've never opened it."
   def thread_read(%User{id: user_id}, %Thread{id: thread_id}) do
     Repo.get_by(ThreadRead, user_id: user_id, thread_id: thread_id)

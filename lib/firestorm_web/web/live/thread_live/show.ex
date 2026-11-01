@@ -54,6 +54,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     {:noreply, assign(socket, :level, level)}
   end
 
+  def handle_event("set_level", _params, socket), do: {:noreply, socket}
+
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
       {:ok, _} = Forums.delete_thread(socket.assigns.thread)

@@ -161,4 +161,38 @@ defmodule FirestormWeb.NotificationsTest do
     Forums.mark_thread_read(author, thread)
     assert Forums.unread_notification_count(author) == 0
   end
+
+  test "new threads email watchers as a new thread, not a reply", %{
+    category: category,
+    author: author,
+    reader: reader
+  } do
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "watching")
+    {:ok, _} = Forums.create_thread(category, author, %{title: "Fresh", body: "Hi"})
+    flush()
+
+    assert_email_delivered_with(
+      to: [nil: "reader@example.com"],
+      subject: "A new thread was started in a category you are watching on Firefly",
+      text_body: ~r/A new Firefly thread was started: Fresh.*because you watch its category/s
+    )
+  end
+
+  test "no notification for a post the user had already read", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    # The reader had the thread open: their read position moved past the post
+    # before the fan-out ran.
+    :ok = :sys.suspend(Notifications)
+    {:ok, post} = Forums.create_post(thread, reader, %{body: "yup"})
+    Forums.mark_thread_read(author, thread)
+    :ok = :sys.resume(Notifications)
+    flush()
+
+    assert MapSet.member?(Forums.users_who_read(thread, post), author.id)
+    assert notifications(author) == []
+    assert_no_emails_delivered()
+  end
 end
