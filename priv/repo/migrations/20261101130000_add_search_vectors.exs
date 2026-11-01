@@ -17,6 +17,10 @@ defmodule FirestormWeb.Repo.Migrations.AddSearchVectors do
 
     alter table(:forums_posts), do: add(:search_vector, :tsvector)
 
+    # "The thread's first post" (the triggers below, title-only search) is
+    # one index probe instead of sorting the thread's posts.
+    create index(:forums_posts, [:thread_id, :inserted_at, :id])
+
     execute """
     CREATE FUNCTION forums_posts_search_vector() RETURNS trigger AS $$
     BEGIN
@@ -77,5 +81,6 @@ defmodule FirestormWeb.Repo.Migrations.AddSearchVectors do
     execute "DROP FUNCTION forums_posts_search_vector()"
     alter table(:forums_posts), do: remove(:search_vector)
     alter table(:forums_threads), do: remove(:search_vector)
+    drop index(:forums_posts, [:thread_id, :inserted_at, :id])
   end
 end
