@@ -113,6 +113,37 @@ defmodule FirestormWeb.Web.PostEditingTest do
     |> assert_has("#post-#{reply.id} .edited")
   end
 
+  test "the history page updates live when the post is edited", ctx do
+    %{conn: conn, author: author, thread: thread, reply: reply} = ctx
+    session = visit(conn, thread_path(thread) <> "/posts/#{reply.id}/history")
+
+    # Fetched the way the edit page fetches it (no user preloaded)
+    post = Forums.get_post!(thread, reply.id)
+    {:ok, _} = Forums.update_post(post, author, %{body: "Changed while you read"})
+
+    assert_has(session, "#revision-1")
+  end
+
+  test "saving over someone else's edit warns and keeps your text", ctx do
+    %{conn: conn, author: author, thread: thread, reply: reply} = ctx
+
+    session =
+      conn
+      |> log_in_as(author)
+      |> visit(thread_path(thread) <> "/posts/#{reply.id}/edit")
+
+    {:ok, _} = Forums.update_post(reply, admin_fixture(), %{body: "Moderated"})
+
+    session
+    |> fill_in("Body", with: "My version")
+    |> click_button("Save edit")
+    |> assert_has("#flash-error", text: "edited by someone else")
+    |> click_button("Save edit")
+    |> assert_has("#flash-info", text: "Post updated successfully.")
+
+    assert Forums.get_post!(thread, reply.id).body == "My version"
+  end
+
   test "an edited first post stays first", ctx do
     %{conn: conn, author: author, thread: thread} = ctx
     [first, _reply] = FirestormWeb.Repo.preload(thread, :posts, force: true).posts

@@ -35,6 +35,15 @@ defmodule FirestormWeb.Repo.Migrations.NotificationLevels do
     end
 
     create index(:forums_notifications, [:user_id, :read_at])
+    # Reading a thread clears its unread notifications.
+    create index(:forums_notifications, [:user_id, :thread_id], where: "read_at IS NULL")
+    # Fan-out looks up a thread's and a category's subscribers.
+    create index(:forums_threads_watches, [:assoc_id])
+    create index(:forums_categories_watches, [:assoc_id])
+
+    # Existing notifications have no thread to be cleared by reading it, so
+    # they'd sit in the badge forever: start them out read.
+    execute "UPDATE forums_notifications SET read_at = now() WHERE thread_id IS NULL"
 
     alter table(:forums_users) do
       add :email_notifications, :boolean, null: false, default: true
@@ -46,6 +55,8 @@ defmodule FirestormWeb.Repo.Migrations.NotificationLevels do
       remove :email_notifications
     end
 
+    drop index(:forums_threads_watches, [:assoc_id])
+    drop index(:forums_notifications, [:user_id, :thread_id])
     drop index(:forums_notifications, [:user_id, :read_at])
 
     alter table(:forums_notifications) do
