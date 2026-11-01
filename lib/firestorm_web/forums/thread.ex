@@ -6,7 +6,7 @@ defmodule FirestormWeb.Forums.Thread do
   use Ecto.Schema
   import Ecto.Changeset, warn: false
 
-  alias FirestormWeb.Forums.{Category, Post, Watch, User}
+  alias FirestormWeb.Forums.{Category, Post, Tag, Watch, User}
   alias FirestormWeb.Forums.Slugs.ThreadTitleSlug
 
   schema "forums_threads" do
@@ -26,6 +26,13 @@ defmodule FirestormWeb.Forums.Thread do
     # Explicit order: an edited post's row moves in the table, so the
     # database's natural order isn't the posting order.
     has_many(:posts, Post, preload_order: [asc: :inserted_at, asc: :id])
+
+    many_to_many(:tags, Tag,
+      join_through: "forums_threads_tags",
+      on_replace: :delete,
+      preload_order: [asc: :name]
+    )
+
     has_many(:watches, {"forums_threads_watches", Watch}, foreign_key: :assoc_id)
 
     many_to_many(

@@ -9,6 +9,11 @@ if System.get_env("FIREFLY_SERVER") do
   config :firestorm_web, FirestormWeb.Web.Endpoint, server: true
 end
 
+# Only admins create new tags; members pick existing ones.
+if System.get_env("FIREFLY_TAGS_ADMIN_ONLY") in ~w(true 1) do
+  config :firestorm_web, tags_admin_only: true
+end
+
 if config_env() != :test do
   config :ueberauth, Ueberauth.Strategy.Github.OAuth,
     client_id: System.get_env("FIREFLY_GITHUB_CLIENT_ID"),

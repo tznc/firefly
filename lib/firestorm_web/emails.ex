@@ -7,7 +7,7 @@ defmodule FirestormWeb.Emails do
   alias FirestormWeb.Markdown
   alias FirestormWeb.Forums.{Post, Thread, User}
 
-  @watching "You're getting this because you watch this thread or its category."
+  @watching "You're getting this because you watch this thread, its category or one of its tags."
   @mentioned "You're getting this because you were mentioned."
   @watching_category "You're getting this because you watch its category."
 

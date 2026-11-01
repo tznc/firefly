@@ -49,7 +49,7 @@ defmodule FirestormWeb.Web.SettingsLive.Notifications do
 
       <div class="prose prose-sm max-w-none text-base-content/80">
         <h2 class="text-base">Notification levels</h2>
-        <p>Set a level from the menu on any thread or category:</p>
+        <p>Set a level from the menu on any thread, category or tag:</p>
         <ul>
           <li>
             <strong>Watching</strong>: notified of every new post, and emailed (once per thread until you've read it).
@@ -61,7 +61,7 @@ defmodule FirestormWeb.Web.SettingsLive.Notifications do
           </li>
         </ul>
         <p>
-          Threads you start are watched; threads you reply to are tracked. A category's level applies to its threads unless you set one on the thread.
+          Threads you start are watched; threads you reply to are tracked. Category and tag levels apply to their threads unless you set one on the thread: a muted category or tag hides the thread, otherwise the most attentive level wins.
         </p>
       </div>
     </Layouts.app>

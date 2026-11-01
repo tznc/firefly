@@ -1,10 +1,10 @@
 defmodule FirestormWeb.Web.ThreadLive.Edit do
-  @moduledoc "Renames a thread."
+  @moduledoc "Renames a thread and changes its tags."
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.Forums
+  alias FirestormWeb.{Forums, Repo}
   alias FirestormWeb.Forums.Thread
 
   @impl true
@@ -27,17 +27,27 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
      |> assign(:page_title, "Edit #{thread.title}")
      |> assign(:category, category)
      |> assign(:thread, thread)
+     |> assign(
+       :tags,
+       thread |> Repo.preload(:tags) |> Map.get(:tags) |> Enum.map_join(", ", & &1.name)
+     )
      |> assign(:form, to_form(Forums.change_thread(thread)))}
   end
 
   @impl true
   def handle_event("validate", %{"thread" => params}, socket) do
     changeset = Thread.changeset(socket.assigns.thread, params)
-    {:noreply, assign(socket, :form, to_form(changeset, action: :validate))}
+
+    {:noreply,
+     socket
+     |> assign(:tags, params["tags"])
+     |> assign(:form, to_form(changeset, action: :validate))}
   end
 
   def handle_event("save", %{"thread" => params}, socket) do
-    case Forums.update_thread(socket.assigns.thread, Map.take(params, ["title"])) do
+    %{thread: thread, current_user: user} = socket.assigns
+
+    case Forums.update_thread(thread, Map.take(params, ["title", "tags"]), user) do
       {:ok, thread} ->
         {:noreply,
          socket
@@ -45,7 +55,7 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
          |> push_navigate(to: ~p"/categories/#{socket.assigns.category}/threads/#{thread}")}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, :form, to_form(changeset))}
+        {:noreply, socket |> assign(:tags, params["tags"]) |> assign(:form, to_form(changeset))}
     end
   end
 
@@ -57,6 +67,7 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
 
       <.form for={@form} id="thread-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <.input field={@form[:title]} type="text" label="Title" />
+        <.tags_input field={@form[:tags]} value={@tags} />
         <div class="flex justify-end gap-2">
           <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"} class="btn btn-ghost">
             Back

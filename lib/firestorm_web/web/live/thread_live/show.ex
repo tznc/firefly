@@ -184,7 +184,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   defp load_thread(socket, thread) do
     user = socket.assigns.current_user
-    thread = Repo.preload(thread, [posts: [:user, :deleted_by]], force: true)
+    thread = Repo.preload(thread, [:tags, posts: [:user, :deleted_by]], force: true)
     [first_post | replies] = Enum.map(thread.posts, &Forums.decorate_post_oembeds/1)
 
     if user && connected?(socket), do: Forums.mark_thread_read(user, thread)
@@ -196,7 +196,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:replies, replies)
     |> assign(:refs, Mentions.refs(Enum.map(thread.posts, & &1.body)))
     |> assign(:level, Subscriptions.thread_level(user, thread))
-    |> assign(:inherited_level, inherited_level(user, socket.assigns.category))
+    |> assign(:inherited_level, Subscriptions.inherited_level(user, thread))
     |> assign(:editable_ids, permitted_ids(user, thread, :edit_post))
     |> assign(:deletable_ids, permitted_ids(user, thread, :delete_post))
     |> assign(:admin?, can?(user, :view_deleted_posts))
@@ -246,8 +246,6 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   defp moderation_message("archive"), do: "Thread archived."
   defp moderation_message("unarchive"), do: "Thread unarchived."
 
-  defp inherited_level(user, category), do: Subscriptions.effective_category_level(user, category)
-
   defp first_unread_id(_replies, nil), do: nil
 
   defp first_unread_id(replies, last_read_post_id) do
@@ -264,6 +262,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           <.thread_status thread={@thread} />
           <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"}>{@thread.title}</.link>
         </h1>
+        <.tag_chips tags={@thread.tags} />
         <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/70">
           <.avatar user={@first_post.user} size="size-6" />
           <.link navigate={~p"/users/#{@first_post.user}"} class="font-medium hover:text-primary">
