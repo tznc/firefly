@@ -42,10 +42,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              :post_created,
              :post_updated,
              :post_deleted,
-             :post_restored,
-             :post_likes_changed
+             :post_restored
            ],
       do: {:noreply, load_thread(socket, socket.assigns.thread)}
+
+  # Likes are frequent: refresh just that post's likers, not the whole thread.
+  def handle_info({:post_likes_changed, post}, socket),
+    do: {:noreply, refresh_likers(socket, post)}
 
   def handle_info({:thread_updated, thread}, socket) do
     if thread.category_id == socket.assigns.category.id,
@@ -157,7 +160,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         do: Forums.unlike_post(post, user),
         else: Forums.like_post(post, user)
 
-      {:noreply, load_thread(socket, thread)}
+      {:noreply, refresh_likers(socket, post)}
     else
       false -> {:noreply, put_flash(socket, :error, denied_message(user))}
       {:error, :rate_limited} -> {:noreply, put_flash(socket, :error, RateLimit.message())}
@@ -226,6 +229,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         into: MapSet.new() do
       post.id
     end
+  end
+
+  defp refresh_likers(socket, post) do
+    likers = Map.get(Forums.likers([post]), post.id, [])
+    assign(socket, :likers, Map.put(socket.assigns.likers, post.id, likers))
   end
 
   defp reply_count(replies), do: Enum.count(replies, &(!Post.deleted?(&1)))

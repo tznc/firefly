@@ -1229,7 +1229,7 @@ defmodule FirestormWeb.Forums do
         :ok
 
       {:ok, _like} ->
-        notify_likes(post)
+        if first_like?(post, user), do: update_like_notification(post, :liked)
         broadcast("forums:thread:#{post.thread_id}", {:post_likes_changed, post})
     end
   end
@@ -1240,9 +1240,27 @@ defmodule FirestormWeb.Forums do
     |> where([l], l.post_id == ^post.id and l.user_id == ^user.id)
     |> Repo.delete_all()
     |> case do
-      {0, _} -> :ok
-      _ -> broadcast("forums:thread:#{post.thread_id}", {:post_likes_changed, post})
+      {0, _} ->
+        :ok
+
+      _ ->
+        update_like_notification(post, :unliked)
+        broadcast("forums:thread:#{post.thread_id}", {:post_likes_changed, post})
     end
+  end
+
+  # Records that the author is being told about this user's like; false if
+  # they were told before (the user unliked and liked again).
+  defp first_like?(post, user) do
+    {count, _} =
+      Repo.insert_all(
+        "forums_post_like_notices",
+        [%{post_id: post.id, user_id: user.id, inserted_at: NaiveDateTime.utc_now()}],
+        on_conflict: :nothing,
+        conflict_target: [:post_id, :user_id]
+      )
+
+    count == 1
   end
 
   @doc "Whether `user` likes `post`."
@@ -1262,34 +1280,64 @@ defmodule FirestormWeb.Forums do
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
-  # Updates the author's unread "liked" notification for the post, or sends a
-  # new one.
-  defp notify_likes(%Post{} = post) do
+  # Brings the author's unread "liked" notification for the post up to date
+  # with its current likers: updated, created (only after a like) or removed
+  # (when no likes remain). The post row lock serializes concurrent likes, so
+  # they share one unread notification.
+  defp update_like_notification(%Post{} = post, change) do
     post = Repo.preload(post, [:thread, :user])
 
-    likers =
-      PostLike
-      |> where([l], l.post_id == ^post.id)
-      |> join(:inner, [l], u in assoc(l, :user))
-      |> order_by([l], desc: l.inserted_at, desc: l.id)
-      |> select([l, u], u)
-      |> Repo.all()
+    {:ok, changed?} =
+      Repo.transact(fn ->
+        Post |> where([p], p.id == ^post.id) |> lock("FOR UPDATE") |> Repo.one!()
 
+        likers =
+          PostLike
+          |> where([l], l.post_id == ^post.id)
+          |> join(:inner, [l], u in assoc(l, :user))
+          |> order_by([l], desc: l.inserted_at, desc: l.id)
+          |> select([l, u], u)
+          |> Repo.all()
+
+        unread =
+          Notification
+          |> where(
+            [n],
+            n.user_id == ^post.user_id and n.post_id == ^post.id and n.kind == "liked"
+          )
+          |> where([n], is_nil(n.read_at))
+          |> first()
+          |> Repo.one()
+
+        {:ok, write_like_notification(unread, likers, post, change)}
+      end)
+
+    if changed?, do: notifications_changed(post.user_id)
+    :ok
+  end
+
+  defp write_like_notification(nil, _likers, _post, :unliked), do: false
+
+  defp write_like_notification(nil, likers, post, :liked) do
+    {:ok, _} =
+      %Notification{}
+      |> Notification.changeset(
+        Map.put(Notification.for_likes(post.thread, post, likers), :user_id, post.user_id)
+      )
+      |> Repo.insert()
+
+    true
+  end
+
+  defp write_like_notification(unread, [], _post, _change) do
+    {:ok, _} = Repo.delete(unread)
+    true
+  end
+
+  defp write_like_notification(unread, likers, post, _change) do
     attrs = Notification.for_likes(post.thread, post, likers)
-
-    unread =
-      Notification
-      |> where([n], n.user_id == ^post.user_id and n.post_id == ^post.id and n.kind == "liked")
-      |> where([n], is_nil(n.read_at))
-      |> first()
-      |> Repo.one()
-
-    if unread do
-      {:ok, _} = unread |> change(subject: attrs.subject, body: attrs.body) |> Repo.update()
-      notifications_changed(post.user_id)
-    else
-      {:ok, _} = notify(post.user, attrs)
-    end
+    {:ok, _} = unread |> change(subject: attrs.subject, body: attrs.body) |> Repo.update()
+    true
   end
 
   def user_posts(user, %{page: page}) do
