@@ -65,8 +65,18 @@ defmodule FirestormWeb.RateLimit do
   @doc "The configured number of hits allowed per window for `bucket`."
   def configured_limit(bucket), do: bucket |> configured() |> elem(0)
 
-  defp limit(:post), do: {FirestormWeb.SiteSettings.get("posts_per_minute"), :timer.minutes(1)}
-  defp limit(bucket), do: configured(bucket)
+  @doc """
+  The `{hits, window_ms}` in force for `bucket`. For `:post`, that's the
+  `posts_per_minute` site setting once an admin sets it; until then the
+  configured limit with its own window.
+  """
+  def limit(:post) do
+    if FirestormWeb.SiteSettings.customized?("posts_per_minute"),
+      do: {FirestormWeb.SiteSettings.get("posts_per_minute"), :timer.minutes(1)},
+      else: configured(:post)
+  end
+
+  def limit(bucket), do: configured(bucket)
 
   defp configured(bucket) do
     configured = Application.get_env(:firestorm_web, __MODULE__, [])[:limits] || []

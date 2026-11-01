@@ -13,9 +13,11 @@ defmodule FirestormWeb.Penalties do
   staff log, and the user is told by email and in-app notification.
   """
 
+  require Logger
+
   alias FirestormWeb.{Emails, Forums, Mailer, Repo, StaffLog}
   alias FirestormWeb.Forums.User
-  alias FirestormWeb.Web.{Endpoint, Paths, Session}
+  alias FirestormWeb.Web.{Paths, Session}
 
   # "Forever" is an end date nobody will reach, so one comparison covers it.
   @forever ~U[9999-12-31 23:59:59Z]
@@ -63,8 +65,9 @@ defmodule FirestormWeb.Penalties do
           {:ok, user}
         end)
 
-      tell(kind, user, until, reason)
+      # Enforced first: telling the user can fail (email), the penalty can't.
       reload_pages(user)
+      tell(kind, user, until, reason)
       {:ok, user}
     end
   end
@@ -147,10 +150,22 @@ defmodule FirestormWeb.Penalties do
         url: Paths.user_url(user)
       })
 
-    if user.email, do: user |> Emails.penalty(subject, reason) |> Mailer.deliver_now()
+    if user.email, do: email(user, subject, reason)
   end
 
-  # Open pages hold the user as they were; disconnecting them makes them
-  # reconnect with the penalty in force (or, when suspended, logged out).
-  defp reload_pages(user), do: Endpoint.broadcast(Session.live_socket_id(user), "disconnect", %{})
+  # Best effort: the penalty is already in force and the in-app
+  # notification says the same, so a mail failure is only logged.
+  defp email(user, subject, reason) do
+    case user |> Emails.penalty(subject, reason) |> Mailer.deliver_now() do
+      {:ok, _email} -> :ok
+      {:error, error} -> email_failed(user, error)
+    end
+  rescue
+    error -> email_failed(user, error)
+  end
+
+  defp email_failed(user, error),
+    do: Logger.error("Penalty email to user #{user.id} failed: #{inspect(error)}")
+
+  defp reload_pages(user), do: Session.reload_pages(user)
 end

@@ -3,7 +3,8 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
   Account registration with a username, email and password. The account is
   created here; the form then posts to the identity callback to log in, which
   writes the session. Closed while the `allow_registrations` site setting is
-  off; with `require_email_confirmation` off, accounts start confirmed.
+  off. New accounts are always sent a confirmation link; with
+  `require_email_confirmation` off they can post before following it.
   """
   use FirestormWeb.Web, :live_view
 

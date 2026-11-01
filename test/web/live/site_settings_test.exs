@@ -1,10 +1,21 @@
 defmodule FirestormWeb.Web.SiteSettingsTest do
   use FirestormWeb.Web.ConnCase
+  use Bamboo.Test, shared: true
 
   import Ecto.Query, only: [from: 2]
   import FirestormWeb.DataCase, only: [errors_on: 1]
 
-  alias FirestormWeb.{Emails, Forums, Mentions, Posting, Repo, SiteSettings}
+  alias FirestormWeb.{
+    Emails,
+    Forums,
+    Mentions,
+    Notifications,
+    Posting,
+    RateLimit,
+    Repo,
+    SiteSettings
+  }
+
   alias FirestormWeb.Forums.{Policy, SpamGuard, StaffAction, Tag}
 
   setup do
@@ -169,6 +180,36 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
       set(admin, %{"require_email_confirmation" => "false"})
       {:ok, trusted} = register("trusted")
       assert Posting.check(trusted) == :ok
+      # Also for accounts from before the change.
+      assert Posting.check(confirming) == :ok
+    end
+
+    test "turning confirmation off never marks addresses verified", %{conn: conn, admin: admin} do
+      {:ok, _} = Notifications.start_link()
+      set(admin, %{"require_email_confirmation" => "false"})
+      {:ok, trusted} = register("trusted")
+      refute Forums.User.confirmed?(trusted)
+
+      conn
+      |> log_in_as(trusted)
+      |> visit(~p"/")
+      |> refute_has("#confirm-email-notice")
+
+      # Notification email still goes only to proven addresses.
+      thread = thread_fixture(category_fixture("Mail"), admin, %{title: "Relay"})
+      {:ok, _} = Forums.create_post(thread, admin, %{body: "hello @trusted"})
+      :sys.get_state(Notifications)
+
+      assert [%{kind: "mentioned"}] = Forums.notifications_for(trusted)
+      assert_no_emails_delivered()
+
+      set(admin, %{"require_email_confirmation" => "true"})
+      assert Posting.check(trusted) == {:error, :unconfirmed}
+
+      conn
+      |> log_in_as(trusted)
+      |> visit(~p"/")
+      |> assert_has("#confirm-email-notice")
     end
   end
 
@@ -201,6 +242,16 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
       body = "@#{a.username} and @#{b.username}"
       assert {:error, changeset} = Forums.create_post(thread, member, %{body: body})
       assert "can mention at most 1 users" in errors_on(changeset).body
+    end
+
+    test "posts per minute keeps the configured window until set", %{admin: admin} do
+      config = Application.get_env(:firestorm_web, RateLimit)
+      Application.put_env(:firestorm_web, RateLimit, limits: [post: {20, :timer.minutes(10)}])
+      on_exit(fn -> Application.put_env(:firestorm_web, RateLimit, config) end)
+
+      assert RateLimit.limit(:post) == {20, :timer.minutes(10)}
+      set(admin, %{"posts_per_minute" => "7"})
+      assert RateLimit.limit(:post) == {7, :timer.minutes(1)}
     end
 
     test "posts per minute", %{admin: admin, member: member, thread: thread} do
@@ -270,5 +321,13 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
     # A change on this node applies at once.
     set(admin, %{"title" => "Glowworm"})
     assert SiteSettings.get("title") == "Glowworm"
+
+    # A reader that loaded before a save and caches after it: its entry
+    # belongs to the old generation and isn't served.
+    generation = :persistent_term.get({SiteSettings, :generation})
+    stale = SiteSettings.all()
+    set(admin, %{"title" => "Lantern"})
+    :persistent_term.put({SiteSettings, :values}, {generation, stale, MapSet.new()})
+    assert SiteSettings.get("title") == "Lantern"
   end
 end

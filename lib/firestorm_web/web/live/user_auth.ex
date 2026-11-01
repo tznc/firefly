@@ -64,7 +64,8 @@ defmodule FirestormWeb.Web.UserAuth do
   defp notification_count(user), do: Forums.unread_notification_count(user)
 
   # Keeps the notification and message badges live: notify/read broadcasts
-  # :notifications_changed on the user's topic. Views can export
+  # :notifications_changed on the user's topic (and :account_changed when the
+  # account itself changes). Views can export
   # `notifications_changed/1` to react as well (e.g. the notifications page).
   defp subscribe_to_notifications(%{assigns: %{current_user: %{id: user_id}}} = socket) do
     if connected?(socket) do
@@ -102,6 +103,12 @@ defmodule FirestormWeb.Web.UserAuth do
         else: socket
 
     {:halt, socket}
+  end
+
+  # The account changed (penalized, deleted): the page reloads, so it mounts
+  # again as the account now is (or logged out). See `Session.reload_pages/1`.
+  defp handle_notifications(:account_changed, socket) do
+    {:halt, redirect(socket, to: socket.assigns[:current_path] || ~p"/")}
   end
 
   defp handle_notifications(_other, socket), do: {:cont, socket}
