@@ -14,17 +14,25 @@ defmodule FirestormWeb.Quote do
 
   alias FirestormWeb.Markdown
 
-  # Longer selections are quoted in full rather than checked.
+  # Longer selections are quoted in full rather than checked. Measured in
+  # UTF-8 bytes, like the check in the QuoteSelection JS hook.
   @max_selection 5_000
 
   @doc """
   The quote markdown for `body` by `username`, linking to `url`. Quotes only
   `selection` when it occurs in the post (its markdown source or its rendered
-  text), otherwise the whole body.
+  text), otherwise the whole body. A selection taken from the rendered text
+  that would render differently as markdown (literal `a*b*c` from a code
+  span, say) is escaped so it reads as selected.
   """
   @spec build(String.t(), String.t(), String.t(), String.t() | nil) :: String.t()
   def build(body, username, url, selection \\ nil) do
-    text = if in_post?(body, selection), do: String.trim(selection), else: String.trim(body)
+    text =
+      cond do
+        not in_post?(body, selection) -> String.trim(body)
+        literal_in_rendered?(body, selection) -> selection |> String.trim() |> escape()
+        true -> String.trim(selection)
+      end
 
     quoted =
       text |> String.split(~r/\R/) |> Enum.map_join("\n", &String.trim_trailing("> " <> &1))
@@ -44,6 +52,17 @@ defmodule FirestormWeb.Quote do
   end
 
   def in_post?(_body, _selection), do: false
+
+  defp literal_in_rendered?(body, selection) do
+    needle = normalize(selection)
+
+    String.contains?(normalize(rendered_text(body)), needle) and
+      normalize(rendered_text(selection)) != needle
+  end
+
+  # Backslash-escapes Markdown and HTML metacharacters (CommonMark allows a
+  # backslash before any ASCII punctuation).
+  defp escape(text), do: String.replace(text, ~r/[\\`*_{}\[\]()<>#+\-!|~&]/, "\\\\\\0")
 
   # What the reader sees (and selects): the rendered post without markup.
   defp rendered_text(body) do

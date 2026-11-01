@@ -334,6 +334,7 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :thread, :any, required: true
   attr :headline, :boolean, default: false, doc: "show the thread title instead of the author"
   attr :can_edit, :boolean, default: false
+  attr :refs, :map, default: nil, doc: "`FirestormWeb.Mentions.refs/1` of the page's posts"
   slot :actions
 
   def post(assigns) do
@@ -384,7 +385,7 @@ defmodule FirestormWeb.Web.ForumComponents do
             </div>
           </div>
         </header>
-        <.markdown id={"post-#{@post.id}-body"} body={@post.body} />
+        <.markdown id={"post-#{@post.id}-body"} body={@post.body} refs={@refs} />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
         <footer class="flex items-center justify-end gap-1">
           {render_slot(@actions)}
@@ -508,11 +509,12 @@ defmodule FirestormWeb.Web.ForumComponents do
   @doc "Markdown rendered (and sanitized) to HTML, with code highlighting."
   attr :id, :string, required: true
   attr :body, :string, required: true
+  attr :refs, :map, default: nil, doc: "see `FirestormWeb.Markdown.render/2`"
 
   def markdown(assigns) do
     ~H"""
     <div id={@id} phx-hook="Highlight" class="post-body prose prose-sm max-w-none">
-      {Phoenix.HTML.raw(Markdown.render(@body))}
+      {Phoenix.HTML.raw(Markdown.render(@body, @refs))}
     </div>
     """
   end
