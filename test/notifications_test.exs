@@ -48,6 +48,33 @@ defmodule FirestormWeb.NotificationsTest do
     assert Subscriptions.thread_level(author, thread) == "muted"
   end
 
+  test "automatic levels never lower what the category or tags give", %{
+    category: category,
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "watching")
+    {:ok, reader} = Forums.update_preferences(reader, %{reply_level: "normal"})
+    reply(thread, reader, "yup")
+    assert Subscriptions.thread_level(reader, thread) == nil
+
+    reply(thread, author, "still watching?")
+
+    assert [%{kind: "new_post", body: "still watching?", emailed_at: %DateTime{}}] =
+             notifications(reader)
+
+    # Starting a thread in a watched category doesn't downgrade it either
+    {:ok, reader} = Forums.update_preferences(reader, %{new_thread_level: "tracking"})
+    {:ok, own} = Forums.create_thread(category, reader, %{title: "Mine", body: "Hi"})
+    assert Subscriptions.effective_thread_level(reader, own) == "watching"
+
+    # And Normal doesn't unmute a thread in a muted category
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "muted")
+    reply(thread, reader, "quietly")
+    assert Subscriptions.effective_thread_level(reader, thread) == "muted"
+  end
+
   test "watchers get a typed notification and an email; the poster doesn't", %{
     author: author,
     reader: reader,

@@ -14,7 +14,7 @@ defmodule FirestormWeb.Messages do
 
   import Ecto.{Query, Changeset}
 
-  alias FirestormWeb.{Forums, Notifications, Repo}
+  alias FirestormWeb.{Forums, Notifications, RateLimit, Repo}
 
   alias FirestormWeb.Forums.{
     Conversation,
@@ -127,23 +127,54 @@ defmodule FirestormWeb.Messages do
 
   @doc """
   Adds the users named in `input` to the conversation, as `actor` (see the
-  `:add_participants` policy). People who left are added back.
+  `:add_participants` policy). People who left can't be added back (leaving
+  sticks), and adds count towards `actor`'s `:message` rate limit.
   """
   def add_participants(%Conversation{} = conversation, %User{} = actor, input) do
-    present = conversation |> active_participant_ids() |> MapSet.new()
+    result =
+      Repo.transact(fn ->
+        # Locked, so concurrent adds can't together go over the maximum.
+        Conversation |> where(id: ^conversation.id) |> lock("FOR UPDATE") |> Repo.one!()
+        present = conversation |> active_participant_ids() |> MapSet.new()
 
-    with {:ok, users} <- resolve_users(input, actor, present) do
-      for user <- users do
-        Repo.insert!(
-          %ConversationParticipant{conversation_id: conversation.id, user_id: user.id},
-          on_conflict: [set: [left_at: nil, updated_at: NaiveDateTime.utc_now()]],
-          conflict_target: [:user_id, :conversation_id]
-        )
-      end
+        with {:ok, users} <- resolve_users(input, actor, present),
+             :ok <- refuse_left(conversation, users),
+             :ok <- rate_limit(actor) do
+          Enum.each(users, &insert_participant(conversation, &1))
+          {:ok, users}
+        end
+      end)
 
+    with {:ok, users} <- result do
       :ok = Notifications.participants_added(conversation, actor, users)
       broadcast(conversation, {:participants_changed, conversation})
       {:ok, users}
+    end
+  end
+
+  defp insert_participant(conversation, user),
+    do: Repo.insert!(%ConversationParticipant{conversation_id: conversation.id, user_id: user.id})
+
+  defp refuse_left(conversation, users) do
+    ids = Enum.map(users, & &1.id)
+
+    left =
+      ConversationParticipant
+      |> where([p], p.conversation_id == ^conversation.id and p.user_id in ^ids)
+      |> where([p], not is_nil(p.left_at))
+      |> select([p], p.user_id)
+      |> Repo.all()
+
+    case Enum.filter(users, &(&1.id in left)) do
+      [] -> :ok
+      gone -> {:error, "#{at(Enum.map(gone, & &1.username))} left this conversation"}
+    end
+  end
+
+  defp rate_limit(actor) do
+    case RateLimit.check_message(actor) do
+      :ok -> :ok
+      {:error, :rate_limited} -> {:error, RateLimit.message()}
     end
   end
 

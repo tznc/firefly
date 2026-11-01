@@ -7,7 +7,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Penalties}
+  alias FirestormWeb.{Forums, Mentions, Penalties}
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -45,7 +45,10 @@ defmodule FirestormWeb.Web.UserLive.Show do
       | entries: Enum.map(posts_page.entries, &Forums.decorate_post_oembeds/1)
     }
 
-    {:noreply, assign(socket, :posts_page, posts_page)}
+    {:noreply,
+     socket
+     |> assign(:posts_page, posts_page)
+     |> assign(:refs, Mentions.refs(Enum.map(posts_page.entries, & &1.body)))}
   end
 
   defp penalty_form(params \\ %{"kind" => "silence", "duration" => "1w"}),
@@ -207,7 +210,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
       <div :if={@activity?} class="space-y-6">
         <ol id="user-posts" class="space-y-4">
           <li :for={post <- @posts_page.entries}>
-            <.post post={post} thread={post.thread} headline />
+            <.post post={post} thread={post.thread} refs={@refs} headline />
           </li>
         </ol>
 
