@@ -16,6 +16,7 @@ defmodule FirestormWeb.Forums.User do
     field(:password, :string, virtual: true)
     field(:api_token, :string)
     field(:github_uid, :string)
+    field(:confirmed_at, :utc_datetime)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -29,6 +30,23 @@ defmodule FirestormWeb.Forums.User do
     |> cast(attrs, [:username, :email, :name, :api_token])
     |> validate_required([:username, :name, :api_token])
     |> unique_constraint(:username)
+  end
+
+  @doc "Whether the user has confirmed their email address."
+  def confirmed?(%__MODULE__{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)
+
+  @doc "Marks the user's email address as confirmed."
+  def confirm_changeset(%__MODULE__{} = user) do
+    change(user, confirmed_at: DateTime.utc_now(:second))
+  end
+
+  @doc "Profile edits. Changing the email address requires confirming it again."
+  def update_changeset(%__MODULE__{} = user, attrs) do
+    changeset = changeset(user, attrs)
+
+    if get_change(changeset, :email),
+      do: put_change(changeset, :confirmed_at, nil),
+      else: changeset
   end
 
   @doc "Links a user to a GitHub account (by GitHub's immutable user id)."

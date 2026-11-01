@@ -65,6 +65,13 @@ defmodule FirestormWeb.Web.Router do
     end
   end
 
+  scope "/confirm", FirestormWeb.Web do
+    pipe_through(:browser)
+
+    get("/:token", ConfirmationController, :confirm)
+    post("/", ConfirmationController, :resend)
+  end
+
   scope "/auth", FirestormWeb.Web do
     pipe_through(:browser)
 

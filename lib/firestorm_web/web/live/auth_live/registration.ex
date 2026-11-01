@@ -6,7 +6,7 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, RateLimit}
+  alias FirestormWeb.{EmailConfirmation, Forums, RateLimit}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -32,7 +32,9 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
 
   def handle_event("save", %{"user" => params}, socket) do
     with :ok <- RateLimit.check_register(socket.assigns.remote_ip || "unknown"),
-         {:ok, _user} <- Forums.register_user(params) do
+         {:ok, user} <- Forums.register_user(params) do
+      EmailConfirmation.deliver(user)
+
       # Keep the submitted values so the form can post them to the login callback.
       {:noreply,
        socket

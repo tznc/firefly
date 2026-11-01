@@ -12,6 +12,8 @@ defmodule FirestormWeb.Web.Api.V1.PostControllerTest do
     {:ok, bob} =
       Forums.register_user(%{username: "bob", email: "bob@example.com", password: "password1"})
 
+    {:ok, bob} = Forums.confirm_user(bob)
+
     {:ok, otp_is_cool} =
       Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
 

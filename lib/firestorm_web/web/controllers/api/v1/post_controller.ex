@@ -1,7 +1,7 @@
 defmodule FirestormWeb.Web.Api.V1.PostController do
   use FirestormWeb.Web, :controller
 
-  alias FirestormWeb.{Forums, RateLimit}
+  alias FirestormWeb.{Forums, Posting}
 
   plug(FirestormWeb.Web.Plugs.RequireApiUser)
 
@@ -9,7 +9,7 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
     user = conn.assigns.current_user
 
     with %{} = thread <- Forums.get_thread(thread_id),
-         :ok <- RateLimit.check_post(user),
+         :ok <- Posting.check(user),
          {:ok, post} <- Forums.create_post(thread, user, %{body: post_params["body"]}) do
       conn
       |> put_status(201)
@@ -18,8 +18,13 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
       nil ->
         conn |> put_status(:not_found) |> json(%{"error" => "Thread not found"})
 
+      {:error, :unconfirmed} ->
+        conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(:unconfirmed)})
+
       {:error, :rate_limited} ->
-        conn |> put_status(:too_many_requests) |> json(%{"error" => RateLimit.message()})
+        conn
+        |> put_status(:too_many_requests)
+        |> json(%{"error" => Posting.message(:rate_limited)})
 
       {:error, %Ecto.Changeset{} = changeset} ->
         conn

@@ -17,6 +17,27 @@ defmodule FirestormWeb.Emails do
     |> put_header("reply-to", FirestormWeb.ReplyAddress.address(thread, user))
   end
 
+  def confirmation(%User{} = user, url) do
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("Confirm your email address for Firefly")
+    |> html_body("""
+    <p>Hi #{escape(user.username)},</p>
+    <p>Confirm your email address to start posting on Firefly: #{link("confirm my email", url)}</p>
+    <p>The link expires in 7 days. If you didn't create a Firefly account, ignore this email.</p>
+    """)
+    |> text_body("""
+    Hi #{user.username},
+
+    Confirm your email address to start posting on Firefly:
+
+    #{url}
+
+    The link expires in 7 days. If you didn't create a Firefly account, ignore this email.
+    """)
+  end
+
   defdelegate thread_url(thread), to: FirestormWeb.Web.Paths
 
   def post_url(thread, post) do

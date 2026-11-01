@@ -24,7 +24,7 @@ defmodule FirestormWeb.E2ECase do
 
   @password "s3cret-password"
 
-  @doc "Creates a member who can log in with `@password`."
+  @doc "Creates a confirmed member who can log in with `@password`."
   def member_fixture(username) do
     {:ok, user} =
       Forums.register_user(%{
@@ -33,6 +33,7 @@ defmodule FirestormWeb.E2ECase do
         password: @password
       })
 
+    {:ok, user} = Forums.confirm_user(user)
     user
   end
 

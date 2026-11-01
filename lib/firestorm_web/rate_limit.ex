@@ -9,6 +9,7 @@ defmodule FirestormWeb.RateLimit do
     * `:login_ip` - password login/registration attempts per client IP
     * `:register` - account registrations per client IP
     * `:post` - new threads and posts per user (web, API and email)
+    * `:email` - account emails (confirmation, password reset) per user
     * `:upload` - upload signatures per user
   """
   use Hammer, backend: :ets
@@ -18,7 +19,8 @@ defmodule FirestormWeb.RateLimit do
     login_ip: {100, :timer.minutes(5)},
     register: {5, :timer.hours(1)},
     post: {10, :timer.minutes(1)},
-    upload: {30, :timer.hours(1)}
+    upload: {30, :timer.hours(1)},
+    email: {3, :timer.hours(1)}
   ]
 
   @doc "Checks the `bucket` limit for `key`: `:ok` or `{:error, :rate_limited}`."
@@ -40,6 +42,7 @@ defmodule FirestormWeb.RateLimit do
   def check_register(remote_ip), do: check(:register, format_ip(remote_ip))
 
   def check_post(%{id: user_id}), do: check(:post, user_id)
+  def check_email(%{id: user_id}), do: check(:email, user_id)
   def check_upload(%{id: user_id}), do: check(:upload, user_id)
 
   @doc "The message shown when a limit is hit."

@@ -31,12 +31,12 @@ defmodule FirestormWeb.Web.PostLive.New do
   def handle_event("save", %{"post" => params}, socket) do
     %{thread: thread, category: category, current_user: user} = socket.assigns
 
-    case FirestormWeb.RateLimit.check_post(user) do
+    case FirestormWeb.Posting.check(user) do
       :ok ->
         create_post(socket, thread, category, user, params)
 
-      {:error, :rate_limited} ->
-        {:noreply, put_flash(socket, :error, FirestormWeb.RateLimit.message())}
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, FirestormWeb.Posting.message(reason))}
     end
   end
 

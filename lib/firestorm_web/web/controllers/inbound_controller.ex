@@ -12,7 +12,7 @@ defmodule FirestormWeb.Web.InboundController do
 
   require Logger
 
-  alias FirestormWeb.{Forums, RateLimit, ReplyAddress}
+  alias FirestormWeb.{Forums, Posting, ReplyAddress}
 
   # Get the email part out of something like "Jane Doe <jane@example.com>"
   @email_regex ~r/<?([^<>\s]+@[^<>\s]+)>?\s*$/
@@ -24,7 +24,7 @@ defmodule FirestormWeb.Web.InboundController do
          %{} = user <- Forums.get_user(user_id),
          true <- sender_matches?(params["from"], user) || {:error, :sender_mismatch},
          %{} = thread <- Forums.get_thread(thread_id),
-         :ok <- RateLimit.check_post(user),
+         :ok <- Posting.check(user),
          {:ok, _post} <- Forums.create_post(thread, user, %{body: params["text"]}) do
       :ok
     else

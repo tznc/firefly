@@ -94,7 +94,8 @@ defmodule FirestormWeb.Forums do
       attrs
       |> Map.put(:api_token, generate_api_token())
 
-    %User{}
+    # Accounts created directly (admin, legacy GitHub logins) are trusted.
+    %User{confirmed_at: DateTime.utc_now(:second)}
     |> User.changeset(attrs)
     |> Repo.insert()
   end
@@ -106,6 +107,7 @@ defmodule FirestormWeb.Forums do
       {:ok, %User{}}
   """
   def register_user(attrs) do
+    # Unconfirmed until they follow the emailed link (see EmailConfirmation).
     %User{api_token: generate_api_token()}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
@@ -130,8 +132,15 @@ defmodule FirestormWeb.Forums do
   """
   def update_user(%User{} = user, attrs) do
     user
-    |> User.changeset(attrs)
+    |> User.update_changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc "Marks the user's email address as confirmed."
+  def confirm_user(%User{} = user) do
+    if User.confirmed?(user),
+      do: {:ok, user},
+      else: user |> User.confirm_changeset() |> Repo.update()
   end
 
   @doc """
@@ -606,7 +615,8 @@ defmodule FirestormWeb.Forums do
   end
 
   defp register_github_user(uid, nickname, name, email) do
-    %User{}
+    # GitHub vouches for the account; its email is not used to log in.
+    %User{confirmed_at: DateTime.utc_now(:second)}
     |> User.github_changeset(%{
       github_uid: uid,
       username: available_username(nickname),

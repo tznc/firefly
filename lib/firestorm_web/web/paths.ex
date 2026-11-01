@@ -8,5 +8,7 @@ defmodule FirestormWeb.Web.Paths do
     endpoint: FirestormWeb.Web.Endpoint,
     router: FirestormWeb.Web.Router
 
+  def confirmation_url(token), do: url(~p"/confirm/#{token}")
+
   def thread_url(thread), do: url(~p"/categories/#{thread.category_id}/threads/#{thread.id}")
 end

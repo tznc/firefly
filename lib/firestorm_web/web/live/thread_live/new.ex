@@ -26,12 +26,12 @@ defmodule FirestormWeb.Web.ThreadLive.New do
   end
 
   def handle_event("save", %{"thread" => params}, socket) do
-    case FirestormWeb.RateLimit.check_post(socket.assigns.current_user) do
+    case FirestormWeb.Posting.check(socket.assigns.current_user) do
       :ok ->
         create_thread(socket, params)
 
-      {:error, :rate_limited} ->
-        {:noreply, put_flash(socket, :error, FirestormWeb.RateLimit.message())}
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, FirestormWeb.Posting.message(reason))}
     end
   end
 
