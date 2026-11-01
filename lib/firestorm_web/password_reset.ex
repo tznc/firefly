@@ -52,6 +52,7 @@ defmodule FirestormWeb.PasswordReset do
   end
 
   defp fingerprint(%User{password_hash: hash}) do
-    :crypto.hash(:sha256, hash || "") |> binary_part(0, 12) |> Base.url_encode64(padding: false)
+    digest = :crypto.hash(:sha256, hash || "")
+    digest |> binary_part(0, 12) |> Base.url_encode64(padding: false)
   end
 end
