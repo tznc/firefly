@@ -15,9 +15,9 @@ defmodule FirestormWeb.Web.Editor do
   @doc "Allows one attachment at a time, uploaded to S3 as soon as it is picked."
   def allow_attachments(socket, progress) do
     allow_upload(socket, :attachment,
-      accept: :any,
+      accept: ~w(.png .jpg .jpeg .gif .webp .pdf .txt),
       max_entries: 1,
-      max_file_size: 10_000_000,
+      max_file_size: Uploads.max_size(),
       auto_upload: true,
       external: &presign/2,
       progress: progress
@@ -25,24 +25,19 @@ defmodule FirestormWeb.Web.Editor do
   end
 
   defp presign(entry, socket) do
-    {:ok, signature} = Uploads.sign(entry.client_name, entry.client_type)
-
-    meta = %{
-      uploader: "S3",
-      key: signature.key,
-      url: signature.action,
-      fields: %{
-        "key" => signature.key,
-        "AWSAccessKeyId" => signature.aws_access_key_id,
-        "acl" => signature.acl,
-        "success_action_status" => signature.success_action_status,
-        "policy" => signature.policy,
-        "signature" => signature.signature,
-        "Content-Type" => signature.content_type
+    with :ok <- FirestormWeb.RateLimit.check_upload(socket.assigns.current_user),
+         {:ok, signature} <- Uploads.sign(entry.client_name, entry.client_type) do
+      meta = %{
+        uploader: "S3",
+        key: signature.key,
+        url: signature.action,
+        fields: signature.fields
       }
-    }
 
-    {:ok, meta, socket}
+      {:ok, meta, socket}
+    else
+      {:error, _reason} -> {:error, %{reason: :not_allowed}, socket}
+    end
   end
 
   @doc """
@@ -90,6 +85,9 @@ defmodule FirestormWeb.Web.Editor do
         <div :for={entry <- @uploads.attachment.entries} class="flex items-center gap-2 text-sm">
           <span>{entry.client_name}</span>
           <progress class="progress progress-primary w-24" value={entry.progress} max="100" />
+          <span :for={err <- upload_errors(@uploads.attachment, entry)} class="text-error">
+            {upload_error(err)}
+          </span>
         </div>
         <p
           :for={err <- upload_errors(@uploads.attachment)}
@@ -111,7 +109,12 @@ defmodule FirestormWeb.Web.Editor do
   end
 
   defp upload_error(:too_large), do: "That file is too large (10 MB max)."
+  defp upload_error(:not_accepted), do: "That file type isn't allowed."
   defp upload_error(:too_many_files), do: "Attach one file at a time."
   defp upload_error(:external_client_failure), do: "The upload failed. Please try again."
+
+  defp upload_error(%{reason: :not_allowed}),
+    do: "Uploads are limited right now. Please try again later."
+
   defp upload_error(other), do: "Upload error: #{other}"
 end

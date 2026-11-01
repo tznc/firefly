@@ -45,6 +45,9 @@ variables (see `config/runtime.exs`):
 | `INBOUND_EMAIL_TOKEN` | Shared secret for the inbound webhook; set the SendGrid Inbound Parse URL to `https://<PHX_HOST>/inbound/sendgrid?token=<INBOUND_EMAIL_TOKEN>`. Reply-by-email is off without it |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`, `AWS_S3_REGION` | Attachment uploads |
 
+Rate limits (login attempts, posting, uploads) are kept in memory per node; see
+`FirestormWeb.RateLimit`.
+
 ### Admin
 
 `/admin` is a [Kaffy](https://github.com/aesmail/kaffy) admin UI, available to

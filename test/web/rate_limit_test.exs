@@ -82,4 +82,13 @@ defmodule FirestormWeb.RateLimitTest do
     assert thread |> FirestormWeb.Repo.preload(:posts, force: true) |> Map.get(:posts) |> length() ==
              3
   end
+
+  test "limits upload signatures through the API", %{conn: conn} do
+    user = user_fixture()
+    conn = put_req_header(conn, "authorization", "Bearer #{user.api_token}")
+    upload = %{"filename" => "a.png", "mimetype" => "image/png"}
+
+    assert conn |> post("/api/v1/upload_signature", upload: upload) |> json_response(201)
+    assert conn |> post("/api/v1/upload_signature", upload: upload) |> json_response(429)
+  end
 end
