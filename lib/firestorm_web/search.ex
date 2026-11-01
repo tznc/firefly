@@ -10,7 +10,7 @@ defmodule FirestormWeb.Search do
   controls (the controls win when both are given):
 
     * `category:slug` - in the category or its subcategories
-    * `tag:name` - threads with the tag
+    * `tag:name` - threads with the tag (or, for a synonym, its canonical tag)
     * `@username` - posts by the user
     * `in:title` - match thread titles only (results are first posts)
     * `order:latest` - newest first instead of most relevant
@@ -29,7 +29,7 @@ defmodule FirestormWeb.Search do
 
   import Ecto.Query
 
-  alias FirestormWeb.Repo
+  alias FirestormWeb.{Repo, Tags}
   alias FirestormWeb.Forums.{Category, Policy, Post, Subscriptions, Tag, User}
 
   defstruct terms: "",
@@ -234,7 +234,7 @@ defmodule FirestormWeb.Search do
   # the user muted.
   defp filters_muted_scope?(user, %{category: category, tag: tag}) do
     category = category && Repo.get_by(Category, slug: String.downcase(category))
-    tag = tag && Repo.get_by(Tag, name: String.downcase(tag))
+    tag = tag && Repo.get_by(Tag, name: Tags.canonical_name(tag))
 
     muted_category? =
       category != nil and
@@ -265,7 +265,7 @@ defmodule FirestormWeb.Search do
       from(tt in "forums_threads_tags",
         join: tag in Tag,
         on: tag.id == tt.tag_id,
-        where: tt.thread_id == parent_as(:thread).id and tag.name == ^String.downcase(name),
+        where: tt.thread_id == parent_as(:thread).id and tag.name == ^Tags.canonical_name(name),
         select: 1
       )
 

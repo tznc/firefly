@@ -1261,36 +1261,96 @@ defmodule FirestormWeb.Forums do
   def may_create_tags?(nil), do: false
 
   # Sets the thread's tags from user input (see `Tag.parse/1`); nil leaves
-  # them as they are. Unknown tags are created, if `user` may.
+  # them as they are. Unknown tags are created, if `user` may. A synonym
+  # stands for its canonical tag. Tag groups (see `FirestormWeb.Tags`) are
+  # enforced here, so every way of tagging obeys them: only staff may add a
+  # staff-only group's tags (and members' edits keep the ones already on the
+  # thread), and a one-per-thread group allows at most one of its tags.
   defp put_tags(changeset, nil, _user), do: changeset
 
   defp put_tags(changeset, input, user) do
     names = Tag.parse(input)
-    existing = Tag |> where([t], t.name in ^names) |> Repo.all() |> Map.new(&{&1.name, &1})
+
+    existing =
+      Tag
+      |> where([t], t.name in ^names)
+      |> preload([:group, synonym_of: :group])
+      |> Repo.all()
+      |> Map.new(&{&1.name, &1})
+
     new = Enum.reject(names, &Map.has_key?(existing, &1))
+
+    chosen =
+      names
+      |> Enum.flat_map(&if(tag = existing[&1], do: [Tag.canonical(tag)], else: []))
+      |> Enum.uniq_by(& &1.id)
+
+    {tags, added_staff_only} =
+      with_staff_only(chosen, current_tags(changeset), not is_nil(user) and admin?(user))
+
+    case tags_error(tags, new, added_staff_only, user) do
+      {message, opts} ->
+        add_error(changeset, :tags, message, opts)
+
+      nil when new == [] or not changeset.valid? ->
+        put_assoc(changeset, :tags, tags ++ Enum.map(new, &Tag.changeset(%Tag{}, %{name: &1})))
+
+      nil ->
+        put_assoc(changeset, :tags, tags ++ ensure_tags(new))
+    end
+  end
+
+  # Members can't add or remove staff-only tags: the thread's current ones
+  # are kept. Returns the tags and the staff-only ones the member added.
+  defp with_staff_only(chosen, _current, true = _staff?), do: {chosen, []}
+
+  defp with_staff_only(chosen, current, false) do
+    kept = Enum.filter(current, &(Tag.staff_only?(&1) and not tag_in?(&1, chosen)))
+    {chosen ++ kept, Enum.filter(chosen, &(Tag.staff_only?(&1) and not tag_in?(&1, current)))}
+  end
+
+  defp tags_error(tags, new, added_staff_only, user) do
     invalid = Enum.reject(new, &Tag.valid_name?/1)
+    crowded = crowded_groups(tags)
 
     cond do
-      length(names) > Tag.max_per_thread() ->
-        add_error(changeset, :tags, "can have at most %{count} tags", count: Tag.max_per_thread())
+      length(tags) + length(new) > Tag.max_per_thread() ->
+        {"can have at most %{count} tags", count: Tag.max_per_thread()}
 
       invalid != [] ->
-        add_error(
-          changeset,
-          :tags,
-          "#{Enum.join(invalid, ", ")}: use lowercase letters, digits and dashes (30 at most)"
-        )
+        {"#{Enum.join(invalid, ", ")}: use lowercase letters, digits and dashes (30 at most)", []}
 
       new != [] and not may_create_tags?(user) ->
-        add_error(changeset, :tags, "#{Enum.join(new, ", ")}: no such tag")
+        {"#{Enum.join(new, ", ")}: no such tag", []}
 
-      new == [] or not changeset.valid? ->
-        tags = Enum.map(names, &(existing[&1] || Tag.changeset(%Tag{}, %{name: &1})))
-        put_assoc(changeset, :tags, tags)
+      added_staff_only != [] ->
+        {"#{Enum.map_join(added_staff_only, ", ", & &1.name)}: only staff can use this tag", []}
+
+      crowded != [] ->
+        {Enum.join(crowded, "; "), []}
 
       true ->
-        put_assoc(changeset, :tags, ensure_tags(names))
+        nil
     end
+  end
+
+  defp current_tags(%Ecto.Changeset{data: %Thread{tags: tags}}) when is_list(tags),
+    do: Repo.preload(tags, :group)
+
+  defp current_tags(_changeset), do: []
+
+  defp tag_in?(tag, tags), do: Enum.any?(tags, &(&1.id == tag.id))
+
+  # "pick one of the <group> tags" for each one-per-thread group `tags`
+  # has more than one of.
+  defp crowded_groups(tags) do
+    tags
+    |> Enum.filter(&match?(%{group: %{one_per_thread: true}}, &1))
+    |> Enum.group_by(& &1.group)
+    |> Enum.filter(fn {_group, tags} -> length(tags) > 1 end)
+    |> Enum.map(fn {group, tags} ->
+      "#{Enum.map_join(tags, ", ", & &1.name)}: pick one of the #{group.name} tags"
+    end)
   end
 
   @doc """
@@ -1324,8 +1384,11 @@ defmodule FirestormWeb.Forums do
     |> Repo.all()
   end
 
-  @doc "Gets a tag by name. Raises `Ecto.NoResultsError` if there's none."
-  def get_tag!(name), do: Repo.get_by!(Tag, name: String.downcase(name))
+  @doc """
+  Gets a tag by name, with `synonym_of` loaded. Raises `Ecto.NoResultsError`
+  if there's none.
+  """
+  def get_tag!(name), do: Tag |> preload(:synonym_of) |> Repo.get_by!(name: String.downcase(name))
 
   @doc "A tag's threads (leaving out archived ones), most recently active first."
   def tag_threads(%Tag{id: tag_id}, user_or_nil) do

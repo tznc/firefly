@@ -14,7 +14,7 @@ defmodule FirestormWeb.StaffLog do
   import Ecto.Query
 
   alias FirestormWeb.Repo
-  alias FirestormWeb.Forums.{Category, Post, StaffAction, Thread, User}
+  alias FirestormWeb.Forums.{Category, Post, StaffAction, Tag, TagGroup, Thread, User}
 
   @actions ~w(
     thread.pin thread.unpin thread.close thread.open thread.archive thread.unarchive
@@ -23,6 +23,7 @@ defmodule FirestormWeb.StaffLog do
     post.edit post.delete post.restore post.unhide post.approve post.reject
     flag.agree flag.disagree flag.defer
     category.create category.update category.delete
+    tag_group.create tag_group.update tag_group.delete tag.synonym tag.unsynonym
     role.create role.grant role.revoke
     user.silence user.unsilence user.suspend user.unsuspend
     setting.update
@@ -58,6 +59,8 @@ defmodule FirestormWeb.StaffLog do
   defp target_ref(%Thread{id: id}), do: {"thread", id}
   defp target_ref(%Post{id: id}), do: {"post", id}
   defp target_ref(%Category{id: id}), do: {"category", id}
+  defp target_ref(%Tag{id: id}), do: {"tag", id}
+  defp target_ref(%TagGroup{id: id}), do: {"tag_group", id}
   defp target_ref(%User{id: id}), do: {"user", id}
   defp target_ref({type, id}) when is_binary(type), do: {type, id}
 
@@ -161,7 +164,7 @@ defmodule FirestormWeb.StaffLog do
   The target types `targets/1` looks up. Others (e.g. roles edited in the
   Kaffy admin) have no page of their own.
   """
-  def linked_types, do: ~w(thread post category user)
+  def linked_types, do: ~w(thread post category user tag)
 
   @doc """
   The entries' targets that still exist, as a map from `{type, id}` to the
@@ -174,6 +177,7 @@ defmodule FirestormWeb.StaffLog do
       {"thread", Thread, []},
       {"post", Post, [:thread]},
       {"category", Category, []},
+      {"tag", Tag, []},
       {"user", User, []}
     ]
     |> Enum.flat_map(fn {type, schema, preloads} ->

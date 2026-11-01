@@ -162,6 +162,9 @@ defmodule FirestormWeb.Web.Layouts do
               <.nav_item path={~p"/staff/groups"} current_path={@current_path} icon="hero-user-group">
                 Groups
               </.nav_item>
+              <.nav_item path={~p"/staff/tags"} current_path={@current_path} icon="hero-tag">
+                Tag groups
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>

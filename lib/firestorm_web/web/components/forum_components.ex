@@ -141,6 +141,34 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
+  @doc """
+  The tag picker under a thread form's tags field: the tags on offer by
+  group (see `FirestormWeb.Tags.picker/1`). Clicking one sends `pick_tag`
+  with its name.
+  """
+  attr :groups, :list, required: true
+
+  def tag_picker(assigns) do
+    ~H"""
+    <div :if={@groups != []} id="tag-picker" class="space-y-1 text-sm">
+      <div :for={{group, tags} <- @groups} class="flex flex-wrap items-center gap-1">
+        <span class="mr-1 text-base-content/70">
+          {if group, do: group.name, else: "Other"}<span :if={group && group.one_per_thread}> (pick one)</span>:
+        </span>
+        <button
+          :for={tag <- tags}
+          type="button"
+          phx-click="pick_tag"
+          phx-value-name={tag.name}
+          class="badge badge-outline cursor-pointer hover:badge-primary"
+        >
+          {tag.name}
+        </button>
+      </div>
+    </div>
+    """
+  end
+
   @doc "A page heading with optional action buttons."
   attr :title, :string, required: true
   attr :navigate, :string, default: nil

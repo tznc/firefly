@@ -4,8 +4,8 @@ defmodule FirestormWeb.Web.ThreadLive.New do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.Forums
-  alias FirestormWeb.Forums.Thread
+  alias FirestormWeb.{Forums, Tags}
+  alias FirestormWeb.Forums.{Tag, Thread}
   alias FirestormWeb.Web.Editor
 
   @impl true
@@ -17,6 +17,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
      |> assign(:page_title, "New Thread - #{category.title}")
      |> assign(:category, category)
      |> assign_form(%{"title" => "", "tags" => "", "body" => ""})
+     |> assign(:tag_groups, Tags.picker(socket.assigns.current_user))
      |> Editor.allow_attachments(&handle_progress/3)
      |> Editor.mention_search()}
   end
@@ -24,6 +25,11 @@ defmodule FirestormWeb.Web.ThreadLive.New do
   @impl true
   def handle_event("validate", %{"thread" => params}, socket) do
     {:noreply, assign_form(socket, params, validate_errors(socket, params))}
+  end
+
+  def handle_event("pick_tag", %{"name" => name}, socket) do
+    params = Map.update(socket.assigns.form.params, "tags", name, &Tag.append(&1, name))
+    {:noreply, assign_form(socket, params, socket.assigns.form.errors)}
   end
 
   def handle_event("save", %{"thread" => params}, socket) do
@@ -113,6 +119,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
       <.form for={@form} id="thread-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <.input field={@form[:title]} type="text" label="Title" placeholder="Type a title" />
         <.tags_input field={@form[:tags]} />
+        <.tag_picker groups={@tag_groups} />
         <Editor.body_editor
           field={@form[:body]}
           uploads={@uploads}

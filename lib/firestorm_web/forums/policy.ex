@@ -29,7 +29,8 @@ defmodule FirestormWeb.Forums.Policy do
       participants, until they leave. Nobody else, admins included.
     * `:add_participants` - participants who started the conversation, and
       admin participants
-    * `:view_staff_log`, `:manage_site_settings`, `:manage_groups` - admins
+    * `:view_staff_log`, `:manage_site_settings`, `:manage_groups`,
+      `:manage_tags` (tag groups and synonyms) - admins
     * `:view_category`, `:view_thread` (in its category) - everyone, members
       or not, unless the category is restricted to roles (groups): then
       members of one of those roles, and admins. A subcategory also needs its
@@ -123,7 +124,8 @@ defmodule FirestormWeb.Forums.Policy do
              :view_deleted_posts,
              :view_staff_log,
              :manage_site_settings,
-             :manage_groups
+             :manage_groups,
+             :manage_tags
            ],
       do: admin(user)
 
