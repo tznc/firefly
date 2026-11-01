@@ -73,22 +73,31 @@ defmodule FirestormWeb.Forums do
   """
   def get_user_by_username(username), do: Repo.get_by(User, %{username: username})
 
-  @doc "The users with the given (downcased) usernames, as a map from downcased username to user."
+  @doc "The users with the given usernames (any case), as a map from each given name to its user."
   def users_by_username([]), do: %{}
 
   def users_by_username(names) do
-    User
-    |> where([u], fragment("lower(?)", u.username) in ^names)
-    |> Repo.all()
-    |> Map.new(&{String.downcase(&1.username), &1})
+    by_lower =
+      User
+      |> where([u], fragment("lower(?)", u.username) in ^Enum.map(names, &String.downcase/1))
+      |> order_by(asc: :id)
+      |> Repo.all()
+      |> Enum.group_by(&String.downcase(&1.username))
+
+    # Usernames are only unique case-sensitively, so `@alice` could fit both
+    # "Alice" and "alice": the exact match wins, else the oldest account.
+    for name <- names, users = by_lower[String.downcase(name)], into: %{} do
+      {name, Enum.find(users, hd(users), &(&1.username == name))}
+    end
   end
 
   @doc "Up to `limit` users whose username starts with `prefix` (any case), shortest first."
   def search_usernames(prefix, limit \\ 6) do
-    pattern = String.replace(prefix, ~r/[\\%_]/, "\\\\\\0") <> "%"
+    pattern = String.replace(String.downcase(prefix), ~r/[\\%_]/, "\\\\\\0") <> "%"
 
+    # `lower(username) LIKE` rather than ILIKE, so it can use the index.
     User
-    |> where([u], ilike(u.username, ^pattern))
+    |> where([u], like(fragment("lower(?)", u.username), ^pattern))
     |> order_by([u], asc: fragment("length(?)", u.username), asc: u.username)
     |> limit(^limit)
     |> Repo.all()
@@ -528,8 +537,14 @@ defmodule FirestormWeb.Forums do
   end
 
   # The cross-category lists (Latest, New, Unread, Top) leave out archived
-  # threads and the user's muted ones.
-  defp listed(query, user), do: query |> where([t], is_nil(t.archived_at)) |> without_muted(user)
+  # threads and the user's muted ones. A tag's own page keeps the muted ones
+  # (`keep_muted: true`), as a category's page does: muting the tag hides its
+  # threads elsewhere, it doesn't empty the tag.
+  defp listed(query, user, opts \\ []) do
+    query
+    |> where([t], is_nil(t.archived_at))
+    |> without_muted(if opts[:keep_muted], do: nil, else: user)
+  end
 
   defp without_muted(query, nil), do: query
 
@@ -939,10 +954,26 @@ defmodule FirestormWeb.Forums do
       new != [] and not may_create_tags?(user) ->
         add_error(changeset, :tags, "#{Enum.join(new, ", ")}: no such tag")
 
-      true ->
+      new == [] or not changeset.valid? ->
         tags = Enum.map(names, &(existing[&1] || Tag.changeset(%Tag{}, %{name: &1})))
         put_assoc(changeset, :tags, tags)
+
+      true ->
+        put_assoc(changeset, :tags, ensure_tags(names))
     end
+  end
+
+  @doc """
+  The tags named `names` (valid names), in order, creating the missing ones.
+  Tags someone else creates at the same moment are taken as they are, where a
+  nested insert would fail the whole save on the unique name.
+  """
+  def ensure_tags(names) do
+    now = NaiveDateTime.utc_now()
+    rows = Enum.map(names, &%{name: &1, inserted_at: now, updated_at: now})
+    Repo.insert_all(Tag, rows, on_conflict: :nothing, conflict_target: :name)
+    by_name = Tag |> where([t], t.name in ^names) |> Repo.all() |> Map.new(&{&1.name, &1})
+    Enum.map(names, &Map.fetch!(by_name, &1))
   end
 
   @doc "Every tag with at least one listed thread, with `threads_count`, most used first."
@@ -959,12 +990,12 @@ defmodule FirestormWeb.Forums do
   @doc "Gets a tag by name. Raises `Ecto.NoResultsError` if there's none."
   def get_tag!(name), do: Repo.get_by!(Tag, name: String.downcase(name))
 
-  @doc "A tag's threads (leaving out archived and muted ones), most recently active first."
+  @doc "A tag's threads (leaving out archived ones), most recently active first."
   def tag_threads(%Tag{id: tag_id}, user_or_nil) do
     Thread
     |> join(:inner, [t], tt in "forums_threads_tags", on: tt.thread_id == t.id)
     |> where([t, tt], tt.tag_id == ^tag_id)
-    |> listed(user_or_nil)
+    |> listed(user_or_nil, keep_muted: true)
     |> by_last_activity()
     |> preload(:category)
     |> Repo.all()
@@ -1212,7 +1243,7 @@ defmodule FirestormWeb.Forums do
         end
       end)
 
-    tap_ok(result, &broadcast_post_updated/1)
+    tap_ok(result, &broadcast_post_updated(&1, editor))
   end
 
   defp edit_post(current, editor, attrs) do
@@ -1229,10 +1260,12 @@ defmodule FirestormWeb.Forums do
     end
   end
 
-  defp broadcast_post_updated(post) do
+  defp broadcast_post_updated(post, editor) do
     post = Repo.preload(post, [:thread, :user])
 
-    :ok = Notifications.post_edited(post)
+    # Mentions notify as the author's words: an admin's moderating edit
+    # doesn't ping anyone in their name.
+    if editor.id == post.user_id, do: :ok = Notifications.post_edited(post)
 
     payload = %ReplenishResponse{
       categories: [],

@@ -166,7 +166,7 @@ defmodule FirestormWeb.Notifications do
       |> Repo.all()
 
     new =
-      for user <- post.body |> Mentions.usernames() |> Forums.users_by_username() |> Map.values(),
+      for user <- Mentions.users(post.body),
           user.id != post.user_id and user.id not in already,
           Bodyguard.permit?(Forums, :view_thread, user, thread),
           Subscriptions.effective_thread_level(user, thread) != "muted" do
