@@ -56,6 +56,7 @@ defmodule FirestormWeb.Web.AuthController do
     conn
     |> configure_session(renew: true)
     |> put_session(:current_user, user.id)
+    |> put_session(:live_socket_id, FirestormWeb.Web.Session.live_socket_id(user))
     |> put_flash(:info, "Successfully authenticated.")
     |> redirect(to: ~p"/")
   end

@@ -27,6 +27,7 @@ defmodule FirestormWeb.Forums.User do
     field(:new_thread_level, :string, default: "watching")
     field(:hide_profile_activity, :boolean, default: false)
     field(:hide_from_directory, :boolean, default: false)
+    field(:deleted_at, :utc_datetime)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -39,8 +40,22 @@ defmodule FirestormWeb.Forums.User do
     user
     |> cast(attrs, [:username, :email, :name, :api_token])
     |> validate_required([:username, :name, :api_token])
+    |> validate_change(:username, fn :username, username ->
+      if reserved_username?(username), do: [username: "is reserved"], else: []
+    end)
     |> unique_constraint(:username)
   end
+
+  @doc """
+  Usernames nobody can pick: `deleted-user-<id>` is what account deletion
+  renames an account to, so taking it ahead of time would block that
+  deletion and let someone pose as a deleted account.
+  """
+  def reserved_username?(username) when is_binary(username),
+    do: String.match?(username, ~r/^deleted-user-/i)
+
+  @doc "The placeholder username of a deleted account."
+  def deleted_username(id), do: "deleted-user-#{id}"
 
   @doc "The themes a user can pick (`system` follows the browser)."
   def themes, do: ~w(system light dark)
@@ -68,6 +83,9 @@ defmodule FirestormWeb.Forums.User do
     |> validate_inclusion(:reply_level, reply_levels())
     |> validate_inclusion(:new_thread_level, new_thread_levels())
   end
+
+  @doc "Whether the account was deleted (it remains, anonymized, as its posts' author)."
+  def deleted?(%__MODULE__{deleted_at: deleted_at}), do: not is_nil(deleted_at)
 
   @doc "Whether the user has confirmed their email address."
   def confirmed?(%__MODULE__{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)
