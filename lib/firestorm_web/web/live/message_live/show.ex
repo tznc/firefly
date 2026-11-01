@@ -190,11 +190,18 @@ defmodule FirestormWeb.Web.MessageLive.Show do
           <article id={"message-#{message.id}"} class="card border border-base-300 bg-base-100">
             <div class="card-body gap-4 p-5">
               <header class="flex items-center gap-3 text-sm">
-                <.avatar user={message.user} size="size-9" />
+                <.avatar :if={message.user} user={message.user} size="size-9" />
                 <div>
-                  <.link navigate={~p"/users/#{message.user}"} class="font-semibold hover:text-primary">
+                  <.link
+                    :if={message.user}
+                    navigate={~p"/users/#{message.user}"}
+                    class="font-semibold hover:text-primary"
+                  >
                     @{message.user.username}
                   </.link>
+                  <span :if={!message.user} class="font-semibold italic text-base-content/60">
+                    deleted user
+                  </span>
                   <div class="text-xs text-base-content/60">
                     <.time_ago id={"message-#{message.id}-time"} at={message.inserted_at} />
                   </div>

@@ -24,6 +24,28 @@ defmodule FirestormWeb.QuoteTest do
              "> restart children.\n> That's the whole trick & more\n\n"
   end
 
+  test "a selection of literal text from the rendered post stays literal" do
+    body = "Use `a*b*c` or `<b>x</b>` here"
+
+    for selection <- ["a*b*c", "<b>x</b>"] do
+      html = Markdown.render(Quote.build(body, "alice", @url, selection))
+      refute html =~ "<em>"
+      refute html =~ "<b>"
+      assert html =~ Phoenix.HTML.html_escape(selection) |> Phoenix.HTML.safe_to_string()
+    end
+
+    # Markdown selected from the source is quoted as written
+    assert Quote.build("Supervisors **restart** them", "alice", @url, "**restart**") =~
+             "> **restart**\n"
+  end
+
+  test "the selection limit counts UTF-8 bytes, like the browser hook" do
+    # 1,666 three-byte characters: 4,998 bytes, just under the limit
+    cjk = String.duplicate("語", 1_666)
+    assert Quote.in_post?("before " <> cjk <> " after", cjk)
+    refute Quote.in_post?(cjk <> "語語", cjk <> "語")
+  end
+
   test "falls back to the whole post for text that isn't in it" do
     for forged <- ["I never said this", "", "   ", nil, String.duplicate("a", 5_001)] do
       assert Quote.build(@body, "alice", @url, forged) == Quote.build(@body, "alice", @url)
