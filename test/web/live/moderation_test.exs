@@ -119,12 +119,13 @@ defmodule FirestormWeb.Web.ModerationTest do
 
   test "links from before a move redirect to the thread's new place", %{
     conn: conn,
+    admin: admin,
     member: member,
     thread: thread
   } do
     old_path = thread_path(thread)
     other = category_fixture("Erlang")
-    {:ok, moved} = Forums.move_thread(thread, other)
+    {:ok, moved} = Forums.move_thread(thread, other, admin)
 
     conn
     |> log_in_as(member)
@@ -153,7 +154,7 @@ defmodule FirestormWeb.Web.ModerationTest do
     admin: admin,
     thread: thread
   } do
-    {:ok, archived} = Forums.archive_thread(thread, true)
+    {:ok, archived} = Forums.archive_thread(thread, true, admin)
     refute FirestormWeb.Web.Authorization.can?(member, :update_thread, archived)
     refute FirestormWeb.Web.Authorization.can?(member, :delete_thread, archived)
     assert FirestormWeb.Web.Authorization.can?(admin, :update_thread, archived)
