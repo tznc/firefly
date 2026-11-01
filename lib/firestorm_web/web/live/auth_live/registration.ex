@@ -30,6 +30,12 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
+  # Bots fill in every field; people never see this one.
+  def handle_event("save", %{"user" => %{"website" => website}}, socket)
+      when website != "" do
+    {:noreply, put_flash(socket, :error, "Registration failed. Please try again.")}
+  end
+
   def handle_event("save", %{"user" => params}, socket) do
     with :ok <- RateLimit.check_register(socket.assigns.remote_ip || "unknown"),
          {:ok, user} <- Forums.register_user(params) do
@@ -80,6 +86,10 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
             autocomplete="new-password"
             value={@form[:password].value}
           />
+          <div class="hidden" aria-hidden="true">
+            <label for="user_website">Website</label>
+            <input type="text" id="user_website" name="user[website]" tabindex="-1" autocomplete="off" />
+          </div>
           <.button variant="primary" class="btn btn-primary w-full" phx-disable-with="Creating...">
             Create account
           </.button>

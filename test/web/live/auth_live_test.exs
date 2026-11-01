@@ -1,6 +1,8 @@
 defmodule FirestormWeb.Web.AuthLiveTest do
   use FirestormWeb.Web.ConnCase
 
+  require Phoenix.LiveViewTest
+
   alias FirestormWeb.Forums
 
   @password "s3cret-password"
@@ -108,6 +110,23 @@ defmodule FirestormWeb.Web.AuthLiveTest do
     |> fill_in("Password", with: @password)
     |> click_button("Create account")
     |> assert_has("p", text: "has already been taken")
+  end
+
+  test "registration ignores bots that fill in the hidden honeypot field", %{conn: conn} do
+    {:ok, view, _html} = Phoenix.LiveViewTest.live(conn, ~p"/register")
+
+    html =
+      Phoenix.LiveViewTest.render_submit(view, "save", %{
+        "user" => %{
+          "username" => "spambot",
+          "email" => "bot@example.com",
+          "password" => "s3cret-password",
+          "website" => "https://spam.example"
+        }
+      })
+
+    assert html =~ "Registration failed"
+    refute Forums.get_user_by_username("spambot")
   end
 
   test "logging out clears the session", %{conn: conn} do

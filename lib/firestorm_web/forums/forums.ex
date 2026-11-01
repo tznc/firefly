@@ -19,7 +19,8 @@ defmodule FirestormWeb.Forums do
     Notification,
     OembedExtractor,
     Role,
-    RoleMembership
+    RoleMembership,
+    SpamGuard
   }
 
   @doc """
@@ -512,7 +513,7 @@ defmodule FirestormWeb.Forums do
 
     thread_result =
       %{thread: thread_attrs, post: post_attrs}
-      |> Thread.new_changeset()
+      |> Thread.new_changeset(user)
       |> Repo.insert()
 
     case thread_result do
@@ -700,7 +701,9 @@ defmodule FirestormWeb.Forums do
       |> Map.put(:thread_id, thread.id)
       |> Map.put(:user_id, user.id)
 
-    with {:ok, post} <- Repo.insert(Post.changeset(%Post{}, attrs)) do
+    changeset = %Post{} |> Post.changeset(attrs) |> SpamGuard.validate_post(user)
+
+    with {:ok, post} <- Repo.insert(changeset) do
       :ok = Notifications.post_created(post)
 
       post = Repo.preload(post, [:thread, :user])
