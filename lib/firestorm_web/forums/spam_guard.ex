@@ -1,7 +1,8 @@
 defmodule FirestormWeb.Forums.SpamGuard do
   @moduledoc """
   Limits for new accounts, the usual shape of forum spam: until an account is
-  a day old and has a few posts, each post may contain only a couple of links.
+  `new_user_hours` old (a day) and has a few posts, each post may contain at
+  most `new_user_max_links` links (two); see `FirestormWeb.SiteSettings`.
   Admins are exempt.
 
   Every post, whoever writes it, may mention at most
@@ -10,12 +11,10 @@ defmodule FirestormWeb.Forums.SpamGuard do
   """
   import Ecto.{Changeset, Query}
 
-  alias FirestormWeb.{Forums, Repo}
+  alias FirestormWeb.{Forums, Repo, SiteSettings}
   alias FirestormWeb.Forums.{Post, User}
 
-  @new_user_age_hours 24
   @new_user_post_count 3
-  @new_user_max_links 2
 
   @link_regex ~r{\bhttps?://|\bwww\.}i
 
@@ -24,11 +23,13 @@ defmodule FirestormWeb.Forums.SpamGuard do
     changeset
     |> FirestormWeb.Mentions.validate_count()
     |> validate_change(:body, fn :body, body ->
-      if link_count(body) > @new_user_max_links and new_user?(user) do
+      max_links = SiteSettings.get("new_user_max_links")
+
+      if link_count(body) > max_links and new_user?(user) do
         [
           body:
             {"new accounts can include at most %{count} links per post",
-             count: @new_user_max_links, validation: :new_user_links}
+             count: max_links, validation: :new_user_links}
         ]
       else
         []
@@ -45,7 +46,9 @@ defmodule FirestormWeb.Forums.SpamGuard do
   end
 
   defp recent?(%User{inserted_at: inserted_at}) do
-    cutoff = NaiveDateTime.add(NaiveDateTime.utc_now(), -@new_user_age_hours, :hour)
+    cutoff =
+      NaiveDateTime.add(NaiveDateTime.utc_now(), -SiteSettings.get("new_user_hours"), :hour)
+
     NaiveDateTime.compare(inserted_at, cutoff) == :gt
   end
 

@@ -32,6 +32,7 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "user.unsilence" => "Lifted silence",
     "user.suspend" => "Suspended user",
     "user.unsuspend" => "Lifted suspension",
+    "setting.update" => "Changed setting",
     "admin.create" => "Created in admin",
     "admin.update" => "Updated in admin",
     "admin.delete" => "Deleted in admin"
@@ -83,6 +84,11 @@ defmodule FirestormWeb.Web.StaffLive.Log do
   defp label(action), do: Map.get(@labels, action, action)
 
   # The target's page (and how to name it), or nil once it's gone.
+  defp target_link(%{target_type: "setting", details: %{"key" => key}}, _target),
+    do: {key, ~p"/staff/settings"}
+
+  defp target_link(_entry, nil), do: nil
+
   defp target_link(%{target_type: "thread"}, thread),
     do: {thread.title, ~p"/categories/#{thread.category_id}/threads/#{thread}"}
 
@@ -145,13 +151,12 @@ defmodule FirestormWeb.Web.StaffLive.Log do
               </td>
               <td class="whitespace-nowrap">{label(entry.action)}</td>
               <td class="target">
-                <%= case @targets[{entry.target_type, entry.target_id}] do %>
+                <%= case target_link(entry, @targets[{entry.target_type, entry.target_id}]) do %>
                   <% nil -> %>
                     <span class="text-base-content/60">
                       Deleted {entry.target_type} #{entry.target_id}
                     </span>
-                  <% target -> %>
-                    <% {name, path} = target_link(entry, target) %>
+                  <% {name, path} -> %>
                     <.link navigate={path} class="link">{name}</.link>
                 <% end %>
               </td>

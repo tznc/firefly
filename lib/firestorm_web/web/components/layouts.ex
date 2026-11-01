@@ -22,6 +22,8 @@ defmodule FirestormWeb.Web.Layouts do
   slot :inner_block, required: true
 
   def app(assigns) do
+    assigns = assign(assigns, :contact_email, FirestormWeb.SiteSettings.get("contact_email"))
+
     ~H"""
     <div class="drawer lg:drawer-open">
       <input id="nav-drawer" type="checkbox" class="drawer-toggle" aria-label="Toggle navigation" />
@@ -138,6 +140,13 @@ defmodule FirestormWeb.Web.Layouts do
               >
                 Staff log
               </.nav_item>
+              <.nav_item
+                path={~p"/staff/settings"}
+                current_path={@current_path}
+                icon="hero-adjustments-horizontal"
+              >
+                Site settings
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>
@@ -157,6 +166,11 @@ defmodule FirestormWeb.Web.Layouts do
             </.nav_item>
           <% end %>
           <li class="menu-title">About</li>
+          <li :if={@contact_email != ""}>
+            <a id="contact-email" href={"mailto:" <> @contact_email}>
+              <.icon name="hero-envelope" class="size-5" /> Contact us
+            </a>
+          </li>
           <li><a href="https://tznc.dev">Made by tznc.dev</a></li>
           <li><a href="https://github.com/tznc/firefly">Firefly on GitHub</a></li>
           <li><a href="http://www.firestormforum.org">Built on Firestorm</a></li>
@@ -245,7 +259,7 @@ defmodule FirestormWeb.Web.Layouts do
     <span class={["flex items-center gap-2", @class]}>
       <img src={~p"/images/firefly-icon.svg"} alt="" class={[@size, "dark:hidden"]} />
       <img src={~p"/images/firefly-icon-dark.svg"} alt="" class={[@size, "hidden dark:block"]} />
-      <span class="text-xl font-bold tracking-tight">Firefly</span>
+      <span class="text-xl font-bold tracking-tight">{FirestormWeb.SiteSettings.get("title")}</span>
     </span>
     """
   end

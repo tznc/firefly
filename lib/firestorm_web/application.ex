@@ -25,6 +25,8 @@ defmodule FirestormWeb.Application do
       FirestormWeb.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: FirestormWeb.PubSub},
+      # Clears cached site settings when another node changes them
+      FirestormWeb.SiteSettings.Cache,
       # Rate limit buckets
       {FirestormWeb.RateLimit, clean_period: :timer.minutes(10)},
       # Add an LRU Cache for storing OEmbed results for a given URL, storing at

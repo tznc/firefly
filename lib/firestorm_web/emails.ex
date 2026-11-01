@@ -1,6 +1,7 @@
 defmodule FirestormWeb.Emails do
   @moduledoc """
-  Module hosting outbound email templates.
+  Module hosting outbound email templates. They call the site by its `title`
+  site setting.
   """
 
   import Bamboo.Email
@@ -14,11 +15,11 @@ defmodule FirestormWeb.Emails do
     reply = post_url(thread, post)
 
     post_notification(user, thread, post,
-      subject: "There was a new post in a thread you are watching on Firefly",
+      subject: "There was a new post in a thread you are watching on #{site()}",
       html:
-        "The Firefly thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", reply)}:",
+        "The #{escape(site())} thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", reply)}:",
       text:
-        "The Firefly thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{reply}]:",
+        "The #{site()} thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{reply}]:",
       reason: @watching
     )
   end
@@ -29,11 +30,11 @@ defmodule FirestormWeb.Emails do
     mention = post_url(thread, post)
 
     post_notification(user, thread, post,
-      subject: "#{author} mentioned you on Firefly",
+      subject: "#{author} mentioned you on #{site()}",
       html:
-        "#{escape(author)} #{link("mentioned you", mention)} in the Firefly thread #{link(thread.title, thread_url(thread))}:",
+        "#{escape(author)} #{link("mentioned you", mention)} in the #{escape(site())} thread #{link(thread.title, thread_url(thread))}:",
       text:
-        "#{author} mentioned you [#{mention}] in the Firefly thread #{thread.title} [#{thread_url(thread)}]:",
+        "#{author} mentioned you [#{mention}] in the #{site()} thread #{thread.title} [#{thread_url(thread)}]:",
       reason: @mentioned
     )
   end
@@ -77,16 +78,16 @@ defmodule FirestormWeb.Emails do
     new_email()
     |> to(user.email)
     |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
-    |> subject("#{subject} on Firefly")
+    |> subject("#{subject} on #{site()}")
     |> html_body("""
-    <p>#{escape(subject)}. #{link("Read and reply on Firefly", url)}:</p>
+    <p>#{escape(subject)}. #{link("Read and reply on #{site()}", url)}:</p>
     <hr />
     #{Markdown.render(message.body)}
     <hr />
     <p><small>You're getting this because you're in this private conversation. We won't email you about it again until you've read it. #{link("Change your notification settings", settings_url())}.</small></p>
     """)
     |> text_body("""
-    #{subject}. Read and reply on Firefly: #{url}
+    #{subject}. Read and reply on #{site()}: #{url}
 
     #{message.body}
 
@@ -101,16 +102,16 @@ defmodule FirestormWeb.Emails do
     new_email()
     |> to(user.email)
     |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
-    |> subject("#{subject} on Firefly")
+    |> subject("#{subject} on #{site()}")
     |> html_body("""
     <p>Hi #{escape(user.username)},</p>
-    <p>#{escape(subject)} on Firefly.</p>
+    <p>#{escape(subject)} on #{escape(site())}.</p>
     <p>Reason: #{escape(reason)}</p>
     """)
     |> text_body("""
     Hi #{user.username},
 
-    #{subject} on Firefly.
+    #{subject} on #{site()}.
 
     Reason: #{reason}
     """)
@@ -120,20 +121,20 @@ defmodule FirestormWeb.Emails do
     new_email()
     |> to(user.email)
     |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
-    |> subject("Confirm your email address for Firefly")
+    |> subject("Confirm your email address for #{site()}")
     |> html_body("""
     <p>Hi #{escape(user.username)},</p>
-    <p>Confirm your email address to start posting on Firefly: #{link("confirm my email", url)}</p>
-    <p>The link expires in 7 days. If you didn't create a Firefly account, ignore this email.</p>
+    <p>Confirm your email address to start posting on #{escape(site())}: #{link("confirm my email", url)}</p>
+    <p>The link expires in 7 days. If you didn't create a #{escape(site())} account, ignore this email.</p>
     """)
     |> text_body("""
     Hi #{user.username},
 
-    Confirm your email address to start posting on Firefly:
+    Confirm your email address to start posting on #{site()}:
 
     #{url}
 
-    The link expires in 7 days. If you didn't create a Firefly account, ignore this email.
+    The link expires in 7 days. If you didn't create a #{site()} account, ignore this email.
     """)
   end
 
@@ -141,16 +142,16 @@ defmodule FirestormWeb.Emails do
     new_email()
     |> to(user.email)
     |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
-    |> subject("Reset your Firefly password")
+    |> subject("Reset your #{site()} password")
     |> html_body("""
     <p>Hi #{escape(user.username)},</p>
-    <p>Someone asked to reset the password for your Firefly account. #{link("Choose a new password", url)}.</p>
+    <p>Someone asked to reset the password for your #{escape(site())} account. #{link("Choose a new password", url)}.</p>
     <p>The link expires in an hour and works once. If it wasn't you, ignore this email.</p>
     """)
     |> text_body("""
     Hi #{user.username},
 
-    Someone asked to reset the password for your Firefly account. Choose a new password here:
+    Someone asked to reset the password for your #{site()} account. Choose a new password here:
 
     #{url}
 
@@ -163,6 +164,9 @@ defmodule FirestormWeb.Emails do
   def post_url(thread, post) do
     "#{thread_url(thread)}#post-#{post.id}"
   end
+
+  # The site's name (the `title` site setting).
+  defp site, do: FirestormWeb.SiteSettings.get("title")
 
   defp settings_url, do: FirestormWeb.Web.Paths.notification_settings_url()
 

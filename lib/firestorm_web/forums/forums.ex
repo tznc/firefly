@@ -5,7 +5,7 @@ defmodule FirestormWeb.Forums do
 
   defdelegate authorize(action, user, params), to: FirestormWeb.Forums.Policy
   import Ecto.{Query, Changeset}, warn: false
-  alias FirestormWeb.{Repo, Notifications, StaffLog}
+  alias FirestormWeb.{Repo, Notifications, SiteSettings, StaffLog}
   alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Store.ReplenishResponse
 
@@ -139,11 +139,22 @@ defmodule FirestormWeb.Forums do
       {:ok, %User{}}
   """
   def register_user(attrs) do
-    # Unconfirmed until they follow the emailed link (see EmailConfirmation).
-    %User{api_token: generate_api_token()}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
+    # Unconfirmed until they follow the emailed link (see EmailConfirmation),
+    # unless the site doesn't require it.
+    confirmed_at =
+      if SiteSettings.get("require_email_confirmation"), do: nil, else: DateTime.utc_now(:second)
+
+    if registration_open?() do
+      %User{api_token: generate_api_token(), confirmed_at: confirmed_at}
+      |> User.registration_changeset(attrs)
+      |> Repo.insert()
+    else
+      {:error, :registration_closed}
+    end
   end
+
+  @doc "Whether new accounts may be created (the `allow_registrations` site setting)."
+  def registration_open?, do: SiteSettings.get("allow_registrations")
 
   @doc "A changeset for the registration form."
   def change_registration(%User{} = user \\ %User{}, attrs \\ %{}) do
@@ -956,9 +967,12 @@ defmodule FirestormWeb.Forums do
     end)
   end
 
-  @doc "Whether members may create tags; otherwise only admins can (`FIREFLY_TAGS_ADMIN_ONLY`)."
+  @doc """
+  Whether `user` may create tags: members may unless the `tags_admin_only`
+  site setting (seeded from `FIREFLY_TAGS_ADMIN_ONLY`) is on; admins always.
+  """
   def may_create_tags?(%User{} = user),
-    do: not Application.get_env(:firestorm_web, :tags_admin_only, false) or admin?(user)
+    do: not SiteSettings.get("tags_admin_only") or admin?(user)
 
   def may_create_tags?(nil), do: false
 
@@ -1157,6 +1171,12 @@ defmodule FirestormWeb.Forums do
   end
 
   defp register_github_user(uid, nickname, name, email) do
+    if registration_open?(),
+      do: insert_github_user(uid, nickname, name, email),
+      else: {:error, "New registrations are closed."}
+  end
+
+  defp insert_github_user(uid, nickname, name, email) do
     # GitHub vouches for the account; its email is not used to log in.
     %User{confirmed_at: DateTime.utc_now(:second)}
     |> User.github_changeset(%{

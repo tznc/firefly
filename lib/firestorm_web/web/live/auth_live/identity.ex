@@ -42,7 +42,7 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
         <.page_header title="Log In">
-          <:subtitle>
+          <:subtitle :if={FirestormWeb.Forums.registration_open?()}>
             New here? <.link navigate={~p"/register"} class="link">Create an account</.link>
           </:subtitle>
         </.page_header>
