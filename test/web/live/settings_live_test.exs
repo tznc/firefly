@@ -101,7 +101,9 @@ defmodule FirestormWeb.Web.SettingsLiveTest do
     {:ok, _} = Forums.create_post(theirs, user, %{body: "Reply"})
 
     assert Subscriptions.thread_level(user, mine) == "tracking"
-    assert Subscriptions.thread_level(user, theirs) == "normal"
+    # Normal sets nothing: the thread keeps what it inherits.
+    assert Subscriptions.thread_level(user, theirs) == nil
+    assert Subscriptions.effective_thread_level(user, theirs) == "normal"
 
     # The defaults: watch what you start, track what you reply to.
     other = user_fixture()

@@ -8,6 +8,7 @@ defmodule FirestormWeb.PrivateCategoriesTest do
     Forums,
     Groups,
     Markdown,
+    Mentions,
     Notifications,
     Posting,
     Repo,
@@ -238,6 +239,13 @@ defmodule FirestormWeb.PrivateCategoriesTest do
     end
 
     assert Markdown.render(body, ctx.insider) =~ "/categories/#{ctx.secret.id}"
+
+    # Likewise with names resolved once for a page of posts
+    refute Markdown.render(body, Mentions.refs([body], ctx.outsider)) =~
+             "/categories/#{ctx.secret.id}"
+
+    assert Markdown.render(body, Mentions.refs([body], ctx.insider)) =~
+             "/categories/#{ctx.secret.id}"
   end
 
   test "the data export leaves out what the user can no longer read", ctx do

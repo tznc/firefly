@@ -101,15 +101,18 @@ defmodule FirestormWeb.Notifications do
   def handle_cast({:message_created, %Message{} = message}, state) do
     message = Repo.preload(message, [:user, :conversation])
     conversation = message.conversation
-    author = message.user
+    # The author's account may be gone by now (their messages stay).
+    {author_id, author} =
+      if message.user, do: {message.user.id, "@#{message.user.username}"}, else: {nil, "Someone"}
+
     first? = Messages.first_message(conversation).id == message.id
 
     subject =
       if first?,
-        do: "@#{author.username} sent you a message: \"#{conversation.title}\"",
-        else: "@#{author.username} replied to \"#{conversation.title}\""
+        do: "#{author} sent you a message: \"#{conversation.title}\"",
+        else: "#{author} replied to \"#{conversation.title}\""
 
-    for user <- Messages.participants(conversation), user.id != author.id do
+    for user <- Messages.participants(conversation), user.id != author_id do
       notify_message(user, conversation, message, subject)
     end
 
@@ -171,7 +174,7 @@ defmodule FirestormWeb.Notifications do
       |> Repo.all()
 
     new =
-      for user <- post.body |> Mentions.usernames() |> Forums.users_by_username() |> Map.values(),
+      for user <- Mentions.users(post.body),
           user.id != post.user_id and user.id not in already,
           Bodyguard.permit?(Forums, :view_thread, user, thread),
           Subscriptions.effective_thread_level(user, thread) != "muted" do

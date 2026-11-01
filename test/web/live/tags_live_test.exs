@@ -44,20 +44,22 @@ defmodule FirestormWeb.Web.TagsLiveTest do
     |> assert_has(".tags a.tag", text: "genserver")
   end
 
-  test "the tag page sets the tag's notification level", %{
+  test "the tag page sets the tag's notification level, and still lists a muted tag's threads", %{
     conn: conn,
     author: author,
     category: category
   } do
     # Someone else's thread: the author's own is watched, which beats the tag.
-    thread_fixture(category, user_fixture(), %{tags: "otp"})
+    thread = thread_fixture(category, user_fixture(), %{tags: "otp"})
 
     conn
     |> visit(~p"/tags/otp")
     |> click_button("#tag-level li button", "Muted")
     |> assert_has("#tag-level .level-label", text: "Muted")
-    |> assert_has("#threads", text: "No threads with this tag.")
+    |> assert_has("#threads .thread-title", text: thread.title)
 
     assert Subscriptions.tag_level(author, Forums.get_tag!("otp")) == "muted"
+    # Hidden from the cross-category lists, though
+    refute thread.id in Enum.map(Forums.latest_threads(author), & &1.id)
   end
 end

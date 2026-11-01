@@ -350,6 +350,7 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :headline, :boolean, default: false, doc: "show the thread title instead of the author"
   attr :can_edit, :boolean, default: false
   attr :viewer, :any, default: nil, doc: "the current user, to link categories they may read"
+  attr :refs, :map, default: nil, doc: "`FirestormWeb.Mentions.refs/2` of the page's posts"
   slot :actions
 
   def post(assigns) do
@@ -400,7 +401,7 @@ defmodule FirestormWeb.Web.ForumComponents do
             </div>
           </div>
         </header>
-        <.markdown id={"post-#{@post.id}-body"} body={@post.body} viewer={@viewer} />
+        <.markdown id={"post-#{@post.id}-body"} body={@post.body} viewer={@viewer} refs={@refs} />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
         <footer class="flex items-center justify-end gap-1">
           {render_slot(@actions)}
@@ -550,11 +551,12 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :id, :string, required: true
   attr :body, :string, required: true
   attr :viewer, :any, default: nil, doc: "who reads it (see `FirestormWeb.Markdown.render/2`)"
+  attr :refs, :map, default: nil, doc: "see `FirestormWeb.Markdown.render/2`"
 
   def markdown(assigns) do
     ~H"""
     <div id={@id} phx-hook="Highlight" class="post-body prose prose-sm max-w-none">
-      {Phoenix.HTML.raw(Markdown.render(@body, @viewer))}
+      {Phoenix.HTML.raw(Markdown.render(@body, @refs || @viewer))}
     </div>
     """
   end

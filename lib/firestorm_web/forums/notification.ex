@@ -77,13 +77,15 @@ defmodule FirestormWeb.Forums.Notification do
 
   @doc """
   Notification attributes for a private `message` (`subject` says what
-  happened: a new conversation, a reply, being added).
+  happened: a new conversation, a reply, being added). The message itself is
+  left out: notifications are stored where admins can see them (the admin
+  pages), and private messages are for their participants only.
   """
   def for_message(%Conversation{} = conversation, %Message{} = message, subject) do
     %{
       kind: "message",
       subject: subject,
-      body: message.body,
+      body: "Open the conversation to read it.",
       url: "#{FirestormWeb.Web.Paths.conversation_url(conversation)}#message-#{message.id}",
       conversation_id: conversation.id
     }
