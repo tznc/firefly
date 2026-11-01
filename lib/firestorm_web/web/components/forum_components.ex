@@ -10,7 +10,7 @@ defmodule FirestormWeb.Web.ForumComponents do
     router: FirestormWeb.Web.Router,
     statics: FirestormWeb.Web.static_paths()
 
-  import FirestormWeb.Web.CoreComponents, only: [icon: 1]
+  import FirestormWeb.Web.CoreComponents, only: [icon: 1, input: 1]
 
   alias FirestormWeb.Forums.User
   alias FirestormWeb.Markdown
@@ -88,6 +88,44 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
+  @doc "A thread's tags, as links to their lists (nothing if not loaded)."
+  attr :tags, :any, required: true
+  attr :class, :string, default: nil
+
+  def tag_chips(assigns) do
+    assigns =
+      assign(assigns, :tags, if(Ecto.assoc_loaded?(assigns.tags), do: assigns.tags, else: []))
+
+    ~H"""
+    <span :if={@tags != []} class={["tags inline-flex flex-wrap gap-1", @class]}>
+      <.link
+        :for={tag <- @tags}
+        navigate={~p"/tags/#{tag.name}"}
+        class="tag badge badge-sm badge-ghost gap-0.5 hover:badge-neutral"
+      >
+        <.icon name="hero-tag" class="size-3" />{tag.name}
+      </.link>
+    </span>
+    """
+  end
+
+  @doc "The tags field of the thread forms: comma- or space-separated names."
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :value, :string, default: nil
+
+  def tags_input(assigns) do
+    ~H"""
+    <.input
+      field={@field}
+      value={@value || @field.value}
+      type="text"
+      label="Tags"
+      placeholder={"Up to #{FirestormWeb.Forums.Tag.max_per_thread()} tags, e.g. otp, phoenix"}
+      autocomplete="off"
+    />
+    """
+  end
+
   @doc "A page heading with optional action buttons."
   attr :title, :string, required: true
   attr :navigate, :string, default: nil
@@ -133,6 +171,7 @@ defmodule FirestormWeb.Web.ForumComponents do
             >
               {thread.title}
             </.link>
+            <.tag_chips tags={thread.tags} />
           </div>
           <div :if={thread.first_post} class="text-xs text-base-content/60">
             <.link navigate={~p"/users/#{thread.first_post.user}"} class="link-hover">

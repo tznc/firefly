@@ -1,5 +1,5 @@
 defmodule FirestormWeb.Web.ThreadLive.New do
-  @moduledoc "Starts a new thread (title plus first post) in a category."
+  @moduledoc "Starts a new thread (title, tags and first post) in a category."
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
@@ -16,7 +16,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
      socket
      |> assign(:page_title, "New Thread - #{category.title}")
      |> assign(:category, category)
-     |> assign_form(%{"title" => "", "body" => ""})
+     |> assign_form(%{"title" => "", "tags" => "", "body" => ""})
      |> Editor.allow_attachments(&handle_progress/3)
      |> Editor.mention_search()}
   end
@@ -39,6 +39,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
   defp create_thread(socket, params) do
     case Forums.create_thread(socket.assigns.category, socket.assigns.current_user, %{
            title: params["title"],
+           tags: params["tags"],
            body: params["body"]
          }) do
       {:ok, thread} ->
@@ -90,7 +91,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
         _ -> []
       end
 
-    Keyword.take(changeset.errors, [:title]) ++ Keyword.take(post_errors, [:body])
+    Keyword.take(changeset.errors, [:title, :tags]) ++ Keyword.take(post_errors, [:body])
   end
 
   @impl true
@@ -105,6 +106,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
 
       <.form for={@form} id="thread-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <.input field={@form[:title]} type="text" label="Title" placeholder="Type a title" />
+        <.tags_input field={@form[:tags]} />
         <Editor.body_editor
           field={@form[:body]}
           uploads={@uploads}

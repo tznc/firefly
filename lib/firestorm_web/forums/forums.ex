@@ -24,7 +24,8 @@ defmodule FirestormWeb.Forums do
     Role,
     RoleMembership,
     SpamGuard,
-    Subscriptions
+    Subscriptions,
+    Tag
   }
 
   @doc """
@@ -445,6 +446,7 @@ defmodule FirestormWeb.Forums do
 
   # Decorates threads with list data, in two queries for the whole list
   # (deleted posts don't count):
+  #   - tags
   #   - first_post (with its user)
   #   - posts_count, last_post_at
   #   - for a user: unread_count, first_unread_post_id, new? (never opened) and
@@ -452,6 +454,7 @@ defmodule FirestormWeb.Forums do
   defp decorate_threads([], _user), do: []
 
   defp decorate_threads(threads, user) do
+    threads = Repo.preload(threads, :tags)
     ids = Enum.map(threads, & &1.id)
     stats = thread_stats(ids, user)
     first_posts = first_posts(ids)
@@ -801,7 +804,7 @@ defmodule FirestormWeb.Forums do
 
   ## Examples
 
-      iex> create_thread(category, user, %{title: "OTP is cool", body: "don't you think?"})
+      iex> create_thread(category, user, %{title: "OTP is cool", body: "don't you think?", tags: "otp, beam"})
       {:ok, %Thread{}}
 
       iex> create_thread(category, user, %{field: bad_value})
@@ -822,6 +825,7 @@ defmodule FirestormWeb.Forums do
     thread_result =
       %{thread: thread_attrs, post: post_attrs}
       |> Thread.new_changeset(user)
+      |> put_tags(attrs[:tags], user)
       |> Repo.insert()
 
     case thread_result do
@@ -859,7 +863,9 @@ defmodule FirestormWeb.Forums do
   end
 
   @doc """
-  Updates a thread.
+  Updates a thread. A `tags` attribute (comma- or space-separated names)
+  replaces its tags; tags that don't exist yet are created if `editor` may
+  (see `may_create_tags?/1`).
 
   ## Examples
 
@@ -870,11 +876,75 @@ defmodule FirestormWeb.Forums do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_thread(%Thread{} = thread, attrs) do
+  def update_thread(%Thread{} = thread, attrs, editor \\ nil) do
     thread
+    |> Repo.preload(:tags)
     |> Thread.changeset(attrs)
+    |> put_tags(attrs[:tags] || attrs["tags"], editor)
     |> Repo.update()
     |> tap_ok(&broadcast_thread(:thread_updated, &1))
+  end
+
+  @doc "Whether members may create tags; otherwise only admins can (`FIREFLY_TAGS_ADMIN_ONLY`)."
+  def may_create_tags?(%User{} = user),
+    do: not Application.get_env(:firestorm_web, :tags_admin_only, false) or admin?(user)
+
+  def may_create_tags?(nil), do: false
+
+  # Sets the thread's tags from user input (see `Tag.parse/1`); nil leaves
+  # them as they are. Unknown tags are created, if `user` may.
+  defp put_tags(changeset, nil, _user), do: changeset
+
+  defp put_tags(changeset, input, user) do
+    names = Tag.parse(input)
+    existing = Tag |> where([t], t.name in ^names) |> Repo.all() |> Map.new(&{&1.name, &1})
+    new = Enum.reject(names, &Map.has_key?(existing, &1))
+    invalid = Enum.reject(new, &Tag.valid_name?/1)
+
+    cond do
+      length(names) > Tag.max_per_thread() ->
+        add_error(changeset, :tags, "can have at most %{count} tags", count: Tag.max_per_thread())
+
+      invalid != [] ->
+        add_error(
+          changeset,
+          :tags,
+          "#{Enum.join(invalid, ", ")}: use lowercase letters, digits and dashes (30 at most)"
+        )
+
+      new != [] and not may_create_tags?(user) ->
+        add_error(changeset, :tags, "#{Enum.join(new, ", ")}: no such tag")
+
+      true ->
+        tags = Enum.map(names, &(existing[&1] || Tag.changeset(%Tag{}, %{name: &1})))
+        put_assoc(changeset, :tags, tags)
+    end
+  end
+
+  @doc "Every tag with at least one listed thread, with `threads_count`, most used first."
+  def list_tags do
+    Tag
+    |> join(:inner, [t], tt in "forums_threads_tags", on: tt.tag_id == t.id)
+    |> join(:inner, [t, tt], th in Thread, on: th.id == tt.thread_id and is_nil(th.archived_at))
+    |> group_by([t], t.id)
+    |> order_by([t, tt], desc: count(tt.thread_id), asc: t.name)
+    |> select([t, tt], %{t | threads_count: count(tt.thread_id)})
+    |> Repo.all()
+  end
+
+  @doc "Gets a tag by name. Raises `Ecto.NoResultsError` if there's none."
+  def get_tag!(name), do: Repo.get_by!(Tag, name: String.downcase(name))
+
+  @doc "A tag's threads (leaving out archived and muted ones), most recently active first."
+  def tag_threads(%Tag{id: tag_id}, user_or_nil) do
+    Thread
+    |> join(:inner, [t], tt in "forums_threads_tags", on: tt.thread_id == t.id)
+    |> where([t, tt], tt.tag_id == ^tag_id)
+    |> listed(user_or_nil)
+    |> by_last_activity()
+    |> preload(:category)
+    |> Repo.all()
+    |> decorate_threads(user_or_nil)
   end
 
   @doc "Pins or unpins a thread (pinned threads list first in their category)."

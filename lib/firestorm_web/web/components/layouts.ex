@@ -90,6 +90,7 @@ defmodule FirestormWeb.Web.Layouts do
           <.nav_item path={~p"/categories"} current_path={@current_path} icon="hero-squares-2x2">
             Categories
           </.nav_item>
+          <.nav_item path={~p"/tags"} current_path={@current_path} icon="hero-tag">Tags</.nav_item>
           <.nav_item path={~p"/users"} current_path={@current_path} icon="hero-users">Users</.nav_item>
           <li class="menu-title">Account</li>
           <%= if @current_user do %>
