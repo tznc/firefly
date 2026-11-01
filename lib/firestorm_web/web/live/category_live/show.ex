@@ -28,6 +28,9 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
     {:noreply, socket |> assign(:level, level) |> load_threads()}
   end
 
+  # Unknown levels, or an anonymous viewer.
+  def handle_event("set_level", _params, socket), do: {:noreply, socket}
+
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :manage_category) do
       {:ok, _} = Forums.delete_category(socket.assigns.category)
