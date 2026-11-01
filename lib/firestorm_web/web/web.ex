@@ -12,17 +12,7 @@ defmodule FirestormWeb.Web do
   Do NOT define functions inside the quoted expressions.
   """
 
-  def static_paths do
-    ~w(assets fonts images favicon.ico robots.txt manifest.json browserconfig.xml) ++
-      ~w(favicon-16x16.png favicon-32x32.png favicon-96x96.png) ++
-      ~w(android-icon-36x36.png android-icon-48x48.png android-icon-72x72.png) ++
-      ~w(android-icon-96x96.png android-icon-144x144.png android-icon-192x192.png) ++
-      ~w(apple-icon.png apple-icon-precomposed.png apple-icon-57x57.png apple-icon-60x60.png) ++
-      ~w(apple-icon-72x72.png apple-icon-76x76.png apple-icon-114x114.png) ++
-      ~w(apple-icon-120x120.png apple-icon-144x144.png apple-icon-152x152.png) ++
-      ~w(apple-icon-180x180.png ms-icon-70x70.png ms-icon-144x144.png) ++
-      ~w(ms-icon-150x150.png ms-icon-310x310.png)
-  end
+  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt manifest.json)
 
   def router do
     quote do

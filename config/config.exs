@@ -49,9 +49,9 @@ config :kaffy,
   otp_app: :firestorm_web,
   ecto_repo: FirestormWeb.Repo,
   router: FirestormWeb.Web.Router,
-  admin_title: "Firestorm Admin",
-  admin_logo: [url: "/images/firestorm-logo.png", style: "max-height: 40px"],
-  admin_logo_mini: "/images/firestorm-logo.png",
+  admin_title: "Firefly Admin",
+  admin_logo: [url: "/images/firefly-icon.svg", style: "max-height: 40px"],
+  admin_logo_mini: "/images/firefly-icon.svg",
   home_page: [kaffy: :dashboard],
   resources: &FirestormWeb.Admin.resources/1
 

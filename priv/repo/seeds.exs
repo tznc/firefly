@@ -11,7 +11,7 @@
 # and so on) as they will fail if something goes wrong.
 alias FirestormWeb.Forums
 
-IO.puts("~~~~~ INITIALIZING FIRESTORM SEEDS ~~~~~")
+IO.puts("~~~~~ INITIALIZING FIREFLY SEEDS ~~~~~")
 IO.puts("-- CREATING ROLES --")
 
 {:ok, admin_role} =

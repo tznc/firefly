@@ -11,7 +11,7 @@ defmodule FirestormWeb.Emails do
     new_email()
     |> to(user.email)
     |> from("noreply@firestormforum.org")
-    |> subject("There was a new post in a thread you are watching on Firestorm")
+    |> subject("There was a new post in a thread you are watching on Firefly")
     |> html_body(html_body_for(thread, post))
     |> text_body(text_body_for(thread, post))
     |> put_header("reply-to", reply_to_thread_address(thread))
@@ -34,7 +34,7 @@ defmodule FirestormWeb.Emails do
 
   defp html_body_for(%Thread{} = thread, %Post{} = post) do
     """
-    <p>The Firestorm thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", post_url(thread, post))}:</p>
+    <p>The Firefly thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", post_url(thread, post))}:</p>
     <hr />
     #{Markdown.render(post.body)}
     """
@@ -42,7 +42,7 @@ defmodule FirestormWeb.Emails do
 
   defp text_body_for(%Thread{} = thread, %Post{} = post) do
     """
-    The Firestorm thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{post_url(thread, post)}]:\n\n
+    The Firefly thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{post_url(thread, post)}]:\n\n
     #{post.body}
     """
   end

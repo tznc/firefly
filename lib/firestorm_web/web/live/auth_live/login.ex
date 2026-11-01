@@ -11,7 +11,7 @@ defmodule FirestormWeb.Web.AuthLive.Login do
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-6 py-8 text-center">
         <.link navigate={~p"/categories"} class="inline-flex justify-center">
-          <Layouts.logo class="h-10" />
+          <Layouts.logo size="size-12" class="text-3xl" />
         </.link>
         <div class="card border border-base-300 bg-base-100">
           <div class="card-body gap-3">
@@ -24,7 +24,7 @@ defmodule FirestormWeb.Web.AuthLive.Login do
           </div>
         </div>
         <p class="text-xs text-base-content/60">
-          By signing up, I agree to Firestorm's Terms and Privacy Policy.
+          By signing up, I agree to Firefly's Terms and Privacy Policy.
         </p>
       </section>
     </Layouts.app>

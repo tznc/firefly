@@ -117,8 +117,9 @@ defmodule FirestormWeb.Web.Layouts do
             </.nav_item>
           <% end %>
           <li class="menu-title">About</li>
-          <li><a href="http://www.firestormforum.org">firestormforum.org</a></li>
-          <li><a href="http://www.firestormforum.org#patrons">Patrons</a></li>
+          <li><a href="https://github.com/tznc/firefly">Firefly on GitHub</a></li>
+          <li><a href="http://www.firestormforum.org">Built on Firestorm</a></li>
+          <li><a href="http://www.firestormforum.org#patrons">Firestorm patrons</a></li>
         </nav>
       </div>
     </div>
@@ -152,12 +153,17 @@ defmodule FirestormWeb.Web.Layouts do
     """
   end
 
-  @doc "The Firestorm logo and wordmark."
+  @doc "The Firefly icon and wordmark (the icon swaps for the dark theme)."
   attr :class, :string, default: nil
+  attr :size, :string, default: "size-8"
 
   def logo(assigns) do
     ~H"""
-    <img src={~p"/images/firestorm-logo.png"} alt="Firestorm" class={["h-6 w-auto", @class]} />
+    <span class={["flex items-center gap-2", @class]}>
+      <img src={~p"/images/firefly-icon.svg"} alt="" class={[@size, "dark:hidden"]} />
+      <img src={~p"/images/firefly-icon-dark.svg"} alt="" class={[@size, "hidden dark:block"]} />
+      <span class="text-xl font-bold tracking-tight">Firefly</span>
+    </span>
     """
   end
 
@@ -212,7 +218,7 @@ defmodule FirestormWeb.Web.Layouts do
   def theme_toggle(assigns) do
     ~H"""
     <div class="card relative flex flex-row items-center rounded-full border-2 border-base-300 bg-base-300">
-      <div class="absolute left-0 h-full w-1/3 rounded-full border-1 border-base-200 bg-base-100 brightness-200 transition-[left] [[data-theme=firestorm]_&]:left-1/3 [[data-theme=firestorm-dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0" />
+      <div class="absolute left-0 h-full w-1/3 rounded-full border-1 border-base-200 bg-base-100 brightness-200 transition-[left] [[data-theme=firefly]_&]:left-1/3 [[data-theme=firefly-dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0" />
       <button
         class="flex w-1/3 cursor-pointer p-2"
         phx-click={JS.dispatch("phx:set-theme")}

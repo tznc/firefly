@@ -9,6 +9,20 @@ defmodule FirestormWeb.Web.LayoutTest do
     assert html =~ ~s(src="/assets/js/app.js")
   end
 
+  test "pages carry the Firefly brand: icons, manifest, wordmark", %{conn: conn} do
+    html = conn |> get(~p"/") |> html_response(200)
+    assert html =~ ~s(href="/images/firefly-icon.svg")
+    assert html =~ ~s(href="/images/apple-touch-icon.png")
+    assert html =~ ~s(href="/manifest.json")
+    assert html =~ "<title data-default=\"Firefly\""
+
+    conn |> visit(~p"/") |> assert_has("header span", text: "Firefly")
+
+    manifest = conn |> get("/manifest.json") |> response(200) |> Jason.decode!()
+    assert manifest["name"] == "Firefly"
+    assert conn |> get("/images/firefly-icon.svg") |> response(200) =~ "<title>Firefly</title>"
+  end
+
   test "visitors see a log in link and the forum navigation", %{conn: conn} do
     conn
     |> visit(~p"/categories")
@@ -42,6 +56,6 @@ defmodule FirestormWeb.Web.LayoutTest do
 
   test "sets the page title", %{conn: conn} do
     category = category_fixture("Elixir")
-    conn |> visit(~p"/categories/#{category}") |> assert_has("title", text: "Elixir - Firestorm")
+    conn |> visit(~p"/categories/#{category}") |> assert_has("title", text: "Elixir - Firefly")
   end
 end
