@@ -12,6 +12,7 @@ defmodule FirestormWeb.Forums.Post do
     field(:body, :string)
     field(:edited_at, :naive_datetime_usec)
     field(:deleted_at, :utc_datetime)
+    field(:hidden_at, :utc_datetime)
     belongs_to(:deleted_by, User)
     belongs_to(:thread, Thread)
     belongs_to(:user, User)
@@ -44,6 +45,12 @@ defmodule FirestormWeb.Forums.Post do
 
   @doc "Whether the post was (soft) deleted. Its content is then hidden from members."
   def deleted?(%__MODULE__{deleted_at: at}), do: not is_nil(at)
+
+  @doc """
+  Whether the post is hidden pending review, after enough flags (see
+  `FirestormWeb.Flags`). Only its author and admins see its content.
+  """
+  def hidden?(%__MODULE__{hidden_at: at}), do: not is_nil(at)
 
   @doc "Posts that aren't deleted."
   def visible(query \\ __MODULE__), do: where(query, [p], is_nil(p.deleted_at))

@@ -5,7 +5,8 @@ defmodule FirestormWeb.Posting do
   confirmed email address and be within the posting rate limit, and a reply's
   thread must be open. Starting a private conversation also counts against
   the `:message` limit, so one account can't message crowds. Liking only
-  checks penalties (`check(user, :like)`). Replying also needs the user to
+  checks penalties (`check(user, :like)`); flagging checks penalties and its
+  own rate limit (`check(user, :flag)`). Replying also needs the user to
   be able to read the thread (`:not_found` otherwise, as if it didn't
   exist): a reply-to address or API call outlives access to a category.
   """
@@ -24,6 +25,10 @@ defmodule FirestormWeb.Posting do
       User.silenced?(user) -> {:error, {:silenced, user.silenced_until}}
       true -> :ok
     end
+  end
+
+  def check(%User{} = user, :flag) do
+    with :ok <- check(user, :like), do: RateLimit.check_flag(user)
   end
 
   def check(%User{} = user, :new_conversation) do
@@ -45,7 +50,7 @@ defmodule FirestormWeb.Posting do
 
   def message({:silenced, until}),
     do:
-      "You've been silenced #{Penalties.ends_text(until)}: you can read, but not post, message or like."
+      "You've been silenced #{Penalties.ends_text(until)}: you can read, but not post, message, like or flag."
 
   def message({:suspended, until}), do: "Your account is suspended #{Penalties.ends_text(until)}."
 

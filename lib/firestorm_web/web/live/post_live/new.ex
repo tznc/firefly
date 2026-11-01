@@ -59,7 +59,7 @@ defmodule FirestormWeb.Web.PostLive.New do
   # `&selection=` if it's really part of the post).
   defp quote_body(category, thread, %{"quote" => post_id} = params) do
     with {id, ""} <- Integer.parse(post_id),
-         %Post{deleted_at: nil} = post <- Forums.get_post(thread, id) do
+         %Post{deleted_at: nil, hidden_at: nil} = post <- Forums.get_post(thread, id) do
       post = Repo.preload(post, :user)
       url = ~p"/categories/#{category}/threads/#{thread}" <> "#post-#{post.id}"
       Quote.build(post.body, post.user.username, url, params["selection"])

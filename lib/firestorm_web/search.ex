@@ -20,7 +20,8 @@ defmodule FirestormWeb.Search do
   `"muted"` control is `"include"`.
 
   A post matches when its body matches; a thread's first post also matches
-  on the title (weighted higher when ranking). Deleted posts and archived threads are left out, and
+  on the title (weighted higher when ranking). Deleted posts, posts hidden
+  after flags and archived threads are left out, and
   only threads the searcher may read are searched (see
   `FirestormWeb.Forums.Policy.readable_threads/2`).
   """
@@ -136,7 +137,7 @@ defmodule FirestormWeb.Search do
       |> join(:inner, [p], t in assoc(p, :thread), as: :thread)
       |> join(:inner, [p], u in assoc(p, :user), as: :user)
       |> join(:inner, [thread: t], c in assoc(t, :category), as: :category)
-      |> where([thread: t], is_nil(t.archived_at))
+      |> where([p, thread: t], is_nil(t.archived_at) and is_nil(p.hidden_at))
       |> Policy.readable_threads(user)
       |> without_muted(user, search.include_muted)
       |> match(search)

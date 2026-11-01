@@ -521,6 +521,31 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
+  @doc "What members see in place of a post hidden after flags."
+  attr :post, :any, required: true
+
+  def hidden_post(assigns) do
+    ~H"""
+    <article
+      id={"post-#{@post.id}"}
+      class="hidden-post rounded-box border border-dashed border-warning/60 px-5 py-3 text-sm italic text-base-content/60"
+    >
+      <.icon name="hero-eye-slash" class="size-4" />
+      This post was hidden after members flagged it. Staff will review it.
+    </article>
+    """
+  end
+
+  @doc "Shown above a hidden post to the few who still see it (its author, admins)."
+  def hidden_notice(assigns) do
+    ~H"""
+    <div role="status" class="hidden-notice alert alert-warning mb-2 py-2 text-sm">
+      <.icon name="hero-eye-slash" class="size-4" />
+      Hidden after members flagged it, pending staff review. Only its author and staff can see it.
+    </div>
+    """
+  end
+
   @doc "Markdown rendered (and sanitized) to HTML, with code highlighting."
   attr :id, :string, required: true
   attr :body, :string, required: true

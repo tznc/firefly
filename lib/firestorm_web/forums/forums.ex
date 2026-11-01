@@ -592,6 +592,7 @@ defmodule FirestormWeb.Forums do
 
     threads_query()
     |> where([t], t.category_id == ^category.id or t.category_id in subquery(subcategory_ids))
+    |> without_hidden_first_post()
     |> Policy.readable_threads(user)
     |> order_by([t], desc_nulls_last: t.pinned_at)
     |> by_last_activity()
@@ -694,7 +695,21 @@ defmodule FirestormWeb.Forums do
     query
     |> where([t], is_nil(t.archived_at))
     |> without_muted(user)
+    |> without_hidden_first_post()
     |> Policy.readable_threads(user)
+  end
+
+  # A thread whose first post is hidden after flags (see `FirestormWeb.Flags`)
+  # is off the lists until staff review it.
+  defp without_hidden_first_post(query) do
+    where(
+      query,
+      [thread: t],
+      fragment(
+        "NOT EXISTS (SELECT 1 FROM forums_posts fp WHERE fp.id = (SELECT f.id FROM forums_posts f WHERE f.thread_id = ? ORDER BY f.inserted_at, f.id LIMIT 1) AND fp.hidden_at IS NOT NULL)",
+        t.id
+      )
+    )
   end
 
   defp without_muted(query, nil), do: query
@@ -1577,8 +1592,11 @@ defmodule FirestormWeb.Forums do
     user_ids |> Enum.uniq() |> Enum.each(&notifications_changed/1)
   end
 
-  # Thread pages re-render the post; lists refresh their counts.
-  defp post_changed(event, %Post{} = post) do
+  @doc """
+  Tells open pages `post` changed (`event`, e.g. `:post_updated`): thread
+  pages re-render it, lists refresh their counts.
+  """
+  def post_changed(event, %Post{} = post) do
     broadcast("forums:thread:#{post.thread_id}", {event, post})
     broadcast_thread(:thread_activity, get_thread!(post.thread_id))
   end
@@ -1683,7 +1701,15 @@ defmodule FirestormWeb.Forums do
     |> where([p], p.user_id == ^user.id)
     |> join(:inner, [p], t in assoc(p, :thread), as: :thread)
     |> Policy.readable_threads(viewer)
+    |> then(
+      &if(sees_hidden_posts_of?(viewer, user), do: &1, else: where(&1, [p], is_nil(p.hidden_at)))
+    )
   end
+
+  # Hidden posts are for their author and admins.
+  defp sees_hidden_posts_of?(nil, _user), do: false
+  defp sees_hidden_posts_of?(%User{id: id}, %User{id: id}), do: true
+  defp sees_hidden_posts_of?(viewer, _user), do: admin?(viewer)
 
   # FIXME: Should track when users log in rather than proxying that by
   # pretending them making a view always happens when they're on the site.

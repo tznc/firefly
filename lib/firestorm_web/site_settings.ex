@@ -138,6 +138,16 @@ defmodule FirestormWeb.SiteSettings do
         min: 0,
         max: 525_600,
         help: "How long authors can edit their posts. 0: forever. Admins can always edit."
+      },
+      %{
+        key: "flags_to_hide",
+        section: "Content",
+        type: :integer,
+        label: "Flags to hide a post",
+        default: 3,
+        min: 1,
+        max: 100,
+        help: "A post flagged by this many members is hidden until staff review it."
       }
     ]
   end
