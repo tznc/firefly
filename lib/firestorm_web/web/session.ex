@@ -32,6 +32,22 @@ defmodule FirestormWeb.Web.Session do
   """
   def live_socket_id(%{id: id}), do: "users_sockets:#{id}"
 
+  @doc """
+  Makes every open page of `user` pick up a change to their account (a
+  penalty, deletion): sockets sharing `live_socket_id/1` are disconnected,
+  and pages whose session predates it (no socket id) reload themselves on
+  the user's notification topic (see `FirestormWeb.Web.UserAuth`).
+  """
+  def reload_pages(%User{} = user) do
+    FirestormWeb.Web.Endpoint.broadcast(live_socket_id(user), "disconnect", %{})
+
+    Phoenix.PubSub.broadcast(
+      FirestormWeb.PubSub,
+      Forums.notifications_topic(user.id),
+      :account_changed
+    )
+  end
+
   def logged_in?(conn), do: !!current_user(conn)
 
   def admin?(conn) do

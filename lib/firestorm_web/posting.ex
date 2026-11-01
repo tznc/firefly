@@ -5,9 +5,13 @@ defmodule FirestormWeb.Posting do
   confirmed email address and be within the posting rate limit, and a reply's
   thread must be open. Starting a private conversation also counts against
   the `:message` limit, so one account can't message crowds. Liking only
-  checks penalties (`check(user, :like)`).
+  checks penalties (`check(user, :like)`), as do other public writes that
+  aren't posts (adding people to a conversation, editing a thread's title or
+  tags, editing one's profile).
   """
-  alias FirestormWeb.{Penalties, RateLimit}
+  import Ecto.Query, only: [from: 2]
+
+  alias FirestormWeb.{Penalties, RateLimit, Repo}
   alias FirestormWeb.Forums.User
 
   def check(%User{} = user) do
@@ -17,6 +21,10 @@ defmodule FirestormWeb.Posting do
   end
 
   def check(%User{} = user, :like) do
+    # Penalties are read from the database, not from `user`: an open page
+    # holds the user as they were when it mounted, before any penalty.
+    user = current_penalties(user)
+
     cond do
       User.suspended?(user) -> {:error, {:suspended, user.suspended_until}}
       User.silenced?(user) -> {:error, {:silenced, user.silenced_until}}
@@ -30,6 +38,18 @@ defmodule FirestormWeb.Posting do
 
   def check(%User{} = user, %FirestormWeb.Forums.Thread{id: thread_id}) do
     if FirestormWeb.Forums.thread_closed?(thread_id), do: {:error, :closed}, else: check(user)
+  end
+
+  defp current_penalties(%User{id: id} = user) do
+    penalties =
+      Repo.one(
+        from(u in User,
+          where: u.id == ^id,
+          select: %{silenced_until: u.silenced_until, suspended_until: u.suspended_until}
+        )
+      )
+
+    Map.merge(user, penalties || %{})
   end
 
   def message({:silenced, until}),
