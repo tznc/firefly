@@ -2,9 +2,9 @@ defmodule FirestormWeb.Web.InboundController do
   use FirestormWeb.Web, :controller
   alias FirestormWeb.Forums
 
-  @inbound_domain "notifier.firestormforum.org"
+  @inbound_domain "reply.firefly.tznc.dev"
   # Get the thread id out of something like
-  # "replythread-123@notifier.firestormforum.org"
+  # "replythread-123@reply.firefly.tznc.dev"
   @thread_email_regex ~r/reply-thread-([0-9]*)@#{@inbound_domain}/
   # Get the email part out of something like "Jane Doe <jane@example.com>"
   @email_regex ~r/[^<]*<?(.*@[^>]*)[^>]*/

@@ -29,6 +29,19 @@ mix phx.server   # http://localhost:4000
 
 Or with Docker: `docker compose up`.
 
+### Production configuration
+
+Firefly runs at <https://firefly.tznc.dev>. Production reads these environment
+variables (see `config/runtime.exs`):
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL`, `SECRET_KEY_BASE` | Required |
+| `PHX_HOST` | Public host, default `firefly.tznc.dev` |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub login |
+| `SENDGRID_API_KEY` | Outbound email (sent from `noreply@firefly.tznc.dev`) |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`, `AWS_S3_REGION` | Attachment uploads |
+
 ### Admin
 
 `/admin` is a [Kaffy](https://github.com/aesmail/kaffy) admin UI, available to
