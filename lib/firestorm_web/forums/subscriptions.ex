@@ -117,12 +117,26 @@ defmodule FirestormWeb.Forums.Subscriptions do
     upsert(%TagWatch{user_id: user.id, assoc_id: tag.id, level: level}, level)
   end
 
-  @doc "Sets the thread level only if the user hasn't chosen one."
+  @doc """
+  Sets the thread level automatically (on starting or replying to it), only
+  if the user hasn't chosen one and it's more attentive than what the thread
+  inherits from its category and tags: a thread-level row overrides those, so
+  an automatic "normal" in a watched category would silently unsubscribe.
+  """
   def ensure_thread_level(%User{} = user, %Thread{} = thread, level) when level in @levels do
-    user
-    |> thread_watch(thread, level)
-    |> Repo.insert(on_conflict: :nothing, conflict_target: [:user_id, :assoc_id])
+    if level in @notified and rank(level) > rank(inherited_level(user, thread)) do
+      user
+      |> thread_watch(thread, level)
+      |> Repo.insert(on_conflict: :nothing, conflict_target: [:user_id, :assoc_id])
+    else
+      {:ok, nil}
+    end
   end
+
+  defp rank("watching"), do: 3
+  defp rank("tracking"), do: 2
+  defp rank("normal"), do: 1
+  defp rank("muted"), do: 0
 
   defp thread_watch(user, thread, level) do
     Ecto.put_meta(%Watch{user_id: user.id, assoc_id: thread.id, level: level},

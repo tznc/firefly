@@ -197,7 +197,9 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
     test "max mentions", %{admin: admin, member: member, thread: thread} do
       set(admin, %{"max_mentions" => "1"})
       assert Mentions.max_mentions() == 1
-      assert {:error, changeset} = Forums.create_post(thread, member, %{body: "@a and @b"})
+      [a, b] = [user_fixture(), user_fixture()]
+      body = "@#{a.username} and @#{b.username}"
+      assert {:error, changeset} = Forums.create_post(thread, member, %{body: body})
       assert "can mention at most 1 users" in errors_on(changeset).body
     end
 

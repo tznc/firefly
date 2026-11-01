@@ -117,10 +117,13 @@ defmodule FirestormWeb.Search do
     end)
   end
 
-  @doc "Whether there's anything to search for (terms or a filter)."
+  @doc """
+  Whether there's anything to search for (terms or a filter). `in:title`
+  alone isn't: it only narrows terms, and listing every thread's first post
+  is what the thread lists are for.
+  """
   def present?(%__MODULE__{} = search) do
-    search.terms != "" or not is_nil(search.category || search.tag || search.user) or
-      search.in_title
+    search.terms != "" or not is_nil(search.category || search.tag || search.user)
   end
 
   @doc """
