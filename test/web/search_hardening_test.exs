@@ -51,7 +51,8 @@ defmodule FirestormWeb.Web.SearchHardeningTest do
   describe "rate limiting" do
     setup do
       config = Application.get_env(:firestorm_web, RateLimit)
-      limits = Keyword.put(config[:limits], :search, {2, 60_000})
+      # Day-long window: Hammer windows are clock-aligned (see rate_limit_test).
+      limits = Keyword.put(config[:limits], :search, {2, 86_400_000})
       Application.put_env(:firestorm_web, RateLimit, limits: limits)
       on_exit(fn -> Application.put_env(:firestorm_web, RateLimit, config) end)
     end

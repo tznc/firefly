@@ -124,7 +124,9 @@ defmodule FirestormWeb.MessagesTest do
     config = Application.get_env(:firestorm_web, RateLimit)
 
     Application.put_env(:firestorm_web, RateLimit,
-      limits: [post: {1_000, 60_000}, message: {1, 60_000}]
+      # Day-long windows: Hammer windows are clock-aligned, so a minute one
+      # could reset mid-test.
+      limits: [post: {1_000, 86_400_000}, message: {1, 86_400_000}]
     )
 
     on_exit(fn -> Application.put_env(:firestorm_web, RateLimit, config) end)

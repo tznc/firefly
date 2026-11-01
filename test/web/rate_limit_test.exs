@@ -6,14 +6,19 @@ defmodule FirestormWeb.RateLimitTest do
   setup do
     config = Application.get_env(:firestorm_web, RateLimit)
 
+    # Hammer uses fixed windows aligned to the clock: with a one-minute window
+    # a test that runs across hh:mm:00 gets a fresh bucket halfway through and
+    # flakes. A day-long window makes that practically impossible.
+    day = 86_400_000
+
     Application.put_env(:firestorm_web, RateLimit,
       limits: [
-        login: {3, 60_000},
-        login_ip: {1_000, 60_000},
-        register: {1, 60_000},
-        post: {2, 60_000},
-        upload: {1, 60_000},
-        like: {2, 60_000}
+        login: {3, day},
+        login_ip: {1_000, day},
+        register: {1, day},
+        post: {2, day},
+        upload: {1, day},
+        like: {2, day}
       ]
     )
 
