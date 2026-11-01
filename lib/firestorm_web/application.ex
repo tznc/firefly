@@ -37,8 +37,9 @@ defmodule FirestormWeb.Application do
     ] ++ topic_timers()
   end
 
-  # Runs due thread timers (close, reopen or delete at a set time). Off in
-  # tests, which run it inside their own database transaction.
+  # Runs due thread timers (close, reopen or delete at a set time) and
+  # bookmark reminders. Off in tests, which run them inside their own
+  # database transaction.
   defp topic_timers do
     if Application.get_env(:firestorm_web, FirestormWeb.TopicTimers, [])[:enabled] == false,
       do: [],

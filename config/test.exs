@@ -53,7 +53,7 @@ config :phoenix, :plug_init_mode, :runtime
 # Start notification server in app start
 config :firestorm_web, notifications_enabled: false
 
-# Tests run due thread timers themselves, inside their sandbox transaction.
+# Tests run due thread timers and reminders themselves, inside their sandbox transaction.
 config :firestorm_web, FirestormWeb.TopicTimers, enabled: false
 
 # Each test reads its own (transactional) site settings: no shared cache.

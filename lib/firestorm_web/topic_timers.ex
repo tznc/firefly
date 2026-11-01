@@ -151,12 +151,19 @@ defmodule FirestormWeb.TopicTimers do
 
   defmodule Scheduler do
     @moduledoc """
-    Runs due thread timers (see `FirestormWeb.TopicTimers`): at start, then
-    every `:interval` milliseconds (the `FirestormWeb.TopicTimers` config;
-    30 seconds by default), so a timer runs at most that late.
+    Runs what's due, from the database: thread timers (see
+    `FirestormWeb.TopicTimers`) and bookmark reminders (see
+    `FirestormWeb.Bookmarks`). At start (so nothing that fell due while the
+    app was down is lost), then every `:interval` milliseconds (the
+    `FirestormWeb.TopicTimers` config; 30 seconds by default), so each runs
+    at most that late. Every job takes its due rows one locked transaction
+    at a time, so each runs once, even with several nodes.
     """
     use GenServer
     require Logger
+
+    # Each has `run_due/0`.
+    @jobs [FirestormWeb.TopicTimers, FirestormWeb.Bookmarks]
 
     def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
@@ -172,12 +179,15 @@ defmodule FirestormWeb.TopicTimers do
 
     @impl true
     def handle_info(:tick, state) do
-      # A failing run is logged, not fatal: crashing would only retry it
-      # straight away, and then take the app down with it.
-      try do
-        FirestormWeb.TopicTimers.run_due()
-      rescue
-        error -> Logger.error("Thread timers failed: " <> Exception.message(error))
+      # A failing job is logged, not fatal: crashing would only retry it
+      # straight away, and then take the app down with it. Nor does it hold
+      # up the other jobs.
+      for job <- @jobs do
+        try do
+          job.run_due()
+        rescue
+          error -> Logger.error("#{inspect(job)} failed: " <> Exception.message(error))
+        end
       end
 
       Process.send_after(self(), :tick, state.interval)

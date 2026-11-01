@@ -7,7 +7,7 @@ defmodule FirestormWeb.AccountDeletion do
   GitHub link or profile), so posts, threads, revisions and private messages
   keep an author without saying who it was. Everything else personal goes:
   roles, read positions, notification levels, notifications, likes, post
-  views, drafts and conversation memberships. Other users' notifications that named
+  views, drafts, bookmarks and conversation memberships. Other users' notifications that named
   the user ("@ada replied in ...") and the staff log name the placeholder
   instead (see `FirestormWeb.StaffLog.scrub_user/2`).
 
@@ -85,7 +85,7 @@ defmodule FirestormWeb.AccountDeletion do
 
         for table <- ~w(forums_role_memberships forums_thread_reads forums_threads_watches
                         forums_categories_watches forums_tags_watches forums_post_likes
-                        forums_posts_views forums_drafts),
+                        forums_posts_views forums_drafts forums_bookmarks),
             do: Repo.delete_all(from(r in table, where: r.user_id == ^id))
 
         Repo.delete_all(from(n in Notification, where: n.user_id == ^id))

@@ -15,10 +15,15 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   there. A pending timer and slow mode (see `FirestormWeb.TopicTimers`)
   are shown above the reply button; admins manage them, and merge and
   split, from the thread's tools page (`ThreadLive.Tools`).
+
+  Members can bookmark posts (see `FirestormWeb.Bookmarks`): bookmarking
+  one opens a form for an optional note and reminder.
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Flags, Forums, Mentions, Posting, RateLimit, Repo, TopicTimers}
+  import FirestormWeb.Web.BookmarkComponents
+
+  alias FirestormWeb.{Bookmarks, Flags, Forums, Mentions, Posting, RateLimit, Repo, TopicTimers}
   alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread, ThreadTimer}
 
   @impl true
@@ -59,6 +64,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
      socket
      |> assign(:category, category)
      |> assign(:last_read_post_id, read && read.last_read_post_id)
+     |> assign(:tz_offset, tz_offset(socket))
+     |> assign(:bookmarking, nil)
      |> load_thread(thread)}
   end
 
@@ -130,7 +137,9 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              "toggle_like",
              "flag",
              "submit_flag",
-             "unhide"
+             "unhide",
+             "toggle_bookmark",
+             "save_bookmark"
            ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
@@ -269,6 +278,56 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     end
   end
 
+  def handle_event("toggle_bookmark", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+    post = Forums.get_post!(thread, id)
+
+    if bookmark = Bookmarks.get_for_post(user, post) do
+      :ok = Bookmarks.delete(user, bookmark.id)
+      {:noreply, socket |> assign(:bookmarking, nil) |> assign_bookmarks()}
+    else
+      case Bookmarks.bookmark(user, post) do
+        {:ok, bookmark} ->
+          form = to_form(form_params(bookmark, socket.assigns.tz_offset), as: :bookmark)
+
+          {:noreply,
+           socket
+           |> assign(bookmarking: post.id, bookmark_id: bookmark.id, bookmark_form: form)
+           |> assign_bookmarks()}
+
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, Bookmarks.message(reason))}
+      end
+    end
+  end
+
+  def handle_event("cancel_bookmark", _params, socket),
+    do: {:noreply, assign(socket, :bookmarking, nil)}
+
+  # Only after "toggle_bookmark" opened the form.
+  def handle_event("save_bookmark", _params, %{assigns: %{bookmarking: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("save_bookmark", %{"bookmark" => params}, socket) do
+    %{current_user: user, bookmark_id: id, tz_offset: offset} = socket.assigns
+
+    case Bookmarks.update(user, id, params, offset) do
+      {:ok, _bookmark} ->
+        {:noreply, socket |> assign(:bookmarking, nil) |> put_flash(:info, "Bookmark saved.")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        form = to_form(params, as: :bookmark, errors: changeset.errors)
+        {:noreply, assign(socket, :bookmark_form, form)}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(:bookmarking, nil)
+         |> put_flash(:error, Bookmarks.message(reason))
+         |> assign_bookmarks()}
+    end
+  end
+
   def handle_event("set_level", _params, socket), do: {:noreply, socket}
 
   def handle_event("delete", _params, socket) do
@@ -313,6 +372,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       if(can?(user, :view_flags), do: Flags.pending_counts(thread.posts), else: %{})
     )
     |> assign(:hidden_ids, hidden_ids(user, thread.posts))
+    |> assign_bookmarks()
     |> assign_new(:flagging, fn -> nil end)
     |> assign_new(:flag_form, &flag_form/0)
     |> assign(:can_manage?, can?(user, :update_thread, thread))
@@ -324,6 +384,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
     |> assign(:timer, TopicTimers.get_timer(thread))
     |> assign(:slow_mode_wait, slow_mode_wait(user, thread))
+  end
+
+  defp assign_bookmarks(socket) do
+    %{current_user: user, thread: thread} = socket.assigns
+    assign(socket, :bookmarked_ids, Bookmarks.bookmarked_ids(user, thread.posts))
   end
 
   defp slow_mode_wait(nil, _thread), do: 0
@@ -502,6 +567,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 flagged={MapSet.member?(@flagged_ids, @first_post.id)}
                 count={@flag_counts[@first_post.id]}
               />
+              <.bookmark_button
+                :if={@current_user}
+                post={@first_post}
+                bookmarked={MapSet.member?(@bookmarked_ids, @first_post.id)}
+              />
               <.level_picker
                 :if={@current_user}
                 id="thread-level"
@@ -511,6 +581,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             </:actions>
           </.post>
           <.flag_reason_form :if={@flagging == @first_post.id} form={@flag_form} />
+          <.bookmark_form :if={@bookmarking == @first_post.id} form={@bookmark_form} />
         </li>
         <li :for={post <- @replies}>
           <div
@@ -554,6 +625,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 flagged={MapSet.member?(@flagged_ids, post.id)}
                 count={@flag_counts[post.id]}
               />
+              <.bookmark_button
+                :if={@current_user}
+                post={post}
+                bookmarked={MapSet.member?(@bookmarked_ids, post.id)}
+              />
               <button
                 :if={MapSet.member?(@deletable_ids, post.id)}
                 phx-click="delete_post"
@@ -575,6 +651,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             </:actions>
           </.post>
           <.flag_reason_form :if={@flagging == post.id} form={@flag_form} />
+          <.bookmark_form :if={@bookmarking == post.id} form={@bookmark_form} />
         </li>
       </ol>
 
