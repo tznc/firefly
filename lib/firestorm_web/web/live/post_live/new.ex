@@ -12,6 +12,21 @@ defmodule FirestormWeb.Web.PostLive.New do
   def mount(%{"category_id" => category_id, "thread_id" => thread_id} = params, _session, socket) do
     category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
     thread = Forums.get_visible_thread!(category, thread_id, socket.assigns.current_user)
+
+    # A merged thread takes no replies: they go where its posts went.
+    case thread.merged_into_id && Forums.get_thread_after_merges(thread.merged_into_id) do
+      nil ->
+        mount_reply(category, thread, params, socket)
+
+      target ->
+        {:ok,
+         push_navigate(socket,
+           to: ~p"/categories/#{target.category_id}/threads/#{target}/posts/new"
+         )}
+    end
+  end
+
+  defp mount_reply(category, thread, params, socket) do
     body = quote_body(category, thread, params)
 
     {:ok,

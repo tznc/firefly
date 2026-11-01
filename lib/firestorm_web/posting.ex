@@ -11,12 +11,14 @@ defmodule FirestormWeb.Posting do
   tags, editing one's profile); flagging checks penalties, a confirmed address
   and its own rate limit (`check(user, :flag)`). Replying also needs the user to be able to
   read the thread (`:not_found` otherwise, as if it didn't exist): a
-  reply-to address or API call outlives access to a category.
+  reply-to address or API call outlives access to a category. A thread in
+  slow mode (see `FirestormWeb.TopicTools.set_slow_mode/3`) takes one reply
+  per member per interval; admins are exempt.
   """
   import Ecto.Query, only: [from: 2]
 
-  alias FirestormWeb.{Penalties, RateLimit, Repo, SiteSettings}
-  alias FirestormWeb.Forums.User
+  alias FirestormWeb.{Forums, Penalties, RateLimit, Repo, SiteSettings}
+  alias FirestormWeb.Forums.{Post, Thread, User}
 
   def check(%User{} = user) do
     with :ok <- check(user, :like) do
@@ -48,17 +50,44 @@ defmodule FirestormWeb.Posting do
     with :ok <- check(user), do: RateLimit.check_message(user)
   end
 
-  def check(%User{} = user, %FirestormWeb.Forums.Thread{id: thread_id} = thread) do
+  def check(%User{} = user, %Thread{id: thread_id} = thread) do
     cond do
-      not Bodyguard.permit?(FirestormWeb.Forums, :view_thread, user, thread) ->
+      not Bodyguard.permit?(Forums, :view_thread, user, thread) ->
         {:error, :not_found}
 
-      FirestormWeb.Forums.thread_closed?(thread_id) ->
+      Forums.thread_closed?(thread_id) ->
         {:error, :closed}
+
+      (wait = slow_mode_wait(user, thread_id)) > 0 ->
+        {:error, {:slow_mode, wait}}
 
       true ->
         check(user)
     end
+  end
+
+  @doc """
+  How many seconds `user` must still wait before replying in the thread
+  with id `thread_id`, under its slow mode (0: they may reply now). Counts
+  from their latest post there, deleted or not: deleting a reply doesn't
+  buy another one sooner.
+  """
+  def slow_mode_wait(%User{} = user, thread_id) do
+    # Read now, not from the caller's thread: an open page may predate it.
+    seconds = Repo.one(from(t in Thread, where: t.id == ^thread_id, select: t.slow_mode_seconds))
+
+    last_at =
+      seconds &&
+        Repo.one(
+          from(p in Post,
+            where: p.thread_id == ^thread_id and p.user_id == ^user.id,
+            select: max(p.inserted_at)
+          )
+        )
+
+    if is_nil(last_at) or Forums.admin?(user),
+      do: 0,
+      else: max(seconds - NaiveDateTime.diff(NaiveDateTime.utc_now(), last_at), 0)
   end
 
   @doc """
@@ -87,7 +116,32 @@ defmodule FirestormWeb.Posting do
   def message({:suspended, until}), do: "Your account is suspended #{Penalties.ends_text(until)}."
 
   def message(:closed), do: "This thread is closed to new replies."
+
+  def message({:slow_mode, wait}),
+    do: "This thread is in slow mode: you can reply again in #{duration_text(wait)}."
+
   def message(:not_found), do: "Thread not found."
   def message(:unconfirmed), do: "Please confirm your email address before posting."
   def message(:rate_limited), do: RateLimit.message()
+
+  @doc ~S'A duration for people, in its two largest units: "45 seconds", "1 hour 5 minutes".'
+  def duration_text(seconds) when seconds < 60, do: plural(seconds, "second")
+
+  def duration_text(seconds) do
+    # Rounded up to the minute: "in 2 minutes" must not undersell a wait.
+    minutes = div(seconds + 59, 60)
+
+    [
+      {div(minutes, 1440), "day"},
+      {div(rem(minutes, 1440), 60), "hour"},
+      {rem(minutes, 60), "minute"}
+    ]
+    |> Enum.drop_while(&(elem(&1, 0) == 0))
+    |> Enum.take(2)
+    |> Enum.reject(&(elem(&1, 0) == 0))
+    |> Enum.map_join(" ", fn {count, unit} -> plural(count, unit) end)
+  end
+
+  defp plural(1, unit), do: "1 #{unit}"
+  defp plural(count, unit), do: "#{count} #{unit}s"
 end

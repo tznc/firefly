@@ -8,7 +8,8 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
   def create(conn, %{"post" => post_params, "thread_id" => thread_id}) do
     user = conn.assigns.current_user
 
-    with %{} = thread <- Forums.get_thread(thread_id),
+    # A merged thread's replies go where its posts went.
+    with %{} = thread <- Forums.get_thread_after_merges(thread_id),
          :ok <- Posting.check(user, thread),
          {:ok, post} <- Forums.create_post(thread, user, %{body: post_params["body"]}) do
       conn
@@ -30,6 +31,9 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
 
       {:error, :unconfirmed} ->
         conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(:unconfirmed)})
+
+      {:error, {:slow_mode, _wait} = reason} ->
+        conn |> put_status(:too_many_requests) |> json(%{"error" => Posting.message(reason)})
 
       {:error, :rate_limited} ->
         conn

@@ -396,6 +396,7 @@ defmodule FirestormWeb.Forums do
       )
       |> order_by([t, p], desc: p.inserted_at)
       |> where([t, p], t.category_id in ^Enum.map(categories, & &1.id))
+      |> where([t], is_nil(t.merged_into_id))
       |> limit(3)
       |> select([t], t)
       |> Repo.all()
@@ -590,6 +591,7 @@ defmodule FirestormWeb.Forums do
   def list_threads(category, user \\ nil) do
     threads_query()
     |> where([t], t.category_id == ^category.id)
+    |> unmerged()
     |> without_hidden_first_post()
     |> Policy.readable_threads(user)
     |> order_by([t], desc_nulls_last: t.pinned_at)
@@ -614,6 +616,7 @@ defmodule FirestormWeb.Forums do
 
     threads_query()
     |> where([t], t.category_id == ^category.id or t.category_id in subquery(subcategory_ids))
+    |> unmerged()
     |> without_hidden_first_post()
     |> Policy.readable_threads(user)
     |> order_by([t], desc_nulls_last: t.pinned_at)
@@ -725,10 +728,15 @@ defmodule FirestormWeb.Forums do
   defp listed(query, user, opts \\ []) do
     query
     |> where([t], is_nil(t.archived_at))
+    |> unmerged()
     |> without_muted(if opts[:keep_muted], do: nil, else: user)
     |> without_hidden_first_post()
     |> Policy.readable_threads(user)
   end
+
+  # A thread merged into another is only a stub that redirects there (see
+  # `FirestormWeb.TopicTools`): no list shows it.
+  defp unmerged(query), do: where(query, [thread: t], is_nil(t.merged_into_id))
 
   # A thread whose first post is hidden after flags (see `FirestormWeb.Flags`)
   # or awaiting approval (see `FirestormWeb.Review`) is off the lists until
@@ -983,6 +991,19 @@ defmodule FirestormWeb.Forums do
   def get_thread(id) do
     Thread
     |> Repo.get(id)
+  end
+
+  @doc """
+  The thread with id `id`, or the one it was merged into (following merges
+  of merges), or nil. For ways of replying that outlive a merge (reply-by-
+  email addresses, API clients): the reply goes where the posts went.
+  """
+  def get_thread_after_merges(id) do
+    case get_thread(id) do
+      %Thread{merged_into_id: nil} = thread -> thread
+      %Thread{merged_into_id: into} -> get_thread_after_merges(into)
+      nil -> nil
+    end
   end
 
   @doc """
@@ -1294,7 +1315,7 @@ defmodule FirestormWeb.Forums do
     |> join(:inner, [t], tt in "forums_threads_tags", on: tt.tag_id == t.id)
     |> join(:inner, [t, tt], th in Thread,
       as: :thread,
-      on: th.id == tt.thread_id and is_nil(th.archived_at)
+      on: th.id == tt.thread_id and is_nil(th.archived_at) and is_nil(th.merged_into_id)
     )
     |> Policy.readable_threads(viewer)
     |> group_by([t], t.id)
@@ -1329,10 +1350,26 @@ defmodule FirestormWeb.Forums do
       )
 
   @doc "Closes or reopens a thread to new replies."
-  def close_thread(%Thread{} = thread, closed?, actor),
+  def close_thread(%Thread{} = thread, closed?, actor) do
+    with {:ok, updated, announce} <- close_thread_unannounced(thread, closed?, actor) do
+      announce.()
+      {:ok, updated}
+    end
+  end
+
+  @doc """
+  `close_thread/3` without telling open pages yet: `{:ok, thread,
+  announce}`, for callers running it inside a larger transaction (see
+  `FirestormWeb.TopicTimers`). `details` go into the staff log entry.
+  """
+  def close_thread_unannounced(%Thread{} = thread, closed?, actor, details \\ %{}),
     do:
-      moderate(thread, actor, if(closed?, do: "thread.close", else: "thread.open"),
-        closed_at: stamp(closed?)
+      moderate_unannounced(
+        thread,
+        actor,
+        if(closed?, do: "thread.close", else: "thread.open"),
+        [closed_at: stamp(closed?)],
+        details
       )
 
   @doc "Archives (closes and hides from Latest/New/Unread/Top) or unarchives a thread."
@@ -1372,13 +1409,21 @@ defmodule FirestormWeb.Forums do
   defp stamp(false), do: nil
 
   defp moderate(thread, actor, action, changes, details \\ %{}) do
+    with {:ok, updated, announce} <- moderate_unannounced(thread, actor, action, changes, details) do
+      announce.()
+      {:ok, updated}
+    end
+  end
+
+  defp moderate_unannounced(thread, actor, action, changes, details) do
     result =
       logged(
         fn -> thread |> Thread.moderation_changeset(Map.new(changes)) |> Repo.update() end,
         &StaffLog.record(actor, action, &1, Map.put(details, :title, &1.title))
       )
 
-    tap_ok(result, &broadcast_thread(:thread_updated, &1))
+    with {:ok, updated} <- result,
+         do: {:ok, updated, fn -> broadcast_thread(:thread_updated, updated) end}
   end
 
   @doc """
@@ -2021,6 +2066,7 @@ defmodule FirestormWeb.Forums do
   defp get_decorated_threads(thread_ids, user) do
     threads_query()
     |> where([t], t.id in ^thread_ids)
+    |> unmerged()
     |> Policy.readable_threads(user)
     |> by_last_activity()
     |> preload(:category)
@@ -2232,6 +2278,12 @@ defmodule FirestormWeb.Forums do
   def subscribe(topic), do: Phoenix.PubSub.subscribe(@pubsub, topic)
 
   defp broadcast(topic, message), do: Phoenix.PubSub.broadcast(@pubsub, topic, message)
+
+  @doc """
+  Tells open pages and lists that `thread` changed (`event`, e.g.
+  `:thread_updated`; see the topics above).
+  """
+  def thread_changed(event, %Thread{} = thread), do: broadcast_thread(event, thread)
 
   defp broadcast_thread(event, %Thread{} = thread) do
     message = {event, thread}

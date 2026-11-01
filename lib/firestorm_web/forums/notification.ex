@@ -8,7 +8,8 @@ defmodule FirestormWeb.Forums.Notification do
   `"suspended"` (a staff penalty; the body is the reason), `"post_hidden"`
   (your post was hidden after flags) or `"flagged"` (for admins: a post was
   flagged; one per post while unread) or `"post_rejected"` (staff rejected
-  your post awaiting approval; the body is the reason). `read_at` is set when you open it
+  your post awaiting approval; the body is the reason) or `"moved"` (staff
+  split your post off into another thread; see `FirestormWeb.TopicTools`). `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
 
@@ -16,7 +17,7 @@ defmodule FirestormWeb.Forums.Notification do
   alias FirestormWeb.Forums.{Conversation, Message, User, Thread, Post}
   import Ecto.Changeset
 
-  @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected)
+  @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved)
 
   # Kinds that may have no thread_id: penalties are about the user, and a
   # rejected thread is gone. Any other notification without a thread_id or

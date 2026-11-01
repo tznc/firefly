@@ -10,11 +10,16 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   admins, who see it with a notice; admins also see pending flag counts.
   Posts awaiting approval (see `FirestormWeb.Review`) are only shown to
   their author and admins, marked as such.
+
+  A thread merged into another (see `FirestormWeb.TopicTools`) redirects
+  there. A pending timer and slow mode (see `FirestormWeb.TopicTimers`)
+  are shown above the reply button; admins manage them, and merge and
+  split, from the thread's tools page (`ThreadLive.Tools`).
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Flags, Forums, Mentions, Posting, RateLimit, Repo}
-  alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread}
+  alias FirestormWeb.{Flags, Forums, Mentions, Posting, RateLimit, Repo, TopicTimers}
+  alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread, ThreadTimer}
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
@@ -25,11 +30,22 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     thread = Forums.get_visible_thread!(category, id, viewer)
 
     # Links from before a move (notifications, emails, bookmarks) still carry
-    # the old category: send them to the thread where it lives now.
-    if to_string(thread.category_id) == category_id do
-      mount_thread(category, thread, socket)
-    else
-      {:ok, push_navigate(socket, to: ~p"/categories/#{thread.category_id}/threads/#{thread}")}
+    # the old category, and those to a merged thread its old id: send them to
+    # the thread where it lives now.
+    cond do
+      Thread.merged?(thread) -> {:ok, push_navigate(socket, to: merged_path(thread))}
+      to_string(thread.category_id) == category_id -> mount_thread(category, thread, socket)
+      true -> {:ok, push_navigate(socket, to: thread_path(thread))}
+    end
+  end
+
+  defp thread_path(thread), do: ~p"/categories/#{thread.category_id}/threads/#{thread}"
+
+  # Where a merged thread's posts went (that thread's page checks access).
+  defp merged_path(thread) do
+    case Forums.get_thread_after_merges(thread.merged_into_id) do
+      nil -> ~p"/"
+      target -> thread_path(target)
     end
   end
 
@@ -70,6 +86,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   def handle_info({:thread_updated, thread}, socket) do
     cond do
+      Thread.merged?(thread) ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "This thread was merged into another one.")
+         |> push_navigate(to: merged_path(thread))}
+
       not can?(socket.assigns.current_user, :view_thread, thread) ->
         {:noreply, leave(socket)}
 
@@ -77,8 +99,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         {:noreply, load_thread(socket, thread)}
 
       true ->
-        {:noreply,
-         push_navigate(socket, to: ~p"/categories/#{thread.category_id}/threads/#{thread}")}
+        {:noreply, push_navigate(socket, to: thread_path(thread))}
     end
   end
 
@@ -301,7 +322,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       if(can?(user, :moderate_thread), do: Forums.list_categories(user), else: [])
     )
     |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
+    |> assign(:timer, TopicTimers.get_timer(thread))
+    |> assign(:slow_mode_wait, slow_mode_wait(user, thread))
   end
+
+  defp slow_mode_wait(nil, _thread), do: 0
+  defp slow_mode_wait(user, thread), do: Posting.slow_mode_wait(user, thread.id)
 
   defp moderate(thread, "pin", user), do: Forums.pin_thread(thread, true, user)
   defp moderate(thread, "unpin", user), do: Forums.pin_thread(thread, false, user)
@@ -419,6 +445,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                   </select>
                   <button class="btn btn-sm">Move</button>
                 </.form>
+                <.link
+                  navigate={~p"/categories/#{@category}/threads/#{@thread}/tools"}
+                  class="btn btn-ghost btn-sm w-full justify-start"
+                >
+                  <.icon name="hero-wrench-screwdriver" class="size-4" /> Merge, split, timer…
+                </.link>
               </div>
             </div>
             <.link
@@ -546,6 +578,26 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         </li>
       </ol>
 
+      <div :if={@timer} id="thread-timer" role="status" class="alert alert-info">
+        <.icon name="hero-clock" class="size-5" />
+        <span>
+          {ThreadTimer.label(@timer)} <.time_ago id="thread-timer-at" at={@timer.run_at} />.
+        </span>
+      </div>
+      <div
+        :if={@thread.slow_mode_seconds && !Thread.closed?(@thread)}
+        id="slow-mode-notice"
+        role="status"
+        class="alert"
+      >
+        <.icon name="hero-clock" class="size-5" />
+        <span>
+          Slow mode: one reply every {Posting.duration_text(@thread.slow_mode_seconds)} per member.
+          <span :if={@slow_mode_wait > 0}>
+            You can reply again in {Posting.duration_text(@slow_mode_wait)}.
+          </span>
+        </span>
+      </div>
       <div :if={Thread.closed?(@thread)} id="closed-notice" role="status" class="alert">
         <.icon name="hero-lock-closed" class="size-5" />
         {if Thread.archived?(@thread),

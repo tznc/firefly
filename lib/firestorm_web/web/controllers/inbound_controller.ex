@@ -23,7 +23,8 @@ defmodule FirestormWeb.Web.InboundController do
     with {:ok, thread_id, user_id} <- ReplyAddress.verify(params["to"]),
          %{} = user <- Forums.get_user(user_id),
          true <- sender_matches?(params["from"], user) || {:error, :sender_mismatch},
-         %{} = thread <- Forums.get_thread(thread_id),
+         # A merged thread's replies go where its posts went.
+         %{} = thread <- Forums.get_thread_after_merges(thread_id),
          :ok <- Posting.check(user, thread),
          {:ok, _post} <- Forums.create_post(thread, user, %{body: params["text"]}) do
       :ok

@@ -133,6 +133,45 @@ defmodule FirestormWeb.Forums.Subscriptions do
     end
   end
 
+  @doc """
+  Carries users' levels on thread `from_id` over to thread `to_id`, when
+  posts move between them (see `FirestormWeb.TopicTools`). With `:keep` a
+  level the user already set on `to_id` stays; with `:combine` (a merge:
+  both threads become one) the more attentive of the two wins.
+  """
+  def copy_thread_levels(from_id, to_id, mode) when mode in [:keep, :combine] do
+    levels = fn thread_id ->
+      thread_watches()
+      |> where([w], w.assoc_id == ^thread_id)
+      |> select([w], {w.user_id, w.level})
+      |> Repo.all()
+      |> Map.new()
+    end
+
+    existing = levels.(to_id)
+    now = NaiveDateTime.utc_now()
+
+    rows =
+      for {user_id, level} <- levels.(from_id),
+          level = carried_level(level, existing[user_id], mode),
+          level != existing[user_id] do
+        %{user_id: user_id, assoc_id: to_id, level: level, inserted_at: now, updated_at: now}
+      end
+
+    Repo.insert_all(thread_watches(), rows,
+      on_conflict: {:replace, [:level, :updated_at]},
+      conflict_target: [:user_id, :assoc_id]
+    )
+
+    :ok
+  end
+
+  defp carried_level(level, nil, _mode), do: level
+  defp carried_level(_level, existing, :keep), do: existing
+
+  defp carried_level(level, existing, :combine),
+    do: if(rank(level) > rank(existing), do: level, else: existing)
+
   defp rank("watching"), do: 3
   defp rank("tracking"), do: 2
   defp rank("normal"), do: 1

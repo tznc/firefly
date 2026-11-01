@@ -34,7 +34,15 @@ defmodule FirestormWeb.Application do
       %{id: LruCache, start: {LruCache, :start_link, [:oembed_cache, 5_000]}},
       # Start the endpoint when the application starts
       FirestormWeb.Web.Endpoint
-    ]
+    ] ++ topic_timers()
+  end
+
+  # Runs due thread timers (close, reopen or delete at a set time). Off in
+  # tests, which run it inside their own database transaction.
+  defp topic_timers do
+    if Application.get_env(:firestorm_web, FirestormWeb.TopicTimers, [])[:enabled] == false,
+      do: [],
+      else: [FirestormWeb.TopicTimers.Scheduler]
   end
 
   defp children(false), do: default_children()
