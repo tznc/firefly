@@ -1,13 +1,14 @@
 defmodule FirestormWeb.Web.ThreadLive.Show do
   @moduledoc """
-  A thread and its posts. New and edited posts appear live. Viewing the thread moves the
+  A thread and its posts. New, edited and deleted posts appear live. Members
+  see a placeholder for a deleted reply; admins see it dimmed, to restore. Viewing the thread moves the
   current user's read position to its newest post; posts that were unread when
   the page opened are marked with a "new since your last visit" divider.
   """
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.{Forums, Repo}
-  alias FirestormWeb.Forums.{Subscriptions, Thread}
+  alias FirestormWeb.Forums.{Post, Subscriptions, Thread}
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
@@ -26,8 +27,9 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   end
 
   @impl true
-  def handle_info({event, _post}, socket) when event in [:post_created, :post_updated],
-    do: {:noreply, load_thread(socket, socket.assigns.thread)}
+  def handle_info({event, _post}, socket)
+      when event in [:post_created, :post_updated, :post_deleted, :post_restored],
+      do: {:noreply, load_thread(socket, socket.assigns.thread)}
 
   def handle_info({:thread_updated, thread}, socket) do
     if thread.category_id == socket.assigns.category.id,
@@ -48,7 +50,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   @impl true
   def handle_event(event, _params, %{assigns: %{current_user: nil}} = socket)
-      when event in ["set_level", "delete", "moderate", "move"] do
+      when event in ["set_level", "delete", "moderate", "move", "delete_post", "restore_post"] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
 
@@ -97,6 +99,33 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     end
   end
 
+  def handle_event("delete_post", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+    post = Forums.get_post!(thread, id)
+
+    with true <- can?(user, :delete_post, %{post: post, thread: Forums.get_thread!(thread.id)}),
+         {:ok, _} <- Forums.delete_post(post, user) do
+      {:noreply, socket |> put_flash(:info, "Post deleted.") |> load_thread(thread)}
+    else
+      {:error, :first_post} ->
+        {:noreply, put_flash(socket, :error, "Delete the thread to remove its first post.")}
+
+      false ->
+        {:noreply, put_flash(socket, :error, denied_message(user))}
+    end
+  end
+
+  def handle_event("restore_post", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+
+    if can?(user, :restore_post) do
+      {:ok, _} = thread |> Forums.get_post!(id) |> Forums.restore_post()
+      {:noreply, socket |> put_flash(:info, "Post restored.") |> load_thread(thread)}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(user))}
+    end
+  end
+
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
       {:ok, _} = Forums.delete_thread(socket.assigns.thread)
@@ -112,7 +141,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   defp load_thread(socket, thread) do
     user = socket.assigns.current_user
-    thread = Repo.preload(thread, [posts: [:user]], force: true)
+    thread = Repo.preload(thread, [posts: [:user, :deleted_by]], force: true)
     [first_post | replies] = Enum.map(thread.posts, &Forums.decorate_post_oembeds/1)
 
     if user && connected?(socket), do: Forums.mark_thread_read(user, thread)
@@ -124,7 +153,9 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:replies, replies)
     |> assign(:level, Subscriptions.thread_level(user, thread))
     |> assign(:inherited_level, inherited_level(user, socket.assigns.category))
-    |> assign(:editable_ids, editable_ids(user, thread))
+    |> assign(:editable_ids, permitted_ids(user, thread, :edit_post))
+    |> assign(:deletable_ids, permitted_ids(user, thread, :delete_post))
+    |> assign(:admin?, can?(user, :view_deleted_posts))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
     |> assign(:can_moderate?, can?(user, :moderate_thread))
     |> assign(
@@ -133,18 +164,20 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     )
   end
 
-  # The posts the user may edit (roles loaded once, not per post).
-  defp editable_ids(nil, _thread), do: MapSet.new()
+  # The posts the user may edit or delete (roles loaded once, not per post).
+  defp permitted_ids(nil, _thread, _action), do: MapSet.new()
 
-  defp editable_ids(user, thread) do
+  defp permitted_ids(user, thread, action) do
     user = Repo.preload(user, :roles)
 
     for post <- thread.posts,
-        can?(user, :edit_post, %{post: post, thread: thread}),
+        can?(user, action, %{post: post, thread: thread}),
         into: MapSet.new() do
       post.id
     end
   end
+
+  defp reply_count(replies), do: Enum.count(replies, &(!Post.deleted?(&1)))
 
   defp moderation_message("pin"), do: "Thread pinned."
   defp moderation_message("unpin"), do: "Thread unpinned."
@@ -178,7 +211,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             @{@first_post.user.username}
           </.link>
           · <.time_ago id="thread-time" at={@thread.inserted_at} />
-          · <span id="reply-count">{ngettext("1 reply", "%{count} replies", length(@replies))}</span>
+          · <span id="reply-count">{ngettext("1 reply", "%{count} replies", reply_count(@replies))}</span>
           <span :if={@can_manage? or @can_moderate?} class="ml-auto flex gap-1">
             <div :if={@can_moderate?} id="moderation" class="dropdown dropdown-end">
               <div tabindex="0" role="button" class="btn btn-ghost btn-xs">
@@ -271,7 +304,34 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           >
             New since your last visit
           </div>
-          <.post post={post} thread={@thread} can_edit={MapSet.member?(@editable_ids, post.id)} />
+          <.deleted_post :if={Post.deleted?(post) and not @admin?} post={post} />
+          <.post
+            :if={not Post.deleted?(post) or @admin?}
+            post={post}
+            thread={@thread}
+            can_edit={MapSet.member?(@editable_ids, post.id)}
+          >
+            <:actions>
+              <button
+                :if={MapSet.member?(@deletable_ids, post.id)}
+                phx-click="delete_post"
+                phx-value-id={post.id}
+                data-confirm="Delete this post?"
+                class="btn btn-ghost btn-sm btn-square text-error"
+                aria-label={"Delete post #{post.id}"}
+              >
+                <.icon name="hero-trash" class="size-4" />
+              </button>
+              <button
+                :if={@admin? and Post.deleted?(post)}
+                phx-click="restore_post"
+                phx-value-id={post.id}
+                class="btn btn-ghost btn-sm"
+              >
+                <.icon name="hero-arrow-uturn-up" class="size-4" /> Restore
+              </button>
+            </:actions>
+          </.post>
         </li>
       </ol>
 

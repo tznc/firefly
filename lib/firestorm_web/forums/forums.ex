@@ -254,7 +254,7 @@ defmodule FirestormWeb.Forums do
         :left_lateral,
         [t],
         p in fragment(
-          "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? ORDER BY forums_posts.inserted_at DESC LIMIT 1",
+          "SELECT thread_id, inserted_at FROM forums_posts WHERE forums_posts.thread_id = ? AND forums_posts.deleted_at IS NULL ORDER BY forums_posts.inserted_at DESC LIMIT 1",
           t.id
         ),
         on: true
@@ -411,7 +411,8 @@ defmodule FirestormWeb.Forums do
     |> decorate_threads(user)
   end
 
-  # Decorates threads with list data, in two queries for the whole list:
+  # Decorates threads with list data, in two queries for the whole list
+  # (deleted posts don't count):
   #   - first_post (with its user)
   #   - posts_count, last_post_at
   #   - for a user: unread_count, first_unread_post_id, new? (never opened) and
@@ -451,6 +452,7 @@ defmodule FirestormWeb.Forums do
     user_id = if user, do: user.id, else: -1
 
     Post
+    |> Post.visible()
     |> where([p], p.thread_id in ^ids)
     |> join(:left, [p], r in ThreadRead, on: r.thread_id == p.thread_id and r.user_id == ^user_id)
     |> group_by([p], p.thread_id)
@@ -495,7 +497,7 @@ defmodule FirestormWeb.Forums do
       :left_lateral,
       [t],
       lp in fragment(
-        "SELECT max(inserted_at) AS at FROM forums_posts WHERE forums_posts.thread_id = ?",
+        "SELECT max(inserted_at) AS at FROM forums_posts WHERE forums_posts.thread_id = ? AND forums_posts.deleted_at IS NULL",
         t.id
       ),
       on: true,
@@ -556,7 +558,7 @@ defmodule FirestormWeb.Forums do
       exists(
         from(p in Post,
           where:
-            p.thread_id == parent_as(:thread).id and
+            p.thread_id == parent_as(:thread).id and is_nil(p.deleted_at) and
               p.id > parent_as(:read).last_read_post_id
         )
       )
@@ -586,11 +588,11 @@ defmodule FirestormWeb.Forums do
     posts =
       case @top_periods[period] do
         nil ->
-          Post
+          Post.visible()
 
         days ->
           since = NaiveDateTime.add(NaiveDateTime.utc_now(), -days, :day)
-          where(Post, [p], p.inserted_at > ^since)
+          where(Post.visible(), [p], p.inserted_at > ^since)
       end
 
     ranked =
@@ -1096,8 +1098,63 @@ defmodule FirestormWeb.Forums do
     |> Enum.reverse()
   end
 
+  @doc """
+  Soft-deletes a reply as `user` (its author or an admin; see the
+  `:delete_post` policy). The row stays so admins can restore it; until then
+  it's left out of counts, lists and notifications. A thread's first post
+  can't be deleted on its own: delete the thread instead.
+  """
+  def delete_post(%Post{} = post, %User{} = user) do
+    if first_post?(post) do
+      {:error, :first_post}
+    else
+      post
+      |> change(deleted_at: DateTime.utc_now(:second), deleted_by_id: user.id)
+      |> Repo.update()
+      |> tap_ok(fn deleted ->
+        remove_post_notifications(deleted)
+        post_changed(:post_deleted, deleted)
+      end)
+    end
+  end
+
+  @doc "Restores a deleted post (admins; see the `:restore_post` policy)."
+  def restore_post(%Post{} = post) do
+    post
+    |> change(deleted_at: nil, deleted_by_id: nil)
+    |> Repo.update()
+    |> tap_ok(&post_changed(:post_restored, &1))
+  end
+
+  defp first_post?(%Post{id: id, thread_id: thread_id}) do
+    Post
+    |> where([p], p.thread_id == ^thread_id)
+    |> order_by([p], asc: p.inserted_at, asc: p.id)
+    |> limit(1)
+    |> select([p], p.id)
+    |> Repo.one() == id
+  end
+
+  # Notifications carry the post's body, so they go with it.
+  defp remove_post_notifications(%Post{id: post_id}) do
+    {_count, user_ids} =
+      Notification
+      |> where([n], n.post_id == ^post_id)
+      |> select([n], n.user_id)
+      |> Repo.delete_all()
+
+    user_ids |> Enum.uniq() |> Enum.each(&notifications_changed/1)
+  end
+
+  # Thread pages re-render the post; lists refresh their counts.
+  defp post_changed(event, %Post{} = post) do
+    broadcast("forums:thread:#{post.thread_id}", {event, post})
+    broadcast_thread(:thread_activity, get_thread!(post.thread_id))
+  end
+
   def user_posts(user, %{page: page}) do
     Post
+    |> Post.visible()
     |> where([p], p.user_id == ^user.id)
     |> order_by([p], desc: p.inserted_at)
     |> preload([p], thread: [:category], user: [])
@@ -1106,6 +1163,7 @@ defmodule FirestormWeb.Forums do
 
   def user_last_post(user) do
     Post
+    |> Post.visible()
     |> where([p], p.user_id == ^user.id)
     |> order_by([p], desc: p.inserted_at)
     |> limit(1)
@@ -1289,6 +1347,8 @@ defmodule FirestormWeb.Forums do
     |> Repo.get(id)
   end
 
+  def decorate_post_oembeds(%Post{deleted_at: %DateTime{}} = post), do: %Post{post | oembeds: []}
+
   def decorate_post_oembeds(%Post{} = post) do
     oembeds =
       post.body
@@ -1329,7 +1389,7 @@ defmodule FirestormWeb.Forums do
   #   * "forums:categories"       - {:category_created | :category_updated | :category_deleted, category}
   #   * "forums:category:<id>"    - {:thread_created | :thread_updated | :thread_deleted | :thread_activity, thread}
   #   * "forums:threads"          - the same thread events, for every category
-  #   * "forums:thread:<id>"      - {:post_created | :post_updated, post} and the thread events for that thread
+  #   * "forums:thread:<id>"      - {:post_created | :post_updated | :post_deleted | :post_restored, post} and the thread events for that thread
 
   @pubsub FirestormWeb.PubSub
 

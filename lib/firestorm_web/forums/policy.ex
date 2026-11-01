@@ -5,8 +5,11 @@ defmodule FirestormWeb.Forums.Policy do
     * `:manage_category` (create, edit, delete) - admins
     * `:update_thread`, `:delete_thread` - the thread's author and admins
     * `:moderate_thread` (pin, close, archive, move) - admins
-    * `:edit_post` (params `%{post: post, thread: thread}`) - the post's author
-      while the thread is open, and admins
+    * `:edit_post`, `:delete_post` (params `%{post: post, thread: thread}`) -
+      the post's author while the thread is open, and admins; not once the
+      post is deleted. (`Forums.delete_post/2` also refuses a thread's first
+      post: delete the thread instead.)
+    * `:restore_post`, `:view_deleted_posts` - admins
     * `:edit_user` - the user themselves
   """
 
@@ -28,9 +31,18 @@ defmodule FirestormWeb.Forums.Policy do
     if Forums.thread_author_id(thread) == user.id, do: :ok, else: admin(user)
   end
 
-  def authorize(:edit_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread}) do
-    if post.user_id == user.id and not Thread.closed?(thread), do: :ok, else: admin(user)
+  def authorize(action, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread})
+      when action in [:edit_post, :delete_post] do
+    cond do
+      Post.deleted?(post) -> {:error, :unauthorized}
+      post.user_id == user.id and not Thread.closed?(thread) -> :ok
+      true -> admin(user)
+    end
   end
+
+  def authorize(action, %User{} = user, _params)
+      when action in [:restore_post, :view_deleted_posts],
+      do: admin(user)
 
   # Catch-all: deny everything else
   def authorize(_action, _user, _params), do: {:error, :unauthorized}

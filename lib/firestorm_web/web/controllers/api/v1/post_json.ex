@@ -6,10 +6,14 @@ defmodule FirestormWeb.Web.Api.V1.PostJSON do
   def show(%{post: %Post{} = post}), do: data(post)
 
   def data(%Post{} = post) do
+    # A deleted post's content is only for admins, on the site.
+    body = if Post.deleted?(post), do: "", else: post.body
+
     %{
       id: post.id,
-      body: post.body,
-      body_html: Markdown.render(post.body),
+      body: body,
+      body_html: Markdown.render(body),
+      deleted: Post.deleted?(post),
       user_id: post.user_id,
       oembeds:
         Enum.map(post.oembeds || [], fn {url, oembed} -> [url, OEmbed.to_html(oembed)] end),

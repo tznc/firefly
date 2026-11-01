@@ -299,7 +299,10 @@ defmodule FirestormWeb.Web.ForumComponents do
 
   def post(assigns) do
     ~H"""
-    <article id={"post-#{@post.id}"} class="card border border-base-300 bg-base-100">
+    <article
+      id={"post-#{@post.id}"}
+      class={["card border border-base-300 bg-base-100", @post.deleted_at && "deleted-post opacity-60"]}
+    >
       <div class="card-body gap-4 p-5">
         <header class="flex items-center gap-3">
           <.avatar user={@post.user} size="size-9" />
@@ -322,6 +325,13 @@ defmodule FirestormWeb.Web.ForumComponents do
               <.link navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}>
                 <.time_ago id={"post-#{@post.id}-time"} at={@post.inserted_at} />
               </.link>
+              <span
+                :if={@post.deleted_at}
+                class="badge badge-error badge-sm"
+                title={deleted_title(@post)}
+              >
+                deleted
+              </span>
               <.link
                 :if={@post.edited_at}
                 navigate={
@@ -363,6 +373,23 @@ defmodule FirestormWeb.Web.ForumComponents do
           </.link>
         </footer>
       </div>
+    </article>
+    """
+  end
+
+  defp deleted_title(%{deleted_by: %User{username: username}}), do: "Deleted by @#{username}"
+  defp deleted_title(_post), do: "Deleted"
+
+  @doc "What members see in place of a deleted post."
+  attr :post, :any, required: true
+
+  def deleted_post(assigns) do
+    ~H"""
+    <article
+      id={"post-#{@post.id}"}
+      class="deleted-post rounded-box border border-dashed border-base-300 px-5 py-3 text-sm italic text-base-content/60"
+    >
+      <.icon name="hero-trash" class="size-4" /> This post was deleted.
     </article>
     """
   end
