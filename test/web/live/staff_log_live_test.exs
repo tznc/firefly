@@ -139,5 +139,72 @@ defmodule FirestormWeb.Web.StaffLogLiveTest do
       assert revoke.action == "role.revoke"
       assert revoke.details == %{"role" => "admin", "username" => "promoted"}
     end
+
+    test "role memberships can't be edited in place", %{conn: conn, admin: admin} do
+      member = user_fixture(%{username: "member"})
+      role = Repo.get_by!(Forums.Role, name: "admin")
+      conn = log_in_as(conn, admin)
+
+      post(conn, "/admin/accounts/role_membership", %{
+        "role_membership" => %{"user_id" => member.id, "role_id" => role.id}
+      })
+
+      membership = Repo.get_by!(Forums.RoleMembership, user_id: member.id)
+      other = user_fixture(%{username: "mallory"})
+
+      form = get(conn, "/admin/accounts/role_membership/#{membership.id}")
+      assert html_response(form, 200) =~ ~r/<select[^>]* disabled [^>]*role_membership_user_id/
+
+      put(conn, "/admin/accounts/role_membership/#{membership.id}", %{
+        "role_membership" => %{"user_id" => other.id, "role_id" => role.id}
+      })
+
+      assert Repo.get!(Forums.RoleMembership, membership.id).user_id == member.id
+      refute Forums.admin?(other)
+      assert ["role.grant"] = Repo.all(from(a in StaffAction, select: a.action))
+    end
+  end
+
+  test "moving a thread to its own category isn't logged", %{admin: admin, thread: thread} do
+    category = Repo.get!(Category, thread.category_id)
+    assert {:ok, _} = Forums.move_thread(thread, category, admin)
+    assert Repo.all(StaffAction) == []
+  end
+
+  test "deleting an account scrubs who it was from the log", %{
+    conn: conn,
+    admin: admin,
+    thread: thread
+  } do
+    {:ok, ada} =
+      Forums.register_user(%{username: "ada", email: "ada@example.com", password: "ada-password"})
+
+    {:ok, ada} = Forums.confirm_user(ada)
+    {:ok, post} = Forums.create_post(thread, ada, %{body: "Ada's reply"})
+    {:ok, _} = Forums.delete_post(post, admin)
+
+    conn = log_in_as(conn, admin)
+    role = Repo.get_by!(Forums.Role, name: "admin")
+
+    put(conn, "/admin/accounts/user/#{ada.id}", %{"user" => %{"email" => "ada@new.example"}})
+
+    post(conn, "/admin/accounts/role_membership", %{
+      "role_membership" => %{"user_id" => ada.id, "role_id" => role.id}
+    })
+
+    membership = Repo.get_by!(Forums.RoleMembership, user_id: ada.id)
+    delete(conn, "/admin/accounts/role_membership/#{membership.id}")
+
+    log = fn -> Repo.all(from(a in StaffAction, select: a.details)) |> Jason.encode!() end
+    assert log.() =~ "ada@example.com"
+    assert log.() =~ ~s{"ada"}
+
+    {:ok, _} =
+      FirestormWeb.AccountDeletion.delete_account(Forums.get_user!(ada.id), "ada-password")
+
+    refute log.() =~ "ada@"
+    refute log.() =~ ~s{"ada"}
+    assert log.() =~ "deleted-user-#{ada.id}"
+    assert Repo.aggregate(StaffAction, :count) == 4
   end
 end
