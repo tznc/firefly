@@ -11,12 +11,48 @@ defmodule FirestormWeb.MentionsTest do
     user
   end
 
+  defp admin_user, do: FirestormWeb.Web.ConnCase.admin_fixture()
+
+  # The number of queries `fun` runs (in this process), and its result.
+  defp count_queries(fun) do
+    ref = make_ref()
+    me = self()
+    handler = fn _event, _measurements, _meta, _config -> send(me, {ref, :query}) end
+    :telemetry.attach({__MODULE__, ref}, [:firestorm_web, :repo, :query], handler, nil)
+
+    try do
+      result = fun.()
+      {count_messages(ref, 0), result}
+    after
+      :telemetry.detach({__MODULE__, ref})
+    end
+  end
+
+  defp count_messages(ref, n) do
+    receive do
+      {^ref, :query} -> count_messages(ref, n + 1)
+    after
+      0 -> n
+    end
+  end
+
   # Casts are async; a call to the server waits for them.
   defp flush, do: :sys.get_state(Notifications)
 
   defp mentions(user), do: Enum.filter(Forums.notifications_for(user), &(&1.kind == "mentioned"))
 
   describe "rendering" do
+    test "a page's posts resolve their names once, together", %{alice: alice} do
+      bodies = ["hi @alice", "and #nothing", "@ALICE again", nil]
+      refs = Mentions.refs(bodies)
+
+      {queries, html} =
+        count_queries(fn -> Enum.map(bodies, &Markdown.render(&1, refs)) end)
+
+      assert queries == 0
+      assert Enum.at(html, 2) =~ Paths.user_url(alice)
+    end
+
     setup do
       {:ok, category} = Forums.create_category(%{title: "Elixir Talk"})
       %{alice: user("Alice"), category: category}
@@ -59,14 +95,37 @@ defmodule FirestormWeb.MentionsTest do
 
   describe "usernames/1 and the cap" do
     test "skips block quotes and repeats" do
-      assert Mentions.usernames("@Bob and @bob, @carol\n\n> @dave said") == ["bob", "carol"]
+      assert Mentions.usernames("@Bob and @Bob, @carol\n\n> @dave said") == ["Bob", "carol"]
+    end
+
+    test "an exact-case match wins when usernames differ only in case" do
+      upper = user("Alice")
+      lower = user("alice")
+
+      assert Forums.users_by_username(["alice", "Alice", "ALICE"]) == %{
+               "alice" => lower,
+               "Alice" => upper,
+               "ALICE" => upper
+             }
+    end
+
+    test "only existing users count towards the cap" do
+      author = user("author")
+      {:ok, category} = Forums.create_category(%{title: "Elixir"})
+      {:ok, thread} = Forums.create_thread(category, author, %{title: "OTP", body: "Hi"})
+      prose = Enum.map_join(1..(Mentions.max_mentions() + 5), " ", &"@Annotation#{&1}")
+
+      assert {:ok, post} = Forums.create_post(thread, author, %{body: prose})
+      assert {:ok, _} = Forums.update_post(post, author, %{body: prose <> " typo fixed"})
     end
 
     test "a post may mention at most #{Mentions.max_mentions()} users" do
       author = user("author")
       {:ok, category} = Forums.create_category(%{title: "Elixir"})
       {:ok, thread} = Forums.create_thread(category, author, %{title: "OTP", body: "Hi"})
-      many = Enum.map_join(1..(Mentions.max_mentions() + 1), " ", &"@user#{&1}")
+
+      many =
+        Enum.map_join(1..(Mentions.max_mentions() + 1), " ", &"@#{user("user#{&1}").username}")
 
       assert {:error, changeset} = Forums.create_post(thread, author, %{body: many})
       assert "can mention at most 10 users" in errors_on(changeset).body
@@ -154,6 +213,18 @@ defmodule FirestormWeb.MentionsTest do
 
       assert length(mentions(bob)) == 1
       assert length(mentions(carol)) == 1
+    end
+
+    test "an admin's edit doesn't notify in the author's name", %{
+      author: author,
+      bob: bob,
+      thread: thread
+    } do
+      post = reply(thread, author, "look")
+      {:ok, _} = Forums.update_post(post, admin_user(), %{body: "look @bob"})
+      flush()
+
+      assert mentions(bob) == []
     end
 
     test "quoting a post doesn't re-notify the users it mentioned", %{

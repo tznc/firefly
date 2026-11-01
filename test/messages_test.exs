@@ -2,6 +2,8 @@ defmodule FirestormWeb.MessagesTest do
   use FirestormWeb.DataCase
   use Bamboo.Test, shared: true
 
+  require Ecto.Query
+
   alias FirestormWeb.{Forums, Messages, Notifications, Posting, RateLimit, Search}
   alias FirestormWeb.Forums.Policy
 
@@ -213,7 +215,7 @@ defmodule FirestormWeb.MessagesTest do
                {:error, "add at least one other person"}
     end
 
-    test "leaving removes the conversation and its notifications; adding back restores it",
+    test "leaving removes the conversation and its notifications, and sticks",
          %{alice: alice, bob: bob} do
       conversation = start(alice, "bob")
       :ok = Messages.leave(conversation, bob)
@@ -226,10 +228,49 @@ defmodule FirestormWeb.MessagesTest do
       reply(conversation, alice, "Still there?")
       assert Forums.notifications_for(bob) == []
 
-      {:ok, _} = Messages.add_participants(conversation, alice, "bob")
-      assert [%{id: id}] = Messages.inbox(bob, 1).entries
-      assert id == conversation.id
+      assert Messages.add_participants(conversation, alice, "bob") ==
+               {:error, "@bob left this conversation"}
+
+      flush()
+      refute Messages.participant?(conversation, bob)
+      assert Forums.notifications_for(bob) == []
     end
+
+    test "adding people counts towards the message rate limit", %{alice: alice, carol: carol} do
+      conversation = start(alice, "bob")
+      config = Application.get_env(:firestorm_web, RateLimit)
+      on_exit(fn -> Application.put_env(:firestorm_web, RateLimit, config) end)
+
+      # Day-long window, so the test can't straddle a window boundary.
+      Application.put_env(:firestorm_web, RateLimit, limits: [message: {1, :timer.hours(24)}])
+      {:ok, _} = Messages.add_participants(conversation, alice, "carol")
+      user("dave")
+
+      assert Messages.add_participants(conversation, alice, "dave") ==
+               {:error, RateLimit.message()}
+
+      assert Enum.map(Messages.participants(conversation), & &1.username) ==
+               ["alice", "bob", carol.username]
+    end
+  end
+
+  test "notifications don't carry the message", %{alice: alice, bob: bob} do
+    start(alice, "bob", "xylophone confidential")
+    assert [%{body: body}] = Forums.notifications_for(bob)
+    refute body =~ "xylophone"
+  end
+
+  test "a deleted author's messages still show and notify", %{alice: alice, bob: bob} do
+    conversation = start(alice, "bob")
+    message = reply(conversation, bob, "Bye")
+    # As Kaffy's user delete would, once nothing else references bob.
+    FirestormWeb.Repo.delete_all(Ecto.Query.where(Forums.Notification, user_id: ^bob.id))
+    {:ok, _} = Forums.delete_user(bob)
+
+    assert [_, %{user: nil}] = Messages.messages(conversation)
+    :ok = Notifications.message_created(message)
+    flush()
+    assert %{subject: ~s(Someone replied to "Hush")} = hd(Forums.notifications_for(alice))
   end
 
   test "the inbox lists the user's conversations, most recent first, with unread counts",
