@@ -10,8 +10,12 @@ defmodule FirestormWeb.Forums.Policy do
       the post's author while the thread is open (editing, also only within
       the `edit_grace_minutes` site setting; 0: forever), and admins; not
       once the post is deleted. Authors can't edit a post while it awaits
-      approval. (`Forums.delete_post/2` also refuses a thread's first
+      approval. A wiki post (`Post.wiki?/1`) can also be edited, with no
+      time limit, by any member who may read it and its thread while the
+      thread is open; saving still goes through `Posting.check/2` (penalties,
+      slow mode). (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
+    * `:toggle_wiki` (make a post a wiki or not) - admins
     * `:accept_answer` (mark a reply as the accepted answer, or unmark it;
       params: the thread) - in a category that allows accepted answers, the
       thread's author unless it's archived, and admins; never on a merged
@@ -102,9 +106,8 @@ defmodule FirestormWeb.Forums.Policy do
       when action in [:edit_post, :delete_post] do
     cond do
       Post.deleted?(post) -> {:error, :unauthorized}
-      # Staff approve what they saw: no author edits while it's queued.
-      action == :edit_post and Post.queued?(post) -> admin(user)
-      post.user_id == user.id and not Thread.closed?(thread) and in_window?(action, post) -> :ok
+      action == :edit_post -> may_edit(user, post, thread)
+      post.user_id == user.id and not Thread.closed?(thread) -> :ok
       true -> admin(user)
     end
   end
@@ -156,16 +159,30 @@ defmodule FirestormWeb.Forums.Policy do
              :view_staff_log,
              :manage_site_settings,
              :manage_groups,
-             :manage_tags
+             :manage_tags,
+             :toggle_wiki
            ],
       do: admin(user)
 
   # Catch-all: deny everything else
   def authorize(_action, _user, _params), do: {:error, :unauthorized}
 
-  defp in_window?(:delete_post, _post), do: true
+  defp wiki_editable?(user, post, thread) do
+    Post.wiki?(post) and not Thread.closed?(thread) and not Thread.merged?(thread) and
+      Post.readable_by?(post, user) and authorize(:view_thread, user, thread) == :ok
+  end
 
-  defp in_window?(:edit_post, post) do
+  defp may_edit(user, post, thread) do
+    cond do
+      # Staff approve what they saw: no author edits while it's queued.
+      Post.queued?(post) -> admin(user)
+      post.user_id == user.id and not Thread.closed?(thread) and in_window?(post) -> :ok
+      wiki_editable?(user, post, thread) -> :ok
+      true -> admin(user)
+    end
+  end
+
+  defp in_window?(post) do
     case SiteSettings.get("edit_grace_minutes") do
       0 -> true
       minutes -> NaiveDateTime.diff(NaiveDateTime.utc_now(), post.inserted_at, :minute) < minutes

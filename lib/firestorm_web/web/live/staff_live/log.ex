@@ -33,6 +33,8 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "post.unhide" => "Unhid flagged post",
     "post.approve" => "Approved post",
     "post.reject" => "Rejected post",
+    "post.wiki" => "Made post a wiki",
+    "post.unwiki" => "Made wiki a normal post",
     "poll.close" => "Closed poll",
     "poll.open" => "Reopened poll",
     "flag.agree" => "Agreed with flags",

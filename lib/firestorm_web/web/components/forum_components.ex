@@ -415,6 +415,13 @@ defmodule FirestormWeb.Web.ForumComponents do
               <.link navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}>
                 <.time_ago id={"post-#{@post.id}-time"} at={@post.inserted_at} />
               </.link>
+              <span
+                :if={@post.wiki}
+                class="wiki-badge badge badge-info badge-sm"
+                title="Wiki: members can edit this post"
+              >
+                <.icon name="hero-pencil-square" class="size-3" /> Wiki
+              </span>
               <span :if={@accepted} class="accepted-badge badge badge-success badge-sm">
                 <.icon name="hero-check-circle" class="size-3" /> Accepted answer
               </span>
