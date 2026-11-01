@@ -112,4 +112,15 @@ defmodule FirestormWeb.Web.PostEditingTest do
     |> assert_has("#post-#{reply.id}", text: "Changed while you read")
     |> assert_has("#post-#{reply.id} .edited")
   end
+
+  test "an edited first post stays first", ctx do
+    %{conn: conn, author: author, thread: thread} = ctx
+    [first, _reply] = FirestormWeb.Repo.preload(thread, :posts, force: true).posts
+    {:ok, _} = Forums.update_post(first, author, %{body: "The original text, edited"})
+
+    conn
+    |> visit(thread_path(thread))
+    |> assert_has("#posts > li:first-child #post-#{first.id}", text: "edited")
+    |> assert_has("#reply-count", text: "1 reply")
+  end
 end
