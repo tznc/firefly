@@ -55,6 +55,7 @@ defmodule FirestormWeb.Web.Router do
       live("/", ThreadLive.Recent, :index)
       live("/login", AuthLive.Login, :login)
       live("/auth/identity", AuthLive.Identity, :new)
+      live("/register", AuthLive.Registration, :new)
       live("/users", UserLive.Index, :index)
       live("/users/:id", UserLive.Show, :show)
       live("/categories", CategoryLive.Index, :index)

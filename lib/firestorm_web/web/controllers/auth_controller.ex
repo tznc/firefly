@@ -44,10 +44,7 @@ defmodule FirestormWeb.Web.AuthController do
 
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-
-           Forums.login_or_register_from_identity(%{
-             username: user_params["username"],
-             password: user_params["password"]
-           }) do
+           Forums.authenticate_by_password(user_params["username"], user_params["password"]) do
       ok_login(conn, user)
     else
       {:error, :rate_limited} -> failed_login(conn, ~p"/auth/identity", RateLimit.message())

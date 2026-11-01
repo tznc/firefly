@@ -75,6 +75,7 @@ config :firestorm_web, FirestormWeb.RateLimit,
   limits: [
     login: {1_000, 60_000},
     login_ip: {10_000, 60_000},
+    register: {1_000, 60_000},
     post: {1_000, 60_000},
     upload: {1_000, 60_000}
   ]

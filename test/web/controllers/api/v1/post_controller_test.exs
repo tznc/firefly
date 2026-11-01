@@ -10,7 +10,7 @@ defmodule FirestormWeb.Web.Api.V1.PostControllerTest do
     {:ok, elixir} = Forums.create_category(%{title: "Elixir"})
 
     {:ok, bob} =
-      Forums.login_or_register_from_identity(%{username: "bob", password: "password1"})
+      Forums.register_user(%{username: "bob", email: "bob@example.com", password: "password1"})
 
     {:ok, otp_is_cool} =
       Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})

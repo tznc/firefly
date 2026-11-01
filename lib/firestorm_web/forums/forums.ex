@@ -99,10 +99,21 @@ defmodule FirestormWeb.Forums do
     |> Repo.insert()
   end
 
-  defp register_user(attrs) do
-    %User{}
+  @doc """
+  Registers a user with a username, email and password.
+
+      iex> register_user(%{username: "ada", email: "ada@example.com", password: "s3cret-password"})
+      {:ok, %User{}}
+  """
+  def register_user(attrs) do
+    %User{api_token: generate_api_token()}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc "A changeset for the registration form."
+  def change_registration(%User{} = user \\ %User{}, attrs \\ %{}) do
+    User.registration_changeset(user, attrs)
   end
 
   @doc """
@@ -614,28 +625,26 @@ defmodule FirestormWeb.Forums do
       else: candidate
   end
 
-  def login_or_register_from_identity(%{username: username, password: password}) do
+  @doc """
+  Logs in with a username and password. Unknown usernames and accounts
+  without a password (e.g. GitHub logins) fail the same way as a wrong
+  password.
+  """
+  def authenticate_by_password(username, password)
+      when is_binary(username) and is_binary(password) do
     case get_user_by_username(username) do
-      nil ->
-        # No user, let's register one!
-        register_user(%{
-          username: username,
-          name: username,
-          password: password,
-          api_token: generate_api_token()
-        })
+      %User{password_hash: hash} = user when is_binary(hash) ->
+        if Bcrypt.verify_pass(password, hash), do: {:ok, user}, else: login_error()
 
-      user ->
-        # We'll check the password against the user's stored password hash
-        if is_binary(user.password_hash) and Bcrypt.verify_pass(password, user.password_hash) do
-          # Everything checks out, success
-          {:ok, user}
-        else
-          # User existed, we checked the password, but no dice
-          {:error, "No user found with that username or password"}
-        end
+      _ ->
+        Bcrypt.no_user_verify()
+        login_error()
     end
   end
+
+  def authenticate_by_password(_username, _password), do: login_error()
+
+  defp login_error, do: {:error, "No user found with that username or password"}
 
   @doc """
   Creates a post within a thread.

@@ -10,6 +10,7 @@ defmodule FirestormWeb.RateLimitTest do
       limits: [
         login: {3, 60_000},
         login_ip: {1_000, 60_000},
+        register: {1, 60_000},
         post: {2, 60_000},
         upload: {1, 60_000}
       ]
@@ -28,7 +29,11 @@ defmodule FirestormWeb.RateLimitTest do
     username = "victim#{System.unique_integer([:positive])}"
 
     {:ok, _} =
-      Forums.login_or_register_from_identity(%{username: username, password: "right-password"})
+      Forums.register_user(%{
+        username: username,
+        email: "#{username}@example.com",
+        password: "right-password"
+      })
 
     for _ <- 1..3, do: attempt(conn, username, "wrong-password")
 
@@ -53,6 +58,25 @@ defmodule FirestormWeb.RateLimitTest do
       })
 
     assert json_response(conn, 429)["error"] =~ "too often"
+  end
+
+  test "limits registrations per client", %{conn: conn} do
+    register = fn session, username ->
+      session
+      |> visit(~p"/register")
+      |> fill_in("Username", with: username)
+      |> fill_in("Email", with: "#{username}@example.com")
+      |> fill_in("Password", with: "s3cret-password")
+      |> click_button("Create account")
+    end
+
+    register.(conn, "first#{System.unique_integer([:positive])}")
+
+    build_conn()
+    |> register.("second")
+    |> assert_has("#flash-error", text: "too often")
+
+    refute Forums.get_user_by_username("second")
   end
 
   test "limits how fast a user can post", %{conn: conn} do

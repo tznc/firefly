@@ -7,6 +7,7 @@ defmodule FirestormWeb.RateLimit do
 
     * `:login` - password login/registration attempts per username
     * `:login_ip` - password login/registration attempts per client IP
+    * `:register` - account registrations per client IP
     * `:post` - new threads and posts per user (web, API and email)
     * `:upload` - upload signatures per user
   """
@@ -15,6 +16,7 @@ defmodule FirestormWeb.RateLimit do
   @defaults [
     login: {10, :timer.minutes(5)},
     login_ip: {100, :timer.minutes(5)},
+    register: {5, :timer.hours(1)},
     post: {10, :timer.minutes(1)},
     upload: {30, :timer.hours(1)}
   ]
@@ -34,6 +36,8 @@ defmodule FirestormWeb.RateLimit do
       check(:login, String.downcase(username || ""))
     end
   end
+
+  def check_register(remote_ip), do: check(:register, format_ip(remote_ip))
 
   def check_post(%{id: user_id}), do: check(:post, user_id)
   def check_upload(%{id: user_id}), do: check(:upload, user_id)

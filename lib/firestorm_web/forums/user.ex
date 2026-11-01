@@ -46,11 +46,26 @@ defmodule FirestormWeb.Forums.User do
     |> add_roles(attrs)
   end
 
+  @doc """
+  Registration with a username, email and password. The display name defaults
+  to the username.
+  """
   def registration_changeset(%__MODULE__{} = user, attrs) do
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+    attrs = Map.put_new(attrs, "name", attrs["username"])
+
     user
     |> changeset(attrs)
     |> cast(attrs, [:password])
+    |> validate_required([:email, :password])
+    |> validate_format(:username, ~r/^[A-Za-z0-9_-]+$/,
+      message: "can only contain letters, numbers, - and _"
+    )
+    |> validate_length(:username, min: 2, max: 32)
+    |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "must be a valid email")
+    |> validate_length(:email, max: 160)
     |> validate_length(:password, min: 8, max: 72)
+    |> unsafe_validate_unique(:username, FirestormWeb.Repo)
     |> put_password_hash()
   end
 

@@ -1,8 +1,8 @@
 defmodule FirestormWeb.Web.AuthLive.Identity do
   @moduledoc """
-  Username and password login (or registration, for a new username). On
-  submit the form posts to the Ueberauth identity callback, which writes the
-  session.
+  Username and password login. On submit the form posts to the Ueberauth
+  identity callback, which writes the session. New accounts register at
+  `/register`.
   """
   use FirestormWeb.Web, :live_view
 
@@ -42,7 +42,9 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
         <.page_header title="Log In">
-          <:subtitle>New usernames are registered automatically.</:subtitle>
+          <:subtitle>
+            New here? <.link navigate={~p"/register"} class="link">Create an account</.link>
+          </:subtitle>
         </.page_header>
         <.form
           for={@form}
@@ -61,7 +63,7 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
             label="Password"
             autocomplete="current-password"
           />
-          <.button variant="primary" class="btn btn-primary w-full">Log in or register</.button>
+          <.button variant="primary" class="btn btn-primary w-full">Log in</.button>
         </.form>
       </section>
     </Layouts.app>

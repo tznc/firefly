@@ -20,8 +20,8 @@ defmodule FirestormWeb.Web.Endpoint do
   end
 
   socket("/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [:user_agent, session: @session_options]],
-    longpoll: [connect_info: [:user_agent, session: @session_options]]
+    websocket: [connect_info: [:user_agent, :peer_data, session: @session_options]],
+    longpoll: [connect_info: [:user_agent, :peer_data, session: @session_options]]
   )
 
   # Origins are checked against the endpoint's host (see :check_origin).

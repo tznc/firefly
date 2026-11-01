@@ -331,8 +331,9 @@ defmodule FirestormWeb.ForumsTest do
 
     test "never logs a GitHub user into a password account with the same username" do
       {:ok, victim} =
-        Forums.login_or_register_from_identity(%{
+        Forums.register_user(%{
           username: "knewter",
+          email: "someone@example.com",
           password: "s3cret-password"
         })
 
@@ -416,47 +417,67 @@ defmodule FirestormWeb.ForumsTest do
     end
   end
 
-  describe "login_or_register_from_identity/1" do
-    test "registers a new user with a hashed password" do
-      assert {:ok, user} =
-               Forums.login_or_register_from_identity(%{
-                 username: "newbie",
-                 password: "s3cret-password"
-               })
+  describe "register_user/1" do
+    @registration %{username: "newbie", email: "newbie@example.com", password: "s3cret-password"}
 
+    test "registers a user with a hashed password" do
+      assert {:ok, user} = Forums.register_user(@registration)
       assert user.username == "newbie"
-      assert is_binary(user.password_hash)
+      assert user.name == "newbie"
+      assert user.email == "newbie@example.com"
+      assert is_binary(user.api_token)
       refute user.password_hash == "s3cret-password"
       assert Bcrypt.verify_pass("s3cret-password", user.password_hash)
     end
 
-    test "logs in an existing user with the right password" do
-      {:ok, %{id: id}} =
-        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret-password"})
+    test "requires a valid username, email and password" do
+      assert {:error, changeset} =
+               Forums.register_user(%{username: "a b", email: "nope", password: "short"})
 
-      assert {:ok, %{id: ^id}} =
-               Forums.login_or_register_from_identity(%{
-                 username: "newbie",
-                 password: "s3cret-password"
-               })
+      errors = errors_on(changeset)
+      assert errors.username
+      assert errors.email == ["must be a valid email"]
+      assert errors.password == ["should be at least 8 character(s)"]
     end
 
-    test "rejects an existing user with the wrong password" do
-      {:ok, _} =
-        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret-password"})
+    test "rejects a taken username" do
+      {:ok, _} = Forums.register_user(@registration)
 
-      assert {:error, _} =
-               Forums.login_or_register_from_identity(%{username: "newbie", password: "wrong"})
+      assert {:error, changeset} =
+               Forums.register_user(%{@registration | email: "other@example.com"})
+
+      assert "has already been taken" in errors_on(changeset).username
+    end
+  end
+
+  describe "authenticate_by_password/2" do
+    setup do
+      {:ok, user} =
+        Forums.register_user(%{
+          username: "newbie",
+          email: "newbie@example.com",
+          password: "s3cret-password"
+        })
+
+      %{user: user}
+    end
+
+    test "logs in with the right password", %{user: %{id: id}} do
+      assert {:ok, %{id: ^id}} = Forums.authenticate_by_password("newbie", "s3cret-password")
+    end
+
+    test "rejects a wrong password" do
+      assert {:error, _} = Forums.authenticate_by_password("newbie", "wrong")
+    end
+
+    test "never registers an unknown username" do
+      assert {:error, _} = Forums.authenticate_by_password("stranger", "s3cret-password")
+      refute Forums.get_user_by_username("stranger")
     end
 
     test "rejects a password login for a user without a password (e.g. GitHub users)" do
       _ = fixture(:user, %{username: "octocat", email: "octo@example.com", name: "Octo"})
-
-      assert {:error, _} =
-               Forums.login_or_register_from_identity(%{
-                 username: "octocat",
-                 password: "anything"
-               })
+      assert {:error, _} = Forums.authenticate_by_password("octocat", "anything")
     end
   end
 
