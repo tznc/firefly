@@ -107,6 +107,12 @@ defmodule FirestormWeb.StaffLog do
   end
 
   @doc """
+  The target types `targets/1` looks up. Others (e.g. roles edited in the
+  Kaffy admin) have no page of their own.
+  """
+  def linked_types, do: ~w(thread post category user)
+
+  @doc """
   The entries' targets that still exist, as a map from `{type, id}` to the
   record. Posts come with their thread, to link to them.
   """

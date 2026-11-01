@@ -107,6 +107,14 @@ defmodule FirestormWeb.Web.StaffLogLiveTest do
                Repo.all(StaffAction)
 
       assert details["title"] == %{"before" => "Elixir", "after" => "Erlang"}
+
+      {:ok, role} = Forums.create_role("moderator")
+      put(conn, "/admin/accounts/role/#{role.id}", %{"role" => %{"name" => "mod"}})
+
+      conn
+      |> visit(~p"/staff/log")
+      |> assert_has("td.target", text: "role ##{role.id}")
+      |> refute_has("td.target", text: "Deleted role")
     end
 
     test "granting and revoking roles is logged on the user", %{conn: conn, admin: admin} do
