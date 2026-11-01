@@ -1077,7 +1077,7 @@ defmodule FirestormWeb.Forums do
 
   `post` is the version the editor started from: if someone else edited it
   since, this returns `{:error, :edited_elsewhere}` instead of overwriting
-  their edit.
+  their edit. Deleted posts give `{:error, :deleted}`.
   """
   def update_post(%Post{} = post, %User{} = editor, attrs) do
     result =
@@ -1086,9 +1086,12 @@ defmodule FirestormWeb.Forums do
         # holds the body this edit actually replaces.
         current = Post |> lock("FOR UPDATE") |> Repo.get!(post.id)
 
-        if current.edited_at == post.edited_at,
-          do: edit_post(current, editor, attrs),
-          else: {:error, :edited_elsewhere}
+        cond do
+          # Deleted posts can't be edited, even from a form opened before.
+          Post.deleted?(current) -> {:error, :deleted}
+          current.edited_at != post.edited_at -> {:error, :edited_elsewhere}
+          true -> edit_post(current, editor, attrs)
+        end
       end)
 
     tap_ok(result, &broadcast_post_updated/1)

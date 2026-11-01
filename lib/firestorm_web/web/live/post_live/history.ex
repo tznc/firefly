@@ -35,6 +35,19 @@ defmodule FirestormWeb.Web.PostLive.History do
   def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket),
     do: {:noreply, load(socket, FirestormWeb.Repo.preload(post, :user))}
 
+  def handle_info({:post_deleted, %{id: id}}, %{assigns: %{post: %{id: id}}} = socket) do
+    if can?(socket.assigns.current_user, :view_deleted_posts) do
+      {:noreply, socket}
+    else
+      %{category: category, thread: thread} = socket.assigns
+
+      {:noreply,
+       socket
+       |> put_flash(:error, "This post was deleted.")
+       |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+    end
+  end
+
   def handle_info(_event, socket), do: {:noreply, socket}
 
   defp load(socket, post), do: assign(socket, post: post, edits: Forums.post_edits(post))
