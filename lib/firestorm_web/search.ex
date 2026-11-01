@@ -15,6 +15,10 @@ defmodule FirestormWeb.Search do
     * `in:title` - match thread titles only (results are first posts)
     * `order:latest` - newest first instead of most relevant
 
+  Threads the searcher muted (directly, or through their category or a tag;
+  see `FirestormWeb.Forums.Subscriptions`) are left out unless the
+  `"muted"` control is `"include"`.
+
   A post matches when its body matches; a thread's first post also matches
   on the title (weighted higher when ranking). Deleted posts and archived threads are left out, and
   only threads the searcher may read are searched (see
@@ -24,9 +28,15 @@ defmodule FirestormWeb.Search do
   import Ecto.Query
 
   alias FirestormWeb.Repo
-  alias FirestormWeb.Forums.{Category, Policy, Post, Tag}
+  alias FirestormWeb.Forums.{Category, Policy, Post, Subscriptions, Tag, User}
 
-  defstruct terms: "", category: nil, tag: nil, user: nil, in_title: false, order: "relevance"
+  defstruct terms: "",
+            category: nil,
+            tag: nil,
+            user: nil,
+            in_title: false,
+            order: "relevance",
+            include_muted: false
 
   @type t :: %__MODULE__{}
 
@@ -57,7 +67,7 @@ defmodule FirestormWeb.Search do
   @doc """
   Parses a query string with inline filters (see the module doc). `controls`
   are the search page's fields (`"category"`, `"tag"`, `"user"`, `"in"`,
-  `"order"`); non-blank ones override the inline filters.
+  `"order"`, `"muted"`); non-blank ones override the inline filters.
   """
   @spec parse(String.t() | nil, map) :: t
   def parse(query, controls \\ %{}) do
@@ -99,6 +109,9 @@ defmodule FirestormWeb.Search do
       {"order", order}, search when order in @orders ->
         %{search | order: order}
 
+      {"muted", "include"}, search ->
+        %{search | include_muted: true}
+
       _other, search ->
         search
     end)
@@ -125,6 +138,7 @@ defmodule FirestormWeb.Search do
       |> join(:inner, [thread: t], c in assoc(t, :category), as: :category)
       |> where([thread: t], is_nil(t.archived_at))
       |> Policy.readable_threads(user)
+      |> without_muted(user, search.include_muted)
       |> match(search)
       |> by_category(search.category)
       |> by_tag(search.tag)
@@ -134,14 +148,20 @@ defmodule FirestormWeb.Search do
       |> Repo.paginate(page: page, page_size: @page_size)
       |> Map.update!(:entries, &Enum.map(&1, fn row -> result(row) end))
     else
-      %Scrivener.Page{
-        entries: [],
-        page_number: 1,
-        page_size: @page_size,
-        total_entries: 0,
-        total_pages: 1
-      }
+      no_results()
     end
+  end
+
+  @doc "An empty page of results."
+  @spec no_results() :: Scrivener.Page.t()
+  def no_results do
+    %Scrivener.Page{
+      entries: [],
+      page_number: 1,
+      page_size: @page_size,
+      total_entries: 0,
+      total_pages: 1
+    }
   end
 
   defp result({post, thread, user, category, headline}) do
@@ -196,6 +216,11 @@ defmodule FirestormWeb.Search do
 
   defp match(query, %{terms: terms}),
     do: where(query, [p], fragment("? @@ ?", p.search_vector, tsquery(^terms)))
+
+  defp without_muted(query, %User{} = user, false),
+    do: where(query, [thread: t], t.id not in subquery(Subscriptions.muted_thread_ids(user)))
+
+  defp without_muted(query, _user, _include_muted), do: query
 
   defp by_category(query, nil), do: query
 

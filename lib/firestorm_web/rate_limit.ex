@@ -17,6 +17,8 @@ defmodule FirestormWeb.RateLimit do
     * `:like` - likes and unlikes per user
     * `:message` - new private conversations per user
     * `:export` - account data exports per user
+    * `:search` - searches (the search page and the API) per user, or per
+      client IP for visitors
   """
   use Hammer, backend: :ets
 
@@ -30,7 +32,8 @@ defmodule FirestormWeb.RateLimit do
     message: {10, :timer.hours(1)},
     export: {3, :timer.hours(1)},
     email: {3, :timer.hours(1)},
-    password_reset: {10, :timer.hours(1)}
+    password_reset: {10, :timer.hours(1)},
+    search: {60, :timer.minutes(1)}
   ]
 
   @doc "Checks the `bucket` limit for `key`: `:ok` or `{:error, :rate_limited}`."
@@ -58,6 +61,10 @@ defmodule FirestormWeb.RateLimit do
   def check_like(%{id: user_id}), do: check(:like, user_id)
   def check_message(%{id: user_id}), do: check(:message, user_id)
   def check_export(%{id: user_id}), do: check(:export, user_id)
+
+  @doc "Checks the search limit: per user when logged in, else per client IP."
+  def check_search(%{id: user_id}, _remote_ip), do: check(:search, "user:#{user_id}")
+  def check_search(nil, remote_ip), do: check(:search, "ip:#{format_ip(remote_ip)}")
 
   @doc "The message shown when a limit is hit."
   def message, do: "You're doing that too often. Please wait a moment and try again."
