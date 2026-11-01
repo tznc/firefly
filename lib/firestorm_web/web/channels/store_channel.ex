@@ -1,4 +1,9 @@
 defmodule FirestormWeb.Web.StoreChannel do
+  @moduledoc """
+  Fetches forum records for the legacy JSON client. The socket is anonymous,
+  so it only serves what a visitor may read: records in restricted
+  categories are left out.
+  """
   use FirestormWeb.Web, :channel
   alias FirestormWeb.Store.{ReplenishResponse, ReplenishRequest}
   alias FirestormWeb.Web.Api.V1.FetchJSON
@@ -50,14 +55,17 @@ defmodule FirestormWeb.Web.StoreChannel do
     categories =
       replenish_request.categories
       |> Enum.map(&Forums.get_category!(&1))
+      |> Enum.filter(&can?(nil, :view_category, &1))
 
     threads =
       replenish_request.threads
       |> Enum.map(&Forums.get_thread!(&1))
+      |> Enum.filter(&can?(nil, :view_thread, &1))
 
     posts =
       replenish_request.posts
       |> Enum.map(&Forums.get_post!(&1))
+      |> Enum.filter(&can?(nil, :view_thread, Forums.get_thread!(&1.thread_id)))
 
     users =
       replenish_request.users

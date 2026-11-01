@@ -11,7 +11,9 @@ defmodule FirestormWeb.Web.SearchLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    categories = Enum.map(Forums.list_categories(), &{&1.title, &1.slug})
+    categories =
+      Enum.map(Forums.list_categories(socket.assigns.current_user), &{&1.title, &1.slug})
+
     {:ok, assign(socket, page_title: "Search", categories: categories)}
   end
 

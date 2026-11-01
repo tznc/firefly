@@ -21,7 +21,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
      |> assign(:staff?, staff?(socket.assigns.current_user))
      |> assign(:penalty_form, penalty_form())
      |> assign(:activity?, activity_visible?(user, socket.assigns.current_user))
-     |> assign(:last_post, Forums.user_last_post(user))
+     |> assign(:last_post, Forums.user_last_post(user, socket.assigns.current_user))
      |> assign(:last_seen, Forums.user_last_seen(user))}
   end
 
@@ -38,7 +38,8 @@ defmodule FirestormWeb.Web.UserLive.Show do
     do: {:noreply, socket}
 
   def handle_params(params, _uri, socket) do
-    posts_page = Forums.user_posts(socket.assigns.user, %{page: params["page"]})
+    %{user: user, current_user: viewer} = socket.assigns
+    posts_page = Forums.user_posts(user, viewer, %{page: params["page"]})
 
     posts_page = %{
       posts_page
@@ -207,7 +208,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
       <div :if={@activity?} class="space-y-6">
         <ol id="user-posts" class="space-y-4">
           <li :for={post <- @posts_page.entries}>
-            <.post post={post} thread={post.thread} headline />
+            <.post post={post} thread={post.thread} viewer={@current_user} headline />
           </li>
         </ol>
 

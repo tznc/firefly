@@ -147,6 +147,9 @@ defmodule FirestormWeb.Web.Layouts do
               >
                 Site settings
               </.nav_item>
+              <.nav_item path={~p"/staff/groups"} current_path={@current_path} icon="hero-user-group">
+                Groups
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>

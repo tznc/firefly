@@ -40,7 +40,7 @@ defmodule FirestormWeb.Web.NotificationLiveTest do
     |> assert_has("h1", text: "GenStage")
     |> assert_has(~s{a[aria-label="Notifications (0)"]})
 
-    assert Forums.get_notification(notification.id).read_at
+    assert Forums.get_notification(bob, notification.id).read_at
   end
 
   test "the notification page still shows one, and marks it read", %{
@@ -54,7 +54,7 @@ defmodule FirestormWeb.Web.NotificationLiveTest do
     |> assert_has("p", text: "Herp Derp")
     |> assert_has(~s(a[href="#{notification.url}"]), text: "Visit")
 
-    assert Forums.get_notification(notification.id).read_at
+    assert Forums.get_notification(bob, notification.id).read_at
   end
 
   test "mark all as read", %{conn: conn, bob: bob} do

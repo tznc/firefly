@@ -7,7 +7,7 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    category = Forums.get_category_with_family!(id)
+    category = Forums.get_category_with_family!(id, socket.assigns.current_user)
     if connected?(socket), do: Forums.subscribe("forums:category:#{category.id}")
 
     {:ok,
@@ -49,11 +49,24 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
     )
   end
 
+  # The groups that can read the category (its own, else its parent's).
+  defp restricted_to(%{roles: [_ | _] = roles}), do: Enum.map_join(roles, ", ", & &1.name)
+
+  defp restricted_to(%{parent: %{} = parent}),
+    do: parent |> FirestormWeb.Repo.preload(:roles) |> restricted_to()
+
+  defp restricted_to(_category), do: "some groups"
+
   @impl true
   def render(assigns) do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <.page_header title={@category.title} navigate={~p"/categories/#{@category}"}>
+        <:subtitle :if={@category.restricted}>
+          <span id="category-restricted">
+            <.lock /> Only {restricted_to(@category)} can see this category.
+          </span>
+        </:subtitle>
         <:actions>
           <.level_picker :if={@current_user} id="category-level" level={@level} />
           <.link navigate={~p"/categories/#{@category}/threads/new"} class="btn btn-primary btn-sm">

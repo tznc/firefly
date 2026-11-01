@@ -10,8 +10,8 @@ defmodule FirestormWeb.Web.PostLive.New do
 
   @impl true
   def mount(%{"category_id" => category_id, "thread_id" => thread_id} = params, _session, socket) do
-    category = Forums.get_category!(category_id)
-    thread = Forums.get_thread!(category, thread_id)
+    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Forums.get_visible_thread!(category, thread_id, socket.assigns.current_user)
     body = quote_body(category, thread, params)
 
     {:ok,

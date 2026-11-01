@@ -11,12 +11,13 @@ defmodule FirestormWeb.Web.CategoryLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Categories")
-     |> assign(:categories, Forums.list_category_tree())}
+     |> assign(:categories, Forums.list_category_tree(socket.assigns.current_user))}
   end
 
   @impl true
   def handle_info({_event, _category}, socket) do
-    {:noreply, assign(socket, :categories, Forums.list_category_tree())}
+    {:noreply,
+     assign(socket, :categories, Forums.list_category_tree(socket.assigns.current_user))}
   end
 
   @impl true
@@ -41,7 +42,9 @@ defmodule FirestormWeb.Web.CategoryLive.Index do
           <div class="card-body gap-2 p-4">
             <.link navigate={~p"/categories/#{category}"} class="flex items-center gap-3">
               <span class="size-3 rounded-full" style={"background-color: #{category_color(category)}"} />
-              <h2 class="card-title text-base">{category.title}</h2>
+              <h2 class="card-title text-base">
+                {category.title} <.lock :if={category.restricted} />
+              </h2>
             </.link>
             <p :if={category.description} class="text-sm text-base-content/70">
               {category.description}

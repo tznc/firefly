@@ -9,7 +9,7 @@ defmodule FirestormWeb.Web.TagLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Tags")
-     |> assign(:tags, Forums.list_tags())}
+     |> assign(:tags, Forums.list_tags(socket.assigns.current_user))}
   end
 
   @impl true

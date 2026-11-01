@@ -21,6 +21,7 @@ defmodule FirestormWeb.Forums do
     ThreadRead,
     Notification,
     OembedExtractor,
+    Policy,
     Role,
     RoleMembership,
     SpamGuard,
@@ -244,30 +245,68 @@ defmodule FirestormWeb.Forums do
   end
 
   @doc """
-  Returns the list of categories.
+  Returns the list of categories `viewer` may read (nil: a visitor; see
+  `FirestormWeb.Forums.Policy`).
 
   ## Examples
 
-      iex> list_categories()
+      iex> list_categories(user)
       [%Category{}, ...]
 
   """
-  def list_categories do
+  def list_categories(viewer \\ nil) do
     Category
+    |> Policy.readable_categories(viewer)
     |> order_by(asc: :position, asc: :title)
     |> Repo.all()
   end
 
-  @doc "Top-level categories, each with its subcategories (both in display order)."
-  def list_category_tree do
-    children = from(c in Category, order_by: [asc: c.position, asc: c.title])
+  @doc """
+  Top-level categories `viewer` may read, each with its readable
+  subcategories (both in display order), marked `restricted` (see
+  `mark_restricted/1`).
+  """
+  def list_category_tree(viewer \\ nil) do
+    children =
+      Category
+      |> order_by(asc: :position, asc: :title)
+      |> Policy.readable_categories(viewer)
 
     Category
     |> where([c], is_nil(c.parent_id))
+    |> Policy.readable_categories(viewer)
     |> order_by(asc: :position, asc: :title)
     |> preload(children: ^children)
     |> Repo.all()
+    |> mark_restricted()
   end
+
+  @doc """
+  Sets `restricted` on categories (and their loaded parents and children)
+  that are restricted to roles, directly or through their parent: the ones
+  that get a lock icon.
+  """
+  def mark_restricted(categories) do
+    restricted = MapSet.new(Repo.all(Policy.hidden_category_ids(nil)))
+    mark = &mark_restricted(&1, restricted)
+    Enum.map(categories, mark)
+  end
+
+  defp mark_restricted(%Category{} = category, restricted) do
+    category = %{category | restricted: MapSet.member?(restricted, category.id)}
+
+    category
+    |> Map.update!(
+      :parent,
+      &if(match?(%Category{}, &1), do: mark_restricted(&1, restricted), else: &1)
+    )
+    |> Map.update!(:children, fn
+      children when is_list(children) -> Enum.map(children, &mark_restricted(&1, restricted))
+      not_loaded -> not_loaded
+    end)
+  end
+
+  defp mark_restricted(other, _restricted), do: other
 
   @doc "Top-level categories other than `category` (candidates for its parent)."
   def parent_category_options(%Category{id: id}) do
@@ -278,10 +317,49 @@ defmodule FirestormWeb.Forums do
     |> Repo.all()
   end
 
-  def get_category_with_family!(id) do
-    children = from(c in Category, order_by: [asc: c.position, asc: c.title])
-    Category |> preload([:parent, children: ^children]) |> Repo.get!(id)
+  @doc """
+  A category `viewer` may read, with its parent and readable children, all
+  marked `restricted` and its own `roles` loaded. Raises
+  `Ecto.NoResultsError` (a 404) otherwise.
+  """
+  def get_category_with_family!(id, viewer) do
+    children =
+      Category
+      |> order_by(asc: :position, asc: :title)
+      |> Policy.readable_categories(viewer)
+
+    [category] =
+      Category
+      |> Policy.readable_categories(viewer)
+      |> preload([:parent, :roles, children: ^children])
+      |> Repo.get!(id)
+      |> List.wrap()
+      |> mark_restricted()
+
+    category
   end
+
+  @doc """
+  Gets a category `viewer` may read (see the `:view_category` policy).
+  Raises `Ecto.NoResultsError` (a 404, as if it didn't exist) otherwise.
+  """
+  def get_visible_category!(id, viewer) do
+    Category |> Policy.readable_categories(viewer) |> Repo.get!(id)
+  end
+
+  @doc """
+  Gets a thread in `category` that `viewer` may read (see the `:view_thread`
+  policy). Raises `Ecto.NoResultsError` otherwise.
+  """
+  def get_visible_thread!(%Category{id: category_id}, id, viewer) do
+    threads_query()
+    |> where([t], t.category_id == ^category_id)
+    |> Policy.readable_threads(viewer)
+    |> Repo.get!(id)
+  end
+
+  # Threads, bound as `:thread` (see `Policy.readable_threads/2`).
+  defp threads_query, do: from(t in Thread, as: :thread)
 
   @doc """
   Takes a list of categories and returns them as well as a map of category ids to recent threads.
@@ -338,12 +416,17 @@ defmodule FirestormWeb.Forums do
   """
   def get_category!(id), do: Repo.get!(Category, id)
 
-  @doc "The categories with the given (downcased) slugs, as a map from slug to category."
-  def categories_by_slug([]), do: %{}
+  @doc """
+  The categories `viewer` may read with the given (downcased) slugs, as a
+  map from slug to category.
+  """
+  def categories_by_slug(slugs, viewer \\ nil)
+  def categories_by_slug([], _viewer), do: %{}
 
-  def categories_by_slug(slugs) do
+  def categories_by_slug(slugs, viewer) do
     Category
     |> where([c], c.slug in ^slugs)
+    |> Policy.readable_categories(viewer)
     |> Repo.all()
     |> Map.new(&{&1.slug, &1})
   end
@@ -351,7 +434,9 @@ defmodule FirestormWeb.Forums do
   @doc """
   Creates a category. With an `actor` (the admin doing it), the change goes
   to the staff log; seeds and scripts pass none. The same goes for
-  `update_category/3` and `delete_category/2`.
+  `update_category/3` and `delete_category/2`. A `role_ids` attribute (a
+  list of role ids) restricts the category to those roles; empty: open to
+  everyone.
 
   ## Examples
 
@@ -365,8 +450,13 @@ defmodule FirestormWeb.Forums do
   def create_category(attrs \\ %{}, actor \\ nil) do
     result =
       logged(
-        fn -> %Category{} |> Category.changeset(attrs) |> Repo.insert() end,
-        &StaffLog.record(actor, "category.create", &1, %{title: &1.title})
+        fn -> %Category{} |> Category.changeset(attrs) |> put_roles(attrs) |> Repo.insert() end,
+        &StaffLog.record(
+          actor,
+          "category.create",
+          &1,
+          Map.merge(%{title: &1.title}, roles_details([], &1.roles))
+        )
       )
 
     tap_ok(result, &broadcast("forums:categories", {:category_created, &1}))
@@ -385,11 +475,14 @@ defmodule FirestormWeb.Forums do
 
   """
   def update_category(%Category{} = category, attrs, actor \\ nil) do
-    changeset = Category.changeset(category, attrs)
+    category = Repo.preload(category, :roles)
+    changeset = category |> Category.changeset(attrs) |> put_roles(attrs)
     details = StaffLog.changes(changeset)
 
     result =
       logged(fn -> Repo.update(changeset) end, fn updated ->
+        details = Map.merge(details, roles_details(category.roles, updated.roles))
+
         if details != %{},
           do:
             StaffLog.record(
@@ -401,6 +494,32 @@ defmodule FirestormWeb.Forums do
       end)
 
     tap_ok(result, &broadcast("forums:categories", {:category_updated, &1}))
+  end
+
+  # Restricts the category to the roles in `attrs`' `role_ids` (blank
+  # entries ignored, so a form can clear them); none given leaves them.
+  defp put_roles(changeset, attrs) do
+    case attrs["role_ids"] || attrs[:role_ids] do
+      nil ->
+        changeset
+
+      ids ->
+        ids = for id <- List.wrap(ids), {id, ""} <- [Integer.parse(to_string(id))], do: id
+        put_assoc(changeset, :roles, Repo.all(from(r in Role, where: r.id in ^ids)))
+    end
+  end
+
+  defp roles_details(before, after_roles) do
+    names = fn
+      roles when is_list(roles) -> roles |> Enum.map(& &1.name) |> Enum.sort() |> Enum.join(", ")
+      _not_loaded -> ""
+    end
+
+    case {names.(before), names.(after_roles)} do
+      {same, same} -> %{}
+      {"", now} -> %{restricted_to: now}
+      {was, now} -> %{restricted_to: %{before: was, after: now}}
+    end
   end
 
   @doc """
@@ -458,9 +577,9 @@ defmodule FirestormWeb.Forums do
   end
 
   @doc """
-  Returns the threads in a given category ordered by those with the most recent
-  posts. If provided a user, will determine whether each thread has been
-  completely read or not.
+  Returns the threads in a given category and its subcategories (those the
+  user may read) ordered by those with the most recent posts. If provided a
+  user, will determine whether each thread has been completely read or not.
 
   ## Examples
 
@@ -471,8 +590,9 @@ defmodule FirestormWeb.Forums do
   def recent_threads(category, user \\ nil) do
     subcategory_ids = from(c in Category, where: c.parent_id == ^category.id, select: c.id)
 
-    Thread
+    threads_query()
     |> where([t], t.category_id == ^category.id or t.category_id in subquery(subcategory_ids))
+    |> Policy.readable_threads(user)
     |> order_by([t], desc_nulls_last: t.pinned_at)
     |> by_last_activity()
     |> preload(:category)
@@ -491,7 +611,7 @@ defmodule FirestormWeb.Forums do
   defp decorate_threads([], _user), do: []
 
   defp decorate_threads(threads, user) do
-    threads = Repo.preload(threads, :tags)
+    threads = threads |> Repo.preload(:tags) |> mark_thread_categories()
     ids = Enum.map(threads, & &1.id)
     stats = thread_stats(ids, user)
     first_posts = first_posts(ids)
@@ -519,6 +639,21 @@ defmodule FirestormWeb.Forums do
       }
     end)
   end
+
+  defp mark_thread_categories(threads) do
+    if Enum.any?(threads, &Ecto.assoc_loaded?(&1.category)) do
+      restricted = MapSet.new(Repo.all(Policy.hidden_category_ids(nil)))
+
+      Enum.map(threads, &mark_thread_category(&1, restricted))
+    else
+      threads
+    end
+  end
+
+  defp mark_thread_category(%Thread{category: %Category{} = category} = thread, restricted),
+    do: %{thread | category: mark_restricted(category, restricted)}
+
+  defp mark_thread_category(thread, _restricted), do: thread
 
   defp thread_stats(ids, user) do
     user_id = if user, do: user.id, else: -1
@@ -553,8 +688,14 @@ defmodule FirestormWeb.Forums do
   end
 
   # The cross-category lists (Latest, New, Unread, Top) leave out archived
-  # threads and the user's muted ones.
-  defp listed(query, user), do: query |> where([t], is_nil(t.archived_at)) |> without_muted(user)
+  # threads and the user's muted ones, and only show threads the user may
+  # read (the query must bind the thread as `:thread`).
+  defp listed(query, user) do
+    query
+    |> where([t], is_nil(t.archived_at))
+    |> without_muted(user)
+    |> Policy.readable_threads(user)
+  end
 
   defp without_muted(query, nil), do: query
 
@@ -580,7 +721,7 @@ defmodule FirestormWeb.Forums do
 
   @doc "Every thread, most recently active first (the Latest list)."
   def latest_threads(user_or_nil) do
-    Thread
+    threads_query()
     |> listed(user_or_nil)
     |> by_last_activity()
     |> preload(:category)
@@ -597,9 +738,7 @@ defmodule FirestormWeb.Forums do
   def new_threads(%User{} = user) do
     since = NaiveDateTime.add(NaiveDateTime.utc_now(), -@new_thread_days, :day)
 
-    query = from(t in Thread, as: :thread)
-
-    query
+    threads_query()
     |> listed(user)
     |> where([t], t.inserted_at > ^since)
     |> where(
@@ -618,9 +757,7 @@ defmodule FirestormWeb.Forums do
 
   @doc "Threads the user has read before that have posts since, most recently active first."
   def unread_threads(%User{} = user) do
-    query = from(t in Thread, as: :thread)
-
-    query
+    threads_query()
     |> listed(user)
     |> join(:inner, [t], r in ThreadRead,
       as: :read,
@@ -680,7 +817,7 @@ defmodule FirestormWeb.Forums do
       |> group_by([l, p], p.thread_id)
       |> select([l, p], %{thread_id: p.thread_id, likes: count(l.id)})
 
-    Thread
+    threads_query()
     |> listed(user_or_nil)
     |> join(:inner, [t], r in subquery(ranked), on: r.thread_id == t.id)
     |> join(:left, [t], l in subquery(liked), on: l.thread_id == t.id)
@@ -1006,11 +1143,18 @@ defmodule FirestormWeb.Forums do
     end
   end
 
-  @doc "Every tag with at least one listed thread, with `threads_count`, most used first."
-  def list_tags do
+  @doc """
+  Every tag with at least one listed thread `viewer` may read, with
+  `threads_count`, most used first.
+  """
+  def list_tags(viewer \\ nil) do
     Tag
     |> join(:inner, [t], tt in "forums_threads_tags", on: tt.tag_id == t.id)
-    |> join(:inner, [t, tt], th in Thread, on: th.id == tt.thread_id and is_nil(th.archived_at))
+    |> join(:inner, [t, tt], th in Thread,
+      as: :thread,
+      on: th.id == tt.thread_id and is_nil(th.archived_at)
+    )
+    |> Policy.readable_threads(viewer)
     |> group_by([t], t.id)
     |> order_by([t, tt], desc: count(tt.thread_id), asc: t.name)
     |> select([t, tt], %{t | threads_count: count(tt.thread_id)})
@@ -1022,7 +1166,7 @@ defmodule FirestormWeb.Forums do
 
   @doc "A tag's threads (leaving out archived and muted ones), most recently active first."
   def tag_threads(%Tag{id: tag_id}, user_or_nil) do
-    Thread
+    threads_query()
     |> join(:inner, [t], tt in "forums_threads_tags", on: tt.thread_id == t.id)
     |> where([t, tt], tt.tag_id == ^tag_id)
     |> listed(user_or_nil)
@@ -1056,12 +1200,20 @@ defmodule FirestormWeb.Forums do
         archived_at: stamp(archived?)
       )
 
-  @doc "Moves a thread to another category."
+  @doc """
+  Moves a thread to another category. The log notes when the move put the
+  thread in a restricted category (one only some groups can read).
+  """
   def move_thread(%Thread{category_id: old_category_id} = thread, %Category{} = category, actor) do
     details = %{
       from_category: Repo.get(Category, old_category_id).title,
       to_category: category.title
     }
+
+    details =
+      if Repo.exists?(where(Policy.hidden_category_ids(nil), [c], c.id == ^category.id)),
+        do: Map.put(details, :restricted, true),
+        else: details
 
     with {:ok, moved} <-
            moderate(thread, actor, "thread.move", [category_id: category.id], details) do
@@ -1507,22 +1659,30 @@ defmodule FirestormWeb.Forums do
     end
   end
 
-  def user_posts(user, %{page: page}) do
-    Post
-    |> Post.visible()
-    |> where([p], p.user_id == ^user.id)
+  @doc "A page of `user`'s posts that `viewer` may read, newest first."
+  def user_posts(user, viewer, %{page: page}) do
+    user
+    |> readable_posts_by(viewer)
     |> order_by([p], desc: p.inserted_at)
     |> preload([p], thread: [:category], user: [])
     |> Repo.paginate(page: page)
   end
 
-  def user_last_post(user) do
-    Post
-    |> Post.visible()
-    |> where([p], p.user_id == ^user.id)
+  @doc "`user`'s latest post that `viewer` may read."
+  def user_last_post(user, viewer) do
+    user
+    |> readable_posts_by(viewer)
     |> order_by([p], desc: p.inserted_at)
     |> limit(1)
     |> Repo.one()
+  end
+
+  defp readable_posts_by(user, viewer) do
+    Post
+    |> Post.visible()
+    |> where([p], p.user_id == ^user.id)
+    |> join(:inner, [p], t in assoc(p, :thread), as: :thread)
+    |> Policy.readable_threads(viewer)
   end
 
   # FIXME: Should track when users log in rather than proxying that by
@@ -1566,8 +1726,9 @@ defmodule FirestormWeb.Forums do
   end
 
   defp get_decorated_threads(thread_ids, user) do
-    Thread
+    threads_query()
     |> where([t], t.id in ^thread_ids)
+    |> Policy.readable_threads(user)
     |> by_last_activity()
     |> preload(:category)
     |> Repo.all()
@@ -1617,18 +1778,23 @@ defmodule FirestormWeb.Forums do
     |> Ecto.assoc(:views)
   end
 
-  @doc "The user's notifications, newest first."
+  @doc """
+  The user's notifications, newest first. Like everything else, they leave
+  out threads the user may no longer read (say, moved into a restricted
+  category).
+  """
   def notifications_for(%User{} = user) do
-    Notification
-    |> where([n], n.user_id == ^user.id)
+    user
+    |> visible_notifications()
     |> order_by(desc: :inserted_at, desc: :id)
     |> limit(100)
     |> Repo.all()
   end
 
   def unread_notification_count(%User{} = user) do
-    Notification
-    |> where([n], n.user_id == ^user.id and is_nil(n.read_at))
+    user
+    |> visible_notifications()
+    |> where([n], is_nil(n.read_at))
     |> Repo.aggregate(:count)
   end
 
@@ -1689,6 +1855,14 @@ defmodule FirestormWeb.Forums do
     |> Repo.exists?()
   end
 
+  defp visible_notifications(user) do
+    readable = threads_query() |> Policy.readable_threads(user) |> select([t], t.id)
+
+    Notification
+    |> where([n], n.user_id == ^user.id)
+    |> where([n], is_nil(n.thread_id) or n.thread_id in subquery(readable))
+  end
+
   def notifications_topic(user_id), do: "user:#{user_id}:notifications"
 
   @doc """
@@ -1703,13 +1877,10 @@ defmodule FirestormWeb.Forums do
     )
   end
 
-  @doc """
-  Gets a notification by id.
-
-  Maybe returns a notification.
-  """
-  def get_notification(id) do
-    Notification
+  @doc "One of `user`'s notifications (see `notifications_for/1`), or nil."
+  def get_notification(%User{} = user, id) do
+    user
+    |> visible_notifications()
     |> Repo.get(id)
   end
 

@@ -12,8 +12,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
-    category = Forums.get_category!(category_id)
-    thread = Forums.get_thread!(category, id)
+    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Forums.get_visible_thread!(category, id, socket.assigns.current_user)
     if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
 
     # Where the user had read up to before this visit (nil: never opened).
@@ -27,6 +27,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   end
 
   @impl true
+  # Access is checked again before showing anything new: the thread may have
+  # been moved, or its category restricted, since the page opened.
   def handle_info({event, _post}, socket)
       when event in [
              :post_created,
@@ -34,15 +36,24 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              :post_deleted,
              :post_restored,
              :post_likes_changed
-           ],
-      do: {:noreply, load_thread(socket, socket.assigns.thread)}
+           ] do
+    if can?(socket.assigns.current_user, :view_thread, socket.assigns.thread),
+      do: {:noreply, load_thread(socket, socket.assigns.thread)},
+      else: {:noreply, leave(socket)}
+  end
 
   def handle_info({:thread_updated, thread}, socket) do
-    if thread.category_id == socket.assigns.category.id,
-      do: {:noreply, load_thread(socket, thread)},
-      else:
+    cond do
+      not can?(socket.assigns.current_user, :view_thread, thread) ->
+        {:noreply, leave(socket)}
+
+      thread.category_id == socket.assigns.category.id ->
+        {:noreply, load_thread(socket, thread)}
+
+      true ->
         {:noreply,
          push_navigate(socket, to: ~p"/categories/#{thread.category_id}/threads/#{thread}")}
+    end
   end
 
   def handle_info({:thread_deleted, _thread}, socket) do
@@ -53,6 +64,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   end
 
   def handle_info({_event, _thread}, socket), do: {:noreply, socket}
+
+  defp leave(socket) do
+    socket
+    |> put_flash(:error, "This thread is no longer available.")
+    |> push_navigate(to: ~p"/")
+  end
 
   @impl true
   def handle_event(event, _params, %{assigns: %{current_user: nil}} = socket)
@@ -194,7 +211,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:can_moderate?, can?(user, :moderate_thread))
     |> assign(
       :categories,
-      if(can?(user, :moderate_thread), do: Forums.list_categories(), else: [])
+      if(can?(user, :moderate_thread), do: Forums.list_categories(user), else: [])
     )
   end
 
@@ -316,6 +333,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           <.post
             post={@first_post}
             thread={@thread}
+            viewer={@current_user}
             can_edit={MapSet.member?(@editable_ids, @first_post.id)}
           >
             <:actions>
@@ -347,6 +365,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             :if={not Post.deleted?(post) or @admin?}
             post={post}
             thread={@thread}
+            viewer={@current_user}
             can_edit={MapSet.member?(@editable_ids, post.id)}
           >
             <:actions>

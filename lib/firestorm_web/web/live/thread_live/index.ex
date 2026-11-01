@@ -6,7 +6,7 @@ defmodule FirestormWeb.Web.ThreadLive.Index do
 
   @impl true
   def mount(%{"category_id" => category_id}, _session, socket) do
-    category = Forums.get_category!(category_id)
+    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
     if connected?(socket), do: Forums.subscribe("forums:category:#{category.id}")
 
     {:ok,

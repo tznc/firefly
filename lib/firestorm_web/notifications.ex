@@ -5,6 +5,9 @@ defmodule FirestormWeb.Notifications do
     * a new thread notifies users watching or tracking its category
     * a new post notifies users watching or tracking the thread (or its
       category)
+    * only users who may read the thread (the `:view_thread` policy) are
+      notified of anything in it: watching a tag or category, or a thread
+      that has since moved, gives no access to restricted categories
     * a new or edited post notifies the users it @mentions (see
       `FirestormWeb.Mentions`), once per post: an edit only notifies users it
       newly mentions. Not the author, users who can't see the thread (the
@@ -142,7 +145,8 @@ defmodule FirestormWeb.Notifications do
   # `mentioned_ids` already got a mention for this post instead.
   defp fan_out(kind, thread, post, mentioned_ids) do
     for {user, level} <- Subscriptions.subscribers(thread),
-        user.id != post.user_id and user.id not in mentioned_ids do
+        user.id != post.user_id and user.id not in mentioned_ids,
+        Bodyguard.permit?(Forums, :view_thread, user, thread) do
       {:ok, notification} =
         Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
 

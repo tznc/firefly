@@ -255,7 +255,7 @@ defmodule FirestormWeb.MessagesTest do
     assert Search.run(Search.parse("xylophone"), nil).entries == []
     assert Search.run(Search.parse("xylophone"), carol).entries == []
     assert Enum.map(Forums.latest_threads(carol), & &1.id) == [thread.id]
-    assert Forums.user_posts(alice, %{page: 1}).entries == []
+    assert Forums.user_posts(alice, nil, %{page: 1}).entries == []
     assert Forums.notifications_for(carol) == []
     assert Forums.participating_threads(bob) == []
   end

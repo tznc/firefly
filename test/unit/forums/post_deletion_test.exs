@@ -30,7 +30,11 @@ defmodule FirestormWeb.Forums.PostDeletionTest do
     assert_receive {:post_deleted, %{id: id}} when id == reply.id
 
     assert [%{posts_count: 2, unread_count: 1}] = Forums.list_threads(category, author)
-    assert Forums.user_posts(replier, %{page: 1}).entries |> Enum.map(& &1.body) == ["second"]
+
+    assert Forums.user_posts(replier, nil, %{page: 1}).entries |> Enum.map(& &1.body) == [
+             "second"
+           ]
+
     assert Forums.decorate_post_oembeds(deleted).oembeds == []
     assert %{body: "", deleted: true} = PostJSON.data(deleted)
 

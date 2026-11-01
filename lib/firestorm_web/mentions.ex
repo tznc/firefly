@@ -54,13 +54,14 @@ defmodule FirestormWeb.Mentions do
 
   @doc """
   Links the mentions and category references in a parsed document to the
-  user profiles and categories they name. Unknown names stay plain text.
+  user profiles and categories they name. Unknown names, and categories
+  `viewer` (nil: anyone) may not read, stay plain text.
   """
-  @spec link(MDEx.Document.t()) :: MDEx.Document.t()
-  def link(%MDEx.Document{} = document) do
+  @spec link(MDEx.Document.t(), term) :: MDEx.Document.t()
+  def link(%MDEx.Document{} = document, viewer \\ nil) do
     texts = texts(document, @unscanned)
     users = texts |> names("@") |> Forums.users_by_username()
-    categories = texts |> names("#") |> Forums.categories_by_slug()
+    categories = texts |> names("#") |> Forums.categories_by_slug(viewer)
 
     if users == %{} and categories == %{} do
       document

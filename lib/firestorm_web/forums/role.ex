@@ -1,6 +1,8 @@
 defmodule FirestormWeb.Forums.Role do
   @moduledoc """
-  Schema for forum roles.
+  Schema for forum roles. Roles double as groups: "admin" makes a user
+  staff, and any role can be given access to restricted categories (see
+  `FirestormWeb.Forums.Policy`). Admins manage them at `/staff/groups`.
   """
 
   use Ecto.Schema
@@ -18,7 +20,9 @@ defmodule FirestormWeb.Forums.Role do
   def changeset(%__MODULE__{} = role, attrs \\ %{}) do
     role
     |> cast(attrs, [:name])
+    |> update_change(:name, &String.trim/1)
     |> validate_required([:name])
+    |> validate_length(:name, max: 40)
     |> unique_constraint(:name)
   end
 end

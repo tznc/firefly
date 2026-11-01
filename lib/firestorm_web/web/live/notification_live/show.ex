@@ -10,8 +10,8 @@ defmodule FirestormWeb.Web.NotificationLive.Show do
   def mount(%{"id" => id}, _session, socket) do
     user = socket.assigns.current_user
 
-    case Forums.get_notification(id) do
-      %{user_id: user_id} = notification when user_id == user.id ->
+    case Forums.get_notification(user, id) do
+      %{} = notification ->
         {:ok, notification} =
           if connected?(socket),
             do: Forums.mark_notification_read(notification),

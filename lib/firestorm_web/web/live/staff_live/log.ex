@@ -26,6 +26,7 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "category.create" => "Created category",
     "category.update" => "Updated category",
     "category.delete" => "Deleted category",
+    "role.create" => "Created group",
     "role.grant" => "Granted role",
     "role.revoke" => "Revoked role",
     "user.silence" => "Silenced user",
@@ -87,6 +88,9 @@ defmodule FirestormWeb.Web.StaffLive.Log do
   # The target's page (and how to name it), or nil once it's gone.
   defp target_link(%{target_type: "setting", details: %{"key" => key}}, _target),
     do: {key, ~p"/staff/settings"}
+
+  defp target_link(%{target_type: "role", details: %{"role" => role}}, _target),
+    do: {role, ~p"/staff/groups"}
 
   defp target_link(_entry, nil), do: nil
 
