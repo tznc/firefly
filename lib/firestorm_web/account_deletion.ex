@@ -8,7 +8,8 @@ defmodule FirestormWeb.AccountDeletion do
   keep an author without saying who it was. Everything else personal goes:
   roles, read positions, notification levels, notifications, likes, post
   views and conversation memberships. Other users' notifications that named
-  the user ("@ada replied in ...") name the placeholder instead.
+  the user ("@ada replied in ...") and the staff log name the placeholder
+  instead (see `FirestormWeb.StaffLog.scrub_user/2`).
 
   Every way in is closed: sessions resolve deleted users to nobody (see
   `FirestormWeb.Web.Session`), open LiveViews are disconnected, the API
@@ -18,7 +19,7 @@ defmodule FirestormWeb.AccountDeletion do
 
   import Ecto.Query
 
-  alias FirestormWeb.{Forums, Repo}
+  alias FirestormWeb.{Forums, Repo, StaffLog}
   alias FirestormWeb.Web.Session
   alias FirestormWeb.Forums.{ConversationParticipant, Notification, Role, RoleMembership, User}
 
@@ -90,6 +91,7 @@ defmodule FirestormWeb.AccountDeletion do
         Repo.delete_all(from(n in Notification, where: n.user_id == ^id))
         Repo.delete_all(from(p in ConversationParticipant, where: p.user_id == ^id))
         rename_in_notifications(user.username, User.deleted_username(id))
+        StaffLog.scrub_user(user, User.deleted_username(id))
 
         user
         |> Ecto.Changeset.change(

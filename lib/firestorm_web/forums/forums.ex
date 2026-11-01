@@ -1098,7 +1098,10 @@ defmodule FirestormWeb.Forums do
         archived_at: stamp(archived?)
       )
 
-  @doc "Moves a thread to another category."
+  @doc "Moves a thread to another category (a no-op, not logged, if it's already there)."
+  def move_thread(%Thread{category_id: id} = thread, %Category{id: id}, _actor),
+    do: {:ok, thread}
+
   def move_thread(%Thread{category_id: old_category_id} = thread, %Category{} = category, actor) do
     details = %{
       from_category: Repo.get(Category, old_category_id).title,
@@ -1107,9 +1110,7 @@ defmodule FirestormWeb.Forums do
 
     with {:ok, moved} <-
            moderate(thread, actor, "thread.move", [category_id: category.id], details) do
-      if old_category_id != category.id,
-        do: broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
-
+      broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
       {:ok, moved}
     end
   end
