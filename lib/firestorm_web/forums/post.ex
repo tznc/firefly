@@ -60,6 +60,24 @@ defmodule FirestormWeb.Forums.Post do
   """
   def queued?(%__MODULE__{queued_at: at}), do: not is_nil(at)
 
+  @doc """
+  Whether `user` (nil: a visitor) may read the post's content: anyone, once
+  it's published; a deleted post, admins only; one hidden after flags or
+  awaiting approval, its author and admins. Every way of reading a single
+  post by id (pages, quotes, history, the API and channels) goes through
+  this, so they stay in step. With nil it's whether the post is public.
+  """
+  def readable_by?(%__MODULE__{} = post, user) do
+    cond do
+      deleted?(post) -> permit?(:view_deleted_posts, user, post)
+      hidden?(post) or queued?(post) -> permit?(:view_hidden_post, user, post)
+      true -> true
+    end
+  end
+
+  defp permit?(action, user, post),
+    do: Bodyguard.permit?(FirestormWeb.Forums, action, user, post)
+
   @doc "Posts that are published: not deleted or awaiting approval."
   def visible(query \\ __MODULE__),
     do: where(query, [p], is_nil(p.deleted_at) and is_nil(p.queued_at))

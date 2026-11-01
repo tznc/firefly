@@ -588,8 +588,10 @@ defmodule FirestormWeb.Forums do
 
   """
   def list_threads(category, user \\ nil) do
-    Thread
+    threads_query()
     |> where([t], t.category_id == ^category.id)
+    |> without_hidden_first_post()
+    |> Policy.readable_threads(user)
     |> order_by([t], desc_nulls_last: t.pinned_at)
     |> by_last_activity()
     |> Repo.all()
@@ -810,9 +812,9 @@ defmodule FirestormWeb.Forums do
     )
     |> where(
       exists(
-        from(p in Post,
+        from(p in Post.visible(),
           where:
-            p.thread_id == parent_as(:thread).id and is_nil(p.deleted_at) and
+            p.thread_id == parent_as(:thread).id and
               p.id > parent_as(:read).last_read_post_id
         )
       )
@@ -904,8 +906,13 @@ defmodule FirestormWeb.Forums do
   Marks the thread read up to its newest post. The position only moves forward.
   """
   def mark_thread_read(%User{} = user, %Thread{} = thread) do
+    # Published posts only: a reply still awaiting approval must count as
+    # unread once it's approved.
     last_post_id =
-      Post |> where([p], p.thread_id == ^thread.id) |> select([p], max(p.id)) |> Repo.one()
+      Post.visible()
+      |> where([p], p.thread_id == ^thread.id)
+      |> select([p], max(p.id))
+      |> Repo.one()
 
     if last_post_id do
       result = advance_read(user.id, thread.id, last_post_id)
@@ -1385,6 +1392,18 @@ defmodule FirestormWeb.Forums do
 
   """
   def delete_thread(%Thread{} = thread, %User{} = actor) do
+    with {:ok, deleted, announce} <- delete_thread_unannounced(thread, actor) do
+      announce.()
+      {:ok, deleted}
+    end
+  end
+
+  @doc """
+  `delete_thread/2` without telling open pages yet: `{:ok, deleted,
+  announce}`, where `announce` does that. For callers running it inside a
+  larger transaction, to announce once that commits.
+  """
+  def delete_thread_unannounced(%Thread{} = thread, %User{} = actor) do
     # Asked first: the thread's posts go with it.
     staff? = staff_on_others?(actor, thread_author_id(thread))
 
@@ -1393,7 +1412,8 @@ defmodule FirestormWeb.Forums do
         if staff?, do: log_thread_delete(actor, deleted)
       end)
 
-    tap_ok(result, &broadcast_thread(:thread_deleted, &1))
+    with {:ok, deleted} <- result,
+         do: {:ok, deleted, fn -> broadcast_thread(:thread_deleted, deleted) end}
   end
 
   defp log_thread_delete(actor, thread) do
@@ -1701,19 +1721,31 @@ defmodule FirestormWeb.Forums do
   can't be deleted on its own: delete the thread instead.
   """
   def delete_post(%Post{} = post, %User{} = user) do
-    if first_post?(post) do
-      {:error, :first_post}
-    else
-      changeset = change(post, deleted_at: DateTime.utc_now(:second), deleted_by_id: user.id)
-
-      result =
-        logged(fn -> Repo.update(changeset) end, &log_post_delete(user, post, &1))
-
-      tap_ok(result, fn deleted ->
-        remove_post_notifications(deleted)
-        post_changed(:post_deleted, deleted)
-      end)
+    with {:ok, deleted, announce} <- delete_post_unannounced(post, user) do
+      announce.()
+      {:ok, deleted}
     end
+  end
+
+  @doc """
+  `delete_post/2` without the aftermath yet: `{:ok, deleted, announce}`,
+  where `announce` removes the post's notifications and tells open pages.
+  For callers running it inside a larger transaction, to announce once that
+  commits.
+  """
+  def delete_post_unannounced(%Post{} = post, %User{} = user) do
+    changeset = change(post, deleted_at: DateTime.utc_now(:second), deleted_by_id: user.id)
+
+    with :ok <- if(first_post?(post), do: {:error, :first_post}, else: :ok),
+         {:ok, deleted} <-
+           logged(fn -> Repo.update(changeset) end, &log_post_delete(user, post, &1)) do
+      {:ok, deleted, fn -> announce_post_deleted(deleted) end}
+    end
+  end
+
+  defp announce_post_deleted(deleted) do
+    remove_post_notifications(deleted)
+    post_changed(:post_deleted, deleted)
   end
 
   defp log_post_delete(user, post, deleted) do

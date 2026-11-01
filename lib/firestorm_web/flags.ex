@@ -92,6 +92,7 @@ defmodule FirestormWeb.Flags do
 
     with {:ok, post} <- result do
       Forums.post_changed(:post_updated, post)
+      FirestormWeb.Review.changed()
       {:ok, post}
     end
   end

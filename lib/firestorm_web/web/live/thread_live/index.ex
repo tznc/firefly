@@ -13,12 +13,17 @@ defmodule FirestormWeb.Web.ThreadLive.Index do
      socket
      |> assign(:page_title, "Threads - #{category.title}")
      |> assign(:category, category)
-     |> assign(:threads, Forums.list_threads(category))}
+     |> assign(:threads, Forums.list_threads(category, socket.assigns.current_user))}
   end
 
   @impl true
   def handle_info({_event, _thread}, socket) do
-    {:noreply, assign(socket, :threads, Forums.list_threads(socket.assigns.category))}
+    {:noreply,
+     assign(
+       socket,
+       :threads,
+       Forums.list_threads(socket.assigns.category, socket.assigns.current_user)
+     )}
   end
 
   @impl true
@@ -31,7 +36,10 @@ defmodule FirestormWeb.Web.ThreadLive.Index do
       {:noreply,
        socket
        |> put_flash(:info, "Thread deleted successfully.")
-       |> assign(:threads, Forums.list_threads(socket.assigns.category))}
+       |> assign(
+         :threads,
+         Forums.list_threads(socket.assigns.category, socket.assigns.current_user)
+       )}
     else
       {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
     end

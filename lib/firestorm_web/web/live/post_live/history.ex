@@ -19,35 +19,50 @@ defmodule FirestormWeb.Web.PostLive.History do
     post = thread |> Forums.get_post!(id) |> FirestormWeb.Repo.preload(:user)
     socket = assign(socket, category: category, thread: thread)
 
-    # A deleted post's content (and so its history) is for admins only; a
-    # hidden one's for its author too.
-    if (Post.deleted?(post) and not can?(socket.assigns.current_user, :view_deleted_posts)) or
-         (Post.hidden?(post) and not can?(socket.assigns.current_user, :view_hidden_post, post)) do
-      {:ok,
-       socket
-       |> put_flash(
-         :error,
-         if(Post.deleted?(post),
-           do: "This post was deleted.",
-           else: "This post is hidden pending review."
-         )
-       )
-       |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
-    else
+    # The history shows the content, so it's for those who may read that
+    # (see `Post.readable_by?/2`).
+    if Post.readable_by?(post, socket.assigns.current_user) do
       if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
       {:ok, socket |> assign(:page_title, "Edit history - #{thread.title}") |> load(post)}
+    else
+      {:ok,
+       socket
+       |> put_flash(:error, unreadable_message(post))
+       |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+    end
+  end
+
+  defp unreadable_message(post) do
+    cond do
+      Post.deleted?(post) -> "This post was deleted."
+      Post.queued?(post) -> "This post is awaiting approval."
+      true -> "This post is hidden pending review."
     end
   end
 
   # Access is re-checked on every edit pushed: the thread may have moved
-  # into a restricted category (or the user left its group) since mount.
+  # into a restricted category (or the user left its group) since mount,
+  # and the post may have been hidden.
   @impl true
   def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket) do
+    user = socket.assigns.current_user
     thread = Forums.get_thread(socket.assigns.thread.id)
 
-    if thread && can?(socket.assigns.current_user, :view_thread, thread),
-      do: {:noreply, load(socket, FirestormWeb.Repo.preload(post, :user))},
-      else: {:noreply, leave(socket)}
+    cond do
+      is_nil(thread) or not can?(user, :view_thread, thread) ->
+        {:noreply, leave(socket)}
+
+      not Post.readable_by?(post, user) ->
+        %{category: category} = socket.assigns
+
+        {:noreply,
+         socket
+         |> put_flash(:error, unreadable_message(post))
+         |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+
+      true ->
+        {:noreply, load(socket, FirestormWeb.Repo.preload(post, :user))}
+    end
   end
 
   def handle_info({:post_deleted, %{id: id}}, %{assigns: %{post: %{id: id}}} = socket) do

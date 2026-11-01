@@ -2,7 +2,7 @@ defmodule FirestormWeb.ReviewTest do
   use FirestormWeb.DataCase
   use Bamboo.Test, shared: true
 
-  alias FirestormWeb.{Flags, Forums, Notifications, Repo, Review}
+  alias FirestormWeb.{Flags, Forums, Notifications, Penalties, Repo, Review}
   alias FirestormWeb.Forums.{Flag, Post, SiteSetting, StaffAction, Subscriptions, Thread, User}
 
   setup do
@@ -82,6 +82,29 @@ defmodule FirestormWeb.ReviewTest do
       assert User.silenced?(Repo.get!(User, reply.user_id))
       assert logged?("user.silence")
       assert Repo.get!(Post, reply.id).hidden_at
+    end
+
+    test "what a decision does outside the database waits for its commit", ctx do
+      %{reply: reply, admin: admin, author: author} = ctx
+      Forums.subscribe("forums:thread:#{reply.thread_id}")
+      params = %{"duration" => "1w", "reason" => "spamming"}
+
+      assert {:error, :rolled_back} =
+               Repo.transact(fn ->
+                 {:ok, _, _} = Penalties.penalize_unannounced(:silence, author, admin, params)
+                 {:ok, _, _} = Forums.delete_post_unannounced(reply, admin)
+                 {:error, :rolled_back}
+               end)
+
+      refute_received {:post_deleted, _}
+      assert Forums.notifications_for(author) == []
+      assert_no_emails_delivered()
+      refute Repo.get!(User, author.id).silenced_until
+      refute Repo.get!(Post, reply.id).deleted_at
+
+      # Committed, the decision announces itself.
+      {:ok, _} = Review.agree(flag_until_hidden(reply), admin, {:silence, params})
+      assert "silenced" in Enum.map(Forums.notifications_for(author), & &1.kind)
     end
 
     test "a failed decision changes nothing", %{reply: reply, admin: admin} do
@@ -170,6 +193,98 @@ defmodule FirestormWeb.ReviewTest do
                Repo.get_by!(StaffAction, action: "post.reject")
 
       assert Review.queued_posts() == []
+    end
+
+    test "a queued reply's content stays out of the API and channels", ctx do
+      {:ok, reply} = Forums.create_post(ctx.thread, user("newbie"), %{body: "spam reply"})
+      queued = %{reply | oembeds: [{"https://spam.example", %{}}]}
+
+      assert %{body: "", body_html: "", oembeds: [], queued: true} =
+               FirestormWeb.Web.Api.V1.PostJSON.data(queued)
+
+      refute Post.readable_by?(reply, nil)
+      refute Post.readable_by?(reply, ctx.author)
+      assert Post.readable_by?(reply, Repo.get!(User, reply.user_id))
+      assert Post.readable_by?(reply, ctx.admin)
+    end
+
+    test "approved replies are unread for those who opened the thread meanwhile", ctx do
+      %{watcher: watcher, thread: thread} = ctx
+      {:ok, _} = Forums.mark_thread_read(watcher, thread)
+      {:ok, reply} = Forums.create_post(thread, user("newbie"), %{body: "a reply"})
+
+      # Queued: not unread, and not on the Unread list.
+      refute thread.id in Enum.map(Forums.unread_threads(watcher), & &1.id)
+      {:ok, _} = Forums.mark_thread_read(watcher, thread)
+
+      {:ok, _} = Review.approve(reply, ctx.admin)
+      assert [%{id: id, unread_count: 1}] = Forums.unread_threads(watcher)
+      assert id == thread.id
+    end
+
+    test "authors can't edit a post while it's queued", ctx do
+      newbie = user("newbie")
+      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "benign"})
+      params = %{post: reply, thread: ctx.thread}
+
+      refute Bodyguard.permit?(Forums, :edit_post, newbie, params)
+      assert Bodyguard.permit?(Forums, :edit_post, ctx.admin, params)
+      # Deleting it is still theirs to do.
+      assert Bodyguard.permit?(Forums, :delete_post, newbie, params)
+
+      {:ok, _} = Review.approve(reply, ctx.admin)
+      approved = Repo.get!(Post, reply.id)
+      assert Bodyguard.permit?(Forums, :edit_post, newbie, %{params | post: approved})
+    end
+
+    test "only the author and admins of a queued thread are notified readers", ctx do
+      newbie = user("newbie")
+      {:ok, thread} = Forums.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
+      users = [ctx.watcher, newbie, ctx.admin]
+
+      assert Forums.Policy.thread_readers(thread, users) == [newbie, ctx.admin]
+
+      assert Forums.Policy.thread_readers(thread, users) ==
+               Enum.filter(users, &Bodyguard.permit?(Forums, :view_thread, &1, thread))
+    end
+
+    test "queued posts know which are first posts", ctx do
+      {:ok, thread} = Forums.create_thread(ctx.category, user("one"), %{title: "T", body: "t"})
+      {:ok, reply} = Forums.create_post(ctx.thread, user("two"), %{body: "reply"})
+      [first] = thread.posts
+
+      assert Review.queued_posts() |> Enum.map(&{&1.id, &1.first?}) |> Enum.sort() ==
+               Enum.sort([{first.id, true}, {reply.id, false}])
+    end
+
+    test "approve then a stale reject: the reject has nothing to do", ctx do
+      newbie = user("newbie")
+      {:ok, thread} = Forums.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
+      [post] = thread.posts
+      stale = Repo.preload(post, [:thread, :user])
+
+      {:ok, _} = Review.approve(post, ctx.admin)
+      assert {:error, :not_queued} = Review.reject(stale, ctx.admin, "Spam")
+      assert Repo.get(Thread, thread.id)
+      refute logged?("post.reject")
+    end
+
+    test "rejecting twice: once only, without crashing", ctx do
+      newbie = user("newbie")
+      {:ok, thread} = Forums.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
+      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "spam reply"})
+      Forums.subscribe("forums:category:#{ctx.category.id}")
+
+      for post <- [hd(thread.posts), reply] do
+        assert {:ok, _} = Review.reject(post, ctx.admin, "Spam")
+        assert {:error, :not_queued} = Review.reject(post, ctx.admin, "Spam")
+      end
+
+      # A rejected thread is deleted like any other: pages hear of it.
+      assert_receive {:thread_deleted, %Thread{id: thread_id}}
+      assert thread_id == thread.id
+      assert length(Forums.notifications_for(newbie)) == 2
+      assert Repo.aggregate(where(StaffAction, action: "post.reject"), :count) == 2
     end
 
     test "a rejected thread is deleted", ctx do

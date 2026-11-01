@@ -17,7 +17,9 @@ defmodule FirestormWeb.Review do
   users are notified at that moment, not before) or rejected with a reason
   the author is told. Every decision goes to the staff log in the same
   transaction, and open review pages (and staff's sidebar badge) update
-  live through `changed/0`.
+  live through `changed/0`. What a decision does outside the database
+  (broadcasts, notifications, email, disconnecting a silenced author's
+  pages) happens only once its transaction has committed.
   """
 
   import Ecto.Query
@@ -57,11 +59,27 @@ defmodule FirestormWeb.Review do
 
   @doc "Posts awaiting approval, oldest first, with their thread and author."
   def queued_posts do
-    queued_query()
-    |> order_by(asc: :queued_at, asc: :id)
-    |> preload([:user, thread: :category])
-    |> Repo.all()
-    |> Enum.map(&Map.put(&1, :first?, Forums.first_post?(&1)))
+    posts =
+      queued_query()
+      |> order_by(asc: :queued_at, asc: :id)
+      |> preload([:user, thread: :category])
+      |> Repo.all()
+
+    first_ids = first_post_ids(Enum.map(posts, & &1.thread_id))
+    Enum.map(posts, &Map.put(&1, :first?, MapSet.member?(first_ids, &1.id)))
+  end
+
+  # The first post of each thread, in one query (as `Forums.first_post?/1`).
+  defp first_post_ids(thread_ids) do
+    query =
+      from(p in Post,
+        where: p.thread_id in ^thread_ids,
+        distinct: p.thread_id,
+        order_by: [asc: p.thread_id, asc: p.inserted_at, asc: p.id],
+        select: p.id
+      )
+
+    MapSet.new(Repo.all(query))
   end
 
   defp queued_query, do: where(Post, [p], not is_nil(p.queued_at) and is_nil(p.deleted_at))
@@ -88,34 +106,38 @@ defmodule FirestormWeb.Review do
 
     decide(post, admin, "disagreed", "flag.disagree", %{}, fn ->
       Post |> where([p], p.id == ^post.id) |> Repo.update_all(set: [hidden_at: nil])
-      :ok
+      {:ok, []}
     end)
   end
 
   @doc "Defers the post's flags as `admin`: they're set aside, the post stays as it is."
   def defer(%Post{} = post, %User{} = admin) do
     post = Repo.preload(post, [:thread, :user])
-    decide(post, admin, "deferred", "flag.defer", %{}, fn -> :ok end)
+    decide(post, admin, "deferred", "flag.defer", %{}, fn -> {:ok, []} end)
   end
 
   defp decision_name({:silence, _params}), do: "silence"
   defp decision_name(decision), do: Atom.to_string(decision)
 
-  # Hiding and silencing leave the post hidden; deleting removes it.
+  # Hiding and silencing leave the post hidden; deleting removes it. Each
+  # returns `{:ok, announcements}`: what to do once the decision commits.
   defp carry_out(:hide, post, _admin), do: hide(post)
 
   defp carry_out(:delete, post, admin) do
     result =
-      case Forums.delete_post(post, admin) do
-        {:error, :first_post} -> Forums.delete_thread(post.thread, admin)
+      case Forums.delete_post_unannounced(post, admin) do
+        {:error, :first_post} -> Forums.delete_thread_unannounced(post.thread, admin)
         result -> result
       end
 
-    with {:ok, _} <- result, do: :ok
+    with {:ok, _deleted, announce} <- result, do: {:ok, [announce]}
   end
 
   defp carry_out({:silence, params}, post, admin) do
-    with {:ok, _user} <- Penalties.penalize(:silence, post.user, admin, params), do: hide(post)
+    with {:ok, _user, announce} <-
+           Penalties.penalize_unannounced(:silence, post.user, admin, params),
+         {:ok, []} <- hide(post),
+         do: {:ok, [announce]}
   end
 
   defp hide(post) do
@@ -123,11 +145,12 @@ defmodule FirestormWeb.Review do
     |> where([p], p.id == ^post.id and is_nil(p.hidden_at))
     |> Repo.update_all(set: [hidden_at: DateTime.utc_now(:second)])
 
-    :ok
+    {:ok, []}
   end
 
   # Settles the pending flags as `status` and runs `action`, logged, all in
-  # one transaction; then tells pages.
+  # one transaction; once that commits, runs the action's announcements and
+  # tells pages.
   defp decide(post, admin, status, log_action, details, action) do
     result =
       Repo.transact(fn ->
@@ -143,13 +166,17 @@ defmodule FirestormWeb.Review do
           )
 
         with true <- count > 0 || {:error, :no_pending_flags},
-             :ok <- action.() do
+             {:ok, announcements} <- action.() do
           StaffLog.record(admin, log_action, post, Map.merge(post_details(post), details))
-          {:ok, post}
+          {:ok, announcements}
         end
       end)
 
-    tap_ok(result, &after_decision/1)
+    with {:ok, announcements} <- result do
+      Enum.each(announcements, & &1.())
+      after_decision(post)
+      {:ok, post}
+    end
   end
 
   ## Queued posts
@@ -193,27 +220,47 @@ defmodule FirestormWeb.Review do
 
     result =
       Repo.transact(fn ->
-        with true <- (Post.queued?(post) and not Post.deleted?(post)) || {:error, :not_queued},
+        # Decided on the row as it is now, locked: a concurrent approve or
+        # reject either finished first (then this one has nothing to do) or
+        # waits for this one.
+        current = Post |> lock("FOR UPDATE") |> Repo.get(post.id)
+
+        with true <- still_queued?(current) || {:error, :not_queued},
              true <- reason != "" || {:error, :reason_required},
-             {:ok, _} <- remove(post, admin, first?) do
+             {:ok, announce} <- remove(post, admin, first?) do
           details = Map.put(post_details(post), :reason, reason)
           StaffLog.record(admin, "post.reject", post, details)
-          {:ok, post}
+          {:ok, announce}
         end
       end)
 
-    tap_ok(result, fn post ->
+    with {:ok, announce} <- result do
+      announce.()
       tell_rejected(post, reason, first?)
       changed()
-    end)
+      {:ok, post}
+    end
   end
 
-  defp remove(post, _admin, true), do: Repo.delete(post.thread)
+  defp still_queued?(nil), do: false
+  defp still_queued?(post), do: Post.queued?(post) and not Post.deleted?(post)
+
+  # A rejected thread goes, like any deleted thread; a rejected reply is
+  # soft-deleted (no "post.delete" entry: the rejection is the log entry).
+  defp remove(post, admin, true) do
+    with {:ok, _thread, announce} <- Forums.delete_thread_unannounced(post.thread, admin),
+         do: {:ok, announce}
+  end
 
   defp remove(post, admin, false) do
-    post
-    |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second), deleted_by_id: admin.id)
-    |> Repo.update()
+    changeset =
+      Ecto.Changeset.change(post,
+        deleted_at: DateTime.utc_now(:second),
+        deleted_by_id: admin.id
+      )
+
+    with {:ok, deleted} <- Repo.update(changeset),
+         do: {:ok, fn -> Forums.post_changed(:post_deleted, deleted) end}
   end
 
   defp tell_rejected(post, reason, first?) do

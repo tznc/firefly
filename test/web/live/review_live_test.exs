@@ -1,7 +1,10 @@
 defmodule FirestormWeb.Web.ReviewLiveTest do
   use FirestormWeb.Web.ConnCase
 
+  import Phoenix.ChannelTest, only: [socket: 3, subscribe_and_join: 3]
   require Phoenix.LiveViewTest
+
+  @endpoint FirestormWeb.Web.Endpoint
 
   alias FirestormWeb.{Flags, Forums, Repo}
   alias FirestormWeb.Forums.{Post, SiteSetting, StaffAction}
@@ -127,6 +130,53 @@ defmodule FirestormWeb.Web.ReviewLiveTest do
       |> assert_has("#flash-info", text: "Approved and published.")
 
       ctx.conn |> log_in_as(member) |> visit(path) |> assert_has("main", text: "my first post")
+    end
+
+    test "a queued reply can't be read by id: history, quotes, the store channel", ctx do
+      newbie = user_fixture(%{username: "newbie"})
+      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "queued reply"})
+      thread_path = ~p"/categories/#{ctx.category}/threads/#{ctx.thread}"
+
+      for user <- [ctx.author, nil] do
+        conn = if user, do: log_in_as(ctx.conn, user), else: ctx.conn
+
+        conn
+        |> visit(thread_path <> "/posts/#{reply.id}/history")
+        |> assert_has("#flash-error", text: "awaiting approval")
+        |> refute_has("main", text: "queued reply")
+      end
+
+      ctx.conn
+      |> log_in_as(newbie)
+      |> visit(thread_path <> "/posts/#{reply.id}/history")
+      |> assert_has("h1", text: "Edit history")
+
+      # Quoting copies only what anyone can read, the author's own included.
+      for user <- [ctx.author, newbie] do
+        ctx.conn
+        |> log_in_as(user)
+        |> visit(thread_path <> "/posts/new?quote=#{reply.id}")
+        |> refute_has("textarea", text: "queued reply")
+      end
+
+      socket = socket(FirestormWeb.Web.UserSocket, nil, %{})
+      {:ok, _, store} = subscribe_and_join(socket, FirestormWeb.Web.StoreChannel, "store:fetch")
+
+      ref = Phoenix.ChannelTest.push(store, "fetch", %{"posts" => [reply.id]})
+      Phoenix.ChannelTest.assert_reply(ref, :ok, %{posts: [%{body: "", queued: true}]})
+    end
+
+    test "a queued thread's title stays off the category's thread index", ctx do
+      newbie = user_fixture(%{username: "newbie"})
+      {:ok, _} = Forums.create_thread(ctx.category, newbie, %{title: "Buy now", body: "spam"})
+
+      for user <- [user_fixture(), ctx.admin] do
+        ctx.conn
+        |> log_in_as(user)
+        |> visit(~p"/categories/#{ctx.category}/threads")
+        |> assert_has("main", text: "Pills")
+        |> refute_has("main", text: "Buy now")
+      end
     end
 
     test "staff reject a reply with a reason, and the author is told", ctx do

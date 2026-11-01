@@ -44,6 +44,20 @@ defmodule FirestormWeb.Penalties do
   `"reason"` (required).
   """
   def penalize(kind, %User{} = user, %User{} = admin, params) when is_map_key(@fields, kind) do
+    with {:ok, user, announce} <- penalize_unannounced(kind, user, admin, params) do
+      announce.()
+      {:ok, user}
+    end
+  end
+
+  @doc """
+  `penalize/4` without its effects outside the database yet: `{:ok, user,
+  announce}`, where `announce` disconnects the user's pages and tells them.
+  For callers running it inside a larger transaction, to announce once that
+  commits (an email can't be taken back if the transaction rolls back).
+  """
+  def penalize_unannounced(kind, %User{} = user, %User{} = admin, params)
+      when is_map_key(@fields, kind) do
     with :ok <- penalizable(user),
          {:ok, until} <- ends_at(params["duration"], params["until"]),
          {:ok, reason} <- reason(params["reason"]) do
@@ -66,9 +80,11 @@ defmodule FirestormWeb.Penalties do
         end)
 
       # Enforced first: telling the user can fail (email), the penalty can't.
-      reload_pages(user)
-      tell(kind, user, until, reason)
-      {:ok, user}
+      {:ok, user,
+       fn ->
+         reload_pages(user)
+         tell(kind, user, until, reason)
+       end}
     end
   end
 
