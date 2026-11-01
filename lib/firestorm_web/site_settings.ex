@@ -10,7 +10,9 @@ defmodule FirestormWeb.SiteSettings do
 
   Reads are served from `:persistent_term`. An update clears the cache on
   this node at once, and on every node through PubSub (see
-  `FirestormWeb.SiteSettings.Cache`), so the next read loads the new values.
+  `FirestormWeb.SiteSettings.Cache`), so the next read loads the new values
+  (clearing starts a new cache generation, so a read racing the update
+  can't put old values back).
   The cache is off in tests (`config :firestorm_web, :site_settings_cache`),
   where each test's settings live in its own database transaction.
   """
@@ -23,6 +25,7 @@ defmodule FirestormWeb.SiteSettings do
   @pubsub FirestormWeb.PubSub
   @topic "site_settings"
   @cache_key {__MODULE__, :values}
+  @generation_key {__MODULE__, :generation}
 
   @doc """
   Every setting, in display order: `key`, `section`, `type` (`:string`,
@@ -69,7 +72,8 @@ defmodule FirestormWeb.SiteSettings do
         type: :boolean,
         label: "Require email confirmation",
         default: true,
-        help: "Off: new password accounts can post without confirming their email."
+        help:
+          "Off: members can post without confirming their email. Email notifications still go only to confirmed addresses."
       },
       %{
         key: "new_user_max_links",
@@ -167,11 +171,30 @@ defmodule FirestormWeb.SiteSettings do
   def get(key), do: Map.fetch!(all(), key)
 
   @doc "Every setting's current value, by key."
-  def all do
+  def all, do: elem(cached(), 0)
+
+  @doc """
+  Whether an admin has set `key` (a row exists), as opposed to it holding
+  its default.
+  """
+  def customized?(key), do: key in elem(cached(), 1)
+
+  # `{values, customized keys}`. The cache entry is tagged with the
+  # generation it was loaded in; invalidating starts a new generation, so an
+  # entry a slow reader loaded before a save and put after it is never
+  # served.
+  defp cached do
     if Application.get_env(:firestorm_web, :site_settings_cache, true) do
+      generation = :persistent_term.get(@generation_key, nil)
+
       case :persistent_term.get(@cache_key, nil) do
-        nil -> tap(load(), &:persistent_term.put(@cache_key, &1))
-        values -> values
+        {^generation, values, customized} ->
+          {values, customized}
+
+        _missing_or_stale ->
+          {values, customized} = load()
+          :persistent_term.put(@cache_key, {generation, values, customized})
+          {values, customized}
       end
     else
       load()
@@ -181,17 +204,20 @@ defmodule FirestormWeb.SiteSettings do
   defp load do
     stored = Map.new(Repo.all(from(s in SiteSetting, select: {s.key, s.value})))
 
-    Map.new(definitions(), fn definition ->
-      value =
-        with raw when is_binary(raw) <- stored[definition.key],
-             {:ok, value} <- cast(definition, raw) do
-          value
-        else
-          _unset_or_invalid -> definition.default
-        end
+    values =
+      Map.new(definitions(), fn definition ->
+        value =
+          with raw when is_binary(raw) <- stored[definition.key],
+               {:ok, value} <- cast(definition, raw) do
+            value
+          else
+            _unset_or_invalid -> definition.default
+          end
 
-      {definition.key, value}
-    end)
+        {definition.key, value}
+      end)
+
+    {values, MapSet.new(Map.keys(stored))}
   end
 
   @doc """
@@ -243,7 +269,7 @@ defmodule FirestormWeb.SiteSettings do
   end
 
   defp invalidate do
-    :persistent_term.erase(@cache_key)
+    clear_cache()
     Phoenix.PubSub.broadcast_from(@pubsub, self(), @topic, :site_settings_changed)
   end
 
@@ -251,7 +277,7 @@ defmodule FirestormWeb.SiteSettings do
   def topic, do: @topic
 
   @doc false
-  def clear_cache, do: :persistent_term.erase(@cache_key)
+  def clear_cache, do: :persistent_term.put(@generation_key, make_ref())
 
   defp encode(value), do: to_string(value)
 

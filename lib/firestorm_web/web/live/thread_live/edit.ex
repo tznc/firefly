@@ -4,7 +4,7 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{Forums, Repo}
+  alias FirestormWeb.{Forums, Posting, Repo}
   alias FirestormWeb.Forums.Thread
 
   @impl true
@@ -47,15 +47,18 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
   def handle_event("save", %{"thread" => params}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
 
-    case Forums.update_thread(thread, Map.take(params, ["title", "tags"]), user) do
-      {:ok, thread} ->
-        {:noreply,
-         socket
-         |> put_flash(:info, "Thread updated successfully.")
-         |> push_navigate(to: ~p"/categories/#{socket.assigns.category}/threads/#{thread}")}
-
-      {:error, changeset} ->
+    with :ok <- Posting.check(user, :like),
+         {:ok, thread} <- Forums.update_thread(thread, Map.take(params, ["title", "tags"]), user) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Thread updated successfully.")
+       |> push_navigate(to: ~p"/categories/#{socket.assigns.category}/threads/#{thread}")}
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, socket |> assign(:tags, params["tags"]) |> assign(:form, to_form(changeset))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Posting.message(reason))}
     end
   end
 

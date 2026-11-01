@@ -204,7 +204,7 @@ defmodule FirestormWeb.Web.Layouts do
   def confirm_email_notice(assigns) do
     ~H"""
     <div
-      :if={@current_user && @current_user.email && !FirestormWeb.Forums.User.confirmed?(@current_user)}
+      :if={@current_user && @current_user.email && !FirestormWeb.Posting.confirmed_enough?(@current_user)}
       id="confirm-email-notice"
       role="alert"
       class="alert alert-warning"

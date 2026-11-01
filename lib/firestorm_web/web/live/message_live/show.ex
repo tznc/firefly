@@ -75,6 +75,7 @@ defmodule FirestormWeb.Web.MessageLive.Show do
     %{conversation: conversation, current_user: user} = socket.assigns
 
     with true <- can?(user, :add_participants, conversation),
+         :ok <- Posting.check(user, :like),
          {:ok, added} <- Messages.add_participants(conversation, user, usernames) do
       {:noreply,
        socket
@@ -85,7 +86,7 @@ defmodule FirestormWeb.Web.MessageLive.Show do
       false ->
         {:noreply, put_flash(socket, :error, denied_message(user))}
 
-      {:error, message} ->
+      {:error, message} when is_binary(message) ->
         {:noreply,
          assign(
            socket,
@@ -96,6 +97,9 @@ defmodule FirestormWeb.Web.MessageLive.Show do
              action: :validate
            )
          )}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Posting.message(reason))}
     end
   end
 
