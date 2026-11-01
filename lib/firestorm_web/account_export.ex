@@ -151,16 +151,15 @@ defmodule FirestormWeb.AccountExport do
   end
 
   # Conversations the user is in or wrote in, with everyone's usernames but
-  # only the user's own messages.
+  # only the user's own messages. Conversations the user left (or was in
+  # only as an author) show just their own messages: their current title and
+  # participants are no longer the user's to see.
   defp conversations(user) do
-    wrote_in = from(m in Message, where: m.user_id == ^user.id, select: m.conversation_id)
-
-    ids =
+    active =
       Repo.all(
         from(p in ConversationParticipant,
-          where: p.user_id == ^user.id,
-          select: p.conversation_id,
-          union: ^wrote_in
+          where: p.user_id == ^user.id and is_nil(p.left_at),
+          select: p.conversation_id
         )
       )
 
@@ -177,20 +176,28 @@ defmodule FirestormWeb.AccountExport do
       |> Repo.all()
       |> Enum.group_by(& &1.conversation_id, &Map.delete(&1, :conversation_id))
 
-    Conversation
-    |> where([c], c.id in ^ids)
-    |> order_by(asc: :id)
-    |> preload([:user, participants: :user])
-    |> Repo.all()
-    |> Enum.map(fn conversation ->
-      %{
-        id: conversation.id,
-        title: conversation.title,
-        started_by: conversation.user && conversation.user.username,
-        participants: for(p <- conversation.participants, is_nil(p.left_at), do: p.user.username),
-        your_messages: Map.get(messages, conversation.id, [])
-      }
-    end)
+    current =
+      Conversation
+      |> where([c], c.id in ^active)
+      |> preload([:user, participants: :user])
+      |> Repo.all()
+      |> Enum.map(fn conversation ->
+        %{
+          id: conversation.id,
+          title: conversation.title,
+          started_by: conversation.user && conversation.user.username,
+          participants:
+            for(p <- conversation.participants, is_nil(p.left_at), do: p.user.username),
+          your_messages: Map.get(messages, conversation.id, [])
+        }
+      end)
+
+    left =
+      for {id, your_messages} <- messages,
+          id not in active,
+          do: %{id: id, left: true, your_messages: your_messages}
+
+    Enum.sort_by(current ++ left, & &1.id)
   end
 
   defp levels(user) do

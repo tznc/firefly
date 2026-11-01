@@ -16,7 +16,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{EmailConfirmation, Forums}
+  alias FirestormWeb.{EmailConfirmation, Forums, Posting}
   alias FirestormWeb.Forums.User
 
   @sections [
@@ -70,20 +70,25 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   def handle_event("save_profile", %{"user" => params}, socket) do
     old = socket.assigns.current_user
 
-    case Forums.update_user(old, profile_params(params)) do
-      {:ok, user} ->
-        message =
-          if user.email != old.email and not User.confirmed?(user) do
-            EmailConfirmation.deliver(user)
-            "User updated. We sent a link to #{user.email} to confirm the new address."
-          else
-            "User updated successfully."
-          end
+    # The profile is public (a markdown bio, a website link): silenced users
+    # can't change it.
+    with :ok <- Posting.check(old, :like),
+         {:ok, user} <- Forums.update_user(old, profile_params(params)) do
+      message =
+        if user.email != old.email and not User.confirmed?(user) do
+          EmailConfirmation.deliver(user)
+          "User updated. We sent a link to #{user.email} to confirm the new address."
+        else
+          "User updated successfully."
+        end
 
-        {:noreply, socket |> put_flash(:info, message) |> push_navigate(to: ~p"/users/#{user}")}
-
-      {:error, changeset} ->
+      {:noreply, socket |> put_flash(:info, message) |> push_navigate(to: ~p"/users/#{user}")}
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, :profile_form, to_form(changeset))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Posting.message(reason))}
     end
   end
 

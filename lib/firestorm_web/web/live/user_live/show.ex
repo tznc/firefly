@@ -61,8 +61,9 @@ defmodule FirestormWeb.Web.UserLive.Show do
   @impl true
   def handle_event(event, params, socket) when event in ["penalize", "lift"] do
     %{current_user: admin, user: user} = socket.assigns
+    action = if event == "lift", do: :lift_penalty, else: :penalize_user
 
-    if can?(admin, :penalize_user, user),
+    if can?(admin, action, user),
       do: penalty_event(event, params, socket),
       else: {:noreply, put_flash(socket, :error, denied_message(admin))}
   end
@@ -154,7 +155,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
           <span class="badge badge-warning">Silenced {Penalties.ends_text(@user.silenced_until)}</span>
           <span class="text-sm">Reason: {@user.silence_reason}</span>
           <button
-            :if={can?(@current_user, :penalize_user, @user)}
+            :if={can?(@current_user, :lift_penalty, @user)}
             phx-click="lift"
             phx-value-kind="silence"
             class="btn btn-ghost btn-xs"
@@ -166,7 +167,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
           <span class="badge badge-error">Suspended {Penalties.ends_text(@user.suspended_until)}</span>
           <span class="text-sm">Reason: {@user.suspend_reason}</span>
           <button
-            :if={can?(@current_user, :penalize_user, @user)}
+            :if={can?(@current_user, :lift_penalty, @user)}
             phx-click="lift"
             phx-value-kind="suspend"
             class="btn btn-ghost btn-xs"

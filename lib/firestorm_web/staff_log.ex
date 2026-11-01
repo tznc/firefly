@@ -59,6 +59,54 @@ defmodule FirestormWeb.StaffLog do
   defp target_ref(%User{id: id}), do: {"user", id}
   defp target_ref({type, id}) when is_binary(type), do: {type, id}
 
+  # The user fields an entry about a user may hold (Kaffy snapshots and
+  # edits, role changes) that would say who a deleted account was.
+  @personal_fields ~w(username name email github_uid bio website location)
+
+  @doc """
+  Removes what the log says about who `user` was, for account deletion:
+  entries about the user lose their personal fields (role changes keep the
+  role, naming the placeholder `username`), and entries about the user's
+  posts name the placeholder as `author`. Runs in the deletion's
+  transaction.
+  """
+  def scrub_user(%User{id: id, username: old}, placeholder) do
+    StaffAction
+    |> where([a], a.target_type == "user" and a.target_id == ^id)
+    |> update([a],
+      set: [details: fragment("? - ?::text[]", a.details, ^@personal_fields)]
+    )
+    |> Repo.update_all([])
+
+    StaffAction
+    |> where([a], a.target_type == "user" and a.target_id == ^id)
+    |> where([a], a.action in ["role.grant", "role.revoke"])
+    |> update([a],
+      set: [
+        details:
+          fragment("jsonb_set(?, '{username}', to_jsonb(?::text))", a.details, ^placeholder)
+      ]
+    )
+    |> Repo.update_all([])
+
+    own_posts = select(where(Post, [p], p.user_id == ^id), [p], p.id)
+
+    StaffAction
+    |> where([a], a.target_type == "post")
+    |> where(
+      [a],
+      a.target_id in subquery(own_posts) or fragment("?->>'author' = ?", a.details, ^old)
+    )
+    |> update([a],
+      set: [
+        details: fragment("jsonb_set(?, '{author}', to_jsonb(?::text))", a.details, ^placeholder)
+      ]
+    )
+    |> Repo.update_all([])
+
+    :ok
+  end
+
   @doc """
   The before/after values of the fields a changeset changes, for `details`
   (associations are left out). Values JSON can't hold are inspected.

@@ -3,6 +3,18 @@ defmodule FirestormWeb.Web.PenaltiesTest do
   use Bamboo.Test, shared: true
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog
+  require Phoenix.LiveViewTest
+
+  alias FirestormWeb.Messages
+
+  defmodule DownMailer do
+    @moduledoc false
+    @behaviour Bamboo.Adapter
+    def deliver(_email, _config), do: raise("SMTP is down")
+    def handle_config(config), do: config
+    def supports_attachments?, do: false
+  end
 
   alias FirestormWeb.{Forums, Penalties, Posting, Repo}
   alias FirestormWeb.Forums.{Notification, StaffAction, User}
@@ -91,6 +103,19 @@ defmodule FirestormWeb.Web.PenaltiesTest do
       refute User.silenced?(member)
       assert "user.unsilence" in Enum.map(Repo.all(StaffAction), & &1.action)
     end
+
+    test "is enforced even when the email can't be sent", %{admin: admin, member: member} do
+      config = Application.get_env(:firestorm_web, FirestormWeb.Mailer)
+      Application.put_env(:firestorm_web, FirestormWeb.Mailer, adapter: DownMailer)
+      on_exit(fn -> Application.put_env(:firestorm_web, FirestormWeb.Mailer, config) end)
+      FirestormWeb.Web.Endpoint.subscribe("users_sockets:#{member.id}")
+
+      log = capture_log(fn -> assert {:ok, _} = silence(member, admin) end)
+
+      assert log =~ "Penalty email to user #{member.id} failed"
+      assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert User.silenced?(Repo.get!(User, member.id))
+    end
   end
 
   describe "silenced members" do
@@ -115,6 +140,69 @@ defmodule FirestormWeb.Web.PenaltiesTest do
       |> assert_has("#flash-error", text: "You've been silenced until")
 
       refute Forums.liked?(post, member)
+    end
+
+    test "are held to it on pages opened before it", ctx do
+      %{admin: admin, thread: thread} = ctx
+
+      {:ok, fresh} =
+        Forums.register_user(%{username: "fresh", email: "f@example.com", password: @password})
+
+      {:ok, fresh} = Forums.confirm_user(fresh)
+
+      # A session without a live_socket_id (from before it existed).
+      {:ok, view, _html} =
+        Phoenix.LiveViewTest.live(log_in_as(ctx.conn, fresh), thread_path(thread))
+
+      {:ok, _} = silence(fresh, admin)
+
+      Phoenix.LiveViewTest.assert_redirect(view, thread_path(thread))
+      # The struct the page held is stale; the gate reads the database.
+      assert {:error, {:silenced, _}} = Posting.check(fresh, :like)
+    end
+
+    test "can't add people to conversations, edit thread titles or their profile", ctx do
+      %{conn: conn, member: member, admin: admin} = ctx
+      user_fixture(%{username: "target"})
+
+      # Started before the silence.
+      {:ok, conversation} =
+        Messages.start_conversation(member, %{
+          "recipients" => "boss",
+          "title" => "Hello",
+          "body" => "Hi"
+        })
+
+      conn
+      |> log_in_as(member)
+      |> visit(~p"/messages/#{conversation}")
+      |> fill_in("Add people", with: "target")
+      |> click_button("Add people")
+      |> assert_has("#flash-error", text: "You've been silenced")
+
+      assert conversation |> Messages.participants() |> Enum.map(& &1.username) |> Enum.sort() ==
+               ["boss", "member"]
+
+      own = thread_fixture(category_fixture("Own"), member, %{title: "Mine"})
+      {:ok, member} = silence(member, admin)
+
+      conn
+      |> log_in_as(member)
+      |> visit(~p"/categories/#{own.category_id}/threads/#{own}/edit")
+      |> fill_in("Title", with: "Buy cheap watches")
+      |> click_button("Submit")
+      |> assert_has("#flash-error", text: "You've been silenced")
+
+      assert Repo.get!(Forums.Thread, own.id).title == "Mine"
+
+      conn
+      |> log_in_as(member)
+      |> visit(~p"/settings/profile")
+      |> fill_in("About me", with: "spam link")
+      |> click_button("Save")
+      |> assert_has("#flash-error", text: "You've been silenced")
+
+      assert Repo.get!(User, member.id).bio == nil
     end
 
     test "can't post through the API", %{conn: conn, member: member, thread: thread} do
@@ -200,6 +288,21 @@ defmodule FirestormWeb.Web.PenaltiesTest do
       |> assert_has("#suspended-badge", text: "until 31 Jan 2999")
 
       assert Repo.get!(User, member.id).suspended_until == ~U[2999-01-31 00:00:00Z]
+    end
+
+    test "admins lift a penalty even after the user became an admin", ctx do
+      %{conn: conn, admin: admin, member: member} = ctx
+      {:ok, _} = silence(member, admin)
+      role = Repo.get_by!(Forums.Role, name: "admin")
+      Repo.insert!(%Forums.RoleMembership{user_id: member.id, role_id: role.id})
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/users/#{member}")
+      |> click_button("Lift silence")
+      |> refute_has("#silenced-badge")
+
+      refute User.silenced?(Repo.get!(User, member.id))
     end
 
     test "admins can't be penalized; members see no staff tools", ctx do

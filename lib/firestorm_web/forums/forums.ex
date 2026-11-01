@@ -150,13 +150,12 @@ defmodule FirestormWeb.Forums do
       {:ok, %User{}}
   """
   def register_user(attrs) do
-    # Unconfirmed until they follow the emailed link (see EmailConfirmation),
-    # unless the site doesn't require it.
-    confirmed_at =
-      if SiteSettings.get("require_email_confirmation"), do: nil, else: DateTime.utc_now(:second)
-
+    # Unconfirmed until they follow the emailed link (see EmailConfirmation).
+    # Whether that's needed to post is the `require_email_confirmation`
+    # setting's job (see `FirestormWeb.Posting`): `confirmed_at` only ever
+    # means the address was proven.
     if registration_open?() do
-      %User{api_token: generate_api_token(), confirmed_at: confirmed_at}
+      %User{api_token: generate_api_token()}
       |> User.registration_changeset(attrs)
       |> Repo.insert()
     else
@@ -1253,9 +1252,13 @@ defmodule FirestormWeb.Forums do
       )
 
   @doc """
-  Moves a thread to another category. The log notes when the move put the
-  thread in a restricted category (one only some groups can read).
+  Moves a thread to another category (a no-op, not logged, if it's already
+  there). The log notes when the move put the thread in a restricted
+  category (one only some groups can read).
   """
+  def move_thread(%Thread{category_id: id} = thread, %Category{id: id}, _actor),
+    do: {:ok, thread}
+
   def move_thread(%Thread{category_id: old_category_id} = thread, %Category{} = category, actor) do
     details = %{
       from_category: Repo.get(Category, old_category_id).title,
@@ -1269,9 +1272,7 @@ defmodule FirestormWeb.Forums do
 
     with {:ok, moved} <-
            moderate(thread, actor, "thread.move", [category_id: category.id], details) do
-      if old_category_id != category.id,
-        do: broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
-
+      broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
       {:ok, moved}
     end
   end
@@ -1393,12 +1394,16 @@ defmodule FirestormWeb.Forums do
     |> Repo.insert()
   end
 
+  # A GitHub login named like a deleted account's placeholder gets a prefix
+  # (see `User.reserved_username?/1`).
   defp available_username(nickname, attempt \\ 0) do
     candidate = if attempt == 0, do: nickname, else: "#{nickname}-#{attempt}"
 
-    if get_user_by_username(candidate),
-      do: available_username(nickname, attempt + 1),
-      else: candidate
+    cond do
+      User.reserved_username?(nickname) -> available_username("gh-" <> nickname)
+      get_user_by_username(candidate) -> available_username(nickname, attempt + 1)
+      true -> candidate
+    end
   end
 
   @doc """
@@ -1726,6 +1731,18 @@ defmodule FirestormWeb.Forums do
     |> select([l, u], {l.post_id, u})
     |> Repo.all()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  @doc """
+  Brings the unread "liked" notifications of `post_ids` up to date with
+  their remaining likes (after likes were removed in bulk, e.g. by account
+  deletion).
+  """
+  def refresh_like_notifications(post_ids) do
+    Post
+    |> where([p], p.id in ^post_ids)
+    |> Repo.all()
+    |> Enum.each(&update_like_notification(&1, :unliked))
   end
 
   # Brings the author's unread "liked" notification for the post up to date
