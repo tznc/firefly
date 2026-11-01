@@ -1847,6 +1847,8 @@ defmodule FirestormWeb.Forums do
     with :ok <- if(first_post?(post), do: {:error, :first_post}, else: :ok),
          {:ok, deleted} <-
            logged(fn -> Repo.update(changeset) end, &log_post_delete(user, post, &1)) do
+      # A deleted reply is no longer anyone's accepted answer.
+      :ok = FirestormWeb.Solved.clear(deleted.id)
       {:ok, deleted, fn -> announce_post_deleted(deleted) end}
     end
   end

@@ -215,6 +215,9 @@ defmodule FirestormWeb.Web.ForumComponents do
             >
               {thread.title}
             </.link>
+            <span :if={thread.accepted_post_id} class="solved-badge badge badge-sm badge-success">
+              <.icon name="hero-check-circle" class="size-3" /> Solved
+            </span>
             <.tag_chips tags={thread.tags} />
           </div>
           <div :if={thread.first_post} class="text-xs text-base-content/60">
@@ -378,6 +381,7 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :thread, :any, required: true
   attr :headline, :boolean, default: false, doc: "show the thread title instead of the author"
   attr :can_edit, :boolean, default: false
+  attr :accepted, :boolean, default: false, doc: "the thread's accepted answer"
   attr :viewer, :any, default: nil, doc: "the current user, to link categories they may read"
   attr :refs, :map, default: nil, doc: "`FirestormWeb.Mentions.refs/2` of the page's posts"
   slot :actions
@@ -410,6 +414,9 @@ defmodule FirestormWeb.Web.ForumComponents do
               <.link navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}>
                 <.time_ago id={"post-#{@post.id}-time"} at={@post.inserted_at} />
               </.link>
+              <span :if={@accepted} class="accepted-badge badge badge-success badge-sm">
+                <.icon name="hero-check-circle" class="size-3" /> Accepted answer
+              </span>
               <span
                 :if={@post.deleted_at}
                 class="badge badge-error badge-sm"

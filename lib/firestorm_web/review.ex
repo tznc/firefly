@@ -145,6 +145,7 @@ defmodule FirestormWeb.Review do
     |> where([p], p.id == ^post.id and is_nil(p.hidden_at))
     |> Repo.update_all(set: [hidden_at: DateTime.utc_now(:second)])
 
+    :ok = FirestormWeb.Solved.clear(post.id)
     {:ok, []}
   end
 

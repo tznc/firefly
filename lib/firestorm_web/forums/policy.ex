@@ -12,6 +12,10 @@ defmodule FirestormWeb.Forums.Policy do
       once the post is deleted. Authors can't edit a post while it awaits
       approval. (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
+    * `:accept_answer` (mark a reply as the accepted answer, or unmark it;
+      params: the thread) - in a category that allows accepted answers, the
+      thread's author unless it's archived, and admins; never on a merged
+      stub. Which replies qualify is `FirestormWeb.Solved`'s business.
     * `:restore_post`, `:view_deleted_posts` - admins
     * `:penalize_user` (silence or suspend; params: the user) - admins, on
       users who aren't admins
@@ -99,6 +103,14 @@ defmodule FirestormWeb.Forums.Policy do
     end
   end
 
+  def authorize(:accept_answer, %User{} = user, %Thread{} = thread) do
+    cond do
+      Thread.merged?(thread) or not accepts_answers?(thread) -> {:error, :unauthorized}
+      Forums.thread_author_id(thread) == user.id and not Thread.archived?(thread) -> :ok
+      true -> admin(user)
+    end
+  end
+
   def authorize(:like_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread}) do
     if post.user_id != user.id and not Post.deleted?(post) and not Thread.archived?(thread),
       do: :ok,
@@ -139,6 +151,11 @@ defmodule FirestormWeb.Forums.Policy do
       0 -> true
       minutes -> NaiveDateTime.diff(NaiveDateTime.utc_now(), post.inserted_at, :minute) < minutes
     end
+  end
+
+  # Read now: the category's setting may have changed since `thread` was.
+  defp accepts_answers?(%Thread{category_id: category_id}) do
+    Repo.exists?(from(c in Category, where: c.id == ^category_id and c.allow_accepted_answers))
   end
 
   defp admin(user), do: if(Forums.admin?(user), do: :ok, else: {:error, :unauthorized})

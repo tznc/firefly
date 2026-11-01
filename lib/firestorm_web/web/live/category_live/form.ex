@@ -117,6 +117,11 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
           />
           <.input field={@form[:position]} type="number" label="Position" min="0" />
         </div>
+        <.input
+          field={@form[:allow_accepted_answers]}
+          type="checkbox"
+          label="Allow accepted answers (Q&A: the thread's author or staff can mark a reply as the answer)"
+        />
         <div>
           <%!-- The hidden blank lets a submit with nothing selected clear the restriction. --%>
           <input type="hidden" name="category[role_ids][]" value="" />

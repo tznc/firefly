@@ -11,7 +11,8 @@ defmodule FirestormWeb.Forums.Notification do
   your post awaiting approval; the body is the reason) or `"moved"` (staff
   split your post off into another thread; see `FirestormWeb.TopicTools`) or
   `"bookmark_reminder"` (a reminder you set on a bookmark; the body is its
-  note, or the post; see `FirestormWeb.Bookmarks`). `read_at` is set when you open it
+  note, or the post; see `FirestormWeb.Bookmarks`) or `"answer_accepted"` (your
+  reply was accepted as a thread's answer; see `FirestormWeb.Solved`). `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
 
@@ -20,7 +21,7 @@ defmodule FirestormWeb.Forums.Notification do
   import Ecto.Changeset
 
   @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved
-             bookmark_reminder)
+             bookmark_reminder answer_accepted)
 
   # Kinds that may have no thread_id: penalties are about the user, and a
   # rejected thread is gone. Any other notification without a thread_id or
