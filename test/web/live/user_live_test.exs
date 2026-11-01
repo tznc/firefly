@@ -79,7 +79,7 @@ defmodule FirestormWeb.Web.UserLiveTest do
       |> log_in_as(user)
       |> visit(~p"/users/#{user}/edit")
       |> unwrap(fn view ->
-        Phoenix.LiveViewTest.render_submit(view, "save", %{
+        Phoenix.LiveViewTest.render_submit(view, "save_profile", %{
           "user" => %{"name" => "x", "api_token" => "chosen"}
         })
       end)

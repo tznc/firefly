@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-user-theme={assigns[:current_user] && @current_user.theme}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -31,11 +31,16 @@
             document.documentElement.setAttribute("data-theme-source", "user");
           }
         };
-        if (!document.documentElement.hasAttribute("data-theme")) {
+        // A logged-in user's saved theme wins over this browser's choice.
+        const userTheme = document.documentElement.dataset.userTheme;
+        if (userTheme) {
+          setTheme(userTheme);
+        } else if (!document.documentElement.hasAttribute("data-theme")) {
           setTheme(localStorage.getItem("phx:theme") || "system");
         }
         window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
-        window.addEventListener("phx:set-theme", (e) => setTheme(e.target.dataset.phxTheme));
+        // From the toggle (data-phx-theme) or the server (push_event "set-theme").
+        window.addEventListener("phx:set-theme", (e) => setTheme((e.detail && e.detail.theme) || e.target.dataset.phxTheme));
 
         matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
           if (document.documentElement.getAttribute("data-theme-source") === "system") {

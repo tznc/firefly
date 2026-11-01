@@ -38,20 +38,25 @@ defmodule FirestormWeb.Web.Router do
   scope "/", FirestormWeb.Web do
     pipe_through(:browser)
 
+    get("/users/:id/edit", UserController, :edit)
+
     live_session :default, on_mount: [{FirestormWeb.Web.UserAuth, :mount_current_user}] do
       # Declared first so that e.g. /categories/new wins over /categories/:id.
       # These LiveViews also run `on_mount {UserAuth, :require_user}`.
       live("/threads/watching", ThreadLive.Watching, :index)
       live("/threads/participating", ThreadLive.Participating, :index)
       live("/new", ThreadLive.NewThreads, :index)
-      live("/settings/notifications", SettingsLive.Notifications, :edit)
+      live("/settings", SettingsLive.Index, :profile)
+      live("/settings/profile", SettingsLive.Index, :profile)
+      live("/settings/interface", SettingsLive.Index, :interface)
+      live("/settings/notifications", SettingsLive.Index, :notifications)
+      live("/settings/privacy", SettingsLive.Index, :privacy)
       live("/unread", ThreadLive.Unread, :index)
       live("/notifications", NotificationLive.Index, :index)
       live("/messages", MessageLive.Index, :index)
       live("/messages/new", MessageLive.New, :new)
       live("/messages/:id", MessageLive.Show, :show)
       live("/notifications/:id", NotificationLive.Show, :show)
-      live("/users/:id/edit", UserLive.Edit, :edit)
       live("/categories/new", CategoryLive.Form, :new)
       live("/categories/:id/edit", CategoryLive.Form, :edit)
       live("/categories/:category_id/threads/new", ThreadLive.New, :new)

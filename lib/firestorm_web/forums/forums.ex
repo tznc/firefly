@@ -41,8 +41,10 @@ defmodule FirestormWeb.Forums do
     Repo.all(User)
   end
 
+  @doc "The user directory: newest first, leaving out users who hid themselves from it."
   def paginate_users(page) do
     User
+    |> where([u], not u.hide_from_directory)
     |> order_by([p], desc: p.inserted_at)
     |> Repo.paginate(page: page)
   end
@@ -853,7 +855,7 @@ defmodule FirestormWeb.Forums do
 
         :ok = Endpoint.broadcast!("categories:#{thread.category_id}", "update", payload)
         broadcast_thread(:thread_created, thread)
-        {:ok, _} = Subscriptions.ensure_thread_level(user, thread, "watching")
+        {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.new_thread_level)
         :ok = Notifications.thread_created(thread)
         {:ok, thread}
 
@@ -1128,7 +1130,7 @@ defmodule FirestormWeb.Forums do
     changeset = %Post{} |> Post.changeset(attrs) |> SpamGuard.validate_post(user)
 
     with {:ok, post} <- Repo.insert(changeset) do
-      {:ok, _} = Subscriptions.ensure_thread_level(user, thread, "tracking")
+      {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.reply_level)
       :ok = Notifications.post_created(post)
 
       post = Repo.preload(post, [:thread, :user])

@@ -19,6 +19,14 @@ defmodule FirestormWeb.Forums.User do
     field(:confirmed_at, :utc_datetime)
     field(:email_notifications, :boolean, default: true)
     field(:allow_private_messages, :boolean, default: true)
+    field(:bio, :string)
+    field(:website, :string)
+    field(:location, :string)
+    field(:theme, :string, default: "system")
+    field(:reply_level, :string, default: "tracking")
+    field(:new_thread_level, :string, default: "watching")
+    field(:hide_profile_activity, :boolean, default: false)
+    field(:hide_from_directory, :boolean, default: false)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -34,9 +42,31 @@ defmodule FirestormWeb.Forums.User do
     |> unique_constraint(:username)
   end
 
-  @doc "Notification and messaging preferences."
+  @doc "The themes a user can pick (`system` follows the browser)."
+  def themes, do: ~w(system light dark)
+
+  @doc "The notification levels a user can pick for threads they reply to."
+  def reply_levels, do: ~w(tracking normal)
+
+  @doc "The notification levels a user can pick for threads they start."
+  def new_thread_levels, do: ~w(watching tracking)
+
+  @doc "Interface, notification, messaging and privacy preferences (see /settings)."
   def preferences_changeset(%__MODULE__{} = user, attrs) do
-    cast(user, attrs, [:email_notifications, :allow_private_messages])
+    user
+    |> cast(attrs, [
+      :email_notifications,
+      :allow_private_messages,
+      :theme,
+      :reply_level,
+      :new_thread_level,
+      :hide_profile_activity,
+      :hide_from_directory
+    ])
+    |> validate_required([:theme, :reply_level, :new_thread_level])
+    |> validate_inclusion(:theme, themes())
+    |> validate_inclusion(:reply_level, reply_levels())
+    |> validate_inclusion(:new_thread_level, new_thread_levels())
   end
 
   @doc "Whether the user has confirmed their email address."
@@ -57,13 +87,38 @@ defmodule FirestormWeb.Forums.User do
     change(user, confirmed_at: DateTime.utc_now(:second))
   end
 
-  @doc "Profile edits. Changing the email address requires confirming it again."
+  @doc """
+  Profile edits: account fields, plus a short markdown bio, a website and a
+  location shown on the profile. Changing the email address requires
+  confirming it again.
+  """
   def update_changeset(%__MODULE__{} = user, attrs) do
-    changeset = changeset(user, attrs)
+    changeset =
+      user
+      |> changeset(attrs)
+      |> cast(attrs, [:bio, :website, :location])
+      |> update_change(:website, &String.trim/1)
+      |> validate_length(:name, max: 100)
+      |> validate_length(:bio, max: 1_000)
+      |> validate_length(:location, max: 100)
+      |> validate_length(:website, max: 200)
+      |> validate_change(:website, &validate_website/2)
 
     if get_change(changeset, :email),
       do: put_change(changeset, :confirmed_at, nil),
       else: changeset
+  end
+
+  # Only web links: a javascript: or data: URL on a profile would be an XSS.
+  defp validate_website(:website, url) do
+    case URI.parse(url) do
+      %URI{scheme: scheme, host: host}
+      when scheme in ["http", "https"] and host not in [nil, ""] ->
+        []
+
+      _ ->
+        [website: "must be a web address starting with http:// or https://"]
+    end
   end
 
   @doc "Links a user to a GitHub account (by GitHub's immutable user id)."
