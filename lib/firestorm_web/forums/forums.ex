@@ -299,6 +299,9 @@ defmodule FirestormWeb.Forums do
   """
   def get_category!(id), do: Repo.get!(Category, id)
 
+  @doc "Gets a single category, or nil."
+  def get_category(id), do: Repo.get(Category, id)
+
   @doc """
   Creates a category.
 
@@ -1302,6 +1305,12 @@ defmodule FirestormWeb.Forums do
     broadcast("forums:threads", message)
     broadcast("forums:category:#{thread.category_id}", message)
     broadcast("forums:thread:#{thread.id}", message)
+
+    # A parent category's page lists its subcategories' threads too.
+    parent_id =
+      Repo.one(from(c in Category, where: c.id == ^thread.category_id, select: c.parent_id))
+
+    if parent_id, do: broadcast("forums:category:#{parent_id}", message)
   end
 
   defp tap_ok({:ok, value} = result, fun) do
