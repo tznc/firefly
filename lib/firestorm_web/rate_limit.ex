@@ -12,6 +12,7 @@ defmodule FirestormWeb.RateLimit do
     * `:email` - account emails (confirmation, password reset) per user
     * `:password_reset` - password reset requests per client IP
     * `:upload` - upload signatures per user
+    * `:like` - likes and unlikes per user
   """
   use Hammer, backend: :ets
 
@@ -21,6 +22,7 @@ defmodule FirestormWeb.RateLimit do
     register: {5, :timer.hours(1)},
     post: {10, :timer.minutes(1)},
     upload: {30, :timer.hours(1)},
+    like: {30, :timer.minutes(5)},
     email: {3, :timer.hours(1)},
     password_reset: {10, :timer.hours(1)}
   ]
@@ -47,6 +49,7 @@ defmodule FirestormWeb.RateLimit do
   def check_password_reset(remote_ip), do: check(:password_reset, format_ip(remote_ip))
   def check_email(%{id: user_id}), do: check(:email, user_id)
   def check_upload(%{id: user_id}), do: check(:upload, user_id)
+  def check_like(%{id: user_id}), do: check(:like, user_id)
 
   @doc "The message shown when a limit is hit."
   def message, do: "You're doing that too often. Please wait a moment and try again."

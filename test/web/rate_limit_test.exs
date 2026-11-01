@@ -12,7 +12,8 @@ defmodule FirestormWeb.RateLimitTest do
         login_ip: {1_000, 60_000},
         register: {1, 60_000},
         post: {2, 60_000},
-        upload: {1, 60_000}
+        upload: {1, 60_000},
+        like: {2, 60_000}
       ]
     )
 
@@ -114,5 +115,23 @@ defmodule FirestormWeb.RateLimitTest do
 
     assert conn |> post("/api/v1/upload_signature", upload: upload) |> json_response(201)
     assert conn |> post("/api/v1/upload_signature", upload: upload) |> json_response(429)
+  end
+
+  test "limits liking and unliking", %{conn: conn} do
+    author = user_fixture()
+    liker = user_fixture()
+    thread = thread_fixture(category_fixture(), author)
+    path = ~p"/categories/#{thread.category_id}/threads/#{thread}"
+    [post] = FirestormWeb.Repo.preload(thread, :posts).posts
+
+    conn
+    |> log_in_as(liker)
+    |> visit(path)
+    |> click_button("Like post #{post.id}")
+    |> click_button("Unlike post #{post.id}")
+    |> click_button("Like post #{post.id}")
+    |> assert_has("#flash-error", text: RateLimit.message())
+
+    refute Forums.likers([post])[post.id]
   end
 end

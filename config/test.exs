@@ -78,6 +78,7 @@ config :firestorm_web, FirestormWeb.RateLimit,
     register: {1_000, 60_000},
     post: {1_000, 60_000},
     upload: {1_000, 60_000},
+    like: {1_000, 60_000},
     email: {1_000, 60_000},
     password_reset: {1_000, 60_000}
   ]

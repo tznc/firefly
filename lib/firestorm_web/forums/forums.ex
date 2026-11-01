@@ -15,6 +15,7 @@ defmodule FirestormWeb.Forums do
     Thread,
     Diff,
     Post,
+    PostLike,
     PostRevision,
     View,
     ThreadRead,
@@ -592,28 +593,37 @@ defmodule FirestormWeb.Forums do
 
   @doc """
   The most active threads: ranked by how many posts they got in the period
-  (`"day"`, `"week"`, `"month"`, `"year"` or `"all"`).
+  (`"day"`, `"week"`, `"month"`, `"year"` or `"all"`). Likes given in the
+  period break ties: replies stay the main signal of activity (a like is a
+  cheap, one-click reaction), but among equally busy threads the one people
+  appreciated more ranks first. Then the most recently active.
   """
   def top_threads(period, user_or_nil) when is_map_key(@top_periods, period) do
-    posts =
+    since =
       case @top_periods[period] do
-        nil ->
-          Post.visible()
-
-        days ->
-          since = NaiveDateTime.add(NaiveDateTime.utc_now(), -days, :day)
-          where(Post.visible(), [p], p.inserted_at > ^since)
+        nil -> ~N[0000-01-01 00:00:00]
+        days -> NaiveDateTime.add(NaiveDateTime.utc_now(), -days, :day)
       end
 
     ranked =
-      posts
+      Post
+      |> Post.visible()
+      |> where([p], p.inserted_at > ^since)
       |> group_by([p], p.thread_id)
       |> select([p], %{thread_id: p.thread_id, posts: count(p.id), last_at: max(p.inserted_at)})
+
+    liked =
+      PostLike
+      |> join(:inner, [l], p in assoc(l, :post))
+      |> where([l, p], is_nil(p.deleted_at) and l.inserted_at > ^since)
+      |> group_by([l, p], p.thread_id)
+      |> select([l, p], %{thread_id: p.thread_id, likes: count(l.id)})
 
     Thread
     |> listed(user_or_nil)
     |> join(:inner, [t], r in subquery(ranked), on: r.thread_id == t.id)
-    |> order_by([t, r], desc: r.posts, desc: r.last_at)
+    |> join(:left, [t], l in subquery(liked), on: l.thread_id == t.id)
+    |> order_by([t, r, l], desc: r.posts, desc: coalesce(l.likes, 0), desc: r.last_at)
     |> limit(50)
     |> preload(:category)
     |> Repo.all()
@@ -1206,6 +1216,130 @@ defmodule FirestormWeb.Forums do
     broadcast_thread(:thread_activity, get_thread!(post.thread_id))
   end
 
+  @doc """
+  Likes `post` as `user` (see the `:like_post` policy). Liking twice is a
+  no-op. The author gets one in-app notification per post while it's unread
+  ("@bob and 2 others liked your post"), never an email.
+  """
+  def like_post(%Post{} = post, %User{} = user) do
+    like = %PostLike{post_id: post.id, user_id: user.id}
+
+    case Repo.insert(like, on_conflict: :nothing, conflict_target: [:post_id, :user_id]) do
+      {:ok, %PostLike{id: nil}} ->
+        :ok
+
+      {:ok, _like} ->
+        if first_like?(post, user), do: update_like_notification(post, :liked)
+        broadcast("forums:thread:#{post.thread_id}", {:post_likes_changed, post})
+    end
+  end
+
+  @doc "Removes `user`'s like from `post`, if any."
+  def unlike_post(%Post{} = post, %User{} = user) do
+    PostLike
+    |> where([l], l.post_id == ^post.id and l.user_id == ^user.id)
+    |> Repo.delete_all()
+    |> case do
+      {0, _} ->
+        :ok
+
+      _ ->
+        update_like_notification(post, :unliked)
+        broadcast("forums:thread:#{post.thread_id}", {:post_likes_changed, post})
+    end
+  end
+
+  # Records that the author is being told about this user's like; false if
+  # they were told before (the user unliked and liked again).
+  defp first_like?(post, user) do
+    {count, _} =
+      Repo.insert_all(
+        "forums_post_like_notices",
+        [%{post_id: post.id, user_id: user.id, inserted_at: NaiveDateTime.utc_now()}],
+        on_conflict: :nothing,
+        conflict_target: [:post_id, :user_id]
+      )
+
+    count == 1
+  end
+
+  @doc "Whether `user` likes `post`."
+  def liked?(%Post{id: post_id}, %User{id: user_id}),
+    do: Repo.exists?(from(l in PostLike, where: l.post_id == ^post_id and l.user_id == ^user_id))
+
+  @doc "The users who liked each of `posts`, in order: a map of post id to users."
+  def likers(posts) do
+    ids = Enum.map(posts, & &1.id)
+
+    PostLike
+    |> where([l], l.post_id in ^ids)
+    |> join(:inner, [l], u in assoc(l, :user))
+    |> order_by([l], asc: l.inserted_at, asc: l.id)
+    |> select([l, u], {l.post_id, u})
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  # Brings the author's unread "liked" notification for the post up to date
+  # with its current likers: updated, created (only after a like) or removed
+  # (when no likes remain). The post row lock serializes concurrent likes, so
+  # they share one unread notification.
+  defp update_like_notification(%Post{} = post, change) do
+    post = Repo.preload(post, [:thread, :user])
+
+    {:ok, changed?} =
+      Repo.transact(fn ->
+        Post |> where([p], p.id == ^post.id) |> lock("FOR UPDATE") |> Repo.one!()
+
+        likers =
+          PostLike
+          |> where([l], l.post_id == ^post.id)
+          |> join(:inner, [l], u in assoc(l, :user))
+          |> order_by([l], desc: l.inserted_at, desc: l.id)
+          |> select([l, u], u)
+          |> Repo.all()
+
+        unread =
+          Notification
+          |> where(
+            [n],
+            n.user_id == ^post.user_id and n.post_id == ^post.id and n.kind == "liked"
+          )
+          |> where([n], is_nil(n.read_at))
+          |> first()
+          |> Repo.one()
+
+        {:ok, write_like_notification(unread, likers, post, change)}
+      end)
+
+    if changed?, do: notifications_changed(post.user_id)
+    :ok
+  end
+
+  defp write_like_notification(nil, _likers, _post, :unliked), do: false
+
+  defp write_like_notification(nil, likers, post, :liked) do
+    {:ok, _} =
+      %Notification{}
+      |> Notification.changeset(
+        Map.put(Notification.for_likes(post.thread, post, likers), :user_id, post.user_id)
+      )
+      |> Repo.insert()
+
+    true
+  end
+
+  defp write_like_notification(unread, [], _post, _change) do
+    {:ok, _} = Repo.delete(unread)
+    true
+  end
+
+  defp write_like_notification(unread, likers, post, _change) do
+    attrs = Notification.for_likes(post.thread, post, likers)
+    {:ok, _} = unread |> change(subject: attrs.subject, body: attrs.body) |> Repo.update()
+    true
+  end
+
   def user_posts(user, %{page: page}) do
     Post
     |> Post.visible()
@@ -1443,7 +1577,7 @@ defmodule FirestormWeb.Forums do
   #   * "forums:categories"       - {:category_created | :category_updated | :category_deleted, category}
   #   * "forums:category:<id>"    - {:thread_created | :thread_updated | :thread_deleted | :thread_activity, thread}
   #   * "forums:threads"          - the same thread events, for every category
-  #   * "forums:thread:<id>"      - {:post_created | :post_updated | :post_deleted | :post_restored, post} and the thread events for that thread
+  #   * "forums:thread:<id>"      - {:post_created | :post_updated | :post_deleted | :post_restored | :post_likes_changed, post} and the thread events for that thread
 
   @pubsub FirestormWeb.PubSub
 
