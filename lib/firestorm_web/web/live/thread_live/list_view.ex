@@ -1,9 +1,9 @@
 defmodule FirestormWeb.Web.ThreadLive.ListView do
   @moduledoc """
-  Shared implementation of the thread list pages (recent, watching,
-  participating). Each page supplies a title, a path and a `load/1` function;
-  the list reloads whenever a thread is created, updated, deleted or gets a
-  new post.
+  Shared implementation of the thread list pages (latest, new, unread,
+  watching, participating). Each page supplies a title, a path and a `load/1`
+  function; the list reloads whenever a thread is created, updated, deleted or
+  gets a new post. Pass `tabs: true` to show the Latest/New/Unread/Top tabs.
   """
   use FirestormWeb.Web, :html
 
@@ -42,6 +42,7 @@ defmodule FirestormWeb.Web.ThreadLive.ListView do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <.page_header :if={@list_opts[:title]} title={@list_opts[:title]} navigate={@list_opts[:path]} />
+      <.list_tabs :if={@list_opts[:tabs]} current_path={@list_opts[:path]} current_user={@current_user} />
       <.thread_list threads={@threads} empty={@list_opts[:empty]} />
     </Layouts.app>
     """

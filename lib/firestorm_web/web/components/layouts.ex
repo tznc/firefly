@@ -86,7 +86,7 @@ defmodule FirestormWeb.Web.Layouts do
             </.nav_item>
           <% end %>
           <li class="menu-title">Forum</li>
-          <.nav_item path={~p"/"} current_path={@current_path} icon="hero-fire">Recent</.nav_item>
+          <.nav_item path={~p"/"} current_path={@current_path} icon="hero-fire">Latest</.nav_item>
           <.nav_item path={~p"/categories"} current_path={@current_path} icon="hero-squares-2x2">
             Categories
           </.nav_item>

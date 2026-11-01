@@ -1,7 +1,8 @@
 defmodule FirestormWeb.Web.ThreadLive.Show do
   @moduledoc """
-  A thread and its posts. New posts appear live; viewing the thread marks its
-  posts as read for the current user.
+  A thread and its posts. New posts appear live. Viewing the thread moves the
+  current user's read position to its newest post; posts that were unread when
+  the page opened are marked with a "new since your last visit" divider.
   """
   use FirestormWeb.Web, :live_view
 
@@ -13,9 +14,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     thread = Forums.get_thread!(category, id)
     if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
 
+    # Where the user had read up to before this visit (nil: never opened).
+    read = Forums.thread_read(socket.assigns.current_user, thread)
+
     {:ok,
      socket
      |> assign(:category, category)
+     |> assign(:last_read_post_id, read && read.last_read_post_id)
      |> load_thread(thread)}
   end
 
@@ -68,7 +73,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     thread = Repo.preload(thread, [posts: [:user]], force: true)
     [first_post | replies] = Enum.map(thread.posts, &Forums.decorate_post_oembeds/1)
 
-    if user && connected?(socket), do: Enum.each(thread.posts, &Forums.view(user, &1))
+    if user && connected?(socket), do: Forums.mark_thread_read(user, thread)
 
     socket
     |> assign(:page_title, "#{thread.title} - #{socket.assigns.category.title}")
@@ -77,6 +82,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:replies, replies)
     |> assign(:watched, !!user && Forums.watched_by?(thread, user))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
+  end
+
+  defp first_unread_id(_replies, nil), do: nil
+
+  defp first_unread_id(replies, last_read_post_id) do
+    Enum.find_value(replies, fn post -> post.id > last_read_post_id && post.id end)
   end
 
   @impl true
@@ -141,6 +152,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           </.post>
         </li>
         <li :for={post <- @replies}>
+          <div
+            :if={post.id == first_unread_id(@replies, @last_read_post_id)}
+            id="new-posts-divider"
+            class="divider divider-primary text-xs text-primary"
+          >
+            New since your last visit
+          </div>
           <.post post={post} thread={@thread} />
         </li>
       </ol>

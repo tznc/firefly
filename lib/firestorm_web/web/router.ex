@@ -43,6 +43,8 @@ defmodule FirestormWeb.Web.Router do
       # These LiveViews also run `on_mount {UserAuth, :require_user}`.
       live("/threads/watching", ThreadLive.Watching, :index)
       live("/threads/participating", ThreadLive.Participating, :index)
+      live("/new", ThreadLive.NewThreads, :index)
+      live("/unread", ThreadLive.Unread, :index)
       live("/notifications", NotificationLive.Index, :index)
       live("/notifications/:id", NotificationLive.Show, :show)
       live("/users/:id/edit", UserLive.Edit, :edit)
@@ -53,6 +55,7 @@ defmodule FirestormWeb.Web.Router do
       live("/categories/:category_id/threads/:thread_id/posts/new", PostLive.New, :new)
 
       live("/", ThreadLive.Recent, :index)
+      live("/top", ThreadLive.Top, :index)
       live("/login", AuthLive.Login, :login)
       live("/auth/identity", AuthLive.Identity, :new)
       live("/register", AuthLive.Registration, :new)

@@ -138,17 +138,59 @@ defmodule FirestormWeb.Web.ForumComponents do
             {String.slice(thread.first_post.body, 0..139)}
           </p>
         </div>
-        <span
-          class={[
-            "posts-count badge",
-            if(thread.completely_read?, do: "badge-ghost", else: "badge-primary")
-          ]}
-          title={if thread.completely_read?, do: "All read", else: "Unread posts"}
-        >
-          {thread.posts_count}
-        </span>
+        <div class="flex flex-col items-end gap-1">
+          <span
+            class={[
+              "posts-count badge",
+              if(thread.completely_read?, do: "badge-ghost", else: "badge-primary")
+            ]}
+            title={if thread.completely_read?, do: "All read", else: "Unread posts"}
+          >
+            {thread.posts_count}
+          </span>
+          <span :if={thread.new?} class="new-badge badge badge-sm badge-accent">new</span>
+          <.link
+            :if={!thread.new? and thread.unread_count > 0}
+            navigate={
+              ~p"/categories/#{thread.category_id}/threads/#{thread}" <>
+                "#post-#{thread.first_unread_post_id}"
+            }
+            class="unread-badge badge badge-sm badge-outline badge-primary"
+            title="Jump to the first unread post"
+          >
+            {thread.unread_count} unread
+          </.link>
+        </div>
       </li>
     </ol>
+    """
+  end
+
+  @doc "Tabs for the Latest / New / Unread / Top thread lists."
+  attr :current_path, :string, required: true
+  attr :current_user, :any, default: nil
+
+  def list_tabs(assigns) do
+    assigns =
+      assign(assigns, :tabs, [
+        {"Latest", "/", true},
+        {"New", "/new", !!assigns.current_user},
+        {"Unread", "/unread", !!assigns.current_user},
+        {"Top", "/top", true}
+      ])
+
+    ~H"""
+    <div id="list-tabs" role="tablist" class="tabs tabs-border">
+      <.link
+        :for={{label, path, shown?} <- @tabs}
+        :if={shown?}
+        navigate={path}
+        role="tab"
+        class={["tab", @current_path == path && "tab-active"]}
+      >
+        {label}
+      </.link>
+    </div>
     """
   end
 
