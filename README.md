@@ -7,11 +7,12 @@
 
 <h1 align="center">Firefly</h1>
 
+<p align="center">Created by <a href="https://tznc.dev">tznc.dev</a></p>
+
 ### An open-source forum engine built with Elixir, Phoenix and LiveView.
 
-Firefly builds on the Firestorm Forum project, which reached version 0.10, nearly
-ready for a 1.0 release. You can view the original Firestorm forum at
-<http://forum.firestormforum.org>.
+Firefly is created and maintained by [tznc.dev](https://tznc.dev). It builds on
+the open-source Firestorm forum project.
 
 ## Development
 
@@ -51,27 +52,6 @@ mix precommit              # compile --warnings-as-errors, format, credo, test
 Set `PLAYWRIGHT_CHROMIUM_PATH` to use an already-installed Chromium, and
 `PW_TRACE=true` to record Playwright traces.
 
-## Clients
-
-These clients were built for Firestorm.
-
-### Elm
-
-https://github.com/dailydrip/firestorm_elm
-
-### Vue
-
-https://github.com/dailydrip/firestorm_vue
-
-### Flutter
-
-https://github.com/dailydrip/firestorm_flutter
-
-### React Native
-
-https://github.com/dailydrip/firestorm_react_native
-
-
 ## Patrons
 
 Firestorm was funded by [a
@@ -82,5 +62,5 @@ All of the patrons that made it possible are listed in [the PATRONS file](PATRON
 
 ## License
 
-Firefly is licensed under the [Apache License 2.0](./LICENSE). It contains code from
-Firestorm, originally MIT licensed by DailyDrip; see [NOTICE](./NOTICE).
+Firefly is licensed under the [Apache License 2.0](./LICENSE), © [tznc.dev](https://tznc.dev).
+It contains code from Firestorm, originally MIT licensed; see [NOTICE](./NOTICE).

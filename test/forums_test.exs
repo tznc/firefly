@@ -307,12 +307,12 @@ defmodule FirestormWeb.ForumsTest do
       auth_info = %{
         name: "Josh Adams",
         nickname: "knewter",
-        email: "josh@dailydrip.com"
+        email: "josh@example.com"
       }
 
       result = Forums.login_or_register_from_github(auth_info)
       assert {:ok, user} = result
-      assert user.email == "josh@dailydrip.com"
+      assert user.email == "josh@example.com"
     end
 
     test "when the user doesn't have name and public email on GitHub" do
@@ -333,13 +333,13 @@ defmodule FirestormWeb.ForumsTest do
     auth_info = %{
       name: "Josh Adams",
       nickname: "knewter",
-      email: "josh@dailydrip.com"
+      email: "josh@example.com"
     }
 
     Forums.login_or_register_from_github(auth_info)
     result = Forums.login_or_register_from_github(auth_info)
     assert {:ok, user} = result
-    assert user.email == "josh@dailydrip.com"
+    assert user.email == "josh@example.com"
   end
 
   describe "posting in a thread" do
@@ -364,7 +364,7 @@ defmodule FirestormWeb.ForumsTest do
     test "uses Gravatar with an identicon fallback" do
       url =
         FirestormWeb.Forums.User.avatar_url(
-          %User{email: "josh@dailydrip.com", username: "knewter"},
+          %User{email: "josh@example.com", username: "knewter"},
           64
         )
 

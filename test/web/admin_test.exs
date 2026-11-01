@@ -29,7 +29,11 @@ defmodule FirestormWeb.Web.AdminTest do
     user_fixture(%{username: "listed_user"})
     conn = log_in_as(conn, admin_fixture())
 
-    conn |> visit("/admin/dashboard") |> assert_has("title", text: "Firefly Admin")
+    conn
+    |> visit("/admin/dashboard")
+    |> assert_has("title", text: "Firefly Admin")
+    |> assert_has(~s(footer a[href="https://tznc.dev"]), text: "tznc.dev")
+
     conn |> visit("/admin/forums/category") |> assert_has("td", text: "Elixir")
 
     conn

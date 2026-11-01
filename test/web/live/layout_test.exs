@@ -23,6 +23,14 @@ defmodule FirestormWeb.Web.LayoutTest do
     assert conn |> get("/images/firefly-icon.svg") |> response(200) =~ "<title>Firefly</title>"
   end
 
+  test "credits tznc.dev as Firefly's creators", %{conn: conn} do
+    conn
+    |> visit(~p"/")
+    |> assert_has(~s(nav a[href="https://tznc.dev"]), text: "Made by tznc.dev")
+    |> click_link("Log in")
+    |> assert_has(~s(a[href="https://tznc.dev"]), text: "tznc.dev")
+  end
+
   test "visitors see a log in link and the forum navigation", %{conn: conn} do
     conn
     |> visit(~p"/categories")

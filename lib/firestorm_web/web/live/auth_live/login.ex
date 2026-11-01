@@ -26,6 +26,9 @@ defmodule FirestormWeb.Web.AuthLive.Login do
         <p class="text-xs text-base-content/60">
           By signing up, I agree to Firefly's Terms and Privacy Policy.
         </p>
+        <p class="text-xs text-base-content/60">
+          Firefly is made by <a href="https://tznc.dev" class="link">tznc.dev</a>
+        </p>
       </section>
     </Layouts.app>
     """

@@ -10,7 +10,7 @@ defmodule FirestormWeb.InboundControllerTest do
       {:ok, user} =
         Forums.create_user(%{
           username: "knewter",
-          email: "josh@dailydrip.com",
+          email: "josh@example.com",
           name: "Josh Adams"
         })
 

@@ -6,7 +6,7 @@ defmodule FirestormWeb.Web.InboundController do
   # Get the thread id out of something like
   # "replythread-123@notifier.firestormforum.org"
   @thread_email_regex ~r/reply-thread-([0-9]*)@#{@inbound_domain}/
-  # Get the email part out of something like "Josh Adams <josh@dailydrip.com>"
+  # Get the email part out of something like "Jane Doe <jane@example.com>"
   @email_regex ~r/[^<]*<?(.*@[^>]*)[^>]*/
 
   def sendgrid(conn, params) do

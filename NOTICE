@@ -1,11 +1,10 @@
 Firefly
-Copyright 2026 The Firefly contributors
+Copyright 2026 tznc.dev (https://tznc.dev)
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This product is a fork of Firestorm (https://github.com/dailydrip/firestorm),
-which was distributed under the MIT License. Code originating from Firestorm
-remains subject to the following notice:
+It contains code from Firestorm, which was distributed under the MIT License.
+That license requires the following notice to accompany that code:
 
 --------------------------------------------------------------------------------
 Copyright 2017 DailyDrip

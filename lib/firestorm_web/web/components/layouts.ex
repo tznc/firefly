@@ -117,6 +117,7 @@ defmodule FirestormWeb.Web.Layouts do
             </.nav_item>
           <% end %>
           <li class="menu-title">About</li>
+          <li><a href="https://tznc.dev">Made by tznc.dev</a></li>
           <li><a href="https://github.com/tznc/firefly">Firefly on GitHub</a></li>
           <li><a href="http://www.firestormforum.org">Built on Firestorm</a></li>
           <li><a href="http://www.firestormforum.org#patrons">Firestorm patrons</a></li>
