@@ -143,10 +143,14 @@ defmodule FirestormWeb.Notifications do
     end
   end
 
-  # `mentioned_ids` already got a mention for this post instead.
+  # `mentioned_ids` already got a mention for this post instead. Anyone who
+  # has already read the post (e.g. had the thread open) is skipped too.
   defp fan_out(kind, thread, post, mentioned_ids) do
+    already_read = Forums.users_who_read(thread, post)
+
     for {user, level} <- Subscriptions.subscribers(thread),
-        user.id != post.user_id and user.id not in mentioned_ids,
+        user.id != post.user_id and user.id not in mentioned_ids and
+          not MapSet.member?(already_read, user.id),
         Bodyguard.permit?(Forums, :view_thread, user, thread) do
       {:ok, notification} =
         Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
@@ -183,12 +187,9 @@ defmodule FirestormWeb.Notifications do
 
   defp maybe_email(%User{} = user, notification, thread, post) do
     if email?(user, notification) do
-      email =
-        if notification.kind == "mentioned",
-          do: Emails.mention_notification(user, thread, post),
-          else: Emails.thread_new_post_notification(user, thread, post)
-
-      Mailer.deliver_now(email)
+      user
+      |> email_for(notification.kind, thread, post)
+      |> Mailer.deliver_now()
 
       Forums.notification_emailed(notification)
     end
@@ -198,4 +199,13 @@ defmodule FirestormWeb.Notifications do
     user.email_notifications and User.confirmed?(user) and
       not Forums.unread_emailed_notification?(user, notification)
   end
+
+  defp email_for(user, "mentioned", thread, post),
+    do: Emails.mention_notification(user, thread, post)
+
+  defp email_for(user, "new_thread", thread, post),
+    do: Emails.thread_created_notification(user, thread, post)
+
+  defp email_for(user, _kind, thread, post),
+    do: Emails.thread_new_post_notification(user, thread, post)
 end

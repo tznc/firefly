@@ -116,4 +116,67 @@ defmodule FirestormWeb.Web.ModerationTest do
 
     assert Forums.get_thread!(thread.id).category_id == other.id
   end
+
+  test "links from before a move redirect to the thread's new place", %{
+    conn: conn,
+    admin: admin,
+    member: member,
+    thread: thread
+  } do
+    old_path = thread_path(thread)
+    other = category_fixture("Erlang")
+    {:ok, moved} = Forums.move_thread(thread, other, admin)
+
+    conn
+    |> log_in_as(member)
+    |> visit(old_path)
+    |> assert_path(thread_path(moved))
+    |> assert_has("h1", text: "Moderate me")
+  end
+
+  test "bad moderation input is reported, not a crash", %{
+    conn: conn,
+    admin: admin,
+    thread: thread
+  } do
+    require Phoenix.LiveViewTest
+    {:ok, view, _} = conn |> log_in_as(admin) |> Phoenix.LiveViewTest.live(thread_path(thread))
+
+    assert Phoenix.LiveViewTest.render_click(view, "moderate", %{"action" => "explode"}) =~
+             "update the thread"
+
+    assert Phoenix.LiveViewTest.render_submit(view, "move", %{"move" => %{"category_id" => "0"}}) =~
+             "no longer exists"
+  end
+
+  test "archived threads are read-only to their author", %{
+    member: member,
+    admin: admin,
+    thread: thread
+  } do
+    {:ok, archived} = Forums.archive_thread(thread, true, admin)
+    refute FirestormWeb.Web.Authorization.can?(member, :update_thread, archived)
+    refute FirestormWeb.Web.Authorization.can?(member, :delete_thread, archived)
+    assert FirestormWeb.Web.Authorization.can?(admin, :update_thread, archived)
+  end
+
+  test "a thread closed while the reply form is open gets a flash, not a crash", %{
+    conn: conn,
+    member: member,
+    thread: thread
+  } do
+    {:ok, member} = Forums.confirm_user(member)
+    session = conn |> log_in_as(member) |> visit(thread_path(thread) <> "/posts/new")
+
+    # Closed after the form opened (the reply form holds a stale thread)
+    Forums.Thread
+    |> FirestormWeb.Repo.get!(thread.id)
+    |> Ecto.Changeset.change(closed_at: DateTime.utc_now(:second))
+    |> FirestormWeb.Repo.update!()
+
+    session
+    |> fill_in("Body", with: "too late")
+    |> click_button("Reply")
+    |> assert_has("#flash-error", text: "closed to new replies")
+  end
 end

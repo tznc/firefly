@@ -62,12 +62,37 @@ defmodule FirestormWeb.Forums.LikesTest do
     assert [%{subject: ~s(@dave and 2 others liked your post in "Likeable")} = notification] =
              Forums.notifications_for(author)
 
-    # Once read, the next like is news again.
+    # Once read, toggling an old like isn't news; a new liker is.
     {:ok, _} = Forums.mark_notification_read(notification)
     Forums.unlike_post(post, bob)
     Forums.like_post(post, bob)
-    assert [%{read_at: nil}, %{}] = Forums.notifications_for(author)
+    assert [%{read_at: read_at}] = Forums.notifications_for(author)
+    assert read_at
+
+    Forums.like_post(post, user_fixture(%{username: "eve"}))
+
+    assert [%{read_at: nil, subject: ~s(@eve and 3 others liked your post in "Likeable")}, %{}] =
+             Forums.notifications_for(author)
+
     assert_no_emails_delivered()
+  end
+
+  test "unliking updates the unread notification, or removes it", ctx do
+    %{author: author, post: post} = ctx
+    [bob, carol] = for name <- ~w(bob carol), do: user_fixture(%{username: name})
+
+    Forums.like_post(post, bob)
+    Forums.like_post(post, carol)
+    Forums.unlike_post(post, carol)
+    assert [%{subject: ~s(@bob liked your post in "Likeable")}] = Forums.notifications_for(author)
+
+    Forums.unlike_post(post, bob)
+    assert Forums.notifications_for(author) == []
+    assert Forums.unread_notification_count(author) == 0
+
+    # Liking again doesn't renotify
+    Forums.like_post(post, bob)
+    assert Forums.notifications_for(author) == []
   end
 
   test "likes break ties in Top", %{author: author, thread: thread} do
