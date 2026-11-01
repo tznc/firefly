@@ -162,6 +162,21 @@ defmodule FirestormWeb.NotificationsTest do
     assert Forums.unread_notification_count(author) == 0
   end
 
+  test "a reply deleted before it fans out notifies no one", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    :sys.suspend(Notifications)
+    {:ok, post} = Forums.create_post(thread, reader, %{body: "never mind"})
+    {:ok, _} = Forums.delete_post(post, reader)
+    :sys.resume(Notifications)
+    flush()
+
+    assert notifications(author) == []
+    assert_no_emails_delivered()
+  end
+
   test "new threads email watchers as a new thread, not a reply", %{
     category: category,
     author: author,

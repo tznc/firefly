@@ -38,7 +38,9 @@ defmodule FirestormWeb.Notifications do
 
   @impl true
   def handle_cast({:post_created, %Post{} = post}, state) do
-    with %Post{thread: %Thread{} = thread} = post <- Repo.preload(post, [:user, :thread]) do
+    # Reloaded: a post deleted before we get to it notifies no one.
+    with %Post{deleted_at: nil} = post <- Repo.get(Post, post.id),
+         %Post{thread: %Thread{} = thread} = post <- Repo.preload(post, [:user, :thread]) do
       fan_out("new_post", thread, post)
     end
 

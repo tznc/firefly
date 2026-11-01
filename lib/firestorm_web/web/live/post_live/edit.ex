@@ -64,6 +64,12 @@ defmodule FirestormWeb.Web.PostLive.Edit do
          |> put_flash(:info, "Post updated successfully.")
          |> push_navigate(to: thread_path(socket) <> "#post-#{post.id}")}
 
+      {:error, :deleted} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "This post was deleted.")
+         |> push_navigate(to: thread_path(socket))}
+
       {:error, :edited_elsewhere} ->
         # Keep what they typed; saving again replaces the other edit knowingly.
         post = Forums.get_post!(socket.assigns.thread, socket.assigns.post.id)

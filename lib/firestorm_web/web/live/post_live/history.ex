@@ -6,6 +6,7 @@ defmodule FirestormWeb.Web.PostLive.History do
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.Forums
+  alias FirestormWeb.Forums.Post
 
   @impl true
   def mount(
@@ -16,18 +17,36 @@ defmodule FirestormWeb.Web.PostLive.History do
     category = Forums.get_category!(category_id)
     thread = Forums.get_thread!(category, thread_id)
     post = thread |> Forums.get_post!(id) |> FirestormWeb.Repo.preload(:user)
-    if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
+    socket = assign(socket, category: category, thread: thread)
 
-    {:ok,
-     socket
-     |> assign(:page_title, "Edit history - #{thread.title}")
-     |> assign(category: category, thread: thread)
-     |> load(post)}
+    # A deleted post's content (and so its history) is for admins only.
+    if Post.deleted?(post) and not can?(socket.assigns.current_user, :view_deleted_posts) do
+      {:ok,
+       socket
+       |> put_flash(:error, "This post was deleted.")
+       |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+    else
+      if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
+      {:ok, socket |> assign(:page_title, "Edit history - #{thread.title}") |> load(post)}
+    end
   end
 
   @impl true
   def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket),
     do: {:noreply, load(socket, FirestormWeb.Repo.preload(post, :user))}
+
+  def handle_info({:post_deleted, %{id: id}}, %{assigns: %{post: %{id: id}}} = socket) do
+    if can?(socket.assigns.current_user, :view_deleted_posts) do
+      {:noreply, socket}
+    else
+      %{category: category, thread: thread} = socket.assigns
+
+      {:noreply,
+       socket
+       |> put_flash(:error, "This post was deleted.")
+       |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+    end
+  end
 
   def handle_info(_event, socket), do: {:noreply, socket}
 

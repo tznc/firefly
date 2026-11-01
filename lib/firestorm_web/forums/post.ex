@@ -11,6 +11,8 @@ defmodule FirestormWeb.Forums.Post do
   schema "forums_posts" do
     field(:body, :string)
     field(:edited_at, :naive_datetime_usec)
+    field(:deleted_at, :utc_datetime)
+    belongs_to(:deleted_by, User)
     belongs_to(:thread, Thread)
     belongs_to(:user, User)
     has_many(:views, {"forums_posts_views", View}, foreign_key: :assoc_id)
@@ -39,6 +41,12 @@ defmodule FirestormWeb.Forums.Post do
     |> cast(attrs, [:body])
     |> validate_required([:body])
   end
+
+  @doc "Whether the post was (soft) deleted. Its content is then hidden from members."
+  def deleted?(%__MODULE__{deleted_at: at}), do: not is_nil(at)
+
+  @doc "Posts that aren't deleted."
+  def visible(query \\ __MODULE__), do: where(query, [p], is_nil(p.deleted_at))
 
   def ordered(query) do
     query
