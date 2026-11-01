@@ -58,13 +58,23 @@ defmodule FirestormWeb.E2ECase do
     PhoenixTest.Playwright.Case.new_session(config, context)
   end
 
-  @doc "Logs in through the username/password form."
+  @doc """
+  Logs in through the username/password form.
+
+  `visit/2` returns once the page has loaded, not once its LiveView has
+  joined. Typed into before that, the form is re-rendered on join with the
+  server's (empty) values and the login goes out blank, so this waits for
+  the connection first. Success is then checked on what a logged-in page
+  always shows (the Account menu), not on the flash.
+  """
   def log_in(session, username, password \\ @password) do
     session
     |> visit("/auth/identity")
+    |> assert_has("[data-phx-main].phx-connected")
     |> fill_in("Username", with: username)
     |> fill_in("Password", with: password)
     |> click_button("Log in")
-    |> assert_has("#flash-info", text: "Successfully authenticated.")
+    |> assert_path("/")
+    |> assert_has("nav a", text: "Your profile")
   end
 end
