@@ -72,22 +72,31 @@ defmodule FirestormWeb.Forums do
   """
   def get_user_by_username(username), do: Repo.get_by(User, %{username: username})
 
-  @doc "The users with the given (downcased) usernames, as a map from downcased username to user."
+  @doc "The users with the given usernames (any case), as a map from each given name to its user."
   def users_by_username([]), do: %{}
 
   def users_by_username(names) do
-    User
-    |> where([u], fragment("lower(?)", u.username) in ^names)
-    |> Repo.all()
-    |> Map.new(&{String.downcase(&1.username), &1})
+    by_lower =
+      User
+      |> where([u], fragment("lower(?)", u.username) in ^Enum.map(names, &String.downcase/1))
+      |> order_by(asc: :id)
+      |> Repo.all()
+      |> Enum.group_by(&String.downcase(&1.username))
+
+    # Usernames are only unique case-sensitively, so `@alice` could fit both
+    # "Alice" and "alice": the exact match wins, else the oldest account.
+    for name <- names, users = by_lower[String.downcase(name)], into: %{} do
+      {name, Enum.find(users, hd(users), &(&1.username == name))}
+    end
   end
 
   @doc "Up to `limit` users whose username starts with `prefix` (any case), shortest first."
   def search_usernames(prefix, limit \\ 6) do
-    pattern = String.replace(prefix, ~r/[\\%_]/, "\\\\\\0") <> "%"
+    pattern = String.replace(String.downcase(prefix), ~r/[\\%_]/, "\\\\\\0") <> "%"
 
+    # `lower(username) LIKE` rather than ILIKE, so it can use the index.
     User
-    |> where([u], ilike(u.username, ^pattern))
+    |> where([u], like(fragment("lower(?)", u.username), ^pattern))
     |> order_by([u], asc: fragment("length(?)", u.username), asc: u.username)
     |> limit(^limit)
     |> Repo.all()
@@ -1142,7 +1151,7 @@ defmodule FirestormWeb.Forums do
         end
       end)
 
-    tap_ok(result, &broadcast_post_updated/1)
+    tap_ok(result, &broadcast_post_updated(&1, editor))
   end
 
   defp edit_post(current, editor, attrs) do
@@ -1159,10 +1168,12 @@ defmodule FirestormWeb.Forums do
     end
   end
 
-  defp broadcast_post_updated(post) do
+  defp broadcast_post_updated(post, editor) do
     post = Repo.preload(post, [:thread, :user])
 
-    :ok = Notifications.post_edited(post)
+    # Mentions notify as the author's words: an admin's moderating edit
+    # doesn't ping anyone in their name.
+    if editor.id == post.user_id, do: :ok = Notifications.post_edited(post)
 
     payload = %ReplenishResponse{
       categories: [],
