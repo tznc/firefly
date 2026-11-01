@@ -15,6 +15,8 @@ defmodule FirestormWeb.Forums.Policy do
     * `:view_staff_log`, `:manage_site_settings` - admins
     * `:penalize_user` (silence or suspend; params: the user) - admins, on
       users who aren't admins
+    * `:lift_penalty` (params: the user) - admins, on anyone (a penalized
+      member may have been made an admin since)
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
     * `:edit_user` - the user themselves
@@ -55,6 +57,8 @@ defmodule FirestormWeb.Forums.Policy do
 
   def authorize(:penalize_user, %User{} = user, %User{} = target),
     do: if(Forums.admin?(target), do: {:error, :unauthorized}, else: admin(user))
+
+  def authorize(:lift_penalty, %User{} = user, %User{}), do: admin(user)
 
   def authorize(:moderate_thread, %User{} = user, _params), do: admin(user)
 

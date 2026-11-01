@@ -3,6 +3,7 @@ defmodule FirestormWeb.Web.AccountTest do
   use Bamboo.Test, shared: true
 
   import Ecto.Query, only: [from: 2]
+  import FirestormWeb.DataCase, only: [errors_on: 1]
 
   alias FirestormWeb.{
     AccountDeletion,
@@ -98,6 +99,23 @@ defmodule FirestormWeb.Web.AccountTest do
 
       assert [%{tag: "beam", level: "watching"}] = data.notification_levels.tags
       assert [%{thread_id: _}] = data.read_positions
+    end
+
+    test "conversations the user left show only their own messages", %{
+      ada: ada,
+      bob: bob,
+      conversation: conversation
+    } do
+      :ok = Messages.leave(conversation, ada)
+      user_fixture(%{username: "carol"})
+      {:ok, _} = Messages.add_participants(conversation, bob, "carol")
+
+      assert [chat] = AccountExport.build(ada).conversations
+      assert chat.id == conversation.id
+      assert [%{body: "Ada's private answer"}] = chat.your_messages
+      refute Map.has_key?(chat, :title)
+      refute Map.has_key?(chat, :participants)
+      refute AccountExport.to_json(ada) =~ "carol"
     end
 
     test "says nothing about other users beyond their usernames", %{ada: ada, bob: bob} do
@@ -202,6 +220,41 @@ defmodule FirestormWeb.Web.AccountTest do
                  "title" => "t",
                  "body" => "b"
                })
+    end
+
+    test "other users' notifications stop naming the deleted user", %{ada: ada, bob: bob} do
+      subjects = fn -> bob |> Forums.notifications_for() |> Enum.map(& &1.subject) end
+      assert Enum.any?(subjects.(), &(&1 =~ "@ada liked your post"))
+      assert Enum.any?(subjects.(), &(&1 =~ "@ada"))
+
+      {:ok, _} = AccountDeletion.delete_account(ada, "ada-password")
+
+      refute Enum.any?(subjects.(), &(&1 =~ "@ada"))
+      assert Enum.any?(subjects.(), &(&1 =~ "@deleted-user-#{ada.id} "))
+      # Ada's like was bob's reply's only one, so its notification is gone.
+      refute Enum.any?(subjects.(), &(&1 =~ "liked your post"))
+    end
+
+    test "the placeholder username is reserved, and a taken one doesn't crash deletion", %{
+      ada: ada
+    } do
+      assert {:error, changeset} =
+               Forums.register_user(%{
+                 username: "Deleted-User-#{ada.id}",
+                 email: "x@example.com",
+                 password: "password123"
+               })
+
+      assert "is reserved" in errors_on(changeset).username
+
+      assert {:ok, %{username: "gh-deleted-user-7"}} =
+               Forums.login_or_register_from_github(%{uid: 7, nickname: "deleted-user-7"})
+
+      # A legacy account that already has the name.
+      Repo.insert!(%User{username: "deleted-user-#{ada.id}", name: "x", api_token: "t"})
+
+      assert {:error, _} = AccountDeletion.delete_account(ada, "ada-password")
+      refute User.deleted?(Forums.get_user!(ada.id))
     end
 
     test "GitHub accounts confirm with their username", %{conn: conn} do
