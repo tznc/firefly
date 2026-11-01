@@ -87,4 +87,11 @@ defmodule FirestormWeb.Web.ThreadListsTest do
     |> assert_has("#top-periods a.btn-active", text: "Day")
     |> assert_has("#thread-#{thread.id}")
   end
+
+  test "Top doesn't re-rank live on every post", %{conn: conn, author: author, category: category} do
+    require Phoenix.LiveViewTest
+    {:ok, view, _html} = Phoenix.LiveViewTest.live(conn, ~p"/top")
+    thread_fixture(category, author, %{title: "Brand new"})
+    refute Phoenix.LiveViewTest.render(view) =~ "Brand new"
+  end
 end

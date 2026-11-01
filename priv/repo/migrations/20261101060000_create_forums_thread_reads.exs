@@ -14,6 +14,8 @@ defmodule FirestormWeb.Repo.Migrations.CreateForumsThreadReads do
 
     create unique_index(:forums_thread_reads, [:user_id, :thread_id])
     create index(:forums_thread_reads, [:thread_id])
+    # Top ranks posts within a period.
+    create index(:forums_posts, [:inserted_at])
 
     flush()
 
@@ -28,6 +30,7 @@ defmodule FirestormWeb.Repo.Migrations.CreateForumsThreadReads do
   end
 
   def down do
+    drop index(:forums_posts, [:inserted_at])
     drop table(:forums_thread_reads)
   end
 end
