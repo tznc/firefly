@@ -8,8 +8,8 @@ defmodule FirestormWeb.Posting do
   the `:message` limit, so one account can't message crowds. Liking only
   checks penalties (`check(user, :like)`), as do other public writes that
   aren't posts (adding people to a conversation, editing a thread's title or
-  tags, editing one's profile); flagging checks penalties and its own rate
-  limit (`check(user, :flag)`). Replying also needs the user to be able to
+  tags, editing one's profile); flagging checks penalties, a confirmed address
+  and its own rate limit (`check(user, :flag)`). Replying also needs the user to be able to
   read the thread (`:not_found` otherwise, as if it didn't exist): a
   reply-to address or API call outlives access to a category.
   """
@@ -36,8 +36,12 @@ defmodule FirestormWeb.Posting do
     end
   end
 
+  # Flags can hide posts, so unlike posting this needs a confirmed address
+  # whatever the `require_email_confirmation` setting says.
   def check(%User{} = user, :flag) do
-    with :ok <- check(user, :like), do: RateLimit.check_flag(user)
+    with :ok <- check(user, :like),
+         :ok <- if(User.confirmed?(user), do: :ok, else: {:error, :unconfirmed}),
+         do: RateLimit.check_flag(user)
   end
 
   def check(%User{} = user, :new_conversation) do

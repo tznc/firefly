@@ -4,18 +4,21 @@ defmodule FirestormWeb.Flags do
   `FirestormWeb.Forums.Flag`): one flag per member per post, never their own
   posts, not while silenced or suspended, and within the `:flag` rate limit.
 
-  When a post has the `flags_to_hide` site setting's number of pending
-  flags (from different members, since each flags once), it's hidden
-  pending review: members see a placeholder, its author and admins still
-  see it, and a hidden first post takes its thread off the lists. The
-  author is notified (`post_hidden`). Admins get one `flagged` notification
-  per post, updated with each new flag while unread. Flag counts are only
-  for staff (the `:view_flags` policy).
+  Flagging needs a confirmed account, so throwaway accounts can't add up
+  to a hide. When a post has the `flags_to_hide` site setting's number of
+  pending flags (from different members, since each flags once), it's
+  hidden pending review: members see a placeholder, its author and admins
+  still see it, and a hidden first post takes its thread off the lists.
+  The author is notified (`post_hidden`). Admins' own posts are never
+  hidden by flags; they're still flagged and reported. Admins get one
+  `flagged` notification per post, updated with each new flag while
+  unread. Flag counts are only for staff (the `:view_flags` policy). An
+  admin can unhide a post (`unhide/2`), which dismisses its pending flags.
   """
 
   import Ecto.Query
 
-  alias FirestormWeb.{Forums, Posting, Repo, SiteSettings}
+  alias FirestormWeb.{Forums, Posting, Repo, SiteSettings, StaffLog}
   alias FirestormWeb.Forums.{Flag, Notification, Post, User}
   alias FirestormWeb.Web.Paths
 
@@ -37,10 +40,59 @@ defmodule FirestormWeb.Flags do
     end
   end
 
+  # A concurrent flag by the same user (a double submit) loses on the
+  # unique index; that's the same as having flagged already.
   defp insert(post, user, attrs) do
-    %Flag{post_id: post.id, user_id: user.id}
-    |> Flag.changeset(attrs)
-    |> Repo.insert()
+    case %Flag{post_id: post.id, user_id: user.id} |> Flag.changeset(attrs) |> Repo.insert() do
+      {:error, %Ecto.Changeset{errors: errors}} = error ->
+        if Keyword.has_key?(errors, :post_id), do: {:error, :already_flagged}, else: error
+
+      result ->
+        result
+    end
+  end
+
+  @doc """
+  Unhides a post hidden after flags, as `admin` (the `:unhide_post`
+  policy): its pending flags are dismissed (`disagreed`), and the action is
+  logged. `{:error, :not_hidden}` if it isn't hidden (any more).
+  """
+  def unhide(%Post{} = post, %User{} = admin) do
+    now = DateTime.utc_now(:second)
+
+    result =
+      Repo.transact(fn ->
+        {count, _} =
+          Post
+          |> where([p], p.id == ^post.id and not is_nil(p.hidden_at))
+          |> Repo.update_all(set: [hidden_at: nil])
+
+        if count == 1 do
+          {flags, _} =
+            Flag
+            |> where([f], f.post_id == ^post.id and f.status == "pending")
+            |> Repo.update_all(
+              set: [status: "disagreed", reviewed_by_id: admin.id, reviewed_at: now]
+            )
+
+          post = Repo.preload(Repo.get!(Post, post.id), [:thread, :user])
+
+          StaffLog.record(admin, "post.unhide", post, %{
+            thread: post.thread.title,
+            author: post.user && post.user.username,
+            flags: flags
+          })
+
+          {:ok, post}
+        else
+          {:error, :not_hidden}
+        end
+      end)
+
+    with {:ok, post} <- result do
+      Forums.post_changed(:post_updated, post)
+      {:ok, post}
+    end
   end
 
   @doc "Whether `user` has flagged `post`."
@@ -81,9 +133,11 @@ defmodule FirestormWeb.Flags do
   end
 
   # Hides the post once it has enough pending flags. The update only matches
-  # a visible post, so concurrent flags hide (and notify) once.
+  # a visible post, so concurrent flags hide (and notify) once. Admins' posts
+  # (staff announcements, say) are left for staff to review instead.
   defp maybe_hide(post) do
-    if length(pending_flags(post)) >= SiteSettings.get("flags_to_hide") do
+    if length(pending_flags(post)) >= SiteSettings.get("flags_to_hide") and
+         not (post.user && Forums.admin?(post.user)) do
       {count, _} =
         Post
         |> where([p], p.id == ^post.id and is_nil(p.hidden_at))
@@ -103,7 +157,7 @@ defmodule FirestormWeb.Flags do
         subject: "Your post in \"#{post.thread.title}\" was hidden after members flagged it",
         body:
           "Staff will review it. Until then only you and staff can see it. " <>
-            "You can edit it to fix the problem.",
+            "If they find nothing wrong, it will be shown again.",
         url: url(post),
         thread_id: post.thread_id,
         post_id: post.id
@@ -161,5 +215,7 @@ defmodule FirestormWeb.Flags do
   @doc "A message for an error from `flag_post/3`."
   def message(:unauthorized), do: "You can't flag that post."
   def message(:already_flagged), do: "You already flagged this post."
+  def message(:unconfirmed), do: "Please confirm your email address before flagging posts."
+  def message(:not_hidden), do: "That post isn't hidden."
   def message(reason), do: Posting.message(reason)
 end

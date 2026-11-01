@@ -21,7 +21,7 @@ defmodule FirestormWeb.Forums.Policy do
     * `:flag_post` (same params) - members, on other people's posts that
       aren't deleted or already hidden
     * `:view_hidden_post` (params: the post) - its author and admins
-    * `:view_flags` (flag counts and reasons) - admins
+    * `:view_flags` (flag counts and reasons), `:unhide_post` - admins
     * `:edit_user` - the user themselves
     * `:view_conversation` (a private conversation: read and reply) - its
       participants, until they leave. Nobody else, admins included.
@@ -109,6 +109,7 @@ defmodule FirestormWeb.Forums.Policy do
       when action in [
              :view_hidden_post,
              :view_flags,
+             :unhide_post,
              :restore_post,
              :view_deleted_posts,
              :view_staff_log,

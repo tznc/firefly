@@ -723,13 +723,15 @@ defmodule FirestormWeb.Forums do
   end
 
   # A thread whose first post is hidden after flags (see `FirestormWeb.Flags`)
-  # is off the lists until staff review it.
+  # is off the lists until staff review it. Hidden posts are looked up first
+  # (a partial index; there are few), so the first post is only worked out
+  # for threads that have one.
   defp without_hidden_first_post(query) do
     where(
       query,
       [thread: t],
       fragment(
-        "NOT EXISTS (SELECT 1 FROM forums_posts fp WHERE fp.id = (SELECT f.id FROM forums_posts f WHERE f.thread_id = ? ORDER BY f.inserted_at, f.id LIMIT 1) AND fp.hidden_at IS NOT NULL)",
+        "NOT EXISTS (SELECT 1 FROM forums_posts h WHERE h.thread_id = ? AND h.hidden_at IS NOT NULL AND h.id = (SELECT f.id FROM forums_posts f WHERE f.thread_id = h.thread_id ORDER BY f.inserted_at, f.id LIMIT 1))",
         t.id
       )
     )
