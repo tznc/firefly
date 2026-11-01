@@ -1,10 +1,11 @@
 defmodule FirestormWeb.Web.Session do
   @moduledoc """
   Helpers for the logged-in user stored in the session (`"current_user"` holds
-  the user id). A deleted account's sessions resolve to nobody.
+  the user id). A deleted or suspended account's sessions resolve to nobody.
   """
 
   alias FirestormWeb.Forums
+  alias FirestormWeb.Forums.User
 
   @doc "The current user for a conn, from its assigns or its session."
   def current_user(%Plug.Conn{assigns: %{current_user: user}}), do: user
@@ -20,7 +21,7 @@ defmodule FirestormWeb.Web.Session do
 
   def user_from_id(id) do
     case Forums.get_user(id) do
-      %{deleted_at: nil} = user -> user
+      %{deleted_at: nil} = user -> if User.suspended?(user), do: nil, else: user
       _missing_or_deleted -> nil
     end
   end

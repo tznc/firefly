@@ -7,7 +7,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, RateLimit, Repo}
+  alias FirestormWeb.{Forums, Posting, RateLimit, Repo}
   alias FirestormWeb.Forums.{Post, Subscriptions, Thread}
 
   @impl true
@@ -145,6 +145,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     post = Forums.get_post!(thread, id)
 
     with true <- can?(user, :like_post, %{post: post, thread: Forums.get_thread!(thread.id)}),
+         :ok <- Posting.check(user, :like),
          :ok <- RateLimit.check_like(user) do
       if Forums.liked?(post, user),
         do: Forums.unlike_post(post, user),
@@ -153,7 +154,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       {:noreply, load_thread(socket, thread)}
     else
       false -> {:noreply, put_flash(socket, :error, denied_message(user))}
-      {:error, :rate_limited} -> {:noreply, put_flash(socket, :error, RateLimit.message())}
+      {:error, reason} -> {:noreply, put_flash(socket, :error, Posting.message(reason))}
     end
   end
 

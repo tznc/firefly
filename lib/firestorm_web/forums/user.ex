@@ -28,6 +28,10 @@ defmodule FirestormWeb.Forums.User do
     field(:hide_profile_activity, :boolean, default: false)
     field(:hide_from_directory, :boolean, default: false)
     field(:deleted_at, :utc_datetime)
+    field(:silenced_until, :utc_datetime)
+    field(:silence_reason, :string)
+    field(:suspended_until, :utc_datetime)
+    field(:suspend_reason, :string)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -72,6 +76,15 @@ defmodule FirestormWeb.Forums.User do
 
   @doc "Whether the account was deleted (it remains, anonymized, as its posts' author)."
   def deleted?(%__MODULE__{deleted_at: deleted_at}), do: not is_nil(deleted_at)
+
+  @doc "Whether the user is silenced now: they can read, but not post, message or like."
+  def silenced?(%__MODULE__{silenced_until: until}), do: in_force?(until)
+
+  @doc "Whether the user is suspended now: they can't log in."
+  def suspended?(%__MODULE__{suspended_until: until}), do: in_force?(until)
+
+  defp in_force?(nil), do: false
+  defp in_force?(until), do: DateTime.after?(until, DateTime.utc_now())
 
   @doc "Whether the user has confirmed their email address."
   def confirmed?(%__MODULE__{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)

@@ -28,6 +28,10 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "category.delete" => "Deleted category",
     "role.grant" => "Granted role",
     "role.revoke" => "Revoked role",
+    "user.silence" => "Silenced user",
+    "user.unsilence" => "Lifted silence",
+    "user.suspend" => "Suspended user",
+    "user.unsuspend" => "Lifted suspension",
     "admin.create" => "Created in admin",
     "admin.update" => "Updated in admin",
     "admin.delete" => "Deleted in admin"

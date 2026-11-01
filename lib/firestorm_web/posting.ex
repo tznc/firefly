@@ -1,15 +1,27 @@
 defmodule FirestormWeb.Posting do
   @moduledoc """
-  Whether a user may post right now (web, API and email): they must have a
+  Whether a user may post right now (web, API and email): they must not be
+  silenced or suspended (see `FirestormWeb.Penalties`), must have a
   confirmed email address and be within the posting rate limit, and a reply's
   thread must be open. Starting a private conversation also counts against
-  the `:message` limit, so one account can't message crowds.
+  the `:message` limit, so one account can't message crowds. Liking only
+  checks penalties (`check(user, :like)`).
   """
-  alias FirestormWeb.RateLimit
+  alias FirestormWeb.{Penalties, RateLimit}
   alias FirestormWeb.Forums.User
 
   def check(%User{} = user) do
-    if User.confirmed?(user), do: RateLimit.check_post(user), else: {:error, :unconfirmed}
+    with :ok <- check(user, :like) do
+      if User.confirmed?(user), do: RateLimit.check_post(user), else: {:error, :unconfirmed}
+    end
+  end
+
+  def check(%User{} = user, :like) do
+    cond do
+      User.suspended?(user) -> {:error, {:suspended, user.suspended_until}}
+      User.silenced?(user) -> {:error, {:silenced, user.silenced_until}}
+      true -> :ok
+    end
   end
 
   def check(%User{} = user, :new_conversation) do
@@ -19,6 +31,12 @@ defmodule FirestormWeb.Posting do
   def check(%User{} = user, %FirestormWeb.Forums.Thread{id: thread_id}) do
     if FirestormWeb.Forums.thread_closed?(thread_id), do: {:error, :closed}, else: check(user)
   end
+
+  def message({:silenced, until}),
+    do:
+      "You've been silenced #{Penalties.ends_text(until)}: you can read, but not post, message or like."
+
+  def message({:suspended, until}), do: "Your account is suspended #{Penalties.ends_text(until)}."
 
   def message(:closed), do: "This thread is closed to new replies."
   def message(:unconfirmed), do: "Please confirm your email address before posting."
