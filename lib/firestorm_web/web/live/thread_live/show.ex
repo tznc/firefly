@@ -82,6 +82,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:replies, replies)
     |> assign(:watched, !!user && Forums.watched_by?(thread, user))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
+    |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
   end
 
   defp first_unread_id(_replies, nil), do: nil
@@ -153,7 +154,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         </li>
         <li :for={post <- @replies}>
           <div
-            :if={post.id == first_unread_id(@replies, @last_read_post_id)}
+            :if={post.id == @first_unread_id}
             id="new-posts-divider"
             class="divider divider-primary text-xs text-primary"
           >
