@@ -131,6 +131,6 @@ jobs:
         # runtime.exs requires these; eval doesn't start the app, so dummies suffice
         run: |
           docker run --rm \
-            -e DATABASE_URL=ecto://user:pass@localhost/firefly \
-            -e SECRET_KEY_BASE="$(openssl rand -base64 48)" \
+            -e FIREFLY_DATABASE_URL=ecto://user:pass@localhost/firefly \
+            -e FIREFLY_SECRET_KEY_BASE="$(openssl rand -base64 48)" \
             firefly:ci /app/bin/firestorm_web eval 'IO.puts(Application.spec(:firestorm_web, :vsn))'

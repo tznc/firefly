@@ -5,10 +5,10 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 config :firestorm_web, FirestormWeb.Repo,
-  username: System.get_env("POSTGRES_USER", "postgres"),
-  password: System.get_env("POSTGRES_PASSWORD", "postgres"),
-  hostname: System.get_env("POSTGRES_HOST", "localhost"),
-  port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+  username: System.get_env("FIREFLY_POSTGRES_USER", "postgres"),
+  password: System.get_env("FIREFLY_POSTGRES_PASSWORD", "postgres"),
+  hostname: System.get_env("FIREFLY_POSTGRES_HOST", "localhost"),
+  port: String.to_integer(System.get_env("FIREFLY_POSTGRES_PORT", "5432")),
   database: "firestorm_web_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2,
@@ -31,10 +31,10 @@ config :phoenix_test,
       browser: :chromium,
       assets_dir: "assets",
       ecto_sandbox_stop_owner_delay: 100,
-      trace: System.get_env("PW_TRACE", "false") in ~w(t true),
-      screenshot: System.get_env("PW_SCREENSHOT", "false") in ~w(t true)
+      trace: System.get_env("FIREFLY_PW_TRACE", "false") in ~w(t true),
+      screenshot: System.get_env("FIREFLY_PW_SCREENSHOT", "false") in ~w(t true)
     ] ++
-      if(path = System.get_env("PLAYWRIGHT_CHROMIUM_PATH"),
+      if(path = System.get_env("FIREFLY_CHROMIUM_PATH"),
         # Use an already-installed Chromium instead of Playwright's own.
         do: [executable_path: path],
         else: []

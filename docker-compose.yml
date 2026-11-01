@@ -31,10 +31,10 @@ services:
       - /firestorm/assets/node_modules
     command: bash -c "mix deps.get && npm ci --prefix assets && mix ecto.create && mix ecto.migrate && mix phx.server"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
+      FIREFLY_POSTGRES_USER: postgres
+      FIREFLY_POSTGRES_PASSWORD: postgres
+      FIREFLY_POSTGRES_HOST: postgres
+      FIREFLY_POSTGRES_PORT: 5432
 
 volumes:
   pgdata:

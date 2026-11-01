@@ -2,7 +2,7 @@ defmodule FirestormWeb.Web.InboundController do
   @moduledoc """
   SendGrid Inbound Parse webhook for reply-by-email.
 
-  Configure SendGrid to POST to `/inbound/sendgrid?token=<INBOUND_EMAIL_TOKEN>`.
+  Configure SendGrid to POST to `/inbound/sendgrid?token=<FIREFLY_INBOUND_EMAIL_TOKEN>`.
   Requests without the shared token are rejected (and the endpoint is
   disabled when no token is configured). A reply is only posted when its
   reply-to address verifies (see `FirestormWeb.ReplyAddress`) and the sender
