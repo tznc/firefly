@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
   @moduledoc "Creates or edits a category."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   alias FirestormWeb.Forums
   alias FirestormWeb.Forums.Category
 

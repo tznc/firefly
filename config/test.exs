@@ -14,11 +14,31 @@ config :firestorm_web, FirestormWeb.Repo,
   pool_size: System.schedulers_online() * 2,
   ownership_timeout: 30_000
 
-# We don't run a server during test.
+# The server runs during tests so Playwright end-to-end tests can drive it.
 config :firestorm_web, FirestormWeb.Web.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "+r1xPk7Kz3gV0h7uN6pXqM1y2dJw8dW1H5rB0oYzq6c2Wc5yR6eLx9oQp3sZt4uV",
-  server: false
+  server: true
+
+# Let browser tests share the test's database transaction
+config :firestorm_web, sql_sandbox: true
+
+config :phoenix_test,
+  otp_app: :firestorm_web,
+  endpoint: FirestormWeb.Web.Endpoint,
+  playwright:
+    [
+      browser: :chromium,
+      assets_dir: "assets",
+      ecto_sandbox_stop_owner_delay: 100,
+      trace: System.get_env("PW_TRACE", "false") in ~w(t true),
+      screenshot: System.get_env("PW_SCREENSHOT", "false") in ~w(t true)
+    ] ++
+      if(path = System.get_env("PLAYWRIGHT_CHROMIUM_PATH"),
+        # Use an already-installed Chromium instead of Playwright's own.
+        do: [executable_path: path],
+        else: []
+      )
 
 # Print only warnings and errors during test
 config :logger, level: :warning

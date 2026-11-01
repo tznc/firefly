@@ -11,9 +11,15 @@ defmodule FirestormWeb.Web.Endpoint do
     same_site: "Lax"
   ]
 
+  # Browser (Playwright) tests share the test's database transaction via
+  # metadata in the user agent; see FirestormWeb.Web.LiveAcceptance.
+  if Application.compile_env(:firestorm_web, :sql_sandbox) do
+    plug(Phoenix.Ecto.SQL.Sandbox)
+  end
+
   socket("/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options]],
-    longpoll: [connect_info: [session: @session_options]]
+    websocket: [connect_info: [:user_agent, session: @session_options]],
+    longpoll: [connect_info: [:user_agent, session: @session_options]]
   )
 
   socket("/socket", FirestormWeb.Web.UserSocket,

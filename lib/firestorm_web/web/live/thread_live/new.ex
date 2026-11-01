@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.ThreadLive.New do
   @moduledoc "Starts a new thread (title plus first post) in a category."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   alias FirestormWeb.Forums
   alias FirestormWeb.Forums.Thread
   alias FirestormWeb.Web.Editor

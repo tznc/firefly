@@ -32,9 +32,9 @@ defmodule FirestormWeb.Web.Router do
   scope "/", FirestormWeb.Web do
     pipe_through(:browser)
 
-    # Pages that need a logged-in user. Declared first so that e.g.
-    # /categories/new wins over /categories/:id.
-    live_session :authenticated, on_mount: [{FirestormWeb.Web.UserAuth, :require_user}] do
+    live_session :default, on_mount: [{FirestormWeb.Web.UserAuth, :mount_current_user}] do
+      # Declared first so that e.g. /categories/new wins over /categories/:id.
+      # These LiveViews also run `on_mount {UserAuth, :require_user}`.
       live("/threads/watching", ThreadLive.Watching, :index)
       live("/threads/participating", ThreadLive.Participating, :index)
       live("/notifications", NotificationLive.Index, :index)
@@ -45,9 +45,7 @@ defmodule FirestormWeb.Web.Router do
       live("/categories/:category_id/threads/new", ThreadLive.New, :new)
       live("/categories/:category_id/threads/:id/edit", ThreadLive.Edit, :edit)
       live("/categories/:category_id/threads/:thread_id/posts/new", PostLive.New, :new)
-    end
 
-    live_session :default, on_mount: [{FirestormWeb.Web.UserAuth, :mount_current_user}] do
       live("/", ThreadLive.Recent, :index)
       live("/login", AuthLive.Login, :login)
       live("/auth/identity", AuthLive.Identity, :new)

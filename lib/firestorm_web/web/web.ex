@@ -56,6 +56,10 @@ defmodule FirestormWeb.Web do
     quote do
       use Phoenix.LiveView
 
+      if Application.compile_env(:firestorm_web, :sql_sandbox) do
+        on_mount(FirestormWeb.Web.LiveAcceptance)
+      end
+
       unquote(html_helpers())
     end
   end

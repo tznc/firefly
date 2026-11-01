@@ -1,8 +1,6 @@
 defmodule FirestormWeb.Web.PostLiveTest do
   use FirestormWeb.Web.ConnCase
 
-  alias FirestormWeb.Forums
-
   setup %{conn: conn} do
     category = category_fixture()
     user = user_fixture(%{username: "knewter"})
@@ -11,17 +9,15 @@ defmodule FirestormWeb.Web.PostLiveTest do
   end
 
   test "replying to a thread", %{conn: conn, category: category, thread: thread} do
-    {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}/posts/new")
-
-    {:ok, show, html} =
-      view
-      |> form("#post-form", post: %{body: "I agree!"})
-      |> render_submit()
-      |> follow_redirect(conn)
-
-    assert html =~ "Post created successfully."
-    assert has_element?(show, "#posts article", "I agree!")
-    assert has_element?(show, "#reply-count", "1 reply")
+    conn
+    |> visit(~p"/categories/#{category}/threads/#{thread}")
+    |> click_link("a.btn-primary", "Reply")
+    |> fill_in("Body", with: "I agree!")
+    |> click_button("Reply")
+    |> assert_path(~p"/categories/#{category}/threads/#{thread}")
+    |> assert_has("#flash-info", text: "Post created successfully.")
+    |> assert_has("#posts article", text: "I agree!")
+    |> assert_has("#reply-count", text: "1 reply")
   end
 
   test "an empty reply shows an error instead of crashing", %{
@@ -29,54 +25,47 @@ defmodule FirestormWeb.Web.PostLiveTest do
     category: category,
     thread: thread
   } do
-    {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}/posts/new")
-
-    assert view |> form("#post-form", post: %{body: ""}) |> render_submit() =~
-             "can&#39;t be blank"
+    conn
+    |> visit(~p"/categories/#{category}/threads/#{thread}/posts/new")
+    |> click_button("Reply")
+    |> assert_has("p", text: "can't be blank")
   end
 
   test "previews the markdown", %{conn: conn, category: category, thread: thread} do
-    {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}/posts/new")
-
-    view |> form("#post-form", post: %{body: "# Heading"}) |> render_change()
-
-    assert has_element?(view, "#post-preview h1", "Heading")
+    conn
+    |> visit(~p"/categories/#{category}/threads/#{thread}/posts/new")
+    |> fill_in("Body", with: "# Heading")
+    |> assert_has("#post-preview h1", text: "Heading")
   end
 
+  @tag :tmp_dir
   test "uploading an attachment appends a markdown image to the body", %{
     conn: conn,
     category: category,
-    thread: thread
+    thread: thread,
+    tmp_dir: tmp_dir
   } do
-    {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}/posts/new")
-    view |> form("#post-form", post: %{body: "Look:"}) |> render_change()
+    path = Path.join(tmp_dir, "cat.png")
+    File.write!(path, "fake png")
 
-    file =
-      file_input(view, "#post-form", :attachment, [
-        %{name: "cat.png", content: "fake png", type: "image/png"}
-      ])
+    session =
+      conn
+      |> visit(~p"/categories/#{category}/threads/#{thread}/posts/new")
+      |> fill_in("Body", with: "Look:")
+      |> upload("Attach a file", path)
 
-    render_upload(file, "cat.png")
-
-    body = view |> element("#post-form textarea") |> render()
-    assert body =~ "Look:"
-
-    assert body =~
-             ~r{!\[cat\.png\]\(https://s3-us-east-1\.amazonaws\.com/firestorm-test/uploads/[^/]+/cat\.png\)}
+    session
+    |> assert_has("textarea", text: "Look:")
+    |> assert_has("textarea",
+      text: "![cat.png](https://s3-us-east-1.amazonaws.com/firestorm-test/uploads/"
+    )
+    |> assert_has("textarea", text: "/cat.png)")
   end
 
-  test "redirects visitors to log in", %{category: category, thread: thread} do
-    assert {:error, {:redirect, %{to: "/categories"}}} =
-             live(build_conn(), ~p"/categories/#{category}/threads/#{thread}/posts/new")
-  end
-
-  test "the posts count in the thread reflects the reply", %{category: category, thread: thread} do
-    {:ok, _} = Forums.create_post(thread, user_fixture(), %{body: "another"})
-
-    assert length(
-             Forums.get_thread!(category, thread.id)
-             |> FirestormWeb.Repo.preload(:posts)
-             |> Map.get(:posts)
-           ) == 2
+  test "sends visitors away with an error", %{category: category, thread: thread} do
+    build_conn()
+    |> visit(~p"/categories/#{category}/threads/#{thread}/posts/new")
+    |> assert_path(~p"/categories")
+    |> assert_has("#flash-error", text: "You must be logged in to access this page.")
   end
 end

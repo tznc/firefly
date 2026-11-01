@@ -4,67 +4,68 @@ defmodule FirestormWeb.Web.AuthLiveTest do
   alias FirestormWeb.Forums
 
   test "the login page offers GitHub and username/password", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/login")
-
-    assert has_element?(view, ~s(a[href="/auth/github"]), "Log in with GitHub")
-    assert has_element?(view, ~s(a[href="/auth/identity"]), "Create Account")
+    conn
+    |> visit(~p"/")
+    |> click_link("Log in")
+    |> assert_has(~s(a[href="/auth/github"]), text: "Log in with GitHub")
+    |> assert_has(~s(a[href="/auth/identity"]), text: "Create Account")
   end
 
   test "the identity form requires a username and password", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/auth/identity")
-
-    html = view |> form("#identity-form", user: %{username: "", password: ""}) |> render_submit()
-    assert html =~ "can&#39;t be blank"
+    conn
+    |> visit(~p"/auth/identity")
+    |> click_button("Log in or register")
+    |> assert_has("p", text: "can't be blank", count: 2)
   end
 
-  test "submitting the identity form posts to the identity callback", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/auth/identity")
+  test "registering through the identity form logs you in", %{conn: conn} do
+    conn
+    |> visit(~p"/auth/identity")
+    |> fill_in("Username", with: "newbie")
+    |> fill_in("Password", with: "s3cret!")
+    |> click_button("Log in or register")
+    |> assert_path(~p"/")
+    |> assert_has("#flash-info", text: "Successfully authenticated.")
+    |> assert_has("nav a", text: "Your profile")
 
-    form = form(view, "#identity-form", user: %{username: "newbie", password: "s3cret!"})
-    render_submit(form)
-
-    conn = follow_trigger_action(form, conn)
-    assert redirected_to(conn) == ~p"/"
-    user = Forums.get_user_by_username("newbie")
-    assert get_session(conn, :current_user) == user.id
+    assert Forums.get_user_by_username("newbie")
   end
 
-  describe "AuthController" do
-    test "a wrong password redirects back with an error", %{conn: conn} do
-      {:ok, _} =
-        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+  test "a wrong password is rejected", %{conn: conn} do
+    {:ok, _} = Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
 
-      conn =
-        post(conn, ~p"/auth/identity/callback", %{
-          "user" => %{"username" => "newbie", "password" => "wrong!"}
-        })
+    conn
+    |> visit(~p"/auth/identity")
+    |> fill_in("Username", with: "newbie")
+    |> fill_in("Password", with: "wrong!")
+    |> click_button("Log in or register")
+    |> assert_path(~p"/auth/identity")
+    |> assert_has("#flash-error", text: "No user found with that username or password")
+  end
 
-      assert redirected_to(conn) == ~p"/auth/identity"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "No user found"
-      refute get_session(conn, :current_user)
-    end
+  test "a too-short password on registration explains why", %{conn: conn} do
+    conn
+    |> visit(~p"/auth/identity")
+    |> fill_in("Username", with: "newbie")
+    |> fill_in("Password", with: "abc")
+    |> click_button("Log in or register")
+    |> assert_has("#flash-error", text: "password should be at least 6")
+  end
 
-    test "a too-short password on registration explains why", %{conn: conn} do
-      conn =
-        post(conn, ~p"/auth/identity/callback", %{
-          "user" => %{"username" => "newbie", "password" => "abc"}
-        })
+  test "logging out clears the session", %{conn: conn} do
+    conn
+    |> log_in_as(user_fixture())
+    |> visit(~p"/")
+    |> click_link("Log out")
+    |> assert_path(~p"/")
+    |> assert_has("#flash-info", text: "You have been logged out!")
+    |> assert_has("nav a", text: "Log in")
+  end
 
-      assert redirected_to(conn) == ~p"/auth/identity"
-      assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "password should be at least 6"
-    end
-
-    test "logging out clears the session", %{conn: conn} do
-      conn = conn |> log_in_as(user_fixture()) |> delete(~p"/auth/logout")
-
-      assert redirected_to(conn) == ~p"/"
-      refute get_session(conn, :current_user)
-      assert Phoenix.Flash.get(conn.assigns.flash, :info) == "You have been logged out!"
-    end
-
-    test "an unknown provider redirects to the login page", %{conn: conn} do
-      conn = get(conn, "/auth/myspace")
-      assert redirected_to(conn) == ~p"/login"
-    end
+  test "an unknown provider redirects to the login page", %{conn: conn} do
+    conn
+    |> visit("/auth/myspace")
+    |> assert_path(~p"/login")
+    |> assert_has("#flash-error", text: "Unknown login provider.")
   end
 end

@@ -200,7 +200,7 @@ defmodule FirestormWeb.Web.ForumComponents do
           <.link
             navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}/posts/new"}
             class="btn btn-ghost btn-sm btn-square"
-            aria-label="reply"
+            aria-label={"Reply to post #{@post.id}"}
           >
             <.icon name="hero-arrow-uturn-left" class="size-4" />
           </.link>

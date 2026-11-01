@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.UserLive.Edit do
   @moduledoc "Edits the current user's own profile."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   alias FirestormWeb.Forums
   alias FirestormWeb.Forums.User
 

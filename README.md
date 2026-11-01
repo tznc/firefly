@@ -35,10 +35,21 @@ users with the `admin` role (the seeds create `admin` / `password`).
 
 ### Tests
 
+Page tests use [PhoenixTest](https://hexdocs.pm/phoenix_test); critical user
+flows (log in, post, live replies, notifications, admin) also run end to end in
+Chromium with [PhoenixTest.Playwright](https://hexdocs.pm/phoenix_test_playwright)
+(`test/e2e`).
+
 ```sh
-mix test        # contexts, LiveViews, API and channels
-mix precommit   # compile --warnings-as-errors, format, credo, test
+npx --prefix assets playwright install chromium   # once, for the e2e tests
+mix test                   # everything
+mix test --exclude e2e     # without the browser
+mix test --only e2e        # just the browser flows
+mix precommit              # compile --warnings-as-errors, format, credo, test
 ```
+
+Set `PLAYWRIGHT_CHROMIUM_PATH` to use an already-installed Chromium, and
+`PW_TRACE=true` to record Playwright traces.
 
 ## Clients
 

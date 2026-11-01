@@ -5,5 +5,7 @@ defmodule FirestormWeb.Web.ThreadLive.Watching do
     path: "/threads/watching",
     empty: "You're not watching any threads yet."
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   defp load(user), do: Forums.watched_threads(user)
 end

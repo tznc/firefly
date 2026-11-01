@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.PostLive.New do
   @moduledoc "Replies to a thread."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   alias FirestormWeb.Forums
   alias FirestormWeb.Forums.Post
   alias FirestormWeb.Web.Editor

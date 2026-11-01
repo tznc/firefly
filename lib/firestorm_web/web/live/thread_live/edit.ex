@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
   @moduledoc "Renames a thread."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   alias FirestormWeb.Forums
   alias FirestormWeb.Forums.Thread
 

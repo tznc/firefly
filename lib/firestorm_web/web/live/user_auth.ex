@@ -4,8 +4,9 @@ defmodule FirestormWeb.Web.UserAuth do
 
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
       the unread notification count and the current path.
-    * `:require_user` - like `:mount_current_user`, but redirects to the
-      categories page when nobody is logged in.
+    * `:require_user` - redirects to the categories page when nobody is
+      logged in. Used by individual LiveViews, after the live session's
+      `:mount_current_user`.
   """
 
   use FirestormWeb.Web, :verified_routes
@@ -20,8 +21,11 @@ defmodule FirestormWeb.Web.UserAuth do
     {:cont, mount_current_user(socket, session)}
   end
 
-  def on_mount(:require_user, _params, session, socket) do
-    socket = mount_current_user(socket, session)
+  def on_mount(:require_user, params, session, socket) do
+    {:cont, socket} =
+      if Map.has_key?(socket.assigns, :current_user),
+        do: {:cont, socket},
+        else: on_mount(:mount_current_user, params, session, socket)
 
     if socket.assigns.current_user do
       {:cont, socket}

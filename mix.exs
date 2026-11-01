@@ -43,6 +43,8 @@ defmodule FirestormWeb.Mixfile do
       {:phoenix_html, "~> 4.4"},
       {:phoenix_live_reload, "~> 1.7", only: :dev},
       {:lazy_html, ">= 0.1.0", only: :test},
+      {:phoenix_test, "~> 0.14", only: :test, runtime: false},
+      {:phoenix_test_playwright, "~> 0.19", only: :test, runtime: false},
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
       {:bandit, "~> 1.14"},

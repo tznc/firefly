@@ -12,26 +12,26 @@ defmodule FirestormWeb.Web.NotificationLiveTest do
     {:ok, post} = Forums.create_post(thread, fred, %{body: "Herp Derp"})
 
     {:ok, notification} =
-      Forums.notify(
-        bob,
-        Notification.thread_new_post_notification(%{thread | category_id: category.id}, post)
-      )
+      Forums.notify(bob, Notification.thread_new_post_notification(thread, post))
 
     {:ok, bob: bob, fred: fred, notification: notification}
   end
 
   test "lists your notifications, with a count in the nav", %{conn: conn, bob: bob} do
-    {:ok, view, _html} = live(log_in_as(conn, bob), ~p"/notifications")
-
-    assert has_element?(view, "#notifications li", "There was a new post in thread: GenStage")
-    assert has_element?(view, ~s{a[aria-label="Notifications (1)"]})
+    conn
+    |> log_in_as(bob)
+    |> visit(~p"/notifications")
+    |> assert_has("#notifications li", text: "There was a new post in thread: GenStage")
+    |> assert_has(~s{a[aria-label="Notifications (1)"]})
   end
 
   test "shows a notification", %{conn: conn, bob: bob, notification: notification} do
-    {:ok, view, html} = live(log_in_as(conn, bob), ~p"/notifications/#{notification}")
-
-    assert html =~ "Herp Derp"
-    assert has_element?(view, ~s(a[href="#{notification.url}"]), "Visit")
+    conn
+    |> log_in_as(bob)
+    |> visit(~p"/notifications")
+    |> click_link("There was a new post in thread: GenStage")
+    |> assert_has("p", text: "Herp Derp")
+    |> assert_has(~s(a[href="#{notification.url}"]), text: "Visit")
   end
 
   test "can't show someone else's notification", %{
@@ -39,13 +39,14 @@ defmodule FirestormWeb.Web.NotificationLiveTest do
     fred: fred,
     notification: notification
   } do
-    assert {:error, {:live_redirect, %{to: "/notifications", flash: flash}}} =
-             live(log_in_as(conn, fred), ~p"/notifications/#{notification}")
-
-    assert flash["error"] == "Notification not found."
+    conn
+    |> log_in_as(fred)
+    |> visit(~p"/notifications/#{notification}")
+    |> assert_path(~p"/notifications")
+    |> assert_has("#flash-error", text: "Notification not found.")
   end
 
   test "requires a logged-in user", %{conn: conn} do
-    assert {:error, {:redirect, %{to: "/categories"}}} = live(conn, ~p"/notifications")
+    conn |> visit(~p"/notifications") |> assert_path(~p"/categories")
   end
 end

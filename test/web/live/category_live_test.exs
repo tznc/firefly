@@ -8,67 +8,66 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
       category_fixture("Elixir")
       category_fixture("Elm")
 
-      {:ok, view, html} = live(conn, ~p"/categories")
-
-      assert html =~ "Categories"
-      assert has_element?(view, "#categories li", "Elixir")
-      assert has_element?(view, "#categories li", "Elm")
+      conn
+      |> visit(~p"/categories")
+      |> assert_has("h1", text: "Categories")
+      |> assert_has("#categories li", text: "Elixir")
+      |> assert_has("#categories li", text: "Elm")
     end
 
     test "shows categories created elsewhere without a reload", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/categories")
-      refute has_element?(view, "#categories", "Erlang")
+      session = conn |> visit(~p"/categories") |> refute_has("#categories", text: "Erlang")
 
       category_fixture("Erlang")
 
-      assert render(view) =~ "Erlang"
+      assert_has(session, "#categories li", text: "Erlang")
     end
   end
 
   describe "new" do
-    test "redirects visitors to log in", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/categories", flash: flash}}} =
-               live(conn, ~p"/categories/new")
-
-      assert flash["error"] == "You must be logged in to access this page."
+    test "sends visitors away with an error", %{conn: conn} do
+      conn
+      |> visit(~p"/categories")
+      |> click_link("New Category")
+      |> assert_path(~p"/categories")
+      |> assert_has("#flash-error", text: "You must be logged in to access this page.")
     end
 
     test "creates a category", %{conn: conn} do
-      conn = log_in_as(conn, user_fixture())
-      {:ok, view, _html} = live(conn, ~p"/categories/new")
-
-      {:ok, _show, html} =
-        view
-        |> form("#category-form", category: %{title: "Erlang"})
-        |> render_submit()
-        |> follow_redirect(conn)
-
-      assert html =~ "Category created successfully."
-      assert html =~ "Erlang"
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories")
+      |> click_link("New Category")
+      |> fill_in("Title", with: "Erlang")
+      |> click_button("Create Category")
+      |> assert_has("#flash-info", text: "Category created successfully.")
+      |> assert_has("h1", text: "Erlang")
     end
 
     test "shows errors for an invalid category", %{conn: conn} do
-      conn = log_in_as(conn, user_fixture())
-      {:ok, view, _html} = live(conn, ~p"/categories/new")
-
-      assert view |> form("#category-form", category: %{title: ""}) |> render_submit() =~
-               "can&#39;t be blank"
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/new")
+      |> fill_in("Title", with: "")
+      |> click_button("Create Category")
+      |> assert_has("p", text: "can't be blank")
+      |> assert_path(~p"/categories/new")
     end
   end
 
   describe "edit" do
     test "renames a category", %{conn: conn} do
       category = category_fixture("Elixir")
-      conn = log_in_as(conn, user_fixture())
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/edit")
 
-      {:ok, _show, html} =
-        view
-        |> form("#category-form", category: %{title: "Elixir & OTP"})
-        |> render_submit()
-        |> follow_redirect(conn)
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/#{category}")
+      |> click_link("Edit")
+      |> fill_in("Title", with: "Elixir & OTP")
+      |> click_button("Save Category")
+      |> assert_has("#flash-info", text: "Category updated successfully.")
+      |> assert_has("h1", text: "Elixir & OTP")
 
-      assert html =~ "Category updated successfully."
       assert Forums.get_category!(category.id).title == "Elixir & OTP"
     end
   end
@@ -81,44 +80,47 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
       {:ok, _} = Forums.create_post(thread, user, %{body: "Yup"})
       conn = log_in_as(conn, user)
 
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}")
-      assert has_element?(view, "#thread-#{thread.id} .thread-title", "OTP is cool")
-      assert has_element?(view, "#thread-#{thread.id} .posts-count.badge-primary", "2")
+      conn
+      |> visit(~p"/categories/#{category}")
+      |> assert_has("#thread-#{thread.id} .thread-title", text: "OTP is cool")
+      |> assert_has("#thread-#{thread.id} .posts-count.badge-primary", text: "2")
+      |> click_link("OTP is cool")
+      |> assert_has("h1", text: "OTP is cool")
 
-      {:ok, _thread_view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}")
-
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}")
-      assert has_element?(view, "#thread-#{thread.id} .posts-count.badge-ghost", "2")
+      conn
+      |> visit(~p"/categories/#{category}")
+      |> assert_has("#thread-#{thread.id} .posts-count.badge-ghost", text: "2")
     end
 
     test "shows new threads without a reload", %{conn: conn} do
       category = category_fixture("Elixir")
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}")
+      session = visit(conn, ~p"/categories/#{category}")
 
       thread = thread_fixture(category, user_fixture(), %{title: "Live!"})
 
-      assert render(view) =~ "Live!"
-      assert has_element?(view, "#thread-#{thread.id}")
+      assert_has(session, "#thread-#{thread.id}", text: "Live!")
     end
 
     test "lets a logged-in user delete the category", %{conn: conn} do
       category = category_fixture("Doomed")
-      conn = log_in_as(conn, user_fixture())
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}")
 
-      {:ok, _index, html} =
-        view |> element("button", "Delete") |> render_click() |> follow_redirect(conn)
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/#{category}")
+      |> click_button("Delete")
+      |> assert_path(~p"/categories")
+      |> assert_has("#flash-info", text: "Category deleted successfully.")
 
-      assert html =~ "Category deleted successfully."
       assert_raise Ecto.NoResultsError, fn -> Forums.get_category!(category.id) end
     end
 
     test "hides edit and delete from visitors", %{conn: conn} do
       category = category_fixture("Elixir")
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}")
 
-      refute has_element?(view, "button", "Delete")
-      refute has_element?(view, "a", "Edit")
+      conn
+      |> visit(~p"/categories/#{category}")
+      |> refute_has("button", text: "Delete")
+      |> refute_has("a", text: "Edit")
     end
   end
 end

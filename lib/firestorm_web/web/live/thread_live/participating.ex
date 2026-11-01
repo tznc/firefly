@@ -5,5 +5,7 @@ defmodule FirestormWeb.Web.ThreadLive.Participating do
     path: "/threads/participating",
     empty: "You haven't posted in any threads yet."
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   defp load(user), do: Forums.participating_threads(user)
 end

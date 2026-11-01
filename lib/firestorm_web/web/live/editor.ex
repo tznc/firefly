@@ -76,6 +76,7 @@ defmodule FirestormWeb.Web.Editor do
       <.input
         field={@field}
         type="textarea"
+        label="Body"
         rows="8"
         placeholder={@placeholder}
         phx-debounce="300"

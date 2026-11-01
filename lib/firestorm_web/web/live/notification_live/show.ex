@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.NotificationLive.Show do
   @moduledoc "One of the current user's notifications."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :require_user})
+
   alias FirestormWeb.Forums
 
   @impl true

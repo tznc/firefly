@@ -68,6 +68,16 @@ jobs:
           mix assets.setup
           mix assets.build
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('assets/package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        run: npx --prefix assets playwright install chromium --with-deps
+
+      # Unit, LiveView (PhoenixTest) and end-to-end browser (PhoenixTest.Playwright) tests
       - run: mix test
 
   dialyzer:

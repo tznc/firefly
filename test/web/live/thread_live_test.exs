@@ -14,66 +14,61 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       thread_fixture(category, user, %{title: "OTP is cool"})
       thread_fixture(category_fixture("Elm"), user, %{title: "Elm is neat"})
 
-      {:ok, _view, html} = live(conn, ~p"/")
-
-      assert html =~ "OTP is cool"
-      assert html =~ "Elm is neat"
+      conn
+      |> visit(~p"/")
+      |> assert_has(".thread-title", text: "OTP is cool")
+      |> assert_has(".thread-title", text: "Elm is neat")
     end
 
     test "updates when a thread gets a new post", %{conn: conn, category: category, user: user} do
-      {:ok, view, _html} = live(conn, ~p"/")
+      session = visit(conn, ~p"/")
       thread = thread_fixture(category, user, %{title: "Fresh"})
-
-      assert render(view) =~ "Fresh"
+      assert_has(session, ".thread-title", text: "Fresh")
 
       {:ok, _} = Forums.create_post(thread, user, %{body: "bump"})
-      assert has_element?(view, "#thread-#{thread.id} .posts-count", "2")
+      assert_has(session, "#thread-#{thread.id} .posts-count", text: "2")
     end
   end
 
   describe "new" do
     test "creates a thread", %{conn: conn, category: category, user: user} do
-      conn = log_in_as(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/new")
-
-      {:ok, _show, html} =
-        view
-        |> form("#thread-form", thread: %{title: "OTP is cool", body: "Don't you think?"})
-        |> render_submit()
-        |> follow_redirect(conn)
-
-      assert html =~ "Thread created successfully."
-      assert html =~ "OTP is cool"
-      assert html =~ "Don&#39;t you think?"
+      conn
+      |> log_in_as(user)
+      |> visit(~p"/categories/#{category}")
+      |> click_link("New Thread")
+      |> fill_in("Title", with: "OTP is cool")
+      |> fill_in("Body", with: "Don't you think?")
+      |> click_button("Create Thread")
+      |> assert_has("#flash-info", text: "Thread created successfully.")
+      |> assert_has("h1", text: "OTP is cool")
+      |> assert_has("#posts article", text: "Don't you think?")
     end
 
     test "shows title and body errors", %{conn: conn, category: category, user: user} do
-      conn = log_in_as(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/new")
+      conn
+      |> log_in_as(user)
+      |> visit(~p"/categories/#{category}/threads/new")
+      |> click_button("Create Thread")
+      |> assert_has("p", text: "can't be blank", count: 2)
 
-      html = view |> form("#thread-form", thread: %{title: "", body: ""}) |> render_submit()
-
-      assert html =~ "can&#39;t be blank"
       assert Forums.list_threads(category) == []
     end
 
     test "previews the markdown as you type", %{conn: conn, category: category, user: user} do
-      conn = log_in_as(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/new")
-
-      view
-      |> form("#thread-form", thread: %{title: "t", body: "**bold** :fire:"})
-      |> render_change()
-
-      assert has_element?(view, "#post-preview strong", "bold")
-      assert render(view) =~ "🔥"
+      conn
+      |> log_in_as(user)
+      |> visit(~p"/categories/#{category}/threads/new")
+      |> fill_in("Body", with: "**bold** :fire:")
+      |> assert_has("#post-preview strong", text: "bold")
+      |> assert_has("#post-preview", text: "🔥")
     end
 
-    test "redirects visitors to log in", %{conn: conn, category: category} do
-      assert {:error, {:redirect, %{to: "/categories", flash: flash}}} =
-               live(conn, ~p"/categories/#{category}/threads/new")
-
-      assert flash["error"] == "You must be logged in to access this page."
+    test "sends visitors away with an error", %{conn: conn, category: category} do
+      conn
+      |> visit(~p"/categories/#{category}")
+      |> click_link("New Thread")
+      |> assert_path(~p"/categories")
+      |> assert_has("#flash-error", text: "You must be logged in to access this page.")
     end
   end
 
@@ -86,46 +81,47 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       thread = thread_fixture(category, user)
       {:ok, _} = Forums.create_post(thread, user_fixture(%{username: "bob"}), %{body: "I agree!"})
 
-      {:ok, view, html} = live(conn, ~p"/categories/#{category}/threads/#{thread}")
-
-      assert html =~ "OTP is cool"
-      assert has_element?(view, "#posts article", "Don't you think?")
-      assert has_element?(view, "#posts article", "I agree!")
-      assert has_element?(view, "#posts .username", "@bob")
-      assert has_element?(view, "#reply-count", "1 reply")
+      conn
+      |> visit(~p"/categories/#{category}/threads/#{thread}")
+      |> assert_has("h1", text: "OTP is cool")
+      |> assert_has("#posts article", text: "Don't you think?")
+      |> assert_has("#posts article", text: "I agree!")
+      |> assert_has("#posts .username", text: "@bob")
+      |> assert_has("#reply-count", text: "1 reply")
     end
 
     test "shows new posts without a reload", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}")
+      session = visit(conn, ~p"/categories/#{category}/threads/#{thread}")
 
       {:ok, post} = Forums.create_post(thread, user, %{body: "Live reply"})
 
-      assert has_element?(view, "#post-#{post.id}", "Live reply")
+      assert_has(session, "#post-#{post.id}", text: "Live reply")
     end
 
     test "watching and unwatching", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
 
-      {:ok, view, _html} =
-        live(log_in_as(conn, user), ~p"/categories/#{category}/threads/#{thread}")
+      session =
+        conn
+        |> log_in_as(user)
+        |> visit(~p"/categories/#{category}/threads/#{thread}")
+        |> click_button("watch")
+        |> assert_has("#unwatch")
 
-      assert has_element?(view, "#watch")
-      view |> element("#watch") |> render_click()
-      assert has_element?(view, "#unwatch")
       assert Forums.watched_by?(thread, user)
 
-      view |> element("#unwatch") |> render_click()
-      assert has_element?(view, "#watch")
+      session |> click_button("unwatch") |> assert_has("#watch")
       refute Forums.watched_by?(thread, user)
     end
 
     test "visitors can't watch", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}")
 
-      assert view |> element("#watch") |> render_click() =~
-               "You must be logged in to access this page."
+      conn
+      |> visit(~p"/categories/#{category}/threads/#{thread}")
+      |> click_button("watch")
+      |> assert_has("#flash-error", text: "You must be logged in to access this page.")
     end
 
     test "renders oEmbeds for links in posts", %{conn: conn, category: category, user: user} do
@@ -135,20 +131,21 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       thread =
         thread_fixture(category, user, %{body: "This is a cool video, check it out: #{url}"})
 
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}")
-
-      assert has_element?(view, ~s([data-oembed-url="#{url}"]), "lolno")
+      conn
+      |> visit(~p"/categories/#{category}/threads/#{thread}")
+      |> assert_has(~s([data-oembed-url="#{url}"]), text: "lolno")
     end
 
     test "a logged-in user can delete the thread", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
-      conn = log_in_as(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}")
 
-      {:ok, _category_view, html} =
-        view |> element("button", "Delete") |> render_click() |> follow_redirect(conn)
+      conn
+      |> log_in_as(user)
+      |> visit(~p"/categories/#{category}/threads/#{thread}")
+      |> click_button("Delete")
+      |> assert_path(~p"/categories/#{category}")
+      |> assert_has("#flash-info", text: "Thread deleted successfully.")
 
-      assert html =~ "Thread deleted successfully."
       assert Forums.get_thread(thread.id) == nil
     end
   end
@@ -156,55 +153,57 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
   describe "edit" do
     test "renames the thread", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
-      conn = log_in_as(conn, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads/#{thread}/edit")
 
-      {:ok, _show, html} =
-        view
-        |> form("#thread-form", thread: %{title: "OTP is great"})
-        |> render_submit()
-        |> follow_redirect(conn)
-
-      assert html =~ "Thread updated successfully."
-      assert html =~ "OTP is great"
+      conn
+      |> log_in_as(user)
+      |> visit(~p"/categories/#{category}/threads/#{thread}")
+      |> click_link("Edit")
+      |> fill_in("Title", with: "OTP is great")
+      |> click_button("Submit")
+      |> assert_has("#flash-info", text: "Thread updated successfully.")
+      |> assert_has("h1", text: "OTP is great")
     end
 
     test "shows errors for an empty title", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
 
-      {:ok, view, _html} =
-        live(log_in_as(conn, user), ~p"/categories/#{category}/threads/#{thread}/edit")
-
-      assert view |> form("#thread-form", thread: %{title: ""}) |> render_submit() =~
-               "can&#39;t be blank"
+      conn
+      |> log_in_as(user)
+      |> visit(~p"/categories/#{category}/threads/#{thread}/edit")
+      |> fill_in("Title", with: "")
+      |> click_button("Submit")
+      |> assert_has("p", text: "can't be blank")
     end
   end
 
   describe "index" do
     test "lists the category's threads", %{conn: conn, category: category, user: user} do
       thread_fixture(category, user)
-      {:ok, _view, html} = live(conn, ~p"/categories/#{category}/threads")
 
-      assert html =~ "Listing Threads"
-      assert html =~ "OTP is cool"
+      conn
+      |> visit(~p"/categories/#{category}/threads")
+      |> assert_has("h1", text: "Listing Threads")
+      |> assert_has("#threads td", text: "OTP is cool")
     end
 
     test "deletes a thread when logged in", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
-      {:ok, view, _html} = live(log_in_as(conn, user), ~p"/categories/#{category}/threads")
 
-      assert view |> element("#thread-#{thread.id} a", "Delete") |> render_click() =~
-               "Thread deleted successfully."
-
-      refute has_element?(view, "#thread-#{thread.id}")
+      conn
+      |> log_in_as(user)
+      |> visit(~p"/categories/#{category}/threads")
+      |> within("#thread-#{thread.id}", &click_link(&1, "Delete"))
+      |> assert_has("#flash-info", text: "Thread deleted successfully.")
+      |> refute_has("#thread-#{thread.id}")
     end
 
     test "visitors can't delete", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
-      {:ok, view, _html} = live(conn, ~p"/categories/#{category}/threads")
 
-      assert view |> element("#thread-#{thread.id} a", "Delete") |> render_click() =~
-               "You must be logged in"
+      conn
+      |> visit(~p"/categories/#{category}/threads")
+      |> within("#thread-#{thread.id}", &click_link(&1, "Delete"))
+      |> assert_has("#flash-error", text: "You must be logged in")
 
       assert Forums.get_thread(thread.id)
     end
@@ -214,21 +213,22 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
     test "list the user's threads", %{conn: conn, category: category, user: user} do
       watched = thread_fixture(category, user_fixture(), %{title: "Watched one"})
       {:ok, _} = Forums.watch(user, watched)
-      mine = thread_fixture(category, user, %{title: "My own"})
+      thread_fixture(category, user, %{title: "My own"})
       conn = log_in_as(conn, user)
 
-      {:ok, _view, html} = live(conn, ~p"/threads/watching")
-      assert html =~ "Watched one"
-      refute html =~ "My own"
-
-      {:ok, _view, html} = live(conn, ~p"/threads/participating")
-      assert html =~ mine.title
-      refute html =~ "Watched one"
+      conn
+      |> visit(~p"/")
+      |> click_link("Watching")
+      |> assert_has(".thread-title", text: "Watched one")
+      |> refute_has(".thread-title", text: "My own")
+      |> click_link("Participating in")
+      |> assert_has(".thread-title", text: "My own")
+      |> refute_has(".thread-title", text: "Watched one")
     end
 
     test "require a logged-in user", %{conn: conn} do
-      assert {:error, {:redirect, %{to: "/categories"}}} = live(conn, ~p"/threads/watching")
-      assert {:error, {:redirect, %{to: "/categories"}}} = live(conn, ~p"/threads/participating")
+      conn |> visit(~p"/threads/watching") |> assert_path(~p"/categories")
+      conn |> visit(~p"/threads/participating") |> assert_path(~p"/categories")
     end
   end
 end

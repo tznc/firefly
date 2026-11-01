@@ -18,7 +18,7 @@ defmodule FirestormWeb.Web.ConnCase do
 
       import Plug.Conn
       import Phoenix.ConnTest
-      import Phoenix.LiveViewTest
+      import PhoenixTest
       import FirestormWeb.Web.ConnCase
     end
   end
