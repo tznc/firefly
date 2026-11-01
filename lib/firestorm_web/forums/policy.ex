@@ -3,7 +3,8 @@ defmodule FirestormWeb.Forums.Policy do
   Authorization rules for the Forums context (see `Bodyguard.Policy`).
 
     * `:manage_category` (create, edit, delete) - admins
-    * `:update_thread`, `:delete_thread` - the thread's author and admins
+    * `:update_thread`, `:delete_thread` - the thread's author (unless it's
+      archived) and admins
     * `:moderate_thread` (pin, close, archive, move) - admins
     * `:edit_post` (params `%{post: post, thread: thread}`) - the post's author
       while the thread is open, and admins
@@ -23,9 +24,12 @@ defmodule FirestormWeb.Forums.Policy do
   def authorize(:manage_category, %User{} = user, _params), do: admin(user)
   def authorize(:moderate_thread, %User{} = user, _params), do: admin(user)
 
+  # Archived threads are read-only, except to admins.
   def authorize(action, %User{} = user, %Thread{} = thread)
       when action in [:update_thread, :delete_thread] do
-    if Forums.thread_author_id(thread) == user.id, do: :ok, else: admin(user)
+    if Forums.thread_author_id(thread) == user.id and not Thread.archived?(thread),
+      do: :ok,
+      else: admin(user)
   end
 
   def authorize(:edit_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread}) do

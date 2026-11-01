@@ -7,12 +7,22 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.{Forums, Repo}
-  alias FirestormWeb.Forums.{Subscriptions, Thread}
+  alias FirestormWeb.Forums.{Category, Subscriptions, Thread}
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
-    category = Forums.get_category!(category_id)
-    thread = Forums.get_thread!(category, id)
+    thread = Forums.get_thread!(id)
+
+    # Links from before a move (notifications, emails, bookmarks) still carry
+    # the old category: send them to the thread where it lives now.
+    if to_string(thread.category_id) == category_id do
+      mount_thread(Forums.get_category!(category_id), thread, socket)
+    else
+      {:ok, push_navigate(socket, to: ~p"/categories/#{thread.category_id}/threads/#{thread}")}
+    end
+  end
+
+  defp mount_thread(category, thread, socket) do
     if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
 
     # Where the user had read up to before this visit (nil: never opened).
@@ -64,18 +74,14 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     %{thread: thread, current_user: user} = socket.assigns
 
     if can?(user, :moderate_thread) do
-      result =
-        case action do
-          "pin" -> Forums.pin_thread(thread, true)
-          "unpin" -> Forums.pin_thread(thread, false)
-          "close" -> Forums.close_thread(thread, true)
-          "open" -> Forums.close_thread(thread, false)
-          "archive" -> Forums.archive_thread(thread, true)
-          "unarchive" -> Forums.archive_thread(thread, false)
-        end
+      case moderate(thread, action) do
+        {:ok, thread} ->
+          {:noreply,
+           socket |> put_flash(:info, moderation_message(action)) |> load_thread(thread)}
 
-      {:ok, thread} = result
-      {:noreply, socket |> put_flash(:info, moderation_message(action)) |> load_thread(thread)}
+        _error ->
+          {:noreply, put_flash(socket, :error, "Couldn't update the thread.")}
+      end
     else
       {:noreply, put_flash(socket, :error, denied_message(user))}
     end
@@ -84,18 +90,21 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   def handle_event("move", %{"move" => %{"category_id" => category_id}}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
 
-    if can?(user, :moderate_thread) do
-      category = Forums.get_category!(category_id)
-      {:ok, moved} = Forums.move_thread(thread, category)
-
+    with true <- can?(user, :moderate_thread) || :denied,
+         %Category{} = category <- Forums.get_category(category_id) || :no_category,
+         {:ok, moved} <- Forums.move_thread(thread, category) do
       {:noreply,
        socket
        |> put_flash(:info, "Thread moved to #{category.title}.")
        |> push_navigate(to: ~p"/categories/#{category}/threads/#{moved}")}
     else
-      {:noreply, put_flash(socket, :error, denied_message(user))}
+      :denied -> {:noreply, put_flash(socket, :error, denied_message(user))}
+      :no_category -> {:noreply, put_flash(socket, :error, "That category no longer exists.")}
+      {:error, _changeset} -> {:noreply, put_flash(socket, :error, "Couldn't move the thread.")}
     end
   end
+
+  def handle_event("set_level", _params, socket), do: {:noreply, socket}
 
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
@@ -131,7 +140,16 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       :categories,
       if(can?(user, :moderate_thread), do: Forums.list_categories(), else: [])
     )
+    |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
   end
+
+  defp moderate(thread, "pin"), do: Forums.pin_thread(thread, true)
+  defp moderate(thread, "unpin"), do: Forums.pin_thread(thread, false)
+  defp moderate(thread, "close"), do: Forums.close_thread(thread, true)
+  defp moderate(thread, "open"), do: Forums.close_thread(thread, false)
+  defp moderate(thread, "archive"), do: Forums.archive_thread(thread, true)
+  defp moderate(thread, "unarchive"), do: Forums.archive_thread(thread, false)
+  defp moderate(_thread, _action), do: {:error, :unknown_action}
 
   # The posts the user may edit (roles loaded once, not per post).
   defp editable_ids(nil, _thread), do: MapSet.new()
@@ -153,8 +171,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   defp moderation_message("archive"), do: "Thread archived."
   defp moderation_message("unarchive"), do: "Thread unarchived."
 
-  defp inherited_level(user, category),
-    do: Subscriptions.category_level(user, category) || "normal"
+  defp inherited_level(user, category), do: Subscriptions.effective_category_level(user, category)
 
   defp first_unread_id(_replies, nil), do: nil
 
@@ -265,7 +282,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         </li>
         <li :for={post <- @replies}>
           <div
-            :if={post.id == first_unread_id(@replies, @last_read_post_id)}
+            :if={post.id == @first_unread_id}
             id="new-posts-divider"
             class="divider divider-primary text-xs text-primary"
           >
