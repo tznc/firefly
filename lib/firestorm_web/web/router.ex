@@ -65,6 +65,7 @@ defmodule FirestormWeb.Web.Router do
       live("/reset-password/:token", AuthLive.ResetPassword, :edit)
       live("/users", UserLive.Index, :index)
       live("/users/:id", UserLive.Show, :show)
+      live("/search", SearchLive.Index, :index)
       live("/tags", TagLive.Index, :index)
       live("/tags/:name", TagLive.Show, :show)
       live("/categories", CategoryLive.Index, :index)
@@ -104,6 +105,7 @@ defmodule FirestormWeb.Web.Router do
     resources("/preview", PreviewController, only: [:create])
     resources("/upload_signature", UploadSignatureController, only: [:create])
     resources("/posts", PostController, only: [:create])
+    get("/search", SearchController, :index)
     post("/auth/identity", AuthController, :identity)
   end
 

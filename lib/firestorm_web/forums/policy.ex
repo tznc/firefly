@@ -16,7 +16,8 @@ defmodule FirestormWeb.Forums.Policy do
     * `:edit_user` - the user themselves
     * `:view_thread` - everyone, members or not (the one place to restrict
       who can read a thread, e.g. for private categories; notifications such
-      as mentions check it)
+      as mentions check it). `readable_threads/2` is its query counterpart,
+      for lists such as search results: keep the two in step.
   """
 
   @behaviour Bodyguard.Policy
@@ -65,4 +66,11 @@ defmodule FirestormWeb.Forums.Policy do
   def authorize(_action, _user, _params), do: {:error, :unauthorized}
 
   defp admin(user), do: if(Forums.admin?(user), do: :ok, else: {:error, :unauthorized})
+
+  @doc """
+  Restricts `query` to threads `user` (or nil, a visitor) may read, as the
+  `:view_thread` rule does for one thread. The query must bind the thread
+  as `:thread`. Everyone may read every thread for now.
+  """
+  def readable_threads(query, _user), do: query
 end

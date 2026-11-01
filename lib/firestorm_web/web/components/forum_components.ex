@@ -561,10 +561,12 @@ defmodule FirestormWeb.Web.ForumComponents do
   defp render_oembed(oembed), do: Phoenix.HTML.raw(FirestormWeb.OEmbed.to_html(oembed))
 
   @doc """
-  Pagination links for a `Scrivener.Page`, linking to `path?page=N`.
+  Pagination links for a `Scrivener.Page`, linking to `path?page=N` (plus
+  any other query `params`).
   """
   attr :page, Scrivener.Page, required: true
   attr :path, :string, required: true
+  attr :params, :map, default: %{}
 
   def pagination(assigns) do
     assigns =
@@ -575,7 +577,7 @@ defmodule FirestormWeb.Web.ForumComponents do
       <div class="join">
         <.link
           :if={@page.page_number > 1}
-          patch={"#{@path}?page=#{@page.page_number - 1}"}
+          patch={page_path(@path, @params, @page.page_number - 1)}
           class="join-item btn btn-sm"
           aria-label="Previous page"
         >
@@ -583,7 +585,7 @@ defmodule FirestormWeb.Web.ForumComponents do
         </.link>
         <.link
           :for={n <- @window}
-          patch={"#{@path}?page=#{n}"}
+          patch={page_path(@path, @params, n)}
           class={["join-item btn btn-sm", n == @page.page_number && "btn-active"]}
           aria-current={n == @page.page_number && "page"}
         >
@@ -591,7 +593,7 @@ defmodule FirestormWeb.Web.ForumComponents do
         </.link>
         <.link
           :if={@page.page_number < @page.total_pages}
-          patch={"#{@path}?page=#{@page.page_number + 1}"}
+          patch={page_path(@path, @params, @page.page_number + 1)}
           class="join-item btn btn-sm"
           aria-label="Next page"
         >
@@ -601,6 +603,8 @@ defmodule FirestormWeb.Web.ForumComponents do
     </nav>
     """
   end
+
+  defp page_path(path, params, n), do: "#{path}?#{URI.encode_query(Map.put(params, "page", n))}"
 
   @doc false
   def page_window(current, total) do
