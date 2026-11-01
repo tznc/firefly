@@ -115,3 +115,15 @@
 
 /* Rendered markdown: keep embedded media inside the post column */
 .post-body iframe, .post-body img, .oembed iframe, .oembed img { max-width: 100%; }
+
+/* Quote replies: a card-like blockquote under an "@user said:" header */
+.post-body blockquote.quote {
+  font-style: normal;
+  border-left-color: var(--color-primary);
+  background-color: var(--color-base-200);
+  border-radius: var(--radius-box);
+  padding: 0.5rem 1rem;
+}
+.post-body blockquote.quote p::before, .post-body blockquote.quote p::after { content: none; }
+.post-body blockquote.quote .quote-attribution { margin: 0 0 0.25rem; font-size: 0.8125rem; font-weight: 600; }
+.post-body blockquote.quote .quote-attribution a { text-decoration: none; color: var(--color-base-content); }

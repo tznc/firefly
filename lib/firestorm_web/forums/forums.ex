@@ -758,6 +758,13 @@ defmodule FirestormWeb.Forums do
     |> Repo.get!(id)
   end
 
+  @doc "Gets a post in `thread`, or nil."
+  def get_post(%Thread{id: thread_id}, id) do
+    Post
+    |> where([p], p.thread_id == ^thread_id)
+    |> Repo.get(id)
+  end
+
   @doc """
   Creates a thread.
 

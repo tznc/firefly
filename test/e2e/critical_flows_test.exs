@@ -138,4 +138,43 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> assert_path("/")
     |> assert_has("#flash-error", text: "You must be an administrator to access this page.")
   end
+
+  test "selecting text in a post and clicking Quote quotes just the selection", %{conn: conn} do
+    alice = member_fixture("alice")
+    member_fixture("bob")
+    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+
+    {:ok, thread} =
+      Forums.create_thread(category, alice, %{
+        title: "Supervision",
+        body: "Let it crash. Supervisors restart children for you."
+      })
+
+    [post] = thread.posts
+    thread_path = "/categories/#{category.id}/threads/#{thread.id}"
+
+    conn
+    |> log_in("bob")
+    |> visit(thread_path)
+    |> assert_has("#post-#{post.id}-body", text: "Supervisors restart")
+    |> PhoenixTest.Playwright.evaluate("""
+    (() => {
+      const text = document.querySelector("#post-#{post.id}-body p").firstChild
+      const start = text.textContent.indexOf("Supervisors restart")
+      const range = document.createRange()
+      range.setStart(text, start)
+      range.setEnd(text, start + "Supervisors restart children".length)
+      window.getSelection().removeAllRanges()
+      window.getSelection().addRange(range)
+    })()
+    """)
+    |> PhoenixTest.Playwright.click("#post-#{post.id}-quote")
+    |> assert_path(thread_path <> "/posts/new")
+    |> assert_has("textarea", text: "> Supervisors restart children")
+    |> refute_has("textarea", text: "Let it crash")
+    |> assert_has("#post-preview .quote-attribution", text: "@alice said:")
+    |> fill_in("Body", with: "Quoting works", exact: false)
+    |> click_button("Reply")
+    |> assert_has("#flash-info", text: "Post created successfully.")
+  end
 end
