@@ -5,7 +5,7 @@ defmodule FirestormWeb.Web.AuthController do
   """
   use FirestormWeb.Web, :controller
 
-  alias FirestormWeb.Forums
+  alias FirestormWeb.{Forums, RateLimit}
 
   # Ueberauth redirects GET /auth/:provider for OAuth providers before this
   # action runs; we only get here for unknown providers.
@@ -42,11 +42,15 @@ defmodule FirestormWeb.Web.AuthController do
   def callback(%{assigns: %{ueberauth_auth: %{provider: :identity}}} = conn, params) do
     user_params = params["user"] || %{}
 
-    case Forums.login_or_register_from_identity(%{
-           username: user_params["username"],
-           password: user_params["password"]
-         }) do
-      {:ok, user} -> ok_login(conn, user)
+    with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
+         {:ok, user} <-
+           Forums.login_or_register_from_identity(%{
+             username: user_params["username"],
+             password: user_params["password"]
+           }) do
+      ok_login(conn, user)
+    else
+      {:error, :rate_limited} -> failed_login(conn, ~p"/auth/identity", RateLimit.message())
       {:error, reason} -> failed_login(conn, ~p"/auth/identity", reason)
     end
   end

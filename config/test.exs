@@ -63,3 +63,13 @@ config :firestorm_web, :aws,
 
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view, enable_expensive_runtime_checks: true
+
+# Generous limits so ordinary tests never trip them; rate limit tests lower
+# them explicitly.
+config :firestorm_web, FirestormWeb.RateLimit,
+  limits: [
+    login: {1_000, 60_000},
+    login_ip: {10_000, 60_000},
+    post: {1_000, 60_000},
+    upload: {1_000, 60_000}
+  ]

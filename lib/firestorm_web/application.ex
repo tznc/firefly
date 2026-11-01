@@ -25,6 +25,8 @@ defmodule FirestormWeb.Application do
       FirestormWeb.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: FirestormWeb.PubSub},
+      # Rate limit buckets
+      {FirestormWeb.RateLimit, clean_period: :timer.minutes(10)},
       # Add an LRU Cache for storing OEmbed results for a given URL, storing at
       # most 5000 results at a time in the cache.
       %{id: LruCache, start: {LruCache, :start_link, [:oembed_cache, 5_000]}},
