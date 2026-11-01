@@ -17,7 +17,8 @@ defmodule FirestormWeb.Search do
 
   Threads the searcher muted (directly, or through their category or a tag;
   see `FirestormWeb.Forums.Subscriptions`) are left out unless the
-  `"muted"` control is `"include"`.
+  `"muted"` control is `"include"`, or the search is filtered to a category
+  or tag the searcher muted (asking for it explicitly beats the mute).
 
   A post matches when its body matches; a thread's first post also matches
   on the title (weighted higher when ranking). Deleted posts and archived threads are left out, and
@@ -141,7 +142,7 @@ defmodule FirestormWeb.Search do
       |> join(:inner, [thread: t], c in assoc(t, :category), as: :category)
       |> where([thread: t], is_nil(t.archived_at))
       |> Policy.readable_threads(user)
-      |> without_muted(user, search.include_muted)
+      |> without_muted(user, search)
       |> match(search)
       |> by_category(search.category)
       |> by_tag(search.tag)
@@ -220,10 +221,28 @@ defmodule FirestormWeb.Search do
   defp match(query, %{terms: terms}),
     do: where(query, [p], fragment("? @@ ?", p.search_vector, tsquery(^terms)))
 
-  defp without_muted(query, %User{} = user, false),
-    do: where(query, [thread: t], t.id not in subquery(Subscriptions.muted_thread_ids(user)))
+  defp without_muted(query, %User{} = user, %{include_muted: false} = search) do
+    if filters_muted_scope?(user, search),
+      do: query,
+      else: where(query, [thread: t], t.id not in subquery(Subscriptions.muted_thread_ids(user)))
+  end
 
-  defp without_muted(query, _user, _include_muted), do: query
+  defp without_muted(query, _user, _search), do: query
+
+  # Whether the search is filtered to a category (or its parent) or a tag
+  # the user muted.
+  defp filters_muted_scope?(user, %{category: category, tag: tag}) do
+    category = category && Repo.get_by(Category, slug: String.downcase(category))
+    tag = tag && Repo.get_by(Tag, name: String.downcase(tag))
+
+    muted_category? =
+      category != nil and
+        (Subscriptions.category_level(user, category) ||
+           (category.parent_id &&
+              Subscriptions.category_level(user, %Category{id: category.parent_id}))) == "muted"
+
+    muted_category? or (tag != nil and Subscriptions.tag_level(user, tag) == "muted")
+  end
 
   defp by_category(query, nil), do: query
 

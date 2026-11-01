@@ -14,6 +14,11 @@ if System.get_env("FIREFLY_TAGS_ADMIN_ONLY") in ~w(true 1) do
   config :firestorm_web, tags_admin_only: true
 end
 
+# Reverse proxies (addresses or CIDR ranges, comma-separated) whose
+# X-Forwarded-For header gives the client IP; see FirestormWeb.Web.ClientIP.
+config :firestorm_web, FirestormWeb.Web.ClientIP,
+  trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
+
 if config_env() != :test do
   config :ueberauth, Ueberauth.Strategy.Github.OAuth,
     client_id: System.get_env("FIREFLY_GITHUB_CLIENT_ID"),

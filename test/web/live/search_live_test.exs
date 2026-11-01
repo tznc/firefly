@@ -21,6 +21,9 @@ defmodule FirestormWeb.Web.SearchLiveTest do
     |> within("form[role=search]", &fill_in(&1, "Search the forum", with: "crashing"))
     |> submit()
     |> assert_path(~p"/search", query_params: %{q: "crashing"})
+    # The top-bar form is a plain GET, and only the connected render
+    # searches; a browser connects, PhoenixTest needs a LiveView visit.
+    |> visit(~p"/search?q=crashing")
     |> assert_has("#search-results", text: "1 result")
     |> assert_has("#result-#{post.id} .result-snippet mark", text: "crash")
     |> assert_has(
