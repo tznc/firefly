@@ -120,6 +120,27 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       refute Forums.watched_by?(thread, reader)
     end
 
+    test "an unknown level or an anonymous viewer is ignored, not a crash", %{
+      conn: conn,
+      category: category,
+      user: user
+    } do
+      require Phoenix.LiveViewTest
+      thread = thread_fixture(category, user)
+
+      {:ok, view, _} =
+        conn
+        |> log_in_as(user_fixture())
+        |> Phoenix.LiveViewTest.live(~p"/categories/#{category}/threads/#{thread}")
+
+      Phoenix.LiveViewTest.render_click(view, "set_level", %{"level" => "bogus"})
+      assert Process.alive?(view.pid)
+
+      {:ok, view, _} = Phoenix.LiveViewTest.live(conn, ~p"/categories/#{category}")
+      Phoenix.LiveViewTest.render_click(view, "set_level", %{"level" => "watching"})
+      assert Process.alive?(view.pid)
+    end
+
     test "visitors don't get a notification level", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
 

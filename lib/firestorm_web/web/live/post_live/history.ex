@@ -33,7 +33,7 @@ defmodule FirestormWeb.Web.PostLive.History do
 
   @impl true
   def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket),
-    do: {:noreply, load(socket, post)}
+    do: {:noreply, load(socket, FirestormWeb.Repo.preload(post, :user))}
 
   def handle_info(_event, socket), do: {:noreply, socket}
 

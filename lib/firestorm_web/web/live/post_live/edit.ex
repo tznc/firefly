@@ -64,6 +64,20 @@ defmodule FirestormWeb.Web.PostLive.Edit do
          |> put_flash(:info, "Post updated successfully.")
          |> push_navigate(to: thread_path(socket) <> "#post-#{post.id}")}
 
+      {:error, :edited_elsewhere} ->
+        # Keep what they typed; saving again replaces the other edit knowingly.
+        post = Forums.get_post!(socket.assigns.thread, socket.assigns.post.id)
+
+        {:noreply,
+         socket
+         |> assign(:post, post)
+         |> assign(:form, to_form(Post.edit_changeset(post, %{body: params["body"]})))
+         |> put_flash(
+           :error,
+           "This post was edited by someone else while you were editing. " <>
+             "Check the post's history, then save again to replace their edit."
+         )}
+
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
     end

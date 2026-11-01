@@ -204,6 +204,9 @@ defmodule FirestormWeb.Forums do
     User.changeset(user, %{})
   end
 
+  # How long a thread a user has never opened counts as "new".
+  @new_thread_days 14
+
   @doc """
   Returns the list of categories.
 
@@ -264,7 +267,6 @@ defmodule FirestormWeb.Forums do
       |> limit(3)
       |> select([t], t)
       |> Repo.all()
-      |> Repo.preload(posts: from(p in Post, order_by: p.inserted_at, preload: :user))
       |> decorate_threads(user)
 
     initial_threads_map =
@@ -298,6 +300,9 @@ defmodule FirestormWeb.Forums do
 
   """
   def get_category!(id), do: Repo.get!(Category, id)
+
+  @doc "Gets a single category, or nil."
+  def get_category(id), do: Repo.get(Category, id)
 
   @doc """
   Creates a category.
@@ -407,7 +412,6 @@ defmodule FirestormWeb.Forums do
     |> by_last_activity()
     |> preload(:category)
     |> Repo.all()
-    |> Repo.preload(posts: from(p in Post, order_by: p.inserted_at, preload: :user))
     |> decorate_threads(user)
   end
 
@@ -442,11 +446,19 @@ defmodule FirestormWeb.Forums do
           last_post_at: stat.last_post_at,
           unread_count: unread_count,
           first_unread_post_id: first_unread,
-          new?: not is_nil(user) and not read?,
-          completely_read?: is_nil(user) or (read? and unread_count == 0)
+          new?: not is_nil(user) and not read? and recent?(thread),
+          # Anonymous viewers have no read state, so nothing counts as read.
+          completely_read?: not is_nil(user) and read? and unread_count == 0
       }
     end)
   end
+
+  # "New" only applies within the same window as the New list, so long-standing
+  # threads a user never opened don't all show the badge.
+  defp recent?(%Thread{inserted_at: inserted_at}),
+    do: NaiveDateTime.compare(inserted_at, new_since()) == :gt
+
+  defp new_since, do: NaiveDateTime.add(NaiveDateTime.utc_now(), -@new_thread_days, :day)
 
   defp thread_stats(ids, user) do
     user_id = if user, do: user.id, else: -1
@@ -516,14 +528,12 @@ defmodule FirestormWeb.Forums do
     |> decorate_threads(user_or_nil)
   end
 
-  @new_thread_days 14
-
   @doc """
   Threads started in the last #{@new_thread_days} days that the user has never
   opened, newest first.
   """
   def new_threads(%User{} = user) do
-    since = NaiveDateTime.add(NaiveDateTime.utc_now(), -@new_thread_days, :day)
+    since = new_since()
 
     query = from(t in Thread, as: :thread)
 
@@ -621,6 +631,15 @@ defmodule FirestormWeb.Forums do
     end
   end
 
+  @doc "The ids of users whose read position in `thread` is at or past `post`."
+  def users_who_read(%Thread{id: thread_id}, %Post{id: post_id}) do
+    ThreadRead
+    |> where([r], r.thread_id == ^thread_id and r.last_read_post_id >= ^post_id)
+    |> select([r], r.user_id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
   @doc "The user's read position in a thread, or nil if they've never opened it."
   def thread_read(%User{id: user_id}, %Thread{id: thread_id}) do
     Repo.get_by(ThreadRead, user_id: user_id, thread_id: thread_id)
@@ -636,31 +655,34 @@ defmodule FirestormWeb.Forums do
       Post |> where([p], p.thread_id == ^thread.id) |> select([p], max(p.id)) |> Repo.one()
 
     if last_post_id do
-      now = NaiveDateTime.utc_now()
-
-      on_conflict =
-        from(r in ThreadRead,
-          update: [
-            set: [
-              last_read_post_id:
-                fragment("GREATEST(?, EXCLUDED.last_read_post_id)", r.last_read_post_id),
-              updated_at: ^now
-            ]
-          ]
-        )
-
-      result =
-        Repo.insert(
-          %ThreadRead{user_id: user.id, thread_id: thread.id, last_read_post_id: last_post_id},
-          on_conflict: on_conflict,
-          conflict_target: [:user_id, :thread_id]
-        )
-
+      result = advance_read(user.id, thread.id, last_post_id)
       read_thread_notifications(user, thread)
       result
     else
       {:ok, nil}
     end
+  end
+
+  # Moves a read position forward to `post_id` (never backwards).
+  defp advance_read(user_id, thread_id, post_id) do
+    now = NaiveDateTime.utc_now()
+
+    on_conflict =
+      from(r in ThreadRead,
+        update: [
+          set: [
+            last_read_post_id:
+              fragment("GREATEST(?, EXCLUDED.last_read_post_id)", r.last_read_post_id),
+            updated_at: ^now
+          ]
+        ]
+      )
+
+    Repo.insert(
+      %ThreadRead{user_id: user_id, thread_id: thread_id, last_read_post_id: post_id},
+      on_conflict: on_conflict,
+      conflict_target: [:user_id, :thread_id]
+    )
   end
 
   @doc """
@@ -778,6 +800,8 @@ defmodule FirestormWeb.Forums do
 
     case thread_result do
       {:ok, thread} ->
+        {:ok, _} = mark_thread_read(user, thread)
+
         thread =
           thread
           |> Repo.preload([:category, posts: [:user]])
@@ -1011,6 +1035,8 @@ defmodule FirestormWeb.Forums do
 
     with {:ok, post} <- Repo.insert(changeset) do
       {:ok, _} = Subscriptions.ensure_thread_level(user, thread, "tracking")
+      # Authors have read what they wrote, whichever way they posted it.
+      {:ok, _} = advance_read(user.id, thread.id, post.id)
       :ok = Notifications.post_created(post)
 
       post = Repo.preload(post, [:thread, :user])
@@ -1048,27 +1074,52 @@ defmodule FirestormWeb.Forums do
   `:edit_post` policy). The replaced body is kept as a `PostRevision`, so the
   post's history can be shown. New-account link limits apply to the edit as
   they do to new posts. Saving an unchanged body is a no-op.
+
+  `post` is the version the editor started from: if someone else edited it
+  since, this returns `{:error, :edited_elsewhere}` instead of overwriting
+  their edit.
   """
   def update_post(%Post{} = post, %User{} = editor, attrs) do
-    changeset = post |> Post.edit_changeset(attrs) |> SpamGuard.validate_post(editor)
+    result =
+      Repo.transact(fn ->
+        # Edit the row as it is now, not the caller's copy, so the revision
+        # holds the body this edit actually replaces.
+        current = Post |> lock("FOR UPDATE") |> Repo.get!(post.id)
+
+        if current.edited_at == post.edited_at,
+          do: edit_post(current, editor, attrs),
+          else: {:error, :edited_elsewhere}
+      end)
+
+    tap_ok(result, &broadcast_post_updated/1)
+  end
+
+  defp edit_post(current, editor, attrs) do
+    changeset = current |> Post.edit_changeset(attrs) |> SpamGuard.validate_post(editor)
 
     if changeset.valid? and not Map.has_key?(changeset.changes, :body) do
-      {:ok, post}
+      {:ok, current}
     else
+      Repo.insert!(%PostRevision{post_id: current.id, user_id: editor.id, body: current.body})
+
       changeset
       |> put_change(:edited_at, NaiveDateTime.utc_now())
-      |> save_edit(post, editor)
+      |> Repo.update()
     end
   end
 
-  defp save_edit(changeset, post, editor) do
-    result =
-      Repo.transact(fn ->
-        Repo.insert!(%PostRevision{post_id: post.id, user_id: editor.id, body: post.body})
-        Repo.update(changeset)
-      end)
+  defp broadcast_post_updated(post) do
+    post = Repo.preload(post, [:thread, :user])
 
-    tap_ok(result, &broadcast("forums:thread:#{&1.thread_id}", {:post_updated, &1}))
+    payload = %ReplenishResponse{
+      categories: [],
+      threads: [post.thread],
+      users: [post.user],
+      posts: [post]
+    }
+
+    :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
+    broadcast("forums:thread:#{post.thread_id}", {:post_updated, post})
   end
 
   @doc """
@@ -1403,6 +1454,12 @@ defmodule FirestormWeb.Forums do
     broadcast("forums:threads", message)
     broadcast("forums:category:#{thread.category_id}", message)
     broadcast("forums:thread:#{thread.id}", message)
+
+    # A parent category's page lists its subcategories' threads too.
+    parent_id =
+      Repo.one(from(c in Category, where: c.id == ^thread.category_id, select: c.parent_id))
+
+    if parent_id, do: broadcast("forums:category:#{parent_id}", message)
   end
 
   defp tap_ok({:ok, value} = result, fun) do
