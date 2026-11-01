@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+cd -P -- "$(dirname -- "$0")"
+FIREFLY_SERVER=true exec ./firestorm_web start

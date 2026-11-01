@@ -19,7 +19,8 @@ defmodule FirestormWeb.Forums do
     Notification,
     OembedExtractor,
     Role,
-    RoleMembership
+    RoleMembership,
+    SpamGuard
   }
 
   @doc """
@@ -94,15 +95,28 @@ defmodule FirestormWeb.Forums do
       attrs
       |> Map.put(:api_token, generate_api_token())
 
-    %User{}
+    # Accounts created directly (admin, legacy GitHub logins) are trusted.
+    %User{confirmed_at: DateTime.utc_now(:second)}
     |> User.changeset(attrs)
     |> Repo.insert()
   end
 
-  defp register_user(attrs) do
-    %User{}
+  @doc """
+  Registers a user with a username, email and password.
+
+      iex> register_user(%{username: "ada", email: "ada@example.com", password: "s3cret-password"})
+      {:ok, %User{}}
+  """
+  def register_user(attrs) do
+    # Unconfirmed until they follow the emailed link (see EmailConfirmation).
+    %User{api_token: generate_api_token()}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc "A changeset for the registration form."
+  def change_registration(%User{} = user \\ %User{}, attrs \\ %{}) do
+    User.registration_changeset(user, attrs)
   end
 
   @doc """
@@ -119,8 +133,39 @@ defmodule FirestormWeb.Forums do
   """
   def update_user(%User{} = user, attrs) do
     user
-    |> User.changeset(attrs)
+    |> User.update_changeset(attrs)
     |> Repo.update()
+  end
+
+  @doc "Users with a password whose email matches (case-insensitively)."
+  def list_password_users_by_email(email) when is_binary(email) do
+    email = email |> String.trim() |> String.downcase()
+
+    User
+    |> where([u], fragment("lower(?)", u.email) == ^email and not is_nil(u.password_hash))
+    |> Repo.all()
+  end
+
+  @doc """
+  Sets a new password from a reset link. Following the emailed link proves the
+  address, so it also confirms the email.
+  """
+  def reset_user_password(%User{} = user, attrs) do
+    changeset = User.password_changeset(user, attrs)
+
+    changeset =
+      if User.confirmed?(user),
+        do: changeset,
+        else: Ecto.Changeset.put_change(changeset, :confirmed_at, DateTime.utc_now(:second))
+
+    Repo.update(changeset)
+  end
+
+  @doc "Marks the user's email address as confirmed."
+  def confirm_user(%User{} = user) do
+    if User.confirmed?(user),
+      do: {:ok, user},
+      else: user |> User.confirm_changeset() |> Repo.update()
   end
 
   @doc """
@@ -385,6 +430,16 @@ defmodule FirestormWeb.Forums do
     |> Repo.get!(id)
   end
 
+  @doc "The id of the user who started `thread` (the author of its first post)."
+  def thread_author_id(%Thread{id: thread_id}) do
+    Post
+    |> where([p], p.thread_id == ^thread_id)
+    |> order_by([p], asc: p.inserted_at, asc: p.id)
+    |> limit(1)
+    |> select([p], p.user_id)
+    |> Repo.one()
+  end
+
   @doc """
   Gets a thread by id.
 
@@ -458,7 +513,7 @@ defmodule FirestormWeb.Forums do
 
     thread_result =
       %{thread: thread_attrs, post: post_attrs}
-      |> Thread.new_changeset()
+      |> Thread.new_changeset(user)
       |> Repo.insert()
 
     case thread_result do
@@ -546,51 +601,85 @@ defmodule FirestormWeb.Forums do
     |> put_assoc(:posts, thread.posts)
   end
 
-  def login_or_register_from_github(%{nickname: nickname, name: nil, email: _email} = user) do
-    login_or_register_from_github(%{user | name: nickname})
+  @doc """
+  Logs in (or registers) a GitHub user, identified by GitHub's immutable user
+  id (`uid`). Accounts are never matched by username alone: anyone can take a
+  GitHub username that matches a local account.
+
+  For accounts created by GitHub logins before ids were stored, the account is
+  linked only if it has no password and the GitHub email matches its email.
+  New accounts get the GitHub username, or a suffixed one if it is taken.
+  """
+  def login_or_register_from_github(%{uid: uid} = info) when not is_nil(uid) do
+    uid = to_string(uid)
+    nickname = info[:nickname]
+    name = info[:name] || nickname
+    email = info[:email] || "#{nickname}@users.noreply.github.com"
+
+    case Repo.get_by(User, github_uid: uid) do
+      %User{} = user -> {:ok, user}
+      nil -> link_or_register_github_user(uid, nickname, name, email)
+    end
   end
 
-  def login_or_register_from_github(%{nickname: nickname, name: _name, email: nil} = user) do
-    login_or_register_from_github(%{user | email: nickname <> "@users.noreply.github.com"})
-  end
+  def login_or_register_from_github(_info), do: {:error, "GitHub did not return an account id."}
 
-  def login_or_register_from_github(%{nickname: nickname, name: name, email: email}) do
+  # Links a legacy GitHub-created account (no password, no stored id) only when
+  # its email matches GitHub's; anything else gets a new account.
+  defp link_or_register_github_user(uid, nickname, name, email) do
     case get_user_by_username(nickname) do
-      nil ->
-        create_user(%{
-          email: email,
-          name: name,
-          username: nickname,
-          api_token: generate_api_token()
-        })
+      %User{github_uid: nil, password_hash: nil, email: user_email} = user
+      when is_binary(user_email) ->
+        if String.downcase(user_email) == String.downcase(email),
+          do: user |> User.github_changeset(%{github_uid: uid}) |> Repo.update(),
+          else: register_github_user(uid, nickname, name, email)
 
-      user ->
-        {:ok, user}
+      _taken_or_free ->
+        register_github_user(uid, nickname, name, email)
     end
   end
 
-  def login_or_register_from_identity(%{username: username, password: password}) do
+  defp register_github_user(uid, nickname, name, email) do
+    # GitHub vouches for the account; its email is not used to log in.
+    %User{confirmed_at: DateTime.utc_now(:second)}
+    |> User.github_changeset(%{
+      github_uid: uid,
+      username: available_username(nickname),
+      name: name,
+      email: email,
+      api_token: generate_api_token()
+    })
+    |> Repo.insert()
+  end
+
+  defp available_username(nickname, attempt \\ 0) do
+    candidate = if attempt == 0, do: nickname, else: "#{nickname}-#{attempt}"
+
+    if get_user_by_username(candidate),
+      do: available_username(nickname, attempt + 1),
+      else: candidate
+  end
+
+  @doc """
+  Logs in with a username and password. Unknown usernames and accounts
+  without a password (e.g. GitHub logins) fail the same way as a wrong
+  password.
+  """
+  def authenticate_by_password(username, password)
+      when is_binary(username) and is_binary(password) do
     case get_user_by_username(username) do
-      nil ->
-        # No user, let's register one!
-        register_user(%{
-          username: username,
-          name: username,
-          password: password,
-          api_token: generate_api_token()
-        })
+      %User{password_hash: hash} = user when is_binary(hash) ->
+        if Bcrypt.verify_pass(password, hash), do: {:ok, user}, else: login_error()
 
-      user ->
-        # We'll check the password against the user's stored password hash
-        if is_binary(user.password_hash) and Bcrypt.verify_pass(password, user.password_hash) do
-          # Everything checks out, success
-          {:ok, user}
-        else
-          # User existed, we checked the password, but no dice
-          {:error, "No user found with that username or password"}
-        end
+      _ ->
+        Bcrypt.no_user_verify()
+        login_error()
     end
   end
+
+  def authenticate_by_password(_username, _password), do: login_error()
+
+  defp login_error, do: {:error, "No user found with that username or password"}
 
   @doc """
   Creates a post within a thread.
@@ -612,7 +701,9 @@ defmodule FirestormWeb.Forums do
       |> Map.put(:thread_id, thread.id)
       |> Map.put(:user_id, user.id)
 
-    with {:ok, post} <- Repo.insert(Post.changeset(%Post{}, attrs)) do
+    changeset = %Post{} |> Post.changeset(attrs) |> SpamGuard.validate_post(user)
+
+    with {:ok, post} <- Repo.insert(changeset) do
       :ok = Notifications.post_created(post)
 
       post = Repo.preload(post, [:thread, :user])

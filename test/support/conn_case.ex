@@ -49,6 +49,18 @@ defmodule FirestormWeb.Web.ConnCase do
     user
   end
 
+  @doc "Creates a user with the admin role."
+  def admin_fixture(attrs \\ %{}) do
+    user = user_fixture(attrs)
+
+    role =
+      FirestormWeb.Repo.get_by(FirestormWeb.Forums.Role, name: "admin") ||
+        elem(FirestormWeb.Forums.create_role("admin"), 1)
+
+    {:ok, _} = FirestormWeb.Forums.add_role(user, role)
+    user
+  end
+
   @doc "Creates a category."
   def category_fixture(title \\ "Elixir") do
     {:ok, category} = FirestormWeb.Forums.create_category(%{title: title})

@@ -24,7 +24,7 @@ defmodule FirestormWeb.Web.CategoryLive.Index do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <.page_header title="Categories" navigate={~p"/categories"}>
-        <:actions>
+        <:actions :if={can?(@current_user, :manage_category)}>
           <.link navigate={~p"/categories/new"} class="btn btn-primary btn-sm">
             <.icon name="hero-plus" class="size-4" /> New Category
           </.link>

@@ -33,4 +33,31 @@ defmodule FirestormWeb.Forums.OembedExtractorTest do
 
     assert [{url, empire_city_elixir_conf_vid}] == OembedExtractor.get_embeds(example_text)
   end
+
+  test "ignores links without a built-in provider, without fetching them" do
+    url = "http://169.254.169.254/latest/meta-data/"
+    assert FirestormWeb.OEmbed.provider_for(url) == nil
+    assert {:error, _} = FirestormWeb.OEmbed.for(url)
+    assert [] == OembedExtractor.get_embeds("internal: #{url} and https://evil.example.com/page")
+  end
+
+  test "looks up at most five embeds per post" do
+    urls = for n <- 1..8, do: "https://www.youtube.com/watch?v=video#{n}"
+    for url <- urls, do: LruCache.put(:oembed_cache, url, %OEmbed.Video{html: "<p>#{url}</p>"})
+
+    assert length(OembedExtractor.get_embeds(Enum.join(urls, " "))) == 5
+  end
+
+  test "sanitizes provider HTML" do
+    html =
+      FirestormWeb.OEmbed.to_html(%OEmbed.Rich{
+        html:
+          ~S|<iframe src="https://www.youtube.com/embed/x" onload="alert(1)"></iframe><script>alert(1)</script><iframe src="javascript:alert(1)"></iframe>|
+      })
+
+    assert html =~ ~s(<iframe src="https://www.youtube.com/embed/x">)
+    refute html =~ "onload"
+    refute html =~ "<script"
+    refute html =~ "javascript:"
+  end
 end

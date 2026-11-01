@@ -24,11 +24,16 @@ defmodule FirestormWeb.E2ECase do
 
   @password "s3cret-password"
 
-  @doc "Creates a member who can log in with `@password`."
+  @doc "Creates a confirmed member who can log in with `@password`."
   def member_fixture(username) do
     {:ok, user} =
-      Forums.login_or_register_from_identity(%{username: username, password: @password})
+      Forums.register_user(%{
+        username: username,
+        email: "#{username}@example.com",
+        password: @password
+      })
 
+    {:ok, user} = Forums.confirm_user(user)
     user
   end
 
@@ -59,7 +64,7 @@ defmodule FirestormWeb.E2ECase do
     |> visit("/auth/identity")
     |> fill_in("Username", with: username)
     |> fill_in("Password", with: password)
-    |> click_button("Log in or register")
+    |> click_button("Log in")
     |> assert_has("#flash-info", text: "Successfully authenticated.")
   end
 end

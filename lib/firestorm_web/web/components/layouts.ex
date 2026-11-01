@@ -57,6 +57,7 @@ defmodule FirestormWeb.Web.Layouts do
 
         <main class="flex-1 px-4 py-8 sm:px-6 lg:px-10">
           <div class="mx-auto max-w-4xl space-y-6">
+            <.confirm_email_notice current_user={@current_user} />
             {render_slot(@inner_block)}
           </div>
         </main>
@@ -126,6 +127,28 @@ defmodule FirestormWeb.Web.Layouts do
     </div>
 
     <.flash_group flash={@flash} />
+    """
+  end
+
+  attr :current_user, :any, required: true
+
+  @doc "Asks a user with an unconfirmed email address to confirm it."
+  def confirm_email_notice(assigns) do
+    ~H"""
+    <div
+      :if={@current_user && @current_user.email && !FirestormWeb.Forums.User.confirmed?(@current_user)}
+      id="confirm-email-notice"
+      role="alert"
+      class="alert alert-warning"
+    >
+      <.icon name="hero-envelope" class="size-5" />
+      <span>
+        Confirm your email address to start posting. We sent a link to <strong>{@current_user.email}</strong>.
+      </span>
+      <.form for={%{}} action={~p"/confirm"} method="post">
+        <button class="btn btn-sm">Resend link</button>
+      </.form>
+    </div>
     """
   end
 

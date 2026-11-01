@@ -2,10 +2,10 @@ import Config
 
 # Configure your database
 config :firestorm_web, FirestormWeb.Repo,
-  username: System.get_env("POSTGRES_USER", "postgres"),
-  password: System.get_env("POSTGRES_PASSWORD", "postgres"),
-  hostname: System.get_env("POSTGRES_HOST", "localhost"),
-  port: String.to_integer(System.get_env("POSTGRES_PORT", "5432")),
+  username: System.get_env("FIREFLY_POSTGRES_USER", "postgres"),
+  password: System.get_env("FIREFLY_POSTGRES_PASSWORD", "postgres"),
+  hostname: System.get_env("FIREFLY_POSTGRES_HOST", "localhost"),
+  port: String.to_integer(System.get_env("FIREFLY_POSTGRES_PORT", "5432")),
   database: "firestorm_web_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
@@ -14,7 +14,7 @@ config :firestorm_web, FirestormWeb.Repo,
 # For development, we disable any cache and enable
 # debugging and code reloading.
 config :firestorm_web, FirestormWeb.Web.Endpoint,
-  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("PORT", "4000"))],
+  http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("FIREFLY_PORT", "4000"))],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,

@@ -233,17 +233,7 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
-  defp render_oembed(%OEmbed.Photo{url: url}) do
-    assigns = %{url: url}
-
-    ~H"""
-    <img src={@url} />
-    """
-  end
-
-  defp render_oembed(%OEmbed.Video{html: html}), do: Phoenix.HTML.raw(html)
-  defp render_oembed(%OEmbed.Rich{html: html}), do: Phoenix.HTML.raw(html)
-  defp render_oembed(_), do: nil
+  defp render_oembed(oembed), do: Phoenix.HTML.raw(FirestormWeb.OEmbed.to_html(oembed))
 
   @doc """
   Pagination links for a `Scrivener.Page`, linking to `path?page=N`.

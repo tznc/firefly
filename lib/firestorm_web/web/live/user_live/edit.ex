@@ -39,9 +39,17 @@ defmodule FirestormWeb.Web.UserLive.Edit do
 
     case Forums.update_user(socket.assigns.user, params) do
       {:ok, user} ->
+        message =
+          if user.email != socket.assigns.user.email and not User.confirmed?(user) do
+            FirestormWeb.EmailConfirmation.deliver(user)
+            "User updated. We sent a link to #{user.email} to confirm the new address."
+          else
+            "User updated successfully."
+          end
+
         {:noreply,
          socket
-         |> put_flash(:info, "User updated successfully.")
+         |> put_flash(:info, message)
          |> push_navigate(to: ~p"/users/#{user}")}
 
       {:error, changeset} ->

@@ -10,20 +10,53 @@ defmodule FirestormWeb.Emails do
   def thread_new_post_notification(%User{} = user, %Thread{} = thread, %Post{} = post) do
     new_email()
     |> to(user.email)
-    |> from("noreply@firestormforum.org")
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
     |> subject("There was a new post in a thread you are watching on Firefly")
     |> html_body(html_body_for(thread, post))
     |> text_body(text_body_for(thread, post))
-    |> put_header("reply-to", reply_to_thread_address(thread))
+    |> put_header("reply-to", FirestormWeb.ReplyAddress.address(thread, user))
   end
 
-  defp reply_to_thread_address(%{id: id}) do
-    "reply-thread-#{id}@#{inbound_email_domain()}"
+  def confirmation(%User{} = user, url) do
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("Confirm your email address for Firefly")
+    |> html_body("""
+    <p>Hi #{escape(user.username)},</p>
+    <p>Confirm your email address to start posting on Firefly: #{link("confirm my email", url)}</p>
+    <p>The link expires in 7 days. If you didn't create a Firefly account, ignore this email.</p>
+    """)
+    |> text_body("""
+    Hi #{user.username},
+
+    Confirm your email address to start posting on Firefly:
+
+    #{url}
+
+    The link expires in 7 days. If you didn't create a Firefly account, ignore this email.
+    """)
   end
 
-  defp inbound_email_domain do
-    # This goes into config at some point
-    "notifier.firestormforum.org"
+  def password_reset(%User{} = user, url) do
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("Reset your Firefly password")
+    |> html_body("""
+    <p>Hi #{escape(user.username)},</p>
+    <p>Someone asked to reset the password for your Firefly account. #{link("Choose a new password", url)}.</p>
+    <p>The link expires in an hour and works once. If it wasn't you, ignore this email.</p>
+    """)
+    |> text_body("""
+    Hi #{user.username},
+
+    Someone asked to reset the password for your Firefly account. Choose a new password here:
+
+    #{url}
+
+    The link expires in an hour and works once. If it wasn't you, ignore this email.
+    """)
   end
 
   defdelegate thread_url(thread), to: FirestormWeb.Web.Paths

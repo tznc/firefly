@@ -12,6 +12,16 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
     category = Forums.get_category!(category_id)
     thread = Forums.get_thread!(category, id)
 
+    if can?(socket.assigns.current_user, :update_thread, thread),
+      do: mount_form(socket, category, thread),
+      else:
+        {:ok,
+         socket
+         |> put_flash(:error, denied_message(socket.assigns.current_user))
+         |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+  end
+
+  defp mount_form(socket, category, thread) do
     {:ok,
      socket
      |> assign(:page_title, "Edit #{thread.title}")
@@ -27,7 +37,7 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
   end
 
   def handle_event("save", %{"thread" => params}, socket) do
-    case Forums.update_thread(socket.assigns.thread, params) do
+    case Forums.update_thread(socket.assigns.thread, Map.take(params, ["title"])) do
       {:ok, thread} ->
         {:noreply,
          socket

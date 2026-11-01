@@ -48,10 +48,7 @@ defmodule FirestormWeb.Notifications do
         {:ok, _} =
           Forums.notify(user, Notification.thread_new_post_notification(post.thread, post))
 
-        # Send email
-        user
-        |> Emails.thread_new_post_notification(post.thread, post)
-        |> Mailer.deliver_now()
+        maybe_email(user, post)
       end
     else
       _ ->
@@ -59,5 +56,14 @@ defmodule FirestormWeb.Notifications do
     end
 
     {:noreply, :nostate}
+  end
+
+  # Email only confirmed addresses
+  defp maybe_email(user, post) do
+    if Forums.User.confirmed?(user) do
+      user
+      |> Emails.thread_new_post_notification(post.thread, post)
+      |> Mailer.deliver_now()
+    end
   end
 end

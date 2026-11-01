@@ -15,6 +15,8 @@ defmodule FirestormWeb.Forums.User do
     field(:password_hash, :string)
     field(:password, :string, virtual: true)
     field(:api_token, :string)
+    field(:github_uid, :string)
+    field(:confirmed_at, :utc_datetime)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -30,17 +32,68 @@ defmodule FirestormWeb.Forums.User do
     |> unique_constraint(:username)
   end
 
+  @doc "Whether the user has confirmed their email address."
+  def confirmed?(%__MODULE__{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)
+
+  @doc "Sets a new password (password reset)."
+  def password_changeset(%__MODULE__{} = user, attrs) do
+    user
+    |> cast(attrs, [:password])
+    |> validate_required([:password])
+    |> validate_length(:password, min: 8, max: 72)
+    |> validate_confirmation(:password, message: "does not match password")
+    |> put_password_hash()
+  end
+
+  @doc "Marks the user's email address as confirmed."
+  def confirm_changeset(%__MODULE__{} = user) do
+    change(user, confirmed_at: DateTime.utc_now(:second))
+  end
+
+  @doc "Profile edits. Changing the email address requires confirming it again."
+  def update_changeset(%__MODULE__{} = user, attrs) do
+    changeset = changeset(user, attrs)
+
+    if get_change(changeset, :email),
+      do: put_change(changeset, :confirmed_at, nil),
+      else: changeset
+  end
+
+  @doc "Links a user to a GitHub account (by GitHub's immutable user id)."
+  def github_changeset(%__MODULE__{} = user, attrs) do
+    user
+    |> changeset(attrs)
+    |> cast(attrs, [:github_uid])
+    |> validate_required([:github_uid])
+    |> unique_constraint(:github_uid)
+  end
+
   def admin_changeset(%__MODULE__{} = user, attrs \\ %{}) do
     user
     |> changeset(attrs)
     |> add_roles(attrs)
   end
 
+  @doc """
+  Registration with a username, email and password. The display name defaults
+  to the username.
+  """
   def registration_changeset(%__MODULE__{} = user, attrs) do
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+    attrs = Map.put_new(attrs, "name", attrs["username"])
+
     user
     |> changeset(attrs)
     |> cast(attrs, [:password])
-    |> validate_length(:password, min: 6)
+    |> validate_required([:email, :password])
+    |> validate_format(:username, ~r/^[A-Za-z0-9_-]+$/,
+      message: "can only contain letters, numbers, - and _"
+    )
+    |> validate_length(:username, min: 2, max: 32)
+    |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "must be a valid email")
+    |> validate_length(:email, max: 160)
+    |> validate_length(:password, min: 8, max: 72)
+    |> unsafe_validate_unique(:username, FirestormWeb.Repo)
     |> put_password_hash()
   end
 

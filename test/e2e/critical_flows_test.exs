@@ -5,7 +5,13 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
 
   test "a new member registers, logs out and logs back in", %{conn: conn} do
     conn
-    |> log_in("newbie")
+    |> visit("/login")
+    |> click_link("Create Account")
+    |> fill_in("Username", with: "newbie")
+    |> fill_in("Email", with: "newbie@example.com")
+    |> fill_in("Password", with: "s3cret-password")
+    |> click_button("Create account")
+    |> assert_has("#flash-info", text: "Successfully authenticated.")
     |> assert_has("nav a", text: "Your profile")
     |> click_link("Log out")
     |> assert_has("#flash-info", text: "You have been logged out!")
@@ -21,13 +27,13 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> visit("/auth/identity")
     |> fill_in("Username", with: "alice")
     |> fill_in("Password", with: "not-the-password")
-    |> click_button("Log in or register")
+    |> click_button("Log in")
     |> assert_has("#flash-error", text: "No user found with that username or password")
     |> assert_path("/auth/identity")
   end
 
-  test "a member creates a category and starts a thread with a live preview", %{conn: conn} do
-    member_fixture("alice")
+  test "an admin creates a category and starts a thread with a live preview", %{conn: conn} do
+    admin_fixture("alice")
 
     conn
     |> log_in("alice")

@@ -19,7 +19,7 @@ defmodule FirestormWeb.Web.AuthLive.Login do
               <.icon name="hero-code-bracket" class="size-5" /> Log in with GitHub
             </a>
             <div class="divider text-xs">or</div>
-            <.link navigate={~p"/auth/identity"} class="btn btn-primary">Create Account</.link>
+            <.link navigate={~p"/register"} class="btn btn-primary">Create Account</.link>
             <.link navigate={~p"/auth/identity"} class="link text-sm">Sign In</.link>
           </div>
         </div>

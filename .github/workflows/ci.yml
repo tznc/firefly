@@ -108,3 +108,29 @@ jobs:
       - run: mix dialyzer --format github
         env:
           MIX_ENV: dev
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build the release image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: firefly:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Check the release boots
+        # runtime.exs requires these; eval doesn't start the app, so dummies suffice
+        run: |
+          docker run --rm \
+            -e FIREFLY_DATABASE_URL=ecto://user:pass@localhost/firefly \
+            -e FIREFLY_SECRET_KEY_BASE="$(openssl rand -base64 48)" \
+            firefly:ci /app/bin/firestorm_web eval 'IO.puts(Application.spec(:firestorm_web, :vsn))'
