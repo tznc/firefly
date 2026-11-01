@@ -1,69 +1,84 @@
 defmodule FirestormWeb.Notifications do
   @moduledoc """
-  This is the entry point for our Notifications system. It will grow to support
-  various notification mechanisms, but for now it will send an email to anyone
-  involved in a thread everytime there's a new post.
+  Fans out activity to subscribers (see `FirestormWeb.Forums.Subscriptions`):
+
+    * a new thread notifies users watching or tracking its category
+    * a new post notifies users watching or tracking the thread (or its
+      category)
+
+  Everyone notified gets an in-app notification; users at `watching` also get
+  an email, if they have email notifications on and a confirmed address. To
+  avoid floods, a thread emails a user once until they read its notifications.
   """
 
   use GenServer
-  alias FirestormWeb.Forums
-  alias FirestormWeb.Forums.{Post, Notification}
-  alias FirestormWeb.{Repo, Emails, Mailer}
+
+  import Ecto.Query, only: [where: 2, order_by: 2, first: 1]
+
+  alias FirestormWeb.{Emails, Forums, Mailer, Repo}
+  alias FirestormWeb.Forums.{Notification, Post, Subscriptions, Thread, User}
 
   ### Client API
-  @doc """
-  Start the notifications system and link it.
 
-      iex> {:ok, pid} = FirestormWeb.Notifications.start_link()
-
-  """
   def start_link(_opts \\ []) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  @doc """
-  Send a notification that a new post has been made.
+  @doc "Notify subscribers about a new reply."
+  def post_created(%Post{} = post), do: GenServer.cast(__MODULE__, {:post_created, post})
 
-      iex> :ok = FirestormWeb.Notifications.post_created(%Post{})
-
-  """
-  def post_created(%Post{} = post) do
-    GenServer.cast(__MODULE__, {:post_created, post})
-  end
+  @doc "Notify category subscribers about a new thread."
+  def thread_created(%Thread{} = thread),
+    do: GenServer.cast(__MODULE__, {:thread_created, thread})
 
   ### Server API
-  def init(_) do
-    {:ok, :nostate}
-  end
 
-  def handle_cast({:post_created, %Post{} = post}, :nostate) do
-    # 1) Find all users that are watching this thread
-    with post when not is_nil(post) <- Repo.preload(post, thread: [:watchers]),
-         thread when not is_nil(thread) <- post.thread,
-         users <- thread.watchers |> Enum.uniq() do
-      # 2) Send each of them an email about it and notify them via the
-      # internal notifications system.
-      for user <- users do
-        # Send internal notification
-        {:ok, _} =
-          Forums.notify(user, Notification.thread_new_post_notification(post.thread, post))
+  @impl true
+  def init(_), do: {:ok, :nostate}
 
-        maybe_email(user, post)
-      end
-    else
-      _ ->
-        :ok
+  @impl true
+  def handle_cast({:post_created, %Post{} = post}, state) do
+    with %Post{thread: %Thread{} = thread} = post <- Repo.preload(post, [:user, :thread]) do
+      fan_out("new_post", thread, post)
     end
 
-    {:noreply, :nostate}
+    {:noreply, state}
   end
 
-  # Email only confirmed addresses
-  defp maybe_email(user, post) do
-    if Forums.User.confirmed?(user) do
+  def handle_cast({:thread_created, %Thread{} = thread}, state) do
+    first_post =
+      Post
+      |> where(thread_id: ^thread.id)
+      |> order_by(asc: :inserted_at, asc: :id)
+      |> first()
+      |> Repo.one()
+
+    if first_post do
+      fan_out("new_thread", thread, Repo.preload(first_post, :user))
+    end
+
+    {:noreply, state}
+  end
+
+  defp fan_out(kind, thread, post) do
+    for {user, level} <- Subscriptions.subscribers(thread), user.id != post.user_id do
+      {:ok, notification} =
+        Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
+
+      if level == "watching", do: maybe_email(user, notification, thread, post)
+    end
+
+    :ok
+  end
+
+  defp maybe_email(%User{} = user, notification, thread, post) do
+    if user.email_notifications and User.confirmed?(user) and
+         not Forums.unread_emailed_notification?(user, thread.id, notification.id) do
       user
-      |> Emails.thread_new_post_notification(post.thread, post)
+      |> Emails.thread_new_post_notification(thread, post)
       |> Mailer.deliver_now()
+
+      Forums.notification_emailed(notification)
     end
   end
 end

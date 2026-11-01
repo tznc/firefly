@@ -14,14 +14,14 @@ defmodule FirestormWeb.Forums do
     Category,
     Thread,
     Post,
-    Watch,
     View,
     ThreadRead,
     Notification,
     OembedExtractor,
     Role,
     RoleMembership,
-    SpamGuard
+    SpamGuard,
+    Subscriptions
   }
 
   @doc """
@@ -160,6 +160,10 @@ defmodule FirestormWeb.Forums do
         else: Ecto.Changeset.put_change(changeset, :confirmed_at, DateTime.utc_now(:second))
 
     Repo.update(changeset)
+  end
+
+  def update_preferences(%User{} = user, attrs) do
+    user |> User.preferences_changeset(attrs) |> Repo.update()
   end
 
   @doc "Marks the user's email address as confirmed."
@@ -451,6 +455,12 @@ defmodule FirestormWeb.Forums do
     |> Map.new(&{&1.thread_id, &1})
   end
 
+  defp without_muted(query, nil), do: query
+
+  defp without_muted(query, %User{} = user) do
+    where(query, [t], t.id not in subquery(Subscriptions.muted_thread_ids(user)))
+  end
+
   # Threads ordered by their latest post (most recently active first).
   defp by_last_activity(query) do
     query
@@ -470,6 +480,7 @@ defmodule FirestormWeb.Forums do
   @doc "Every thread, most recently active first (the Latest list)."
   def latest_threads(user_or_nil) do
     Thread
+    |> without_muted(user_or_nil)
     |> by_last_activity()
     |> preload(:category)
     |> Repo.all()
@@ -488,6 +499,7 @@ defmodule FirestormWeb.Forums do
     query = from(t in Thread, as: :thread)
 
     query
+    |> without_muted(user)
     |> where([t], t.inserted_at > ^since)
     |> where(
       [t],
@@ -508,6 +520,7 @@ defmodule FirestormWeb.Forums do
     query = from(t in Thread, as: :thread)
 
     query
+    |> without_muted(user)
     |> join(:inner, [t], r in ThreadRead,
       as: :read,
       on: r.thread_id == t.id and r.user_id == ^user.id
@@ -567,6 +580,17 @@ defmodule FirestormWeb.Forums do
     |> decorate_threads(user_or_nil)
   end
 
+  # Reading a thread reads its notifications.
+  defp read_thread_notifications(user, thread) do
+    Notification
+    |> where([n], n.user_id == ^user.id and n.thread_id == ^thread.id and is_nil(n.read_at))
+    |> Repo.update_all(set: [read_at: DateTime.utc_now(:second)])
+    |> case do
+      {0, _} -> :ok
+      _ -> notifications_changed(user.id)
+    end
+  end
+
   @doc "The user's read position in a thread, or nil if they've never opened it."
   def thread_read(%User{id: user_id}, %Thread{id: thread_id}) do
     Repo.get_by(ThreadRead, user_id: user_id, thread_id: thread_id)
@@ -595,11 +619,15 @@ defmodule FirestormWeb.Forums do
           ]
         )
 
-      Repo.insert(
-        %ThreadRead{user_id: user.id, thread_id: thread.id, last_read_post_id: last_post_id},
-        on_conflict: on_conflict,
-        conflict_target: [:user_id, :thread_id]
-      )
+      result =
+        Repo.insert(
+          %ThreadRead{user_id: user.id, thread_id: thread.id, last_read_post_id: last_post_id},
+          on_conflict: on_conflict,
+          conflict_target: [:user_id, :thread_id]
+        )
+
+      read_thread_notifications(user, thread)
+      result
     else
       {:ok, nil}
     end
@@ -736,6 +764,8 @@ defmodule FirestormWeb.Forums do
 
         :ok = Endpoint.broadcast!("categories:#{thread.category_id}", "update", payload)
         broadcast_thread(:thread_created, thread)
+        {:ok, _} = Subscriptions.ensure_thread_level(user, thread, "watching")
+        :ok = Notifications.thread_created(thread)
         {:ok, thread}
 
       e ->
@@ -899,6 +929,7 @@ defmodule FirestormWeb.Forums do
     changeset = %Post{} |> Post.changeset(attrs) |> SpamGuard.validate_post(user)
 
     with {:ok, post} <- Repo.insert(changeset) do
+      {:ok, _} = Subscriptions.ensure_thread_level(user, thread, "tracking")
       :ok = Notifications.post_created(post)
 
       post = Repo.preload(post, [:thread, :user])
@@ -958,78 +989,23 @@ defmodule FirestormWeb.Forums do
     |> Repo.one()
   end
 
-  @doc """
-  Have a user watch a thread:
+  @doc "Have a user watch a thread (notification level `watching`)."
+  def watch(%User{} = user, %Thread{} = thread),
+    do: Subscriptions.set_thread_level(user, thread, "watching")
 
-      iex> %User{} |> watch(%Thread{})
-      {:ok, %Watch{}}
-
-  """
-  def watch(%User{} = user, %Thread{} = thread) do
-    thread
-    |> Ecto.build_assoc(:watches, %{user_id: user.id})
-    |> Watch.changeset(%{})
-    |> Repo.insert()
-  end
-
-  @doc """
-  Ensure a user no longer watches a thread:
-
-      iex> %User{} |> unwatch(%Thread{})
-      :ok
-
-  """
+  @doc "Stop watching a thread (notification level `normal`)."
   def unwatch(%User{} = user, %Thread{} = thread) do
-    "forums_threads_watches"
-    |> where(assoc_id: ^thread.id)
-    |> where(user_id: ^user.id)
-    |> Repo.delete_all()
-
+    {:ok, _} = Subscriptions.set_thread_level(user, thread, "normal")
     :ok
   end
 
-  @doc """
-  Determine if a user is watching a given watchable (Thread, etc):
-
-      iex> %Thread{} |> watched_by?(%User{})
-      false
-
-  """
-  def watched_by?(watchable, %User{} = user) do
-    watch_count(watchable, user) > 0
-  end
-
-  def watcher_ids(watchable) do
-    watchable
-    |> watches()
-    |> select([f], f.user_id)
-    |> Repo.all()
-  end
-
-  def watch_count(watchable) do
-    watchable
-    |> watches()
-    |> Repo.aggregate(:count, :id)
-  end
-
-  defp watch_count(watchable, %User{} = user) do
-    watchable
-    |> watches()
-    |> where([f], f.user_id == ^user.id)
-    |> Repo.aggregate(:count, :id)
-  end
-
-  defp watches(watchable) do
-    watchable
-    |> Ecto.assoc(:watches)
-  end
-
-  def home_threads(user_or_nil), do: latest_threads(user_or_nil)
+  @doc "Whether the user watches the thread (by their own choice on the thread)."
+  def watched_by?(%Thread{} = thread, %User{} = user),
+    do: Subscriptions.thread_level(user, thread) == "watching"
 
   def watched_threads(%User{} = user) do
-    "forums_threads_watches"
-    |> where([w], w.user_id == ^user.id)
-    |> select([w], w.assoc_id)
+    user
+    |> Subscriptions.watched_thread_ids()
     |> Repo.all()
     |> get_decorated_threads(user)
   end
@@ -1094,23 +1070,79 @@ defmodule FirestormWeb.Forums do
     |> Ecto.assoc(:views)
   end
 
+  @doc "The user's notifications, newest first."
   def notifications_for(%User{} = user) do
     Notification
     |> where([n], n.user_id == ^user.id)
+    |> order_by(desc: :inserted_at, desc: :id)
+    |> limit(100)
     |> Repo.all()
   end
 
+  def unread_notification_count(%User{} = user) do
+    Notification
+    |> where([n], n.user_id == ^user.id and is_nil(n.read_at))
+    |> Repo.aggregate(:count)
+  end
+
   @doc """
-  Send a notification to a user:
-
-      iex> %User{} |> notify("Nice shoes")
-      {:ok, %Notification{}}
-
+  Sends a notification to a user, and tells their open pages so the badge
+  updates live.
   """
-  def notify(%User{} = user, %{subject: subject, body: body, url: url}) do
-    %Notification{}
-    |> Notification.changeset(%{body: body, subject: subject, url: url, user_id: user.id})
-    |> Repo.insert()
+  def notify(%User{} = user, attrs) do
+    result =
+      %Notification{}
+      |> Notification.changeset(Map.put(attrs, :user_id, user.id))
+      |> Repo.insert()
+
+    with {:ok, _} <- result, do: notifications_changed(user.id)
+    result
+  end
+
+  def mark_notification_read(%Notification{read_at: nil} = notification) do
+    {:ok, notification} =
+      notification |> change(read_at: DateTime.utc_now(:second)) |> Repo.update()
+
+    notifications_changed(notification.user_id)
+    {:ok, notification}
+  end
+
+  def mark_notification_read(%Notification{} = notification), do: {:ok, notification}
+
+  def mark_all_notifications_read(%User{} = user) do
+    Notification
+    |> where([n], n.user_id == ^user.id and is_nil(n.read_at))
+    |> Repo.update_all(set: [read_at: DateTime.utc_now(:second)])
+    |> case do
+      {0, _} -> :ok
+      _ -> notifications_changed(user.id)
+    end
+  end
+
+  @doc "Marks the notification as emailed."
+  def notification_emailed(%Notification{} = notification) do
+    notification |> change(emailed_at: DateTime.utc_now(:second)) |> Repo.update()
+  end
+
+  @doc """
+  Whether the user already has an unread, emailed notification for the
+  thread. Used to send one email per thread until the user comes back.
+  """
+  def unread_emailed_notification?(%User{} = user, thread_id, except_id) do
+    Notification
+    |> where([n], n.user_id == ^user.id and n.thread_id == ^thread_id and n.id != ^except_id)
+    |> where([n], is_nil(n.read_at) and not is_nil(n.emailed_at))
+    |> Repo.exists?()
+  end
+
+  def notifications_topic(user_id), do: "user:#{user_id}:notifications"
+
+  defp notifications_changed(user_id) do
+    Phoenix.PubSub.broadcast(
+      FirestormWeb.PubSub,
+      notifications_topic(user_id),
+      :notifications_changed
+    )
   end
 
   @doc """

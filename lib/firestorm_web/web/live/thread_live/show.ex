@@ -7,6 +7,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.{Forums, Repo}
+  alias FirestormWeb.Forums.Subscriptions
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
@@ -41,18 +42,16 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   @impl true
   def handle_event(event, _params, %{assigns: %{current_user: nil}} = socket)
-      when event in ["watch", "unwatch", "delete"] do
+      when event in ["set_level", "delete"] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
 
-  def handle_event("watch", _params, socket) do
-    Forums.watch(socket.assigns.current_user, socket.assigns.thread)
-    {:noreply, assign(socket, :watched, true)}
-  end
+  def handle_event("set_level", %{"level" => level}, socket)
+      when level in ["watching", "tracking", "normal", "muted"] do
+    {:ok, _} =
+      Subscriptions.set_thread_level(socket.assigns.current_user, socket.assigns.thread, level)
 
-  def handle_event("unwatch", _params, socket) do
-    Forums.unwatch(socket.assigns.current_user, socket.assigns.thread)
-    {:noreply, assign(socket, :watched, false)}
+    {:noreply, assign(socket, :level, level)}
   end
 
   def handle_event("delete", _params, socket) do
@@ -80,9 +79,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:thread, thread)
     |> assign(:first_post, first_post)
     |> assign(:replies, replies)
-    |> assign(:watched, !!user && Forums.watched_by?(thread, user))
+    |> assign(:level, Subscriptions.thread_level(user, thread))
+    |> assign(:inherited_level, inherited_level(user, socket.assigns.category))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
   end
+
+  defp inherited_level(user, category),
+    do: Subscriptions.category_level(user, category) || "normal"
 
   defp first_unread_id(_replies, nil), do: nil
 
@@ -128,26 +131,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         <li>
           <.post post={@first_post} thread={@thread}>
             <:actions>
-              <button
-                :if={@watched}
-                id="unwatch"
-                phx-click="unwatch"
-                class="btn btn-ghost btn-sm btn-square text-primary"
-                aria-label="unwatch"
-                title="Stop watching this thread"
-              >
-                <.icon name="hero-eye-solid" class="size-4" />
-              </button>
-              <button
-                :if={!@watched}
-                id="watch"
-                phx-click="watch"
-                class="btn btn-ghost btn-sm btn-square"
-                aria-label="watch"
-                title="Watch this thread"
-              >
-                <.icon name="hero-eye" class="size-4" />
-              </button>
+              <.level_picker
+                :if={@current_user}
+                id="thread-level"
+                level={@level}
+                inherited={@inherited_level}
+              />
             </:actions>
           </.post>
         </li>

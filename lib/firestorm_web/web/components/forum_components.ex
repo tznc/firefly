@@ -166,6 +166,67 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
+  @level_info %{
+    "watching" => {"hero-eye-solid", "Watching", "Notify me of every new post, and email me"},
+    "tracking" => {"hero-eye", "Tracking", "Notify me of every new post (no email)"},
+    "normal" => {"hero-bell-slash", "Normal", "Don't notify me"},
+    "muted" => {"hero-speaker-x-mark", "Muted", "Don't notify me, and hide from my lists"}
+  }
+
+  @doc """
+  A dropdown to pick a notification level. Sends `set_level` with `level`.
+  `inherited` is the level that applies when none is chosen (e.g. from the
+  category).
+  """
+  attr :id, :string, required: true
+  attr :level, :string, default: nil, doc: "the chosen level, or nil"
+  attr :inherited, :string, default: "normal"
+
+  def level_picker(assigns) do
+    effective = assigns.level || assigns.inherited
+    {icon, label, _} = Map.fetch!(@level_info, effective)
+
+    assigns =
+      assign(assigns,
+        effective: effective,
+        icon: icon,
+        label: label,
+        options: Enum.map(~w(watching tracking normal muted), &{&1, @level_info[&1]})
+      )
+
+    ~H"""
+    <div id={@id} class="dropdown dropdown-end">
+      <div
+        tabindex="0"
+        role="button"
+        class={["btn btn-ghost btn-sm", @effective in ~w(watching tracking) && "text-primary"]}
+        title="Notification level"
+      >
+        <.icon name={@icon} class="size-4" /> <span class="level-label">{@label}</span>
+      </div>
+      <ul
+        tabindex="0"
+        class="dropdown-content menu z-10 w-72 rounded-box border border-base-300 bg-base-100 p-2 shadow"
+      >
+        <li :for={{value, {opt_icon, opt_label, description}} <- @options}>
+          <button
+            type="button"
+            phx-click="set_level"
+            phx-value-level={value}
+            class={[@effective == value && "menu-active"]}
+          >
+            <.icon name={opt_icon} class="size-4" />
+            <span class="flex flex-col items-start">
+              <span class="font-medium">{opt_label}</span>
+              <span class="text-xs opacity-70">{description}</span>
+            </span>
+          </button>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
   @doc "Tabs for the Latest / New / Unread / Top thread lists."
   attr :current_path, :string, required: true
   attr :current_user, :any, default: nil

@@ -70,13 +70,21 @@ defmodule FirestormWeb.Emails do
     <p>The Firefly thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", post_url(thread, post))}:</p>
     <hr />
     #{Markdown.render(post.body)}
+    <hr />
+    <p><small>You're getting this because you watch this thread or its category. We won't email you about this thread again until you've read it. #{link("Change your notification settings", settings_url())}.</small></p>
     """
   end
+
+  defp settings_url, do: FirestormWeb.Web.Paths.notification_settings_url()
 
   defp text_body_for(%Thread{} = thread, %Post{} = post) do
     """
     The Firefly thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{post_url(thread, post)}]:\n\n
     #{post.body}
+
+    --
+    You're getting this because you watch this thread or its category. We won't email you about this thread again until you've read it.
+    Change your notification settings: #{settings_url()}
     """
   end
 

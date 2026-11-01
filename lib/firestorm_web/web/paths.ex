@@ -12,5 +12,7 @@ defmodule FirestormWeb.Web.Paths do
 
   def password_reset_url(token), do: url(~p"/reset-password/#{token}")
 
+  def notification_settings_url, do: url(~p"/settings/notifications")
+
   def thread_url(thread), do: url(~p"/categories/#{thread.category_id}/threads/#{thread.id}")
 end

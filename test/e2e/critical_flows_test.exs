@@ -82,7 +82,7 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> assert_has("#reply-count", text: "1 reply")
   end
 
-  test "watching a thread notifies the watcher about new replies", %{conn: conn} = context do
+  test "watching a thread notifies the watcher live about new replies", %{conn: conn} = context do
     start_supervised!(FirestormWeb.Notifications)
     alice = member_fixture("alice")
     member_fixture("bob")
@@ -95,23 +95,28 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
 
     watcher =
       conn
-      |> log_in("alice")
+      |> log_in("bob")
       |> visit(thread_path)
-      |> click_button("watch")
-      |> assert_has("button[aria-label='unwatch']")
+      |> click_button("#thread-level [role=button]", "Normal")
+      |> click_button("#thread-level li button", "Watching")
+      |> assert_has("#thread-level .level-label", text: "Watching")
+      |> visit("/")
+      |> assert_has("a[aria-label='Notifications (0)']")
 
     another_browser(context)
-    |> log_in("bob")
+    |> log_in("alice")
     |> visit(thread_path <> "/posts/new")
     |> fill_in("Body", with: "Herp Derp")
     |> click_button("Reply")
     |> assert_has("#flash-info", text: "Post created successfully.")
 
+    # The badge updates without a reload
     watcher
+    |> assert_has("a[aria-label='Notifications (1)']")
     |> visit("/notifications")
-    |> assert_has("#notifications li", text: "There was a new post in thread: GenStage")
-    |> click_link("There was a new post in thread: GenStage")
+    |> click_button("#notifications button", "@alice replied in")
     |> assert_has("p", text: "Herp Derp")
+    |> assert_has("a[aria-label='Notifications (0)']")
   end
 
   test "admins manage categories in the admin UI; members can't reach it",

@@ -12,6 +12,11 @@ defmodule FirestormWeb.Web.NotificationLive.Show do
 
     case Forums.get_notification(id) do
       %{user_id: user_id} = notification when user_id == user.id ->
+        {:ok, notification} =
+          if connected?(socket),
+            do: Forums.mark_notification_read(notification),
+            else: {:ok, notification}
+
         {:ok,
          socket
          |> assign(:page_title, notification.subject)
