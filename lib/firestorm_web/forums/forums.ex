@@ -2006,7 +2006,11 @@ defmodule FirestormWeb.Forums do
 
     Notification
     |> where([n], n.user_id == ^user.id)
-    |> where([n], is_nil(n.thread_id) or n.thread_id in subquery(readable))
+    |> where(
+      [n],
+      not is_nil(n.conversation_id) or n.kind in ^Notification.threadless_kinds() or
+        n.thread_id in subquery(readable)
+    )
   end
 
   def notifications_topic(user_id), do: "user:#{user_id}:notifications"

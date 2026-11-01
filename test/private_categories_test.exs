@@ -9,6 +9,7 @@ defmodule FirestormWeb.PrivateCategoriesTest do
     Groups,
     Markdown,
     Mentions,
+    Messages,
     Notifications,
     Posting,
     Repo,
@@ -107,6 +108,23 @@ defmodule FirestormWeb.PrivateCategoriesTest do
 
         assert readable == expected
       end
+    end
+
+    test "thread_readers/2 agrees with :view_thread", ctx do
+      {:ok, leads} = Groups.create_group(%{name: "leads"}, ctx.admin)
+      {:ok, _} = Forums.update_category(ctx.inner, %{role_ids: [leads.id]})
+      {:ok, _} = Groups.add_member(leads, "outsider", ctx.admin)
+      both = user("both")
+      {:ok, _} = Groups.add_member(ctx.team, "both", ctx.admin)
+      {:ok, _} = Groups.add_member(leads, "both", ctx.admin)
+      users = [ctx.outsider, ctx.insider, ctx.admin, both]
+
+      for thread <- [ctx.public_thread, ctx.secret_thread, ctx.inner_thread] do
+        assert Policy.thread_readers(thread, users) ==
+                 Enum.filter(users, &can?(&1, :view_thread, thread))
+      end
+
+      assert Policy.thread_readers(ctx.inner_thread, users) == [ctx.admin, both]
     end
   end
 
@@ -220,6 +238,31 @@ defmodule FirestormWeb.PrivateCategoriesTest do
       assert Forums.notifications_for(ctx.outsider) == []
       assert Forums.unread_notification_count(ctx.outsider) == 0
       assert Forums.get_notification(ctx.outsider, notification.id) == nil
+    end
+
+    test "rows without a thread are shown only for messages and penalties", ctx do
+      %{outsider: outsider} = ctx
+      # A pre-thread_id row that quotes a (now restricted) thread's post.
+      legacy = %{subject: "New post in: Launch plans", body: "classified", url: "/x"}
+      {:ok, _} = Forums.notify(outsider, legacy)
+
+      {:ok, _} =
+        Forums.notify(outsider, %{kind: "silenced", subject: "Silenced", body: "why", url: "/"})
+
+      {:ok, _} =
+        Messages.start_conversation(ctx.insider, %{
+          recipients: "outsider",
+          title: "Hi",
+          body: "a message"
+        })
+
+      flush()
+
+      assert [%{kind: "message"}, %{kind: "silenced"}] = Forums.notifications_for(outsider)
+      assert Forums.unread_notification_count(outsider) == 2
+
+      assert [%{kind: "silenced"}, %{kind: "message"}] =
+               AccountExport.build(outsider).notifications
     end
   end
 
