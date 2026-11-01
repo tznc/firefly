@@ -4,11 +4,15 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   see a placeholder for a deleted reply; admins see it dimmed, to restore. Viewing the thread moves the
   current user's read position to its newest post; posts that were unread when
   the page opened are marked with a "new since your last visit" divider.
+
+  Members can flag other people's posts (see `FirestormWeb.Flags`). A post
+  hidden after flags shows as a placeholder, except to its author and
+  admins, who see it with a notice; admins also see pending flag counts.
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Mentions, Posting, RateLimit, Repo}
-  alias FirestormWeb.Forums.{Category, Post, Subscriptions, Thread}
+  alias FirestormWeb.{Flags, Forums, Mentions, Posting, RateLimit, Repo}
+  alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread}
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
@@ -100,7 +104,10 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              "move",
              "delete_post",
              "restore_post",
-             "toggle_like"
+             "toggle_like",
+             "flag",
+             "submit_flag",
+             "unhide"
            ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
@@ -192,6 +199,53 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     end
   end
 
+  def handle_event("flag", %{"id" => id}, socket) do
+    post = Forums.get_post!(socket.assigns.thread, id)
+
+    if can?(socket.assigns.current_user, :flag_post, %{post: post, thread: socket.assigns.thread}),
+       do: {:noreply, assign(socket, flagging: post.id, flag_form: flag_form())},
+       else: {:noreply, put_flash(socket, :error, Flags.message(:unauthorized))}
+  end
+
+  def handle_event("cancel_flag", _params, socket),
+    do: {:noreply, assign(socket, :flagging, nil)}
+
+  # Only after a "flag" event picked the post (a stale or crafted submit
+  # without one is ignored).
+  def handle_event("submit_flag", _params, %{assigns: %{flagging: nil}} = socket),
+    do: {:noreply, socket}
+
+  def handle_event("submit_flag", %{"flag" => params}, socket) do
+    %{thread: thread, current_user: user, flagging: post_id} = socket.assigns
+    post = Forums.get_post!(thread, post_id)
+
+    case Flags.flag_post(post, user, params) do
+      {:ok, _flag} ->
+        {:noreply,
+         socket
+         |> assign(:flagging, nil)
+         |> put_flash(:info, "Thanks: staff will take a look.")
+         |> load_thread(thread)}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, :flag_form, to_form(changeset, action: :validate))}
+
+      {:error, reason} ->
+        {:noreply, socket |> assign(:flagging, nil) |> put_flash(:error, Flags.message(reason))}
+    end
+  end
+
+  def handle_event("unhide", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+
+    with true <- can?(user, :unhide_post) || {:error, :unauthorized},
+         {:ok, _post} <- thread |> Forums.get_post!(id) |> Flags.unhide(user) do
+      {:noreply, socket |> put_flash(:info, "Post unhidden.") |> load_thread(thread)}
+    else
+      {:error, reason} -> {:noreply, put_flash(socket, :error, Flags.message(reason))}
+    end
+  end
+
   def handle_event("set_level", _params, socket), do: {:noreply, socket}
 
   def handle_event("delete", _params, socket) do
@@ -227,6 +281,15 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:admin?, can?(user, :view_deleted_posts))
     |> assign(:likers, Forums.likers(thread.posts))
     |> assign(:likeable_ids, permitted_ids(user, thread, :like_post))
+    |> assign(:flaggable_ids, permitted_ids(user, thread, :flag_post))
+    |> assign(:flagged_ids, Flags.flagged_ids(thread.posts, user))
+    |> assign(
+      :flag_counts,
+      if(can?(user, :view_flags), do: Flags.pending_counts(thread.posts), else: %{})
+    )
+    |> assign(:hidden_ids, hidden_ids(user, thread.posts))
+    |> assign_new(:flagging, fn -> nil end)
+    |> assign_new(:flag_form, &flag_form/0)
     |> assign(:can_manage?, can?(user, :update_thread, thread))
     |> assign(:can_moderate?, can?(user, :moderate_thread))
     |> assign(
@@ -256,6 +319,17 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       post.id
     end
   end
+
+  # Hidden posts the user sees only as a placeholder.
+  defp hidden_ids(user, posts) do
+    for post <- posts,
+        Post.hidden?(post),
+        not can?(user, :view_hidden_post, post),
+        into: MapSet.new(),
+        do: post.id
+  end
+
+  defp flag_form, do: to_form(Flag.changeset(%Flag{}, %{}))
 
   defp refresh_likers(socket, post) do
     likers = Map.get(Forums.likers([post]), post.id, [])
@@ -364,7 +438,14 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
       <ol id="posts" class="space-y-4">
         <li>
+          <.hidden_post :if={MapSet.member?(@hidden_ids, @first_post.id)} post={@first_post} />
+          <.hidden_notice
+            :if={Post.hidden?(@first_post) and not MapSet.member?(@hidden_ids, @first_post.id)}
+            post={@first_post}
+            can_unhide={@admin?}
+          />
           <.post
+            :if={not MapSet.member?(@hidden_ids, @first_post.id)}
             post={@first_post}
             thread={@thread}
             viewer={@current_user}
@@ -378,6 +459,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 current_user={@current_user}
                 can_like={MapSet.member?(@likeable_ids, @first_post.id)}
               />
+              <.flag_button
+                post={@first_post}
+                can_flag={MapSet.member?(@flaggable_ids, @first_post.id)}
+                flagged={MapSet.member?(@flagged_ids, @first_post.id)}
+                count={@flag_counts[@first_post.id]}
+              />
               <.level_picker
                 :if={@current_user}
                 id="thread-level"
@@ -386,6 +473,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
               />
             </:actions>
           </.post>
+          <.flag_reason_form :if={@flagging == @first_post.id} form={@flag_form} />
         </li>
         <li :for={post <- @replies}>
           <div
@@ -396,8 +484,19 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             New since your last visit
           </div>
           <.deleted_post :if={Post.deleted?(post) and not @admin?} post={post} />
+          <.hidden_post
+            :if={not Post.deleted?(post) and MapSet.member?(@hidden_ids, post.id)}
+            post={post}
+          />
+          <.hidden_notice
+            :if={Post.hidden?(post) and not MapSet.member?(@hidden_ids, post.id)}
+            post={post}
+            can_unhide={@admin?}
+          />
           <.post
-            :if={not Post.deleted?(post) or @admin?}
+            :if={
+              (not Post.deleted?(post) or @admin?) and not MapSet.member?(@hidden_ids, post.id)
+            }
             post={post}
             thread={@thread}
             viewer={@current_user}
@@ -410,6 +509,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 likers={Map.get(@likers, post.id, [])}
                 current_user={@current_user}
                 can_like={MapSet.member?(@likeable_ids, post.id)}
+              />
+              <.flag_button
+                post={post}
+                can_flag={MapSet.member?(@flaggable_ids, post.id)}
+                flagged={MapSet.member?(@flagged_ids, post.id)}
+                count={@flag_counts[post.id]}
               />
               <button
                 :if={MapSet.member?(@deletable_ids, post.id)}
@@ -431,6 +536,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
               </button>
             </:actions>
           </.post>
+          <.flag_reason_form :if={@flagging == post.id} form={@flag_form} />
         </li>
       </ol>
 
@@ -449,6 +555,63 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         </.link>
       </div>
     </Layouts.app>
+    """
+  end
+
+  attr :post, :any, required: true
+  attr :can_flag, :boolean, required: true
+  attr :flagged, :boolean, required: true
+  attr :count, :integer, default: nil, doc: "pending flags (staff only)"
+
+  defp flag_button(assigns) do
+    ~H"""
+    <span :if={@count} class="flag-count badge badge-warning badge-sm" title="Pending flags">
+      <.icon name="hero-flag" class="size-3" /> {@count}
+    </span>
+    <span :if={@flagged} class="flagged btn btn-ghost btn-sm btn-disabled" aria-label="You flagged this post">
+      <.icon name="hero-flag-solid" class="size-4" /> Flagged
+    </span>
+    <button
+      :if={@can_flag and not @flagged}
+      phx-click="flag"
+      phx-value-id={@post.id}
+      class="btn btn-ghost btn-sm btn-square"
+      aria-label={"Flag post #{@post.id}"}
+      title="Flag this post for staff"
+    >
+      <.icon name="hero-flag" class="size-4" />
+    </button>
+    """
+  end
+
+  attr :form, :any, required: true
+
+  defp flag_reason_form(assigns) do
+    ~H"""
+    <.form
+      for={@form}
+      id="flag-form"
+      phx-submit="submit_flag"
+      class="mt-2 space-y-2 rounded-box border border-warning/50 bg-base-100 p-4"
+    >
+      <p class="font-semibold">Why should staff look at this post?</p>
+      <label :for={reason <- Flag.reasons()} class="flex items-center gap-2 text-sm">
+        <input
+          type="radio"
+          name={@form[:reason].name}
+          value={reason}
+          checked={@form[:reason].value == reason}
+          class="radio radio-sm"
+        />
+        {Flag.reason_label(reason)}
+      </label>
+      <.input field={@form[:note]} type="textarea" label="Details (required for something else)" rows="2" />
+      <p :for={{message, _} <- @form[:reason].errors} class="text-sm text-error">Reason {message}</p>
+      <div class="flex justify-end gap-2">
+        <button type="button" phx-click="cancel_flag" class="btn btn-ghost btn-sm">Cancel</button>
+        <.button variant="primary" class="btn-sm">Flag post</.button>
+      </div>
+    </.form>
     """
   end
 end

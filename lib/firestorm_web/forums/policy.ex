@@ -18,6 +18,10 @@ defmodule FirestormWeb.Forums.Policy do
       member may have been made an admin since)
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
+    * `:flag_post` (same params) - members, on other people's posts that
+      aren't deleted or already hidden
+    * `:view_hidden_post` (params: the post) - its author and admins
+    * `:view_flags` (flag counts and reasons), `:unhide_post` - admins
     * `:edit_user` - the user themselves
     * `:view_conversation` (a private conversation: read and reply) - its
       participants, until they leave. Nobody else, admins included.
@@ -93,8 +97,19 @@ defmodule FirestormWeb.Forums.Policy do
       else: {:error, :unauthorized}
   end
 
+  def authorize(:flag_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{}}) do
+    if post.user_id != user.id and not Post.deleted?(post) and not Post.hidden?(post),
+      do: :ok,
+      else: {:error, :unauthorized}
+  end
+
+  def authorize(:view_hidden_post, %User{id: id}, %Post{user_id: id}), do: :ok
+
   def authorize(action, %User{} = user, _params)
       when action in [
+             :view_hidden_post,
+             :view_flags,
+             :unhide_post,
              :restore_post,
              :view_deleted_posts,
              :view_staff_log,

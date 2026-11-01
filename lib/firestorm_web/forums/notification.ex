@@ -5,7 +5,9 @@ defmodule FirestormWeb.Forums.Notification do
   or track), `"mentioned"` (someone @mentioned you in a post) `"liked"`
   (someone liked your post; never emailed), `"message"` (a private message,
   or being added to a conversation; with `conversation_id`) or `"silenced"`/
-  `"suspended"` (a staff penalty; the body is the reason). `read_at` is set when you open it
+  `"suspended"` (a staff penalty; the body is the reason), `"post_hidden"`
+  (your post was hidden after flags) or `"flagged"` (for admins: a post was
+  flagged; one per post while unread). `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
 
@@ -13,7 +15,7 @@ defmodule FirestormWeb.Forums.Notification do
   alias FirestormWeb.Forums.{Conversation, Message, User, Thread, Post}
   import Ecto.Changeset
 
-  @kinds ~w(new_thread new_post mentioned liked message silenced suspended)
+  @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged)
 
   # Kinds that are about the user, not a thread, so they never carry a
   # thread_id. Any other notification without a thread_id or conversation_id

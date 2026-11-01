@@ -19,11 +19,19 @@ defmodule FirestormWeb.Web.PostLive.History do
     post = thread |> Forums.get_post!(id) |> FirestormWeb.Repo.preload(:user)
     socket = assign(socket, category: category, thread: thread)
 
-    # A deleted post's content (and so its history) is for admins only.
-    if Post.deleted?(post) and not can?(socket.assigns.current_user, :view_deleted_posts) do
+    # A deleted post's content (and so its history) is for admins only; a
+    # hidden one's for its author too.
+    if (Post.deleted?(post) and not can?(socket.assigns.current_user, :view_deleted_posts)) or
+         (Post.hidden?(post) and not can?(socket.assigns.current_user, :view_hidden_post, post)) do
       {:ok,
        socket
-       |> put_flash(:error, "This post was deleted.")
+       |> put_flash(
+         :error,
+         if(Post.deleted?(post),
+           do: "This post was deleted.",
+           else: "This post is hidden pending review."
+         )
+       )
        |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
     else
       if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
