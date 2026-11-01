@@ -4,10 +4,15 @@ defmodule FirestormWeb.Forums.OembedExtractor do
   """
 
   @url_regex ~r(https?://[^ $\n]*)
+  # Embeds per post, so one post can't trigger an unbounded number of lookups.
+  @max_embeds 5
 
   def get_embeds(body) do
     body
     |> get_urls_from_string()
+    |> Enum.uniq()
+    |> Enum.filter(&FirestormWeb.OEmbed.provider_for/1)
+    |> Enum.take(@max_embeds)
     |> Task.async_stream(fn url -> {url, FirestormWeb.OEmbed.for(url)} end)
     |> Enum.filter(&successful_oembed?/1)
     |> Enum.map(fn {:ok, {url, {:ok, a}}} -> {url, a} end)
