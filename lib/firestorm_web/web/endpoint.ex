@@ -20,8 +20,8 @@ defmodule FirestormWeb.Web.Endpoint do
   end
 
   socket("/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [:user_agent, :peer_data, session: @session_options]],
-    longpoll: [connect_info: [:user_agent, :peer_data, session: @session_options]]
+    websocket: [connect_info: [:user_agent, :peer_data, :x_headers, session: @session_options]],
+    longpoll: [connect_info: [:user_agent, :peer_data, :x_headers, session: @session_options]]
   )
 
   # Origins are checked against the endpoint's host (see :check_origin).
@@ -53,6 +53,9 @@ defmodule FirestormWeb.Web.Endpoint do
     plug(Phoenix.CodeReloader)
     plug(Phoenix.Ecto.CheckRepoStatus, otp_app: :firestorm_web)
   end
+
+  # The client's IP behind trusted proxies, for per-IP rate limits.
+  plug(FirestormWeb.Web.ClientIP)
 
   plug(Plug.RequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])

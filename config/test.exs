@@ -89,5 +89,6 @@ config :firestorm_web, FirestormWeb.RateLimit,
     message: {1_000, 60_000},
     export: {1_000, 60_000},
     email: {1_000, 60_000},
-    password_reset: {1_000, 60_000}
+    password_reset: {1_000, 60_000},
+    search: {1_000, 60_000}
   ]

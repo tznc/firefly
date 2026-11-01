@@ -2,33 +2,59 @@ defmodule FirestormWeb.Web.SearchLive.Index do
   @moduledoc """
   Full-text search (see `FirestormWeb.Search`). The query and filters live in
   the URL (`/search?q=...&category=...`), so results can be linked and paged.
+
+  Searches are rate limited (the `:search` bucket, per user or per client IP
+  for visitors, see `FirestormWeb.Web.ClientIP`). Only the connected render
+  searches: the static one shows the form alone, so a page load counts
+  once and plain HTTP requests get no results (the JSON API, also limited,
+  is for those).
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Search}
+  alias FirestormWeb.{Forums, RateLimit, Search}
 
-  @controls ~w(category tag user in order)
+  @controls ~w(category tag user in order muted)
 
   @impl true
   def mount(_params, _session, socket) do
     categories =
       Enum.map(Forums.list_categories(socket.assigns.current_user), &{&1.title, &1.slug})
 
-    {:ok, assign(socket, page_title: "Search", categories: categories)}
+    {:ok,
+     assign(socket,
+       page_title: "Search",
+       categories: categories,
+       remote_ip: FirestormWeb.Web.ClientIP.from_socket(socket),
+       rate_limited?: false
+     )}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
     query = Map.take(params, ["q" | @controls])
     search = Search.parse(params["q"], query)
-    page = Search.run(search, socket.assigns.current_user, params["page"] || 1)
 
     {:noreply,
      socket
      |> assign(:query, query)
-     |> assign(:searched?, Search.present?(search))
+     |> assign(:searched?, connected?(socket) and Search.present?(search))
      |> assign(:form, to_form(query, as: :search))
-     |> assign(:results, page)}
+     |> run(search, params["page"] || 1)}
+  end
+
+  defp run(socket, search, page) do
+    %{current_user: user, remote_ip: remote_ip} = socket.assigns
+
+    cond do
+      not connected?(socket) or not Search.present?(search) ->
+        assign(socket, results: Search.no_results(), rate_limited?: false)
+
+      RateLimit.check_search(user, remote_ip) == :ok ->
+        assign(socket, results: Search.run(search, user, page), rate_limited?: false)
+
+      true ->
+        assign(socket, results: Search.no_results(), rate_limited?: true)
+    end
   end
 
   @impl true
@@ -82,6 +108,15 @@ defmodule FirestormWeb.Web.SearchLive.Index do
               class="checkbox checkbox-sm"
             /> Titles only
           </label>
+          <label :if={@current_user} class="label self-end pb-3 text-sm">
+            <input
+              type="checkbox"
+              name="search[muted]"
+              value="include"
+              checked={@form[:muted].value == "include"}
+              class="checkbox checkbox-sm"
+            /> Include muted
+          </label>
         </div>
         <p class="text-xs text-base-content/60">
           Also in the search box: <code>category:slug</code>, <code>tag:name</code>,
@@ -89,7 +124,11 @@ defmodule FirestormWeb.Web.SearchLive.Index do
         </p>
       </.form>
 
-      <section :if={@searched?} id="search-results" class="space-y-4">
+      <p :if={@rate_limited?} id="search-rate-limited" class="alert alert-warning">
+        {RateLimit.message()}
+      </p>
+
+      <section :if={@searched? and not @rate_limited?} id="search-results" class="space-y-4">
         <p class="text-sm text-base-content/70">
           {ngettext("1 result", "%{count} results", @results.total_entries)}
         </p>
