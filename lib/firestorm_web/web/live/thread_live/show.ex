@@ -18,12 +18,16 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   Members can bookmark posts (see `FirestormWeb.Bookmarks`): bookmarking
   one opens a form for an optional note and reminder.
+
+  In a Q&A category the thread's author and staff can accept a reply as
+  the answer (see `FirestormWeb.Solved`); it's shown under the first post.
   """
   use FirestormWeb.Web, :live_view
 
   import FirestormWeb.Web.BookmarkComponents
 
-  alias FirestormWeb.{Bookmarks, Flags, Forums, Mentions, Posting, RateLimit, Repo, TopicTimers}
+  alias FirestormWeb.{Bookmarks, Flags, Forums, Mentions, Posting, RateLimit, Repo, Solved}
+  alias FirestormWeb.TopicTimers
   alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread, ThreadTimer}
 
   @impl true
@@ -79,9 +83,17 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              :post_deleted,
              :post_restored
            ] do
-    if can?(socket.assigns.current_user, :view_thread, socket.assigns.thread),
-      do: {:noreply, load_thread(socket, socket.assigns.thread)},
-      else: {:noreply, leave(socket)}
+    # Read again: a post's change can change the thread (e.g. a deleted
+    # answer is unaccepted).
+    case Forums.get_thread(socket.assigns.thread.id) do
+      nil ->
+        {:noreply, leave(socket)}
+
+      thread ->
+        if can?(socket.assigns.current_user, :view_thread, thread),
+          do: {:noreply, load_thread(socket, thread)},
+          else: {:noreply, leave(socket)}
+    end
   end
 
   # Likes are frequent: refresh just that post's likers, not the whole thread.
@@ -139,7 +151,9 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              "submit_flag",
              "unhide",
              "toggle_bookmark",
-             "save_bookmark"
+             "save_bookmark",
+             "accept_answer",
+             "unaccept_answer"
            ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
@@ -278,6 +292,29 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     end
   end
 
+  def handle_event("accept_answer", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+    post = Forums.get_post!(thread, id)
+
+    case Solved.accept(thread, post, user) do
+      {:ok, thread} ->
+        {:noreply, socket |> put_flash(:info, "Answer accepted.") |> load_thread(thread)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Solved.message(reason))}
+    end
+  end
+
+  def handle_event("unaccept_answer", _params, socket) do
+    case Solved.unaccept(socket.assigns.thread, socket.assigns.current_user) do
+      {:ok, thread} ->
+        {:noreply, socket |> put_flash(:info, "Answer unaccepted.") |> load_thread(thread)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Solved.message(reason))}
+    end
+  end
+
   def handle_event("toggle_bookmark", %{"id" => id}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
     post = Forums.get_post!(thread, id)
@@ -375,6 +412,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign_bookmarks()
     |> assign_new(:flagging, fn -> nil end)
     |> assign_new(:flag_form, &flag_form/0)
+    |> assign(:accepted, Enum.find(replies, &(&1.id == thread.accepted_post_id)))
+    |> assign(:can_accept?, can?(user, :accept_answer, thread))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
     |> assign(:can_moderate?, can?(user, :moderate_thread))
     |> assign(
@@ -455,6 +494,9 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
           <.thread_status thread={@thread} />
           <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"}>{@thread.title}</.link>
+          <span :if={Thread.solved?(@thread)} class="solved-badge badge badge-success">
+            <.icon name="hero-check-circle" class="size-4" /> Solved
+          </span>
         </h1>
         <.tag_chips tags={@thread.tags} />
         <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/70">
@@ -582,6 +624,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           </.post>
           <.flag_reason_form :if={@flagging == @first_post.id} form={@flag_form} />
           <.bookmark_form :if={@bookmarking == @first_post.id} form={@bookmark_form} />
+          <.accepted_answer :if={@accepted} post={@accepted} />
         </li>
         <li :for={post <- @replies}>
           <div
@@ -611,6 +654,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             viewer={@current_user}
             refs={@refs}
             can_edit={MapSet.member?(@editable_ids, post.id)}
+            accepted={post.id == @thread.accepted_post_id}
           >
             <:actions>
               <.like_button
@@ -624,6 +668,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 can_flag={MapSet.member?(@flaggable_ids, post.id)}
                 flagged={MapSet.member?(@flagged_ids, post.id)}
                 count={@flag_counts[post.id]}
+              />
+              <.accept_button
+                :if={@can_accept? and Solved.acceptable?(post, @first_post)}
+                post={post}
+                accepted={post.id == @thread.accepted_post_id}
               />
               <.bookmark_button
                 :if={@current_user}
@@ -716,6 +765,50 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     >
       <.icon name="hero-flag" class="size-4" />
     </button>
+    """
+  end
+
+  attr :post, :any, required: true
+  attr :accepted, :boolean, required: true
+
+  defp accept_button(assigns) do
+    ~H"""
+    <button
+      :if={@accepted}
+      phx-click="unaccept_answer"
+      class="btn btn-ghost btn-sm text-success"
+      aria-label={"Unaccept post #{@post.id} as the answer"}
+      title="Unaccept as the answer"
+    >
+      <.icon name="hero-check-circle-solid" class="size-4" /> Unaccept
+    </button>
+    <button
+      :if={!@accepted}
+      phx-click="accept_answer"
+      phx-value-id={@post.id}
+      class="btn btn-ghost btn-sm"
+      aria-label={"Accept post #{@post.id} as the answer"}
+      title="Accept as the answer"
+    >
+      <.icon name="hero-check-circle" class="size-4" /> Accept answer
+    </button>
+    """
+  end
+
+  attr :post, :any, required: true
+
+  defp accepted_answer(assigns) do
+    ~H"""
+    <div id="accepted-answer" class="mt-2 rounded-box border border-success/50 bg-success/5 p-4 text-sm">
+      <div class="flex flex-wrap items-center gap-2 font-semibold text-success">
+        <.icon name="hero-check-circle-solid" class="size-5" /> Solved: accepted answer by
+        <.link navigate={~p"/users/#{@post.user}"} class="link-hover">@{@post.user.username}</.link>
+        <.link href={"#post-#{@post.id}"} class="btn btn-ghost btn-xs ml-auto">
+          Jump to answer <.icon name="hero-arrow-down" class="size-3" />
+        </.link>
+      </div>
+      <p class="mt-1 line-clamp-3 text-base-content/80">{String.slice(@post.body, 0, 300)}</p>
+    </div>
     """
   end
 

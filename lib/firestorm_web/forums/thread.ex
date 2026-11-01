@@ -27,6 +27,9 @@ defmodule FirestormWeb.Forums.Thread do
     # Set once the thread's posts were merged into another (see
     # `FirestormWeb.TopicTools`): it's then a closed stub that redirects.
     belongs_to(:merged_into, __MODULE__)
+    # The reply accepted as the answer, in a Q&A category (see
+    # `FirestormWeb.Solved`).
+    belongs_to(:accepted_post, Post)
     has_one(:timer, ThreadTimer)
     # Explicit order: an edited post's row moves in the table, so the
     # database's natural order isn't the posting order.
@@ -74,6 +77,7 @@ defmodule FirestormWeb.Forums.Thread do
   end
 
   def merged?(%__MODULE__{merged_into_id: id}), do: not is_nil(id)
+  def solved?(%__MODULE__{accepted_post_id: id}), do: not is_nil(id)
   def pinned?(%__MODULE__{pinned_at: at}), do: not is_nil(at)
   def archived?(%__MODULE__{archived_at: at}), do: not is_nil(at)
 

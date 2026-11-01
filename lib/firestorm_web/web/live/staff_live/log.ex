@@ -25,6 +25,8 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "thread.timer" => "Set thread timer",
     "thread.timer_cancel" => "Cancelled thread timer",
     "thread.slow_mode" => "Changed slow mode",
+    "thread.accept_answer" => "Accepted an answer",
+    "thread.unaccept_answer" => "Unaccepted an answer",
     "post.edit" => "Edited post",
     "post.delete" => "Deleted post",
     "post.restore" => "Restored post",

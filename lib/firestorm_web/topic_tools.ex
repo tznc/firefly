@@ -19,12 +19,14 @@ defmodule FirestormWeb.TopicTools do
   reply drafts (on a merge), read positions (see `rebase_reads/3`), notification levels (see
   `FirestormWeb.Forums.Subscriptions.copy_thread_levels/3`), the
   notifications about the moved posts (now pointing at the target), and a
-  staff log entry. Open pages are told once it has committed.
+  staff log entry. Bookmarks follow their posts by themselves; an accepted
+  answer that moves is unaccepted (see `FirestormWeb.Solved`). Open pages
+  are told once it has committed.
   """
 
   import Ecto.Query
 
-  alias FirestormWeb.{Drafts, Forums, Repo, StaffLog}
+  alias FirestormWeb.{Drafts, Forums, Repo, Solved, StaffLog}
   alias FirestormWeb.Forums.{Category, Notification, Policy, Post, Subscriptions}
   alias FirestormWeb.Forums.{Thread, ThreadRead, User}
   alias FirestormWeb.Web.Paths
@@ -112,7 +114,8 @@ defmodule FirestormWeb.TopicTools do
             posts: length(moved_ids)
           })
 
-          {:ok, {source, target, new?, posts, notified}}
+          # Reloaded: the move may have unaccepted its answer.
+          {:ok, {Repo.reload!(source), target, new?, posts, notified}}
         end
       end)
 
@@ -227,6 +230,10 @@ defmodule FirestormWeb.TopicTools do
   # Moves the posts into `target`, keeping its first post first: moved posts
   # older than it are placed just after it, in their order.
   defp move_posts(post_ids, target) do
+    # An accepted answer moving away is no longer its thread's answer (nor
+    # the target's: that thread's author didn't pick it).
+    :ok = Solved.clear(post_ids)
+
     first =
       Post
       |> where([p], p.thread_id == ^target.id)

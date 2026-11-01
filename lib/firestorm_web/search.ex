@@ -14,6 +14,9 @@ defmodule FirestormWeb.Search do
     * `@username` - posts by the user
     * `in:title` - match thread titles only (results are first posts)
     * `order:latest` - newest first instead of most relevant
+    * `status:solved` - threads with an accepted answer; `status:unsolved`
+      - threads without one, in categories that allow them (see
+      `FirestormWeb.Solved`)
 
   Threads the searcher muted (directly, or through their category or a tag;
   see `FirestormWeb.Forums.Subscriptions`) are left out unless the
@@ -38,11 +41,13 @@ defmodule FirestormWeb.Search do
             user: nil,
             in_title: false,
             order: "relevance",
+            status: nil,
             include_muted: false
 
   @type t :: %__MODULE__{}
 
   @orders ~w(relevance latest)
+  @statuses ~w(solved unsolved)
   @page_size 20
 
   # ts_headline marks matches with these; they're stripped from the post
@@ -76,7 +81,9 @@ defmodule FirestormWeb.Search do
     {filters, words} =
       (query || "")
       |> String.split()
-      |> Enum.split_with(&Regex.match?(~r/^(?:(?:category|tag|order):.|in:title$|@.)/i, &1))
+      |> Enum.split_with(
+        &Regex.match?(~r/^(?:(?:category|tag|order|status):.|in:title$|@.)/i, &1)
+      )
 
     filters
     |> Enum.reduce(%__MODULE__{terms: Enum.join(words, " ")}, &put_filter/2)
@@ -95,6 +102,10 @@ defmodule FirestormWeb.Search do
   defp put_filter("tag", name, search), do: %{search | tag: name}
   defp put_filter("in", "title", search), do: %{search | in_title: true}
   defp put_filter("order", order, search) when order in @orders, do: %{search | order: order}
+
+  defp put_filter("status", status, search) when status in @statuses,
+    do: %{search | status: status}
+
   defp put_filter(_key, _value, search), do: search
 
   defp override(search, controls) do
@@ -125,7 +136,8 @@ defmodule FirestormWeb.Search do
   is what the thread lists are for.
   """
   def present?(%__MODULE__{} = search) do
-    search.terms != "" or not is_nil(search.category || search.tag || search.user)
+    search.terms != "" or
+      not is_nil(search.category || search.tag || search.user || search.status)
   end
 
   @doc """
@@ -148,6 +160,7 @@ defmodule FirestormWeb.Search do
       |> by_category(search.category)
       |> by_tag(search.tag)
       |> by_user(search.user)
+      |> by_status(search.status)
       |> order(search)
       |> select_headline(search.terms)
       |> Repo.paginate(page: page, page_size: @page_size)
@@ -270,6 +283,17 @@ defmodule FirestormWeb.Search do
       )
 
     where(query, exists(tagged))
+  end
+
+  defp by_status(query, nil), do: query
+  defp by_status(query, "solved"), do: where(query, [thread: t], not is_nil(t.accepted_post_id))
+
+  defp by_status(query, "unsolved") do
+    where(
+      query,
+      [thread: t, category: c],
+      is_nil(t.accepted_post_id) and c.allow_accepted_answers
+    )
   end
 
   defp by_user(query, nil), do: query

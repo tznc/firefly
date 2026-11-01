@@ -22,6 +22,9 @@ defmodule FirestormWeb.Forums.Category do
     field(:description, :string)
     field(:color, :string)
     field(:position, :integer, default: 0)
+    # Q&A: thread authors (and staff) may mark a reply as the accepted
+    # answer (see `FirestormWeb.Solved`).
+    field(:allow_accepted_answers, :boolean, default: false)
     belongs_to(:parent, __MODULE__)
     has_many(:children, __MODULE__, foreign_key: :parent_id)
     has_many(:threads, Thread)
@@ -35,7 +38,11 @@ defmodule FirestormWeb.Forums.Category do
 
   def changeset(%__MODULE__{} = category, attrs \\ %{}) do
     category
-    |> cast(attrs, [:title, :description, :color, :position, :parent_id], empty_values: [""])
+    |> cast(
+      attrs,
+      [:title, :description, :color, :position, :parent_id, :allow_accepted_answers],
+      empty_values: [""]
+    )
     |> validate_required([:title])
     |> validate_length(:description, max: 1000)
     |> validate_format(:color, ~r/^#[0-9a-fA-F]{6}$/, message: "must be a hex color like #3b82f6")

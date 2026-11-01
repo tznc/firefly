@@ -120,7 +120,7 @@ defmodule FirestormWeb.Web.SearchLive.Index do
         </div>
         <p class="text-xs text-base-content/60">
           Also in the search box: <code>category:slug</code>, <code>tag:name</code>,
-          <code>@username</code>, <code>in:title</code>, <code>order:latest</code>, <code>"exact phrase"</code>, <code>-exclude</code>.
+          <code>@username</code>, <code>in:title</code>, <code>order:latest</code>, <code>status:solved</code>, <code>status:unsolved</code>, <code>"exact phrase"</code>, <code>-exclude</code>.
         </p>
       </.form>
 

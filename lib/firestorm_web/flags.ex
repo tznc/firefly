@@ -146,6 +146,7 @@ defmodule FirestormWeb.Flags do
         |> Repo.update_all(set: [hidden_at: DateTime.utc_now(:second)])
 
       if count == 1 do
+        :ok = FirestormWeb.Solved.clear(post.id)
         notify_author(post)
         Forums.post_changed(:post_updated, Repo.get!(Post, post.id))
       end
