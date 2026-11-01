@@ -380,6 +380,59 @@ defmodule FirestormWeb.Web.ForumComponents do
   defp deleted_title(%{deleted_by: %User{username: username}}), do: "Deleted by @#{username}"
   defp deleted_title(_post), do: "Deleted"
 
+  @doc """
+  A post's likes: a toggle button with the count for members who may like it
+  (sends `toggle_like` with the post `id`), otherwise just the count. Hovering
+  shows who liked it.
+  """
+  attr :post, :any, required: true
+  attr :likers, :list, default: [], doc: "the users who liked the post, in order"
+  attr :current_user, :any, default: nil
+  attr :can_like, :boolean, default: false
+
+  def like_button(assigns) do
+    liked? =
+      !!assigns.current_user and Enum.any?(assigns.likers, &(&1.id == assigns.current_user.id))
+
+    assigns = assign(assigns, liked?: liked?, tip: likers_tip(assigns.likers))
+
+    ~H"""
+    <div
+      :if={@can_like or @likers != []}
+      id={"post-#{@post.id}-likes"}
+      class={["likes", @likers != [] && "tooltip"]}
+      data-tip={@tip}
+    >
+      <button
+        :if={@can_like}
+        type="button"
+        phx-click="toggle_like"
+        phx-value-id={@post.id}
+        class={["btn btn-ghost btn-sm", @liked? && "text-error"]}
+        aria-label={if @liked?, do: "Unlike post #{@post.id}", else: "Like post #{@post.id}"}
+        aria-pressed={to_string(@liked?)}
+      >
+        <.icon name={if @liked?, do: "hero-heart-solid", else: "hero-heart"} class="size-4" />
+        <span :if={@likers != []} class="like-count">{length(@likers)}</span>
+      </button>
+      <span :if={!@can_like} class="inline-flex items-center gap-1 px-3 text-sm text-base-content/70">
+        <.icon name="hero-heart" class="size-4" />
+        <span class="like-count">{length(@likers)}</span>
+      </span>
+    </div>
+    """
+  end
+
+  @tip_names 10
+
+  defp likers_tip([]), do: nil
+
+  defp likers_tip(likers) do
+    {named, rest} = Enum.split(likers, @tip_names)
+    names = Enum.map_join(named, ", ", &"@#{&1.username}")
+    if rest == [], do: "Liked by #{names}", else: "Liked by #{names} and #{length(rest)} more"
+  end
+
   @doc "What members see in place of a deleted post."
   attr :post, :any, required: true
 

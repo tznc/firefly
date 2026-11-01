@@ -10,6 +10,8 @@ defmodule FirestormWeb.Forums.Policy do
       post is deleted. (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
     * `:restore_post`, `:view_deleted_posts` - admins
+    * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
+      people's posts that aren't deleted, unless the thread is archived
     * `:edit_user` - the user themselves
   """
 
@@ -38,6 +40,12 @@ defmodule FirestormWeb.Forums.Policy do
       post.user_id == user.id and not Thread.closed?(thread) -> :ok
       true -> admin(user)
     end
+  end
+
+  def authorize(:like_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread}) do
+    if post.user_id != user.id and not Post.deleted?(post) and not Thread.archived?(thread),
+      do: :ok,
+      else: {:error, :unauthorized}
   end
 
   def authorize(action, %User{} = user, _params)

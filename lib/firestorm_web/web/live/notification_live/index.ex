@@ -35,6 +35,10 @@ defmodule FirestormWeb.Web.NotificationLive.Index do
     {:noreply, load(socket)}
   end
 
+  defp kind_icon("new_thread"), do: "hero-chat-bubble-left"
+  defp kind_icon("liked"), do: "hero-heart"
+  defp kind_icon(_kind), do: "hero-arrow-uturn-left"
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -65,7 +69,7 @@ defmodule FirestormWeb.Web.NotificationLive.Index do
           class={["list-row", !Notification.read?(notification) && "unread bg-primary/5"]}
         >
           <.icon
-            name={if notification.kind == "new_thread", do: "hero-chat-bubble-left", else: "hero-arrow-uturn-left"}
+            name={kind_icon(notification.kind)}
             class={["size-5", if(Notification.read?(notification), do: "opacity-50", else: "text-primary")]}
           />
           <button

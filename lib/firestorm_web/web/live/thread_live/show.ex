@@ -7,7 +7,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Repo}
+  alias FirestormWeb.{Forums, RateLimit, Repo}
   alias FirestormWeb.Forums.{Post, Subscriptions, Thread}
 
   @impl true
@@ -28,7 +28,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   @impl true
   def handle_info({event, _post}, socket)
-      when event in [:post_created, :post_updated, :post_deleted, :post_restored],
+      when event in [
+             :post_created,
+             :post_updated,
+             :post_deleted,
+             :post_restored,
+             :post_likes_changed
+           ],
       do: {:noreply, load_thread(socket, socket.assigns.thread)}
 
   def handle_info({:thread_updated, thread}, socket) do
@@ -50,7 +56,15 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   @impl true
   def handle_event(event, _params, %{assigns: %{current_user: nil}} = socket)
-      when event in ["set_level", "delete", "moderate", "move", "delete_post", "restore_post"] do
+      when event in [
+             "set_level",
+             "delete",
+             "moderate",
+             "move",
+             "delete_post",
+             "restore_post",
+             "toggle_like"
+           ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
 
@@ -126,6 +140,23 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     end
   end
 
+  def handle_event("toggle_like", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+    post = Forums.get_post!(thread, id)
+
+    with true <- can?(user, :like_post, %{post: post, thread: Forums.get_thread!(thread.id)}),
+         :ok <- RateLimit.check_like(user) do
+      if Forums.liked?(post, user),
+        do: Forums.unlike_post(post, user),
+        else: Forums.like_post(post, user)
+
+      {:noreply, load_thread(socket, thread)}
+    else
+      false -> {:noreply, put_flash(socket, :error, denied_message(user))}
+      {:error, :rate_limited} -> {:noreply, put_flash(socket, :error, RateLimit.message())}
+    end
+  end
+
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
       {:ok, _} = Forums.delete_thread(socket.assigns.thread)
@@ -156,6 +187,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:editable_ids, permitted_ids(user, thread, :edit_post))
     |> assign(:deletable_ids, permitted_ids(user, thread, :delete_post))
     |> assign(:admin?, can?(user, :view_deleted_posts))
+    |> assign(:likers, Forums.likers(thread.posts))
+    |> assign(:likeable_ids, permitted_ids(user, thread, :like_post))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
     |> assign(:can_moderate?, can?(user, :moderate_thread))
     |> assign(
@@ -287,6 +320,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             can_edit={MapSet.member?(@editable_ids, @first_post.id)}
           >
             <:actions>
+              <.like_button
+                post={@first_post}
+                likers={Map.get(@likers, @first_post.id, [])}
+                current_user={@current_user}
+                can_like={MapSet.member?(@likeable_ids, @first_post.id)}
+              />
               <.level_picker
                 :if={@current_user}
                 id="thread-level"
@@ -312,6 +351,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             can_edit={MapSet.member?(@editable_ids, post.id)}
           >
             <:actions>
+              <.like_button
+                post={post}
+                likers={Map.get(@likers, post.id, [])}
+                current_user={@current_user}
+                can_like={MapSet.member?(@likeable_ids, post.id)}
+              />
               <button
                 :if={MapSet.member?(@deletable_ids, post.id)}
                 phx-click="delete_post"

@@ -1,8 +1,8 @@
 defmodule FirestormWeb.Forums.Notification do
   @moduledoc """
   An in-app notification. `kind` is `"new_thread"` (a thread started in a
-  category you watch or track) or `"new_post"` (a reply in a thread you watch
-  or track). `read_at` is set when you open it or read the thread;
+  category you watch or track), `"new_post"` (a reply in a thread you watch
+  or track) or `"liked"` (someone liked your post; never emailed). `read_at` is set when you open it or read the thread;
   `emailed_at` when it was also sent by email.
   """
 
@@ -10,7 +10,7 @@ defmodule FirestormWeb.Forums.Notification do
   alias FirestormWeb.Forums.{User, Thread, Post}
   import Ecto.Changeset
 
-  @kinds ~w(new_thread new_post)
+  @kinds ~w(new_thread new_post liked)
 
   schema "forums_notifications" do
     field(:kind, :string, default: "new_post")
@@ -28,7 +28,7 @@ defmodule FirestormWeb.Forums.Notification do
 
   @doc "Notification attributes for a new thread or reply."
   def for_post(kind, %Thread{} = thread, %Post{} = post, %User{} = author)
-      when kind in @kinds do
+      when kind in ~w(new_thread new_post) do
     subject =
       case kind do
         "new_thread" -> "@#{author.username} started \"#{thread.title}\""
@@ -38,6 +38,28 @@ defmodule FirestormWeb.Forums.Notification do
     %{
       kind: kind,
       subject: subject,
+      body: post.body,
+      url: "#{FirestormWeb.Web.Paths.thread_url(thread)}#post-#{post.id}",
+      thread_id: thread.id,
+      post_id: post.id
+    }
+  end
+
+  @doc """
+  Notification attributes for likes on `post`: `likers` are the users who
+  liked it, most recent first (one notification covers them all).
+  """
+  def for_likes(%Thread{} = thread, %Post{} = post, [latest | others]) do
+    who =
+      case length(others) do
+        0 -> "@#{latest.username}"
+        1 -> "@#{latest.username} and 1 other"
+        n -> "@#{latest.username} and #{n} others"
+      end
+
+    %{
+      kind: "liked",
+      subject: "#{who} liked your post in \"#{thread.title}\"",
       body: post.body,
       url: "#{FirestormWeb.Web.Paths.thread_url(thread)}#post-#{post.id}",
       thread_id: thread.id,
