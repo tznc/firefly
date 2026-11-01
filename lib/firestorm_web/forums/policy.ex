@@ -11,6 +11,7 @@ defmodule FirestormWeb.Forums.Policy do
       post is deleted. (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
     * `:restore_post`, `:view_deleted_posts` - admins
+    * `:view_staff_log` - admins
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
     * `:edit_user` - the user themselves
@@ -74,7 +75,7 @@ defmodule FirestormWeb.Forums.Policy do
   end
 
   def authorize(action, %User{} = user, _params)
-      when action in [:restore_post, :view_deleted_posts],
+      when action in [:restore_post, :view_deleted_posts, :view_staff_log],
       do: admin(user)
 
   # Catch-all: deny everything else

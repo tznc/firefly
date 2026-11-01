@@ -50,7 +50,7 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
   end
 
   defp save(socket, :new, params) do
-    case Forums.create_category(params) do
+    case Forums.create_category(params, socket.assigns.current_user) do
       {:ok, category} ->
         {:noreply,
          socket
@@ -63,7 +63,7 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
   end
 
   defp save(socket, :edit, params) do
-    case Forums.update_category(socket.assigns.category, params) do
+    case Forums.update_category(socket.assigns.category, params, socket.assigns.current_user) do
       {:ok, category} ->
         {:noreply,
          socket

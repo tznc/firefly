@@ -120,7 +120,7 @@ defmodule FirestormWeb.SearchTest do
     {:ok, _} = Forums.delete_post(ctx.reply, ctx.bob)
     assert post_ids("restarting") == []
 
-    {:ok, _} = Forums.archive_thread(ctx.cooking, true)
+    {:ok, _} = Forums.archive_thread(ctx.cooking, true, ctx.bob)
     assert post_ids("pancakes") == []
   end
 

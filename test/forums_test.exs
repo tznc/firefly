@@ -262,7 +262,7 @@ defmodule FirestormWeb.ForumsTest do
       assert thread.title == Forums.get_thread!(category, thread.id).title
     end
 
-    test "delete_thread/1 deletes a thread that has been viewed and watched", %{
+    test "delete_thread/2 deletes a thread that has been viewed and watched", %{
       category: category,
       user: user
     } do
@@ -271,7 +271,7 @@ defmodule FirestormWeb.ForumsTest do
       {:ok, _} = Forums.view(user, post)
       {:ok, _} = Forums.watch(user, thread)
 
-      assert {:ok, %Thread{}} = Forums.delete_thread(thread)
+      assert {:ok, %Thread{}} = Forums.delete_thread(thread, user)
       assert Forums.get_thread(thread.id) == nil
     end
 
@@ -285,9 +285,9 @@ defmodule FirestormWeb.ForumsTest do
       assert Forums.get_thread(thread.id) == nil
     end
 
-    test "delete_thread/1 deletes the thread", %{category: category, user: user} do
+    test "delete_thread/2 deletes the thread", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
-      assert {:ok, %Thread{}} = Forums.delete_thread(thread)
+      assert {:ok, %Thread{}} = Forums.delete_thread(thread, user)
       assert_raise Ecto.NoResultsError, fn -> Forums.get_thread!(category, thread.id) end
     end
 

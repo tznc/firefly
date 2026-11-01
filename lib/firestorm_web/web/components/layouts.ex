@@ -129,9 +129,18 @@ defmodule FirestormWeb.Web.Layouts do
             <.nav_item path={~p"/settings/profile"} current_path={@current_path} icon="hero-cog-6-tooth">
               Settings
             </.nav_item>
-            <li :if={FirestormWeb.Forums.admin?(@current_user)}>
-              <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
-            </li>
+            <%= if FirestormWeb.Forums.admin?(@current_user) do %>
+              <.nav_item
+                path={~p"/staff/log"}
+                current_path={@current_path}
+                icon="hero-clipboard-document-list"
+              >
+                Staff log
+              </.nav_item>
+              <li>
+                <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
+              </li>
+            <% end %>
             <li>
               <.link href={~p"/auth/logout"} method="delete">
                 <.icon name="hero-arrow-right-start-on-rectangle" class="size-5" /> Log out

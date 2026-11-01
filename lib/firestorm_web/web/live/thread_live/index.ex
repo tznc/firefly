@@ -26,7 +26,7 @@ defmodule FirestormWeb.Web.ThreadLive.Index do
     thread = Forums.get_thread!(socket.assigns.category, id)
 
     if can?(socket.assigns.current_user, :delete_thread, thread) do
-      {:ok, _} = Forums.delete_thread(thread)
+      {:ok, _} = Forums.delete_thread(thread, socket.assigns.current_user)
 
       {:noreply,
        socket

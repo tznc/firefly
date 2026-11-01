@@ -93,7 +93,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     %{thread: thread, current_user: user} = socket.assigns
 
     if can?(user, :moderate_thread) do
-      case moderate(thread, action) do
+      case moderate(thread, action, user) do
         {:ok, thread} ->
           {:noreply,
            socket |> put_flash(:info, moderation_message(action)) |> load_thread(thread)}
@@ -111,7 +111,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
     with true <- can?(user, :moderate_thread) || :denied,
          %Category{} = category <- Forums.get_category(category_id) || :no_category,
-         {:ok, moved} <- Forums.move_thread(thread, category) do
+         {:ok, moved} <- Forums.move_thread(thread, category, user) do
       {:noreply,
        socket
        |> put_flash(:info, "Thread moved to #{category.title}.")
@@ -143,7 +143,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     %{thread: thread, current_user: user} = socket.assigns
 
     if can?(user, :restore_post) do
-      {:ok, _} = thread |> Forums.get_post!(id) |> Forums.restore_post()
+      {:ok, _} = thread |> Forums.get_post!(id) |> Forums.restore_post(user)
       {:noreply, socket |> put_flash(:info, "Post restored.") |> load_thread(thread)}
     else
       {:noreply, put_flash(socket, :error, denied_message(user))}
@@ -171,7 +171,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
-      {:ok, _} = Forums.delete_thread(socket.assigns.thread)
+      {:ok, _} = Forums.delete_thread(socket.assigns.thread, socket.assigns.current_user)
 
       {:noreply,
        socket
@@ -211,13 +211,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
   end
 
-  defp moderate(thread, "pin"), do: Forums.pin_thread(thread, true)
-  defp moderate(thread, "unpin"), do: Forums.pin_thread(thread, false)
-  defp moderate(thread, "close"), do: Forums.close_thread(thread, true)
-  defp moderate(thread, "open"), do: Forums.close_thread(thread, false)
-  defp moderate(thread, "archive"), do: Forums.archive_thread(thread, true)
-  defp moderate(thread, "unarchive"), do: Forums.archive_thread(thread, false)
-  defp moderate(_thread, _action), do: {:error, :unknown_action}
+  defp moderate(thread, "pin", user), do: Forums.pin_thread(thread, true, user)
+  defp moderate(thread, "unpin", user), do: Forums.pin_thread(thread, false, user)
+  defp moderate(thread, "close", user), do: Forums.close_thread(thread, true, user)
+  defp moderate(thread, "open", user), do: Forums.close_thread(thread, false, user)
+  defp moderate(thread, "archive", user), do: Forums.archive_thread(thread, true, user)
+  defp moderate(thread, "unarchive", user), do: Forums.archive_thread(thread, false, user)
+  defp moderate(_thread, _action, _user), do: {:error, :unknown_action}
 
   # The posts the user may edit or delete (roles loaded once, not per post).
   defp permitted_ids(nil, _thread, _action), do: MapSet.new()

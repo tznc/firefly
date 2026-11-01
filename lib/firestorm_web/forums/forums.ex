@@ -5,7 +5,7 @@ defmodule FirestormWeb.Forums do
 
   defdelegate authorize(action, user, params), to: FirestormWeb.Forums.Policy
   import Ecto.{Query, Changeset}, warn: false
-  alias FirestormWeb.{Repo, Notifications}
+  alias FirestormWeb.{Repo, Notifications, StaffLog}
   alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Store.ReplenishResponse
 
@@ -353,7 +353,9 @@ defmodule FirestormWeb.Forums do
   def get_category(id), do: Repo.get(Category, id)
 
   @doc """
-  Creates a category.
+  Creates a category. With an `actor` (the admin doing it), the change goes
+  to the staff log; seeds and scripts pass none. The same goes for
+  `update_category/3` and `delete_category/2`.
 
   ## Examples
 
@@ -364,11 +366,14 @@ defmodule FirestormWeb.Forums do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_category(attrs \\ %{}) do
-    %Category{}
-    |> Category.changeset(attrs)
-    |> Repo.insert()
-    |> tap_ok(&broadcast("forums:categories", {:category_created, &1}))
+  def create_category(attrs \\ %{}, actor \\ nil) do
+    result =
+      logged(
+        fn -> %Category{} |> Category.changeset(attrs) |> Repo.insert() end,
+        &StaffLog.record(actor, "category.create", &1, %{title: &1.title})
+      )
+
+    tap_ok(result, &broadcast("forums:categories", {:category_created, &1}))
   end
 
   @doc """
@@ -383,11 +388,23 @@ defmodule FirestormWeb.Forums do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_category(%Category{} = category, attrs) do
-    category
-    |> Category.changeset(attrs)
-    |> Repo.update()
-    |> tap_ok(&broadcast("forums:categories", {:category_updated, &1}))
+  def update_category(%Category{} = category, attrs, actor \\ nil) do
+    changeset = Category.changeset(category, attrs)
+    details = StaffLog.changes(changeset)
+
+    result =
+      logged(fn -> Repo.update(changeset) end, fn updated ->
+        if details != %{},
+          do:
+            StaffLog.record(
+              actor,
+              "category.update",
+              updated,
+              Map.put_new(details, :title, updated.title)
+            )
+      end)
+
+    tap_ok(result, &broadcast("forums:categories", {:category_updated, &1}))
   end
 
   @doc """
@@ -402,10 +419,14 @@ defmodule FirestormWeb.Forums do
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_category(%Category{} = category) do
-    category
-    |> Repo.delete()
-    |> tap_ok(&broadcast("forums:categories", {:category_deleted, &1}))
+  def delete_category(%Category{} = category, actor \\ nil) do
+    result =
+      logged(
+        fn -> Repo.delete(category) end,
+        &StaffLog.record(actor, "category.delete", &1, %{title: &1.title})
+      )
+
+    tap_ok(result, &broadcast("forums:categories", {:category_deleted, &1}))
   end
 
   @doc """
@@ -910,7 +931,8 @@ defmodule FirestormWeb.Forums do
   @doc """
   Updates a thread. A `tags` attribute (comma- or space-separated names)
   replaces its tags; tags that don't exist yet are created if `editor` may
-  (see `may_create_tags?/1`).
+  (see `may_create_tags?/1`). An admin's edit of someone else's thread goes
+  to the staff log.
 
   ## Examples
 
@@ -922,12 +944,56 @@ defmodule FirestormWeb.Forums do
 
   """
   def update_thread(%Thread{} = thread, attrs, editor \\ nil) do
-    thread
-    |> Repo.preload(:tags)
-    |> Thread.changeset(attrs)
-    |> put_tags(attrs[:tags] || attrs["tags"], editor)
-    |> Repo.update()
-    |> tap_ok(&broadcast_thread(:thread_updated, &1))
+    thread = Repo.preload(thread, :tags)
+
+    changeset =
+      thread
+      |> Thread.changeset(attrs)
+      |> put_tags(attrs[:tags] || attrs["tags"], editor)
+
+    staff? = staff_on_others?(editor, thread_author_id(thread))
+
+    result =
+      logged(fn -> Repo.update(changeset) end, fn updated ->
+        if staff?, do: log_thread_edit(editor, thread, updated)
+      end)
+
+    tap_ok(result, &broadcast_thread(:thread_updated, &1))
+  end
+
+  defp log_thread_edit(editor, before, updated) do
+    tag_names = &Enum.map_join(&1.tags, ", ", fn tag -> tag.name end)
+
+    details =
+      [title: {before.title, updated.title}, tags: {tag_names.(before), tag_names.(updated)}]
+      |> Enum.reject(fn {_field, {old, new}} -> old == new end)
+      |> Map.new(fn {field, {old, new}} -> {field, %{before: old, after: new}} end)
+
+    if details != %{},
+      do:
+        StaffLog.record(
+          editor,
+          "thread.edit",
+          updated,
+          Map.put_new(details, :title, updated.title)
+        )
+  end
+
+  # Whether `actor` is acting on someone else's content: a staff action, for
+  # the log. (The policies only let admins do that.)
+  defp staff_on_others?(nil, _author_id), do: false
+  defp staff_on_others?(%User{id: id}, author_id), do: id != author_id
+
+  # Runs `action` (returning `{:ok, record}` or an error) and, if it
+  # succeeds, `log.(record)` in the same transaction: the staff log records
+  # an action if and only if it happened.
+  defp logged(action, log) do
+    Repo.transact(fn ->
+      with {:ok, record} <- action.() do
+        log.(record)
+        {:ok, record}
+      end
+    end)
   end
 
   @doc "Whether members may create tags; otherwise only admins can (`FIREFLY_TAGS_ADMIN_ONLY`)."
@@ -1008,22 +1074,43 @@ defmodule FirestormWeb.Forums do
     |> decorate_threads(user_or_nil)
   end
 
+  # Thread moderation is admin-only (the `:moderate_thread` policy); each
+  # action is recorded in the staff log as `actor`'s.
+
   @doc "Pins or unpins a thread (pinned threads list first in their category)."
-  def pin_thread(%Thread{} = thread, pinned?), do: moderate(thread, pinned_at: stamp(pinned?))
+  def pin_thread(%Thread{} = thread, pinned?, actor),
+    do:
+      moderate(thread, actor, if(pinned?, do: "thread.pin", else: "thread.unpin"),
+        pinned_at: stamp(pinned?)
+      )
 
   @doc "Closes or reopens a thread to new replies."
-  def close_thread(%Thread{} = thread, closed?), do: moderate(thread, closed_at: stamp(closed?))
+  def close_thread(%Thread{} = thread, closed?, actor),
+    do:
+      moderate(thread, actor, if(closed?, do: "thread.close", else: "thread.open"),
+        closed_at: stamp(closed?)
+      )
 
   @doc "Archives (closes and hides from Latest/New/Unread/Top) or unarchives a thread."
-  def archive_thread(%Thread{} = thread, archived?),
-    do: moderate(thread, archived_at: stamp(archived?))
+  def archive_thread(%Thread{} = thread, archived?, actor),
+    do:
+      moderate(thread, actor, if(archived?, do: "thread.archive", else: "thread.unarchive"),
+        archived_at: stamp(archived?)
+      )
 
-  @doc "Moves a thread to another category."
-  def move_thread(%Thread{category_id: old_category_id} = thread, %Category{id: category_id}) do
-    with {:ok, moved} <- moderate(thread, category_id: category_id) do
-      if old_category_id != category_id,
-        do: broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
+  @doc "Moves a thread to another category (a no-op, not logged, if it's already there)."
+  def move_thread(%Thread{category_id: id} = thread, %Category{id: id}, _actor),
+    do: {:ok, thread}
 
+  def move_thread(%Thread{category_id: old_category_id} = thread, %Category{} = category, actor) do
+    details = %{
+      from_category: Repo.get(Category, old_category_id).title,
+      to_category: category.title
+    }
+
+    with {:ok, moved} <-
+           moderate(thread, actor, "thread.move", [category_id: category.id], details) do
+      broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
       {:ok, moved}
     end
   end
@@ -1031,29 +1118,45 @@ defmodule FirestormWeb.Forums do
   defp stamp(true), do: DateTime.utc_now(:second)
   defp stamp(false), do: nil
 
-  defp moderate(thread, changes) do
-    thread
-    |> Thread.moderation_changeset(Map.new(changes))
-    |> Repo.update()
-    |> tap_ok(&broadcast_thread(:thread_updated, &1))
+  defp moderate(thread, actor, action, changes, details \\ %{}) do
+    result =
+      logged(
+        fn -> thread |> Thread.moderation_changeset(Map.new(changes)) |> Repo.update() end,
+        &StaffLog.record(actor, action, &1, Map.put(details, :title, &1.title))
+      )
+
+    tap_ok(result, &broadcast_thread(:thread_updated, &1))
   end
 
   @doc """
-  Deletes a Thread.
+  Deletes a thread as `actor` (its author or an admin). An admin deleting
+  someone else's thread goes to the staff log.
 
   ## Examples
 
-      iex> delete_thread(thread)
+      iex> delete_thread(thread, user)
       {:ok, %Thread{}}
 
-      iex> delete_thread(thread)
-      {:error, %Ecto.Changeset{}}
-
   """
-  def delete_thread(%Thread{} = thread) do
-    thread
-    |> Repo.delete()
-    |> tap_ok(&broadcast_thread(:thread_deleted, &1))
+  def delete_thread(%Thread{} = thread, %User{} = actor) do
+    # Asked first: the thread's posts go with it.
+    staff? = staff_on_others?(actor, thread_author_id(thread))
+
+    result =
+      logged(fn -> Repo.delete(thread) end, fn deleted ->
+        if staff?, do: log_thread_delete(actor, deleted)
+      end)
+
+    tap_ok(result, &broadcast_thread(:thread_deleted, &1))
+  end
+
+  defp log_thread_delete(actor, thread) do
+    category = Repo.get(Category, thread.category_id)
+
+    StaffLog.record(actor, "thread.delete", thread, %{
+      title: thread.title,
+      category: category.title
+    })
   end
 
   @doc """
@@ -1263,10 +1366,15 @@ defmodule FirestormWeb.Forums do
       {:ok, current}
     else
       Repo.insert!(%PostRevision{post_id: current.id, user_id: editor.id, body: current.body})
+      changeset = put_change(changeset, :edited_at, NaiveDateTime.utc_now())
+      logged(fn -> Repo.update(changeset) end, &log_post_edit(editor, current, &1))
+    end
+  end
 
-      changeset
-      |> put_change(:edited_at, NaiveDateTime.utc_now())
-      |> Repo.update()
+  defp log_post_edit(editor, post, updated) do
+    if staff_on_others?(editor, post.user_id) do
+      details = post_details(post, %{body: %{before: post.body, after: updated.body}})
+      StaffLog.record(editor, "post.edit", updated, details)
     end
   end
 
@@ -1325,22 +1433,46 @@ defmodule FirestormWeb.Forums do
     if first_post?(post) do
       {:error, :first_post}
     else
-      post
-      |> change(deleted_at: DateTime.utc_now(:second), deleted_by_id: user.id)
-      |> Repo.update()
-      |> tap_ok(fn deleted ->
+      changeset = change(post, deleted_at: DateTime.utc_now(:second), deleted_by_id: user.id)
+
+      result =
+        logged(fn -> Repo.update(changeset) end, &log_post_delete(user, post, &1))
+
+      tap_ok(result, fn deleted ->
         remove_post_notifications(deleted)
         post_changed(:post_deleted, deleted)
       end)
     end
   end
 
-  @doc "Restores a deleted post (admins; see the `:restore_post` policy)."
-  def restore_post(%Post{} = post) do
-    post
-    |> change(deleted_at: nil, deleted_by_id: nil)
-    |> Repo.update()
-    |> tap_ok(&post_changed(:post_restored, &1))
+  defp log_post_delete(user, post, deleted) do
+    if staff_on_others?(user, post.user_id),
+      do: StaffLog.record(user, "post.delete", deleted, post_details(post))
+  end
+
+  @doc "Restores a deleted post as `actor` (admins; see the `:restore_post` policy)."
+  def restore_post(%Post{} = post, %User{} = actor) do
+    result =
+      logged(
+        fn -> post |> change(deleted_at: nil, deleted_by_id: nil) |> Repo.update() end,
+        &StaffLog.record(actor, "post.restore", &1, post_details(post))
+      )
+
+    tap_ok(result, &post_changed(:post_restored, &1))
+  end
+
+  # What the staff log keeps about a post, to show it once it's gone.
+  defp post_details(%Post{} = post, extra \\ %{}) do
+    post = Repo.preload(post, [:thread, :user])
+
+    Map.merge(
+      %{
+        thread: post.thread.title,
+        author: post.user && post.user.username,
+        excerpt: String.slice(post.body, 0, 200)
+      },
+      extra
+    )
   end
 
   defp first_post?(%Post{id: id, thread_id: thread_id}) do

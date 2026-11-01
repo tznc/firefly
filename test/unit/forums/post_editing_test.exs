@@ -99,7 +99,7 @@ defmodule FirestormWeb.Forums.PostEditingTest do
       assert {:error, :unauthorized} = Policy.authorize(:edit_post, user_fixture(), params)
       assert {:error, :unauthenticated} = Policy.authorize(:edit_post, nil, params)
 
-      {:ok, closed} = Forums.close_thread(thread, true)
+      {:ok, closed} = Forums.close_thread(thread, true, admin_fixture())
       closed_params = %{post: post, thread: closed}
       assert {:error, :unauthorized} = Policy.authorize(:edit_post, author, closed_params)
       assert :ok = Policy.authorize(:edit_post, admin_fixture(), closed_params)
