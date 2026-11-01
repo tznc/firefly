@@ -50,6 +50,9 @@ defmodule FirestormWeb.Web.PostLive.New do
          |> put_flash(:info, "Post created successfully.")
          |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
 
+      {:error, :closed} ->
+        {:noreply, put_flash(socket, :error, FirestormWeb.Posting.message(:closed))}
+
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
     end
