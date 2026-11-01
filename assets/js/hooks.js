@@ -42,6 +42,7 @@ const LocalTime = {
 // checks it really is in the post). The selection is read on mousedown,
 // before the click collapses it, and the link's href is set before
 // LiveView's own click handler navigates.
+// In UTF-8 bytes, as the server measures it (FirestormWeb.Quote).
 const MAX_SELECTION = 5000
 const QuoteSelection = {
   mounted() {
@@ -51,7 +52,7 @@ const QuoteSelection = {
       const inPost = selection && !selection.isCollapsed && body &&
         body.contains(selection.anchorNode) && body.contains(selection.focusNode)
       const text = inPost ? selection.toString().trim() : ""
-      return text.length <= MAX_SELECTION ? text : ""
+      return new TextEncoder().encode(text).length <= MAX_SELECTION ? text : ""
     }
     this.el.addEventListener("mousedown", () => { this.selected = this.read() })
     this.el.addEventListener("click", () => {
