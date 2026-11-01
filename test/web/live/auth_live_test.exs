@@ -68,4 +68,22 @@ defmodule FirestormWeb.Web.AuthLiveTest do
     |> assert_path(~p"/login")
     |> assert_has("#flash-error", text: "Unknown login provider.")
   end
+
+  test "GitHub callbacks pass the GitHub user id", %{conn: conn} do
+    auth = %Ueberauth.Auth{
+      provider: :github,
+      uid: 4242,
+      info: %Ueberauth.Auth.Info{nickname: "octocat", name: "Octo", email: "octo@example.com"}
+    }
+
+    conn =
+      conn
+      |> Plug.Test.init_test_session(%{})
+      |> fetch_flash()
+      |> assign(:ueberauth_auth, auth)
+      |> FirestormWeb.Web.AuthController.callback(%{})
+
+    assert redirected_to(conn) == ~p"/"
+    assert Forums.get_user!(get_session(conn, :current_user)).github_uid == "4242"
+  end
 end
