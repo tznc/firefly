@@ -5,13 +5,15 @@ defmodule FirestormWeb.Forums.Policy do
     * `:manage_category` (create, edit, delete) - admins
     * `:update_thread`, `:delete_thread` - the thread's author and admins
     * `:moderate_thread` (pin, close, archive, move) - admins
+    * `:edit_post` (params `%{post: post, thread: thread}`) - the post's author
+      while the thread is open, and admins
     * `:edit_user` - the user themselves
   """
 
   @behaviour Bodyguard.Policy
 
   alias FirestormWeb.Forums
-  alias FirestormWeb.Forums.{Thread, User}
+  alias FirestormWeb.Forums.{Post, Thread, User}
 
   @impl true
   def authorize(_action, nil, _params), do: {:error, :unauthenticated}
@@ -24,6 +26,10 @@ defmodule FirestormWeb.Forums.Policy do
   def authorize(action, %User{} = user, %Thread{} = thread)
       when action in [:update_thread, :delete_thread] do
     if Forums.thread_author_id(thread) == user.id, do: :ok, else: admin(user)
+  end
+
+  def authorize(:edit_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread}) do
+    if post.user_id == user.id and not Thread.closed?(thread), do: :ok, else: admin(user)
   end
 
   # Catch-all: deny everything else

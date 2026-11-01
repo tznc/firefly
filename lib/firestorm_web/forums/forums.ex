@@ -13,7 +13,9 @@ defmodule FirestormWeb.Forums do
     User,
     Category,
     Thread,
+    Diff,
     Post,
+    PostRevision,
     View,
     ThreadRead,
     Notification,
@@ -737,6 +739,13 @@ defmodule FirestormWeb.Forums do
     |> Repo.get!(id)
   end
 
+  @doc "Gets a post in `thread`. Raises `Ecto.NoResultsError` if it isn't there."
+  def get_post!(%Thread{id: thread_id}, id) do
+    Post
+    |> where([p], p.thread_id == ^thread_id)
+    |> Repo.get!(id)
+  end
+
   @doc """
   Creates a thread.
 
@@ -1032,6 +1041,61 @@ defmodule FirestormWeb.Forums do
     |> Post.changeset(%{})
   end
 
+  @doc """
+  Edits a post's body as `editor` (its author or an admin; see the
+  `:edit_post` policy). The replaced body is kept as a `PostRevision`, so the
+  post's history can be shown. New-account link limits apply to the edit as
+  they do to new posts. Saving an unchanged body is a no-op.
+  """
+  def update_post(%Post{} = post, %User{} = editor, attrs) do
+    changeset = post |> Post.edit_changeset(attrs) |> SpamGuard.validate_post(editor)
+
+    if changeset.valid? and not Map.has_key?(changeset.changes, :body) do
+      {:ok, post}
+    else
+      changeset
+      |> put_change(:edited_at, NaiveDateTime.utc_now())
+      |> save_edit(post, editor)
+    end
+  end
+
+  defp save_edit(changeset, post, editor) do
+    result =
+      Repo.transact(fn ->
+        Repo.insert!(%PostRevision{post_id: post.id, user_id: editor.id, body: post.body})
+        Repo.update(changeset)
+      end)
+
+    tap_ok(result, &broadcast("forums:thread:#{&1.thread_id}", {:post_updated, &1}))
+  end
+
+  @doc """
+  A post's edits, newest first: who edited it, when, and the word diff from
+  the body before the edit to the body after it.
+  """
+  def post_edits(%Post{} = post) do
+    revisions =
+      PostRevision
+      |> where([r], r.post_id == ^post.id)
+      |> order_by([r], asc: r.inserted_at, asc: r.id)
+      |> preload(:user)
+      |> Repo.all()
+
+    # Each revision holds the body its edit replaced; the next revision (or
+    # the current body) is what the edit produced.
+    afters = Enum.map(Enum.drop(revisions, 1), & &1.body) ++ [post.body]
+
+    revisions
+    |> Enum.zip_with(afters, fn revision, after_body ->
+      %{
+        editor: revision.user,
+        at: revision.inserted_at,
+        diff: Diff.words(revision.body, after_body)
+      }
+    end)
+    |> Enum.reverse()
+  end
+
   def user_posts(user, %{page: page}) do
     Post
     |> where([p], p.user_id == ^user.id)
@@ -1265,7 +1329,7 @@ defmodule FirestormWeb.Forums do
   #   * "forums:categories"       - {:category_created | :category_updated | :category_deleted, category}
   #   * "forums:category:<id>"    - {:thread_created | :thread_updated | :thread_deleted | :thread_activity, thread}
   #   * "forums:threads"          - the same thread events, for every category
-  #   * "forums:thread:<id>"      - {:post_created, post} and the thread events for that thread
+  #   * "forums:thread:<id>"      - {:post_created | :post_updated, post} and the thread events for that thread
 
   @pubsub FirestormWeb.PubSub
 
