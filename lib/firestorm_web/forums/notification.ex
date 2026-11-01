@@ -3,8 +3,9 @@ defmodule FirestormWeb.Forums.Notification do
   An in-app notification. `kind` is `"new_thread"` (a thread started in a
   category you watch or track), `"new_post"` (a reply in a thread you watch
   or track), `"mentioned"` (someone @mentioned you in a post) `"liked"`
-  (someone liked your post; never emailed) or `"message"` (a private message,
-  or being added to a conversation; with `conversation_id`). `read_at` is set when you open it
+  (someone liked your post; never emailed), `"message"` (a private message,
+  or being added to a conversation; with `conversation_id`) or `"silenced"`/
+  `"suspended"` (a staff penalty; the body is the reason). `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
 
@@ -12,7 +13,7 @@ defmodule FirestormWeb.Forums.Notification do
   alias FirestormWeb.Forums.{Conversation, Message, User, Thread, Post}
   import Ecto.Changeset
 
-  @kinds ~w(new_thread new_post mentioned liked message)
+  @kinds ~w(new_thread new_post mentioned liked message silenced suspended)
 
   schema "forums_notifications" do
     field(:kind, :string, default: "new_post")

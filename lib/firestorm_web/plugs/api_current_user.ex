@@ -1,10 +1,13 @@
 defmodule FirestormWeb.Web.Plugs.ApiCurrentUser do
   @moduledoc """
-  A `Plug` to assign `:current_user` based on the authorization header containing a user's api token
+  A `Plug` to assign `:current_user` based on the authorization header
+  containing a user's api token. Deleted and suspended users' tokens are
+  rejected.
   """
 
   import Plug.Conn
   alias FirestormWeb.Forums
+  alias FirestormWeb.Forums.User
 
   def init(options), do: options
 
@@ -19,13 +22,12 @@ defmodule FirestormWeb.Web.Plugs.ApiCurrentUser do
           |> String.replace("Bearer ", "")
 
         case Forums.get_user_by_api_token(api_token) do
-          %{deleted_at: nil} = user ->
-            conn
-            |> assign(:current_user, user)
-
-          _missing_or_deleted ->
-            conn
+          %{deleted_at: nil} = user -> assign_unless_suspended(conn, user)
+          _missing_or_deleted -> conn
         end
     end
   end
+
+  defp assign_unless_suspended(conn, user),
+    do: if(User.suspended?(user), do: conn, else: assign(conn, :current_user, user))
 end

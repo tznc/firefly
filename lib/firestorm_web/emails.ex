@@ -106,6 +106,26 @@ defmodule FirestormWeb.Emails do
     """)
   end
 
+  @doc "Tells `user` they were silenced or suspended (`subject` says which and until when)."
+  def penalty(%User{} = user, subject, reason) do
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("#{subject} on Firefly")
+    |> html_body("""
+    <p>Hi #{escape(user.username)},</p>
+    <p>#{escape(subject)} on Firefly.</p>
+    <p>Reason: #{escape(reason)}</p>
+    """)
+    |> text_body("""
+    Hi #{user.username},
+
+    #{subject} on Firefly.
+
+    Reason: #{reason}
+    """)
+  end
+
   def confirmation(%User{} = user, url) do
     new_email()
     |> to(user.email)

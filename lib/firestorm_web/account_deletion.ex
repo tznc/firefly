@@ -121,7 +121,7 @@ defmodule FirestormWeb.AccountDeletion do
 
       # Open LiveViews of this user (any browser) are disconnected; they come
       # back logged out.
-      FirestormWeb.Web.Endpoint.broadcast(Session.live_socket_id(deleted), "disconnect", %{})
+      Session.reload_pages(deleted)
       {:ok, deleted}
     end
   end

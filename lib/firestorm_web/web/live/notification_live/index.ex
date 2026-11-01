@@ -39,6 +39,7 @@ defmodule FirestormWeb.Web.NotificationLive.Index do
   defp kind_icon("liked"), do: "hero-heart"
   defp kind_icon("mentioned"), do: "hero-at-symbol"
   defp kind_icon("message"), do: "hero-envelope"
+  defp kind_icon(kind) when kind in ["silenced", "suspended"], do: "hero-no-symbol"
   defp kind_icon(_kind), do: "hero-arrow-uturn-left"
 
   @impl true

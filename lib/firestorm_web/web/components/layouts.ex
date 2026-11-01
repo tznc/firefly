@@ -72,6 +72,7 @@ defmodule FirestormWeb.Web.Layouts do
         <main class="flex-1 px-4 py-8 sm:px-6 lg:px-10">
           <div class="mx-auto max-w-4xl space-y-6">
             <.confirm_email_notice current_user={@current_user} />
+            <.silenced_notice current_user={@current_user} />
             {render_slot(@inner_block)}
           </div>
         </main>
@@ -186,6 +187,26 @@ defmodule FirestormWeb.Web.Layouts do
       <.form for={%{}} action={~p"/confirm"} method="post">
         <button class="btn btn-sm">Resend link</button>
       </.form>
+    </div>
+    """
+  end
+
+  attr :current_user, :any, required: true
+
+  @doc "Tells a silenced user what they can't do, why, and until when."
+  def silenced_notice(assigns) do
+    ~H"""
+    <div
+      :if={@current_user && FirestormWeb.Forums.User.silenced?(@current_user)}
+      id="silenced-notice"
+      role="alert"
+      class="alert alert-warning"
+    >
+      <.icon name="hero-no-symbol" class="size-5" />
+      <span>
+        {FirestormWeb.Posting.message({:silenced, @current_user.silenced_until})}
+        Reason: {@current_user.silence_reason}
+      </span>
     </div>
     """
   end

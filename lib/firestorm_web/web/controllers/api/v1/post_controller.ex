@@ -21,6 +21,9 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
       {:error, :closed} ->
         conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(:closed)})
 
+      {:error, {penalty, _until} = reason} when penalty in [:silenced, :suspended] ->
+        conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(reason)})
+
       {:error, :unconfirmed} ->
         conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(:unconfirmed)})
 

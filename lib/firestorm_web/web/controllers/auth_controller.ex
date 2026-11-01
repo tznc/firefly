@@ -5,7 +5,8 @@ defmodule FirestormWeb.Web.AuthController do
   """
   use FirestormWeb.Web, :controller
 
-  alias FirestormWeb.{Forums, RateLimit}
+  alias FirestormWeb.{Forums, Penalties, RateLimit}
+  alias FirestormWeb.Forums.User
 
   # Ueberauth redirects GET /auth/:provider for OAuth providers before this
   # action runs; we only get here for unknown providers.
@@ -34,7 +35,7 @@ defmodule FirestormWeb.Web.AuthController do
     info = %{uid: auth.uid, name: name, nickname: nickname, email: email}
 
     case Forums.login_or_register_from_github(info) do
-      {:ok, user} -> ok_login(conn, user)
+      {:ok, user} -> ok_login(conn, user, ~p"/login")
       {:error, reason} -> failed_login(conn, ~p"/", reason)
     end
   end
@@ -45,14 +46,21 @@ defmodule FirestormWeb.Web.AuthController do
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-
            Forums.authenticate_by_password(user_params["username"], user_params["password"]) do
-      ok_login(conn, user)
+      ok_login(conn, user, ~p"/auth/identity")
     else
       {:error, :rate_limited} -> failed_login(conn, ~p"/auth/identity", RateLimit.message())
       {:error, reason} -> failed_login(conn, ~p"/auth/identity", reason)
     end
   end
 
-  defp ok_login(conn, user) do
+  # Suspended users are told why (only once they've proven who they are).
+  defp ok_login(conn, user, failure_path) do
+    if User.suspended?(user),
+      do: failed_login(conn, failure_path, Penalties.suspended_message(user)),
+      else: log_in(conn, user)
+  end
+
+  defp log_in(conn, user) do
     conn
     |> configure_session(renew: true)
     |> put_session(:current_user, user.id)

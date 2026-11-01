@@ -22,6 +22,7 @@ defmodule FirestormWeb.StaffLog do
     post.edit post.delete post.restore
     category.create category.update category.delete
     role.grant role.revoke
+    user.silence user.unsilence user.suspend user.unsuspend
     admin.create admin.update admin.delete
   )
 
