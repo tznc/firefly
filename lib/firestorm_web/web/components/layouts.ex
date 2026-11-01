@@ -32,6 +32,19 @@ defmodule FirestormWeb.Web.Layouts do
             </.link>
           </div>
           <div class="flex flex-none items-center gap-2">
+            <form action={~p"/search"} method="get" role="search" class="hidden sm:block">
+              <label class="input input-sm w-48 lg:w-64">
+                <.icon name="hero-magnifying-glass" class="size-4 opacity-60" />
+                <input type="search" name="q" placeholder="Search" aria-label="Search the forum" />
+              </label>
+            </form>
+            <.link
+              navigate={~p"/search"}
+              class="btn btn-ghost btn-circle sm:hidden"
+              aria-label="Search"
+            >
+              <.icon name="hero-magnifying-glass" class="size-5" />
+            </.link>
             <.link
               :if={@current_user}
               navigate={~p"/notifications"}
