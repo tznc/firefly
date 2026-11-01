@@ -97,6 +97,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     end
   end
 
+  def handle_event("set_level", _params, socket), do: {:noreply, socket}
+
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
       {:ok, _} = Forums.delete_thread(socket.assigns.thread)
@@ -130,6 +132,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       :categories,
       if(can?(user, :moderate_thread), do: Forums.list_categories(), else: [])
     )
+    |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
   end
 
   defp moderation_message("pin"), do: "Thread pinned."
@@ -247,7 +250,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         </li>
         <li :for={post <- @replies}>
           <div
-            :if={post.id == first_unread_id(@replies, @last_read_post_id)}
+            :if={post.id == @first_unread_id}
             id="new-posts-divider"
             class="divider divider-primary text-xs text-primary"
           >
