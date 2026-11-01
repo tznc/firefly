@@ -1225,12 +1225,16 @@ defmodule FirestormWeb.Forums do
     |> Repo.insert()
   end
 
+  # A GitHub login named like a deleted account's placeholder gets a prefix
+  # (see `User.reserved_username?/1`).
   defp available_username(nickname, attempt \\ 0) do
     candidate = if attempt == 0, do: nickname, else: "#{nickname}-#{attempt}"
 
-    if get_user_by_username(candidate),
-      do: available_username(nickname, attempt + 1),
-      else: candidate
+    cond do
+      User.reserved_username?(nickname) -> available_username("gh-" <> nickname)
+      get_user_by_username(candidate) -> available_username(nickname, attempt + 1)
+      true -> candidate
+    end
   end
 
   @doc """
@@ -1558,6 +1562,18 @@ defmodule FirestormWeb.Forums do
     |> select([l, u], {l.post_id, u})
     |> Repo.all()
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  @doc """
+  Brings the unread "liked" notifications of `post_ids` up to date with
+  their remaining likes (after likes were removed in bulk, e.g. by account
+  deletion).
+  """
+  def refresh_like_notifications(post_ids) do
+    Post
+    |> where([p], p.id in ^post_ids)
+    |> Repo.all()
+    |> Enum.each(&update_like_notification(&1, :unliked))
   end
 
   # Brings the author's unread "liked" notification for the post up to date

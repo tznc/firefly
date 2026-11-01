@@ -40,8 +40,22 @@ defmodule FirestormWeb.Forums.User do
     user
     |> cast(attrs, [:username, :email, :name, :api_token])
     |> validate_required([:username, :name, :api_token])
+    |> validate_change(:username, fn :username, username ->
+      if reserved_username?(username), do: [username: "is reserved"], else: []
+    end)
     |> unique_constraint(:username)
   end
+
+  @doc """
+  Usernames nobody can pick: `deleted-user-<id>` is what account deletion
+  renames an account to, so taking it ahead of time would block that
+  deletion and let someone pose as a deleted account.
+  """
+  def reserved_username?(username) when is_binary(username),
+    do: String.match?(username, ~r/^deleted-user-/i)
+
+  @doc "The placeholder username of a deleted account."
+  def deleted_username(id), do: "deleted-user-#{id}"
 
   @doc "The themes a user can pick (`system` follows the browser)."
   def themes, do: ~w(system light dark)
