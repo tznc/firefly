@@ -1774,8 +1774,9 @@ defmodule FirestormWeb.Forums do
     end
   end
 
+  # Members editing someone else's wiki post aren't acting as staff.
   defp log_post_edit(editor, post, updated) do
-    if staff_on_others?(editor, post.user_id) do
+    if staff_on_others?(editor, post.user_id) and admin?(editor) do
       details = post_details(post, %{body: %{before: post.body, after: updated.body}})
       StaffLog.record(editor, "post.edit", updated, details)
     end
@@ -1865,6 +1866,29 @@ defmodule FirestormWeb.Forums do
   defp log_post_delete(user, post, deleted) do
     if staff_on_others?(user, post.user_id),
       do: StaffLog.record(user, "post.delete", deleted, post_details(post))
+  end
+
+  @doc """
+  Makes `post` a wiki (or not) as `actor` (admins; see the `:toggle_wiki`
+  policy), logged. A no-op if it already is.
+  """
+  def set_wiki(%Post{} = post, wiki?, %User{} = actor) when is_boolean(wiki?) do
+    if Post.wiki?(post) == wiki? do
+      {:ok, post}
+    else
+      result =
+        logged(
+          fn -> post |> change(wiki: wiki?) |> Repo.update() end,
+          &StaffLog.record(
+            actor,
+            if(wiki?, do: "post.wiki", else: "post.unwiki"),
+            &1,
+            post_details(post)
+          )
+        )
+
+      tap_ok(result, &post_changed(:post_updated, &1))
+    end
   end
 
   @doc "Restores a deleted post as `actor` (admins; see the `:restore_post` policy)."

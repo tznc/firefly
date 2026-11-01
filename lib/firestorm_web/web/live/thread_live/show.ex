@@ -24,6 +24,9 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   Posts' polls (see `FirestormWeb.Polls`) take votes here, and their
   results update live.
+
+  Admins make posts wikis (or not); members may then edit them (see the
+  `:edit_post` policy).
   """
   use FirestormWeb.Web, :live_view
 
@@ -177,7 +180,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              "unaccept_answer",
              "vote",
              "close_poll",
-             "reopen_poll"
+             "reopen_poll",
+             "toggle_wiki"
            ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
@@ -369,6 +373,19 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
        |> assign(:polls, Map.put(socket.assigns.polls, post_id, view))}
     else
       {:error, reason} -> {:noreply, put_flash(socket, :error, Polls.message(reason))}
+    end
+  end
+
+  def handle_event("toggle_wiki", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+    post = Forums.get_post!(thread, id)
+
+    if can?(user, :toggle_wiki) do
+      {:ok, post} = Forums.set_wiki(post, !Post.wiki?(post), user)
+      message = if Post.wiki?(post), do: "Post is now a wiki.", else: "Post is no longer a wiki."
+      {:noreply, socket |> put_flash(:info, message) |> load_thread(thread)}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(user))}
     end
   end
 
@@ -683,6 +700,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 flagged={MapSet.member?(@flagged_ids, @first_post.id)}
                 count={@flag_counts[@first_post.id]}
               />
+              <.wiki_button :if={@admin?} post={@first_post} />
               <.bookmark_button
                 :if={@current_user}
                 post={@first_post}
@@ -755,6 +773,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 post={post}
                 accepted={post.id == @thread.accepted_post_id}
               />
+              <.wiki_button :if={@admin? and not Post.deleted?(post)} post={post} />
               <.bookmark_button
                 :if={@current_user}
                 post={post}
@@ -845,6 +864,23 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       title="Flag this post for staff"
     >
       <.icon name="hero-flag" class="size-4" />
+    </button>
+    """
+  end
+
+  attr :post, :any, required: true
+
+  defp wiki_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click="toggle_wiki"
+      phx-value-id={@post.id}
+      class={["btn btn-ghost btn-sm btn-square", @post.wiki && "text-info"]}
+      aria-label={if @post.wiki, do: "Make post #{@post.id} a normal post", else: "Make post #{@post.id} a wiki"}
+      title={if @post.wiki, do: "Remove wiki", else: "Make wiki"}
+    >
+      <.icon name="hero-pencil-square" class="size-4" />
     </button>
     """
   end

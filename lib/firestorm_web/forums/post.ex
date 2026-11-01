@@ -14,6 +14,9 @@ defmodule FirestormWeb.Forums.Post do
     field(:deleted_at, :utc_datetime)
     field(:hidden_at, :utc_datetime)
     field(:queued_at, :utc_datetime)
+    # A wiki post: anyone who may post in its thread may edit it (see the
+    # `:edit_post` policy). Set by staff (`Forums.set_wiki/3`).
+    field(:wiki, :boolean, default: false)
     belongs_to(:deleted_by, User)
     belongs_to(:thread, Thread)
     belongs_to(:user, User)
@@ -67,6 +70,9 @@ defmodule FirestormWeb.Forums.Post do
   @doc "Validates that the changeset's `:body` fits `max_body_length/0`."
   def validate_body_length(changeset),
     do: validate_length(changeset, :body, max: @max_body_length)
+
+  @doc "Whether the post is a wiki: editable by anyone who may post in its thread."
+  def wiki?(%__MODULE__{wiki: wiki}), do: wiki == true
 
   @doc "Whether the post was (soft) deleted. Its content is then hidden from members."
   def deleted?(%__MODULE__{deleted_at: at}), do: not is_nil(at)

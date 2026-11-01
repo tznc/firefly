@@ -1,7 +1,8 @@
 defmodule FirestormWeb.AccountExport do
   @moduledoc """
   A user's data as JSON, for download: their profile and preferences, posts
-  (with the revisions they made to them), threads started, likes,
+  (with the revisions they made to them), edits of other people's (wiki)
+  posts, threads started, likes,
   notifications, private messages they sent and the conversations they're
   in, notification levels, read positions, drafts, bookmarks, poll votes and the polls they created.
 
@@ -56,6 +57,7 @@ defmodule FirestormWeb.AccountExport do
       preferences: Map.take(user, @preferences),
       posts: posts(user),
       threads_started: threads_started(user),
+      wiki_edits: wiki_edits(user),
       likes: likes(user),
       notifications: notifications(user),
       conversations: conversations(user),
@@ -88,10 +90,22 @@ defmodule FirestormWeb.AccountExport do
       body: p.body,
       inserted_at: p.inserted_at,
       edited_at: p.edited_at,
-      deleted_at: p.deleted_at
+      deleted_at: p.deleted_at,
+      wiki: p.wiki
     })
     |> Repo.all()
     |> Enum.map(&Map.put(&1, :revisions, Map.get(revisions, &1.id, [])))
+  end
+
+  # Edits the user made to other people's posts (wikis; for staff, any):
+  # which post and when. Not the text, which is the post's.
+  defp wiki_edits(user) do
+    PostRevision
+    |> join(:inner, [r], p in Post, on: p.id == r.post_id and p.user_id != ^user.id)
+    |> where([r], r.user_id == ^user.id)
+    |> order_by(asc: :id)
+    |> select([r, p], %{post_id: r.post_id, thread_id: p.thread_id, edited_at: r.inserted_at})
+    |> Repo.all()
   end
 
   # Threads whose first post is the user's.

@@ -1,7 +1,9 @@
 defmodule FirestormWeb.Web.PostLive.Edit do
   @moduledoc """
-  Edits a post's body (its author while the thread is open, or an admin).
-  The previous body is kept in the post's revision history. An unsaved
+  Edits a post's body (its author while the thread is open, or an admin;
+  a wiki post, anyone who may post in the thread, as `Posting.check/2`
+  says, slow mode included). The previous body is kept in the post's
+  revision history, with who edited it. An unsaved
   edit is kept as a draft (see `FirestormWeb.Web.Drafting`) until it's
   saved or discarded.
   """
@@ -60,14 +62,19 @@ defmodule FirestormWeb.Web.PostLive.Edit do
 
   def handle_event("save", %{"post" => params}, socket) do
     user = socket.assigns.current_user
-    # The thread may have closed, or moved out of the user's reach, since
-    # the page opened.
+    # The thread may have closed, or moved out of the user's reach, and the
+    # post stopped being a wiki, since the page opened. (The post as it was
+    # stays assigned: it's what the edit started from.)
     thread = Forums.get_thread!(socket.assigns.thread.id)
     socket = assign(socket, :thread, thread)
+    current = Forums.get_post!(thread, socket.assigns.post.id)
 
     with {:can_view, true} <- {:can_view, can?(user, :view_thread, thread)},
-         {:can_edit, true} <- {:can_edit, can_edit?(socket)},
-         :ok <- Posting.check(user) do
+         # A deleted post goes on to `save/3`, which says so.
+         {:can_edit, true} <-
+           {:can_edit,
+            Post.deleted?(current) or can?(user, :edit_post, %{post: current, thread: thread})},
+         :ok <- posting_check(user, current, thread) do
       save(socket, user, params)
     else
       {:can_view, false} -> {:noreply, leave(socket)}
@@ -110,6 +117,13 @@ defmodule FirestormWeb.Web.PostLive.Edit do
     end
   end
 
+  # Someone else's wiki post: as if replying in the thread (slow mode too).
+  defp posting_check(user, post, thread) do
+    if Post.wiki?(post) and post.user_id != user.id and not Forums.admin?(user),
+      do: Posting.check(user, thread),
+      else: Posting.check(user)
+  end
+
   defp handle_progress(:attachment, entry, socket) do
     if entry.done? do
       markdown = Editor.consume_attachment(socket, entry)
@@ -146,7 +160,7 @@ defmodule FirestormWeb.Web.PostLive.Edit do
   def render(assigns) do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
-      <.page_header title="Edit Post">
+      <.page_header title={if @post.wiki, do: "Edit Wiki Post", else: "Edit Post"}>
         <:subtitle>
           In <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"} class="link">
             {@thread.title}
