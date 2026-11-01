@@ -37,6 +37,34 @@ const LocalTime = {
   },
 }
 
+// A post's "Quote" link: if the reader selected text inside that post, quote
+// just the selection by passing it to the reply page as a param (the server
+// checks it really is in the post). The selection is read on mousedown,
+// before the click collapses it, and the link's href is set before
+// LiveView's own click handler navigates.
+// In UTF-8 bytes, as the server measures it (FirestormWeb.Quote).
+const MAX_SELECTION = 5000
+const QuoteSelection = {
+  mounted() {
+    this.read = () => {
+      const selection = window.getSelection()
+      const body = document.getElementById(this.el.dataset.body)
+      const inPost = selection && !selection.isCollapsed && body &&
+        body.contains(selection.anchorNode) && body.contains(selection.focusNode)
+      const text = inPost ? selection.toString().trim() : ""
+      return new TextEncoder().encode(text).length <= MAX_SELECTION ? text : ""
+    }
+    this.el.addEventListener("mousedown", () => { this.selected = this.read() })
+    this.el.addEventListener("click", () => {
+      const text = this.selected ?? this.read()
+      this.selected = undefined
+      const url = new URL(this.el.dataset.href, window.location.origin)
+      if (text) { url.searchParams.set("selection", text) }
+      this.el.setAttribute("href", url.pathname + url.search)
+    })
+  },
+}
+
 // Upload directly from the browser to S3 with a presigned POST policy.
 const Uploaders = {
   S3(entries, onViewError) {
@@ -62,4 +90,4 @@ const Uploaders = {
   },
 }
 
-export default {Highlight, LocalTime, Uploaders}
+export default {Highlight, LocalTime, QuoteSelection, Uploaders}

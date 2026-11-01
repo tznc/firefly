@@ -1,24 +1,25 @@
 defmodule FirestormWeb.Web.PostLive.New do
-  @moduledoc "Replies to a thread."
+  @moduledoc "Replies to a thread, optionally quoting one of its posts."
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.Forums
+  alias FirestormWeb.{Forums, Quote, Repo}
   alias FirestormWeb.Forums.Post
   alias FirestormWeb.Web.Editor
 
   @impl true
-  def mount(%{"category_id" => category_id, "thread_id" => thread_id}, _session, socket) do
+  def mount(%{"category_id" => category_id, "thread_id" => thread_id} = params, _session, socket) do
     category = Forums.get_category!(category_id)
     thread = Forums.get_thread!(category, thread_id)
+    body = quote_body(category, thread, params)
 
     {:ok,
      socket
      |> assign(:page_title, "Reply - #{thread.title}")
      |> assign(:category, category)
      |> assign(:thread, thread)
-     |> assign(:form, to_form(Forums.change_post(%Post{thread_id: thread.id})))
+     |> assign(:form, to_form(Forums.change_post(%Post{thread_id: thread.id, body: body})))
      |> Editor.allow_attachments(&handle_progress/3)}
   end
 
@@ -55,6 +56,21 @@ defmodule FirestormWeb.Web.PostLive.New do
         {:noreply, assign(socket, :form, to_form(changeset))}
     end
   end
+
+  # `?quote=<post id>` starts the reply with a quote of that post (of just
+  # `&selection=` if it's really part of the post).
+  defp quote_body(category, thread, %{"quote" => post_id} = params) do
+    with {id, ""} <- Integer.parse(post_id),
+         %Post{deleted_at: nil} = post <- Forums.get_post(thread, id) do
+      post = Repo.preload(post, :user)
+      url = ~p"/categories/#{category}/threads/#{thread}" <> "#post-#{post.id}"
+      Quote.build(post.body, post.user.username, url, params["selection"])
+    else
+      _ -> nil
+    end
+  end
+
+  defp quote_body(_category, _thread, _params), do: nil
 
   defp handle_progress(:attachment, entry, socket) do
     if entry.done? do

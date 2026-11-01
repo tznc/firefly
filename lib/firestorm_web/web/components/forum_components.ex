@@ -365,6 +365,19 @@ defmodule FirestormWeb.Web.ForumComponents do
             <.icon name="hero-link" class="size-4" />
           </.link>
           <.link
+            :if={quotable?(@post, @thread)}
+            id={"post-#{@post.id}-quote"}
+            navigate={quote_path(@post, @thread)}
+            phx-hook="QuoteSelection"
+            data-href={quote_path(@post, @thread)}
+            data-body={"post-#{@post.id}-body"}
+            class="quote-link btn btn-ghost btn-sm btn-square"
+            aria-label={"Quote post #{@post.id}"}
+            title="Quote (select text in the post to quote just that)"
+          >
+            <.icon name="hero-chat-bubble-bottom-center-text" class="size-4" />
+          </.link>
+          <.link
             navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}/posts/new"}
             class="btn btn-ghost btn-sm btn-square"
             aria-label={"Reply to post #{@post.id}"}
@@ -376,6 +389,12 @@ defmodule FirestormWeb.Web.ForumComponents do
     </article>
     """
   end
+
+  defp quotable?(post, thread),
+    do: is_nil(post.deleted_at) and is_nil(thread.closed_at) and is_nil(thread.archived_at)
+
+  defp quote_path(post, thread),
+    do: ~p"/categories/#{thread.category_id}/threads/#{thread}/posts/new?#{[quote: post.id]}"
 
   defp deleted_title(%{deleted_by: %User{username: username}}), do: "Deleted by @#{username}"
   defp deleted_title(_post), do: "Deleted"
