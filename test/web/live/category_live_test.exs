@@ -86,9 +86,10 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
   describe "show" do
     test "shows the post count, highlighted until the thread has been read", %{conn: conn} do
       category = category_fixture("Elixir")
+      author = user_fixture()
       user = user_fixture()
-      thread = thread_fixture(category, user)
-      {:ok, _} = Forums.create_post(thread, user, %{body: "Yup"})
+      thread = thread_fixture(category, author)
+      {:ok, _} = Forums.create_post(thread, author, %{body: "Yup"})
       conn = log_in_as(conn, user)
 
       conn

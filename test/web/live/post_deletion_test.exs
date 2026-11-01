@@ -75,4 +75,39 @@ defmodule FirestormWeb.Web.PostDeletionTest do
     |> visit(history)
     |> assert_has("#revision-1 del", text: "Oops,")
   end
+
+  test "an edit form opened before the post was deleted can't save", ctx do
+    %{conn: conn, replier: replier, thread: thread, reply: reply} = ctx
+    {:ok, replier} = Forums.confirm_user(replier)
+
+    session =
+      conn
+      |> log_in_as(replier)
+      |> visit(thread_path(thread) <> "/posts/#{reply.id}/edit")
+
+    {:ok, _} = Forums.delete_post(reply, admin_fixture())
+
+    session
+    |> fill_in("Body", with: "Sneaky rewrite")
+    |> click_button("Save edit")
+    |> assert_has("#flash-error", text: "This post was deleted.")
+
+    assert Forums.get_post!(thread, reply.id).body == "Oops, wrong thread"
+    assert {:error, :deleted} = Forums.update_post(reply, replier, %{body: "Again"})
+  end
+
+  test "an open history page leaves when the post is deleted", ctx do
+    %{conn: conn, replier: replier, thread: thread, reply: reply} = ctx
+    {:ok, reply} = Forums.update_post(reply, replier, %{body: "Edited once"})
+    require Phoenix.LiveViewTest
+
+    {:ok, view, _} =
+      Phoenix.LiveViewTest.live(conn, thread_path(thread) <> "/posts/#{reply.id}/history")
+
+    {:ok, _} = Forums.delete_post(reply, replier)
+
+    {path, flash} = Phoenix.LiveViewTest.assert_redirect(view)
+    assert path == thread_path(thread)
+    assert flash["error"] == "This post was deleted."
+  end
 end
