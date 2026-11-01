@@ -9,7 +9,8 @@ defmodule FirestormWeb.Forums.Policy do
     * `:edit_post`, `:delete_post` (params `%{post: post, thread: thread}`) -
       the post's author while the thread is open (editing, also only within
       the `edit_grace_minutes` site setting; 0: forever), and admins; not
-      once the post is deleted. (`Forums.delete_post/2` also refuses a thread's first
+      once the post is deleted. Authors can't edit a post while it awaits
+      approval. (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
     * `:restore_post`, `:view_deleted_posts` - admins
     * `:penalize_user` (silence or suspend; params: the user) - admins, on
@@ -21,7 +22,8 @@ defmodule FirestormWeb.Forums.Policy do
     * `:flag_post` (same params) - members, on other people's posts that
       aren't deleted or already hidden
     * `:view_hidden_post` (params: the post) - its author and admins
-    * `:view_flags` (flag counts and reasons), `:unhide_post` - admins
+    * `:view_flags` (flag counts and reasons), `:unhide_post`, `:review` (the
+      review queue) - admins
     * `:edit_user` - the user themselves
     * `:view_conversation` (a private conversation: read and reply) - its
       participants, until they leave. Nobody else, admins included.
@@ -31,7 +33,9 @@ defmodule FirestormWeb.Forums.Policy do
     * `:view_category`, `:view_thread` (in its category) - everyone, members
       or not, unless the category is restricted to roles (groups): then
       members of one of those roles, and admins. A subcategory also needs its
-      parent's roles, if the parent is restricted. Every way of reading a
+      parent's roles, if the parent is restricted. A thread awaiting
+      approval (see `FirestormWeb.Review`) is only for its author and
+      admins. Every way of reading a
       thread (pages, lists, search, notifications, email, the API) goes
       through these rules or their query counterparts, `readable_threads/2`
       and `readable_categories/2`: keep them in step.
@@ -45,8 +49,9 @@ defmodule FirestormWeb.Forums.Policy do
   alias FirestormWeb.Forums.{Category, Conversation, Post, Role, RoleMembership, Thread, User}
 
   @impl true
-  def authorize(:view_thread, user, %Thread{category_id: category_id}),
-    do: visible(user, category_id)
+  def authorize(:view_thread, user, %Thread{category_id: category_id} = thread) do
+    with :ok <- visible(user, category_id), do: approved_or_own(user, thread)
+  end
 
   def authorize(:view_category, user, %Category{id: id}), do: visible(user, id)
 
@@ -86,6 +91,8 @@ defmodule FirestormWeb.Forums.Policy do
       when action in [:edit_post, :delete_post] do
     cond do
       Post.deleted?(post) -> {:error, :unauthorized}
+      # Staff approve what they saw: no author edits while it's queued.
+      action == :edit_post and Post.queued?(post) -> admin(user)
       post.user_id == user.id and not Thread.closed?(thread) and in_window?(action, post) -> :ok
       true -> admin(user)
     end
@@ -98,9 +105,10 @@ defmodule FirestormWeb.Forums.Policy do
   end
 
   def authorize(:flag_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{}}) do
-    if post.user_id != user.id and not Post.deleted?(post) and not Post.hidden?(post),
-      do: :ok,
-      else: {:error, :unauthorized}
+    if post.user_id != user.id and not Post.deleted?(post) and not Post.hidden?(post) and
+         not Post.queued?(post),
+       do: :ok,
+       else: {:error, :unauthorized}
   end
 
   def authorize(:view_hidden_post, %User{id: id}, %Post{user_id: id}), do: :ok
@@ -109,6 +117,7 @@ defmodule FirestormWeb.Forums.Policy do
       when action in [
              :view_hidden_post,
              :view_flags,
+             :review,
              :unhide_post,
              :restore_post,
              :view_deleted_posts,
@@ -132,6 +141,15 @@ defmodule FirestormWeb.Forums.Policy do
 
   defp admin(user), do: if(Forums.admin?(user), do: :ok, else: {:error, :unauthorized})
 
+  # A thread awaiting approval is for its author and admins.
+  defp approved_or_own(user, thread) do
+    case Forums.queued_thread_author_id(thread) do
+      nil -> :ok
+      author_id when is_struct(user, User) and user.id == author_id -> :ok
+      _author_id -> if staff?(user), do: :ok, else: {:error, :unauthorized}
+    end
+  end
+
   defp visible(user, category_id) do
     if category_visible?(user, category_id), do: :ok, else: {:error, :unauthorized}
   end
@@ -147,9 +165,19 @@ defmodule FirestormWeb.Forums.Policy do
   @doc """
   The `users` who may read `thread`, as the `:view_thread` rule decides for
   each, in a query or two however many users there are (for the
-  notification fan-out). A thread in an unrestricted category: all of them.
+  notification fan-out). A thread in an unrestricted category: all of them
+  (unless it awaits approval: then its author and admins).
   """
-  def thread_readers(%Thread{category_id: category_id}, users) do
+  def thread_readers(%Thread{} = thread, users) do
+    readers = category_readers(thread, users)
+
+    case Forums.queued_thread_author_id(thread) do
+      nil -> readers
+      author_id -> Enum.filter(readers, &(&1.id == author_id or Forums.admin?(&1)))
+    end
+  end
+
+  defp category_readers(%Thread{category_id: category_id}, users) do
     restricted =
       Repo.all(
         from(cr in "forums_category_roles",

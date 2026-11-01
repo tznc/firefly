@@ -8,6 +8,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   Members can flag other people's posts (see `FirestormWeb.Flags`). A post
   hidden after flags shows as a placeholder, except to its author and
   admins, who see it with a notice; admins also see pending flag counts.
+  Posts awaiting approval (see `FirestormWeb.Review`) are only shown to
+  their author and admins, marked as such.
   """
   use FirestormWeb.Web, :live_view
 
@@ -265,6 +267,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     user = socket.assigns.current_user
     thread = Repo.preload(thread, [:tags, posts: [:user, :deleted_by]], force: true)
     [first_post | replies] = Enum.map(thread.posts, &Forums.decorate_post_oembeds/1)
+    # Replies awaiting approval are only for their author and admins.
+    replies = Enum.reject(replies, &(Post.queued?(&1) and not can?(user, :view_hidden_post, &1)))
 
     if user && connected?(socket), do: Forums.mark_thread_read(user, thread)
 
@@ -444,6 +448,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             post={@first_post}
             can_unhide={@admin?}
           />
+          <.awaiting_notice :if={Post.queued?(@first_post)} />
           <.post
             :if={not MapSet.member?(@hidden_ids, @first_post.id)}
             post={@first_post}
@@ -493,6 +498,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             post={post}
             can_unhide={@admin?}
           />
+          <.awaiting_notice :if={Post.queued?(post) and not Post.deleted?(post)} />
           <.post
             :if={
               (not Post.deleted?(post) or @admin?) and not MapSet.member?(@hidden_ids, post.id)
@@ -612,6 +618,15 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         <.button variant="primary" class="btn-sm">Flag post</.button>
       </div>
     </.form>
+    """
+  end
+
+  defp awaiting_notice(assigns) do
+    ~H"""
+    <div role="status" class="awaiting-approval alert alert-info mb-2 py-2 text-sm">
+      <.icon name="hero-clock" class="size-4" />
+      Awaiting approval: staff review new members' first posts. Only you and staff can see it until then.
+    </div>
     """
   end
 end

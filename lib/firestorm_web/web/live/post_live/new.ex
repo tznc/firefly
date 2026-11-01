@@ -44,10 +44,10 @@ defmodule FirestormWeb.Web.PostLive.New do
 
   defp create_post(socket, thread, category, user, params) do
     case Forums.create_post(thread, user, %{body: params["body"]}) do
-      {:ok, _post} ->
+      {:ok, post} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Post created successfully.")
+         |> put_flash(:info, created_message(post))
          |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
 
       {:error, :closed} ->
@@ -58,11 +58,16 @@ defmodule FirestormWeb.Web.PostLive.New do
     end
   end
 
+  defp created_message(%Post{queued_at: nil}), do: "Post created successfully."
+  defp created_message(_queued), do: "Thanks! Your post is awaiting approval by staff."
+
   # `?quote=<post id>` starts the reply with a quote of that post (of just
   # `&selection=` if it's really part of the post).
   defp quote_body(category, thread, %{"quote" => post_id} = params) do
     with {id, ""} <- Integer.parse(post_id),
-         %Post{deleted_at: nil, hidden_at: nil} = post <- Forums.get_post(thread, id) do
+         %Post{} = post <- Forums.get_post(thread, id),
+         # Quotes publish what they copy: only from posts anyone can read.
+         true <- Post.readable_by?(post, nil) do
       post = Repo.preload(post, :user)
       url = ~p"/categories/#{category}/threads/#{thread}" <> "#post-#{post.id}"
       Quote.build(post.body, post.user.username, url, params["selection"])

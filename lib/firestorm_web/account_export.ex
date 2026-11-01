@@ -129,7 +129,8 @@ defmodule FirestormWeb.AccountExport do
     |> where([n], n.user_id == ^user.id)
     |> where(
       [n],
-      not is_nil(n.conversation_id) or n.kind in ^Notification.threadless_kinds() or
+      not is_nil(n.conversation_id) or
+        (is_nil(n.thread_id) and n.kind in ^Notification.threadless_kinds()) or
         n.thread_id in subquery(from(r in subquery(readable_thread_ids(user)), select: r.id))
     )
     |> order_by(asc: :id)

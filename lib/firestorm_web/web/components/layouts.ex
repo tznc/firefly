@@ -19,6 +19,7 @@ defmodule FirestormWeb.Web.Layouts do
   attr :notification_count, :integer, default: 0
   attr :message_count, :integer, default: 0, doc: "conversations with unread messages"
   attr :current_path, :string, default: nil, doc: "used to highlight the active link"
+  attr :review_count, :integer, default: 0, doc: "items in the staff review queue (admins)"
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -133,6 +134,17 @@ defmodule FirestormWeb.Web.Layouts do
               Settings
             </.nav_item>
             <%= if FirestormWeb.Forums.admin?(@current_user) do %>
+              <.nav_item path={~p"/staff/review"} current_path={@current_path} icon="hero-inbox-stack">
+                Review
+                <span
+                  :if={@review_count > 0}
+                  id="review-count"
+                  class="badge badge-sm badge-warning"
+                  aria-label={"#{@review_count} to review"}
+                >
+                  {@review_count}
+                </span>
+              </.nav_item>
               <.nav_item
                 path={~p"/staff/log"}
                 current_path={@current_path}
@@ -234,7 +246,14 @@ defmodule FirestormWeb.Web.Layouts do
       <Layouts.app {Layouts.shell(assigns)}>...</Layouts.app>
   """
   def shell(assigns) do
-    Map.take(assigns, [:flash, :current_user, :notification_count, :message_count, :current_path])
+    Map.take(assigns, [
+      :flash,
+      :current_user,
+      :notification_count,
+      :message_count,
+      :review_count,
+      :current_path
+    ])
   end
 
   attr :path, :string, required: true

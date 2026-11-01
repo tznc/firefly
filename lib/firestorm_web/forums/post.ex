@@ -6,16 +6,18 @@ defmodule FirestormWeb.Forums.Post do
   use Ecto.Schema
   import Ecto.Changeset, warn: false
   import Ecto.Query
-  alias FirestormWeb.Forums.{User, Thread, View}
+  alias FirestormWeb.Forums.{Flag, User, Thread, View}
 
   schema "forums_posts" do
     field(:body, :string)
     field(:edited_at, :naive_datetime_usec)
     field(:deleted_at, :utc_datetime)
     field(:hidden_at, :utc_datetime)
+    field(:queued_at, :utc_datetime)
     belongs_to(:deleted_by, User)
     belongs_to(:thread, Thread)
     belongs_to(:user, User)
+    has_many(:flags, Flag)
     has_many(:views, {"forums_posts_views", View}, foreign_key: :assoc_id)
 
     many_to_many(
@@ -52,8 +54,33 @@ defmodule FirestormWeb.Forums.Post do
   """
   def hidden?(%__MODULE__{hidden_at: at}), do: not is_nil(at)
 
-  @doc "Posts that aren't deleted."
-  def visible(query \\ __MODULE__), do: where(query, [p], is_nil(p.deleted_at))
+  @doc """
+  Whether the post waits for staff approval (see `FirestormWeb.Review`).
+  Until then only its author and admins see it.
+  """
+  def queued?(%__MODULE__{queued_at: at}), do: not is_nil(at)
+
+  @doc """
+  Whether `user` (nil: a visitor) may read the post's content: anyone, once
+  it's published; a deleted post, admins only; one hidden after flags or
+  awaiting approval, its author and admins. Every way of reading a single
+  post by id (pages, quotes, history, the API and channels) goes through
+  this, so they stay in step. With nil it's whether the post is public.
+  """
+  def readable_by?(%__MODULE__{} = post, user) do
+    cond do
+      deleted?(post) -> permit?(:view_deleted_posts, user, post)
+      hidden?(post) or queued?(post) -> permit?(:view_hidden_post, user, post)
+      true -> true
+    end
+  end
+
+  defp permit?(action, user, post),
+    do: Bodyguard.permit?(FirestormWeb.Forums, action, user, post)
+
+  @doc "Posts that are published: not deleted or awaiting approval."
+  def visible(query \\ __MODULE__),
+    do: where(query, [p], is_nil(p.deleted_at) and is_nil(p.queued_at))
 
   def ordered(query) do
     query

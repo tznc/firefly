@@ -45,7 +45,13 @@ defmodule FirestormWeb.Web.ThreadLive.New do
       {:ok, thread} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Thread created successfully.")
+         |> put_flash(
+           :info,
+           if(FirestormWeb.Forums.Post.queued?(thread.first_post),
+             do: "Thanks! Your thread is awaiting approval by staff.",
+             else: "Thread created successfully."
+           )
+         )
          |> push_navigate(to: ~p"/categories/#{socket.assigns.category}/threads/#{thread}")}
 
       {:error, changeset} ->

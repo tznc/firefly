@@ -63,6 +63,7 @@ defmodule FirestormWeb.Web.Router do
       live("/staff/log", StaffLive.Log, :index)
       live("/staff/settings", StaffLive.Settings, :index)
       live("/staff/groups", StaffLive.Groups, :index)
+      live("/staff/review", StaffLive.Review, :index)
       live("/categories/new", CategoryLive.Form, :new)
       live("/categories/:id/edit", CategoryLive.Form, :edit)
       live("/categories/:category_id/threads/new", ThreadLive.New, :new)

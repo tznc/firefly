@@ -36,6 +36,7 @@ defmodule FirestormWeb.Flags do
          {:ok, flag} <- insert(post, user, attrs) do
       maybe_hide(post)
       notify_admins(post, user)
+      FirestormWeb.Review.changed()
       {:ok, flag}
     end
   end
@@ -91,6 +92,7 @@ defmodule FirestormWeb.Flags do
 
     with {:ok, post} <- result do
       Forums.post_changed(:post_updated, post)
+      FirestormWeb.Review.changed()
       {:ok, post}
     end
   end

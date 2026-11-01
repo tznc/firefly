@@ -19,7 +19,8 @@ defmodule FirestormWeb.StaffLog do
   @actions ~w(
     thread.pin thread.unpin thread.close thread.open thread.archive thread.unarchive
     thread.move thread.edit thread.delete
-    post.edit post.delete post.restore post.unhide
+    post.edit post.delete post.restore post.unhide post.approve post.reject
+    flag.agree flag.disagree flag.defer
     category.create category.update category.delete
     role.create role.grant role.revoke
     user.silence user.unsilence user.suspend user.unsuspend
