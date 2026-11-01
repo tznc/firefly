@@ -149,13 +149,12 @@ defmodule FirestormWeb.Forums do
       {:ok, %User{}}
   """
   def register_user(attrs) do
-    # Unconfirmed until they follow the emailed link (see EmailConfirmation),
-    # unless the site doesn't require it.
-    confirmed_at =
-      if SiteSettings.get("require_email_confirmation"), do: nil, else: DateTime.utc_now(:second)
-
+    # Unconfirmed until they follow the emailed link (see EmailConfirmation).
+    # Whether that's needed to post is the `require_email_confirmation`
+    # setting's job (see `FirestormWeb.Posting`): `confirmed_at` only ever
+    # means the address was proven.
     if registration_open?() do
-      %User{api_token: generate_api_token(), confirmed_at: confirmed_at}
+      %User{api_token: generate_api_token()}
       |> User.registration_changeset(attrs)
       |> Repo.insert()
     else

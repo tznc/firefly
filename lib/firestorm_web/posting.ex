@@ -2,7 +2,8 @@ defmodule FirestormWeb.Posting do
   @moduledoc """
   Whether a user may post right now (web, API and email): they must not be
   silenced or suspended (see `FirestormWeb.Penalties`), must have a
-  confirmed email address and be within the posting rate limit, and a reply's
+  confirmed email address (unless the `require_email_confirmation` site
+  setting is off) and be within the posting rate limit, and a reply's
   thread must be open. Starting a private conversation also counts against
   the `:message` limit, so one account can't message crowds. Liking only
   checks penalties (`check(user, :like)`), as do other public writes that
@@ -11,12 +12,12 @@ defmodule FirestormWeb.Posting do
   """
   import Ecto.Query, only: [from: 2]
 
-  alias FirestormWeb.{Penalties, RateLimit, Repo}
+  alias FirestormWeb.{Penalties, RateLimit, Repo, SiteSettings}
   alias FirestormWeb.Forums.User
 
   def check(%User{} = user) do
     with :ok <- check(user, :like) do
-      if User.confirmed?(user), do: RateLimit.check_post(user), else: {:error, :unconfirmed}
+      if confirmed_enough?(user), do: RateLimit.check_post(user), else: {:error, :unconfirmed}
     end
   end
 
@@ -39,6 +40,13 @@ defmodule FirestormWeb.Posting do
   def check(%User{} = user, %FirestormWeb.Forums.Thread{id: thread_id}) do
     if FirestormWeb.Forums.thread_closed?(thread_id), do: {:error, :closed}, else: check(user)
   end
+
+  @doc """
+  Whether `user`'s email confirmation status lets them post: confirmed, or
+  the site doesn't require it (the `require_email_confirmation` setting).
+  """
+  def confirmed_enough?(%User{} = user),
+    do: User.confirmed?(user) or not SiteSettings.get("require_email_confirmation")
 
   defp current_penalties(%User{id: id} = user) do
     penalties =
