@@ -42,7 +42,7 @@ defmodule FirestormWeb.Forums.Policy do
   import Ecto.Query
 
   alias FirestormWeb.{Forums, Messages, Repo, SiteSettings}
-  alias FirestormWeb.Forums.{Category, Conversation, Post, RoleMembership, Thread, User}
+  alias FirestormWeb.Forums.{Category, Conversation, Post, Role, RoleMembership, Thread, User}
 
   @impl true
   def authorize(:view_thread, user, %Thread{category_id: category_id}),
@@ -142,6 +142,68 @@ defmodule FirestormWeb.Forums.Policy do
 
   defp staff?(nil), do: false
   defp staff?(%User{} = user), do: Forums.admin?(user)
+
+  @doc """
+  The `users` who may read `thread`, as the `:view_thread` rule decides for
+  each, in a query or two however many users there are (for the
+  notification fan-out). A thread in an unrestricted category: all of them.
+  """
+  def thread_readers(%Thread{category_id: category_id}, users) do
+    restricted =
+      Repo.all(
+        from(cr in "forums_category_roles",
+          join: c in Category,
+          on: c.id == ^category_id and (cr.category_id == c.id or cr.category_id == c.parent_id),
+          distinct: true,
+          select: cr.category_id
+        )
+      )
+
+    if restricted == [] or users == [] do
+      users
+    else
+      ids = Enum.map(users, & &1.id)
+
+      query =
+        from(u in User,
+          as: :user,
+          where: u.id in ^ids,
+          where: ^readers_condition(restricted),
+          select: u.id
+        )
+
+      readers = MapSet.new(Repo.all(query))
+
+      Enum.filter(users, &MapSet.member?(readers, &1.id))
+    end
+  end
+
+  # Admins, or members of one of the roles of every restricted category on
+  # the way (the category and its parent).
+  defp readers_condition(restricted) do
+    admin =
+      from(m in RoleMembership,
+        join: r in Role,
+        on: r.id == m.role_id,
+        where: m.user_id == parent_as(:user).id and r.name == "admin",
+        select: 1
+      )
+
+    member =
+      Enum.reduce(restricted, dynamic(true), fn category_id, acc ->
+        in_role =
+          from(m in RoleMembership,
+            join: cr in "forums_category_roles",
+            on: cr.role_id == m.role_id,
+            where: m.user_id == parent_as(:user).id and cr.category_id == ^category_id,
+            select: 1
+          )
+
+        dynamic(^acc and exists(in_role))
+      end)
+
+    dynamic(exists(admin) or ^member)
+  end
 
   @doc """
   Restricts `query` to threads `user` (or nil, a visitor) may read, as the

@@ -17,6 +17,14 @@ defmodule FirestormWeb.Forums.Notification do
 
   @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged)
 
+  # Kinds that are about the user, not a thread, so they never carry a
+  # thread_id. Any other notification without a thread_id or conversation_id
+  # predates thread_id and can't be checked against thread visibility.
+  @threadless_kinds ~w(silenced suspended)
+
+  @doc "Kinds that are about the user rather than a thread or conversation."
+  def threadless_kinds, do: @threadless_kinds
+
   schema "forums_notifications" do
     field(:kind, :string, default: "new_post")
     field(:body, :string)
@@ -95,7 +103,9 @@ defmodule FirestormWeb.Forums.Notification do
     %{
       subject: "There was a new post in thread: #{thread.title}",
       body: post.body,
-      url: "#{FirestormWeb.Web.Paths.thread_url(thread)}#post-#{post.id}"
+      url: "#{FirestormWeb.Web.Paths.thread_url(thread)}#post-#{post.id}",
+      thread_id: thread.id,
+      post_id: post.id
     }
   end
 

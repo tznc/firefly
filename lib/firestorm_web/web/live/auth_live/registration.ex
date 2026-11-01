@@ -24,16 +24,10 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
   end
 
   defp mount_form(socket) do
-    remote_ip =
-      case get_connect_info(socket, :peer_data) do
-        %{address: address} -> address
-        _ -> nil
-      end
-
     {:ok,
      socket
      |> assign(:page_title, "Create an account")
-     |> assign(:remote_ip, remote_ip)
+     |> assign(:remote_ip, FirestormWeb.Web.ClientIP.from_socket(socket))
      |> assign(:trigger_submit, false)
      |> assign_form(Forums.change_registration())}
   end
@@ -51,7 +45,7 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
   end
 
   def handle_event("save", %{"user" => params}, socket) do
-    with :ok <- RateLimit.check_register(socket.assigns.remote_ip || "unknown"),
+    with :ok <- RateLimit.check_register(socket.assigns.remote_ip),
          {:ok, user} <- Forums.register_user(params) do
       unless Forums.User.confirmed?(user), do: EmailConfirmation.deliver(user)
 

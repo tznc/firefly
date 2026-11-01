@@ -107,6 +107,34 @@ defmodule FirestormWeb.Web.PrivateCategoriesLiveTest do
     assert flash["error"] == "This thread is no longer available."
   end
 
+  test "an open history or edit page stops once its thread moves out of reach", ctx do
+    open = thread_fixture(ctx.public, ctx.outsider, %{title: "Open", body: "first words"})
+    [post] = Repo.preload(open, :posts).posts
+    conn = log_in_as(ctx.conn, ctx.outsider)
+
+    {:ok, history, _html} =
+      Phoenix.LiveViewTest.live(conn, thread_path(open) <> "/posts/#{post.id}/history")
+
+    {:ok, edit, _html} =
+      Phoenix.LiveViewTest.live(conn, thread_path(open) <> "/posts/#{post.id}/edit")
+
+    {:ok, _} = Forums.move_thread(open, ctx.secret, ctx.admin)
+
+    # Saving from the already-open edit page is refused.
+    edit
+    |> Phoenix.LiveViewTest.form("#post-form", post: %{body: "edited words"})
+    |> Phoenix.LiveViewTest.render_submit()
+
+    flash = Phoenix.LiveViewTest.assert_redirect(edit, ~p"/")
+    assert flash["error"] == "This thread is no longer available."
+    assert Repo.get!(Post, post.id).body == "first words"
+
+    # An edit made by someone who can still read it isn't pushed.
+    {:ok, _} = Forums.update_post(post, ctx.admin, %{body: "staff edit"})
+    flash = Phoenix.LiveViewTest.assert_redirect(history, ~p"/")
+    assert flash["error"] == "This thread is no longer available."
+  end
+
   describe "JSON API" do
     test "search", ctx do
       assert %{"results" => []} =
