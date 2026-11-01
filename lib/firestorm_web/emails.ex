@@ -5,7 +5,7 @@ defmodule FirestormWeb.Emails do
 
   import Bamboo.Email
   alias FirestormWeb.Markdown
-  alias FirestormWeb.Forums.{Post, Thread, User}
+  alias FirestormWeb.Forums.{Conversation, Message, Post, Thread, User}
 
   @watching "You're getting this because you watch this thread, its category or one of its tags."
   @mentioned "You're getting this because you were mentioned."
@@ -69,6 +69,41 @@ defmodule FirestormWeb.Emails do
     Change your notification settings: #{settings_url()}
     """)
     |> put_header("reply-to", FirestormWeb.ReplyAddress.address(thread, user))
+  end
+
+  @doc """
+  A private `message` for `user` (`subject` says who sent it). It has no
+  reply-by-email address: those are for threads, and a reply must come from
+  the site, where only participants can post.
+  """
+  def message_notification(
+        %User{} = user,
+        %Conversation{} = conversation,
+        %Message{} = message,
+        subject
+      ) do
+    url = "#{FirestormWeb.Web.Paths.conversation_url(conversation)}#message-#{message.id}"
+
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("#{subject} on Firefly")
+    |> html_body("""
+    <p>#{escape(subject)}. #{link("Read and reply on Firefly", url)}:</p>
+    <hr />
+    #{Markdown.render(message.body)}
+    <hr />
+    <p><small>You're getting this because you're in this private conversation. We won't email you about it again until you've read it. #{link("Change your notification settings", settings_url())}.</small></p>
+    """)
+    |> text_body("""
+    #{subject}. Read and reply on Firefly: #{url}
+
+    #{message.body}
+
+    --
+    You're getting this because you're in this private conversation. We won't email you about it again until you've read it.
+    Change your notification settings: #{settings_url()}
+    """)
   end
 
   def confirmation(%User{} = user, url) do

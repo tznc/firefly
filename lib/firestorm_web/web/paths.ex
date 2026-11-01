@@ -18,5 +18,7 @@ defmodule FirestormWeb.Web.Paths do
 
   def category_url(category), do: url(~p"/categories/#{category.id}")
 
+  def conversation_url(conversation), do: url(~p"/messages/#{conversation.id}")
+
   def thread_url(thread), do: url(~p"/categories/#{thread.category_id}/threads/#{thread.id}")
 end

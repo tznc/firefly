@@ -14,6 +14,10 @@ defmodule FirestormWeb.Forums.Policy do
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
     * `:edit_user` - the user themselves
+    * `:view_conversation` (a private conversation: read and reply) - its
+      participants, until they leave. Nobody else, admins included.
+    * `:add_participants` - participants who started the conversation, and
+      admin participants
     * `:view_thread` - everyone, members or not (the one place to restrict
       who can read a thread, e.g. for private categories; notifications such
       as mentions check it). `readable_threads/2` is its query counterpart,
@@ -22,8 +26,8 @@ defmodule FirestormWeb.Forums.Policy do
 
   @behaviour Bodyguard.Policy
 
-  alias FirestormWeb.Forums
-  alias FirestormWeb.Forums.{Post, Thread, User}
+  alias FirestormWeb.{Forums, Messages}
+  alias FirestormWeb.Forums.{Conversation, Post, Thread, User}
 
   @impl true
   def authorize(:view_thread, _user, %Thread{}), do: :ok
@@ -31,6 +35,17 @@ defmodule FirestormWeb.Forums.Policy do
   def authorize(_action, nil, _params), do: {:error, :unauthenticated}
 
   def authorize(:edit_user, %User{id: id}, %{user: %{id: id}}), do: :ok
+
+  def authorize(:view_conversation, %User{} = user, %Conversation{} = conversation),
+    do: if(Messages.participant?(conversation, user), do: :ok, else: {:error, :unauthorized})
+
+  def authorize(:add_participants, %User{} = user, %Conversation{} = conversation) do
+    cond do
+      not Messages.participant?(conversation, user) -> {:error, :unauthorized}
+      conversation.user_id == user.id -> :ok
+      true -> admin(user)
+    end
+  end
 
   def authorize(:manage_category, %User{} = user, _params), do: admin(user)
   def authorize(:moderate_thread, %User{} = user, _params), do: admin(user)

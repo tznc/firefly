@@ -53,4 +53,29 @@ defmodule FirestormWeb.Web.AdminTest do
     |> refute_has("th", text: "Password hash")
     |> refute_has("th", text: "Api token")
   end
+
+  test "admins can't read private messages through the notifications admin", %{conn: conn} do
+    {:ok, _} = FirestormWeb.Notifications.start_link()
+    alice = user_fixture()
+    bob = user_fixture()
+
+    {:ok, _} =
+      FirestormWeb.Messages.start_conversation(alice, %{
+        "recipients" => bob.username,
+        "title" => "Hush",
+        "body" => "xylophone confidential"
+      })
+
+    :sys.get_state(FirestormWeb.Notifications)
+    [notification] = FirestormWeb.Forums.notifications_for(bob)
+    conn = log_in_as(conn, admin_fixture())
+
+    for path <- [
+          "/admin/accounts/notification",
+          "/admin/accounts/notification/#{notification.id}"
+        ] do
+      html = conn |> get(path) |> html_response(200)
+      refute html =~ "xylophone"
+    end
+  end
 end

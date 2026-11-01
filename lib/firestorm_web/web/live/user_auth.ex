@@ -3,7 +3,7 @@ defmodule FirestormWeb.Web.UserAuth do
   `on_mount` hooks for LiveViews:
 
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
-      the unread notification count and the current path.
+      the unread notification and conversation counts and the current path.
     * `:require_user` - redirects to the categories page when nobody is
       logged in. Used by individual LiveViews, after the live session's
       `:mount_current_user`.
@@ -14,7 +14,7 @@ defmodule FirestormWeb.Web.UserAuth do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
   import Phoenix.LiveView
 
-  alias FirestormWeb.Forums
+  alias FirestormWeb.{Forums, Messages}
   alias FirestormWeb.Web.Session
 
   def on_mount(:mount_current_user, _params, session, socket) do
@@ -42,17 +42,25 @@ defmodule FirestormWeb.Web.UserAuth do
   defp mount_current_user(socket, session) do
     socket
     |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
-    |> then(&assign(&1, :notification_count, notification_count(&1.assigns.current_user)))
+    |> assign_counts()
     |> subscribe_to_notifications()
     |> attach_hook(:current_path, :handle_params, fn _params, uri, socket ->
       {:cont, assign(socket, :current_path, URI.parse(uri).path)}
     end)
   end
 
+  defp assign_counts(socket) do
+    user = socket.assigns.current_user
+
+    socket
+    |> assign(:notification_count, notification_count(user))
+    |> assign(:message_count, Messages.unread_conversation_count(user))
+  end
+
   defp notification_count(nil), do: 0
   defp notification_count(user), do: Forums.unread_notification_count(user)
 
-  # Keeps the notification badge live: notify/read broadcasts
+  # Keeps the notification and message badges live: notify/read broadcasts
   # :notifications_changed on the user's topic. Views can export
   # `notifications_changed/1` to react as well (e.g. the notifications page).
   defp subscribe_to_notifications(%{assigns: %{current_user: %{id: user_id}}} = socket) do
@@ -68,7 +76,7 @@ defmodule FirestormWeb.Web.UserAuth do
   defp subscribe_to_notifications(socket), do: socket
 
   defp handle_notifications(:notifications_changed, socket) do
-    socket = assign(socket, :notification_count, notification_count(socket.assigns.current_user))
+    socket = assign_counts(socket)
 
     socket =
       if function_exported?(socket.view, :notifications_changed, 1),
