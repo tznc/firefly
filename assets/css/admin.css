@@ -1,0 +1,269 @@
+/*
+ * Firefly theme for the Kaffy admin (/admin).
+ *
+ * Kaffy ships a Bootstrap 4 "Purple Admin" theme; this stylesheet is injected
+ * after it (see FirestormWeb.Admin.Theme) and re-skins it with the same font,
+ * palette, radii and light/dark modes as the forum's daisyUI themes in app.css.
+ */
+
+@font-face { font-family: "Fira Sans"; font-weight: 400; font-display: swap; src: url("/fonts/fira-sans-v7-latin-regular.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-weight: 500; font-display: swap; src: url("/fonts/fira-sans-v7-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-weight: 600; font-display: swap; src: url("/fonts/fira-sans-v7-latin-600.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-weight: 700; font-display: swap; src: url("/fonts/fira-sans-v7-latin-700.woff2") format("woff2"); }
+
+/* Same values as the "firefly" daisyUI theme */
+:root {
+  --ff-base-100: #FFFFFF;
+  --ff-base-200: #F7F5F1;
+  --ff-base-300: #E9E5DE;
+  --ff-content: #2E2E2E;
+  --ff-muted: #6B6B6B;
+  --ff-primary: #DB3440;
+  --ff-primary-hover: #C42A35;
+  --ff-primary-content: #FFFFFF;
+  --ff-primary-soft: #FBE5E7;
+  --ff-accent: #FAAF3F;
+  --ff-neutral: #4A4A4A;
+  --ff-neutral-content: #F2EFEA;
+  --ff-error: #C42A35;
+  --ff-success: #2E9A63;
+  --ff-radius-field: 0.5rem;
+  --ff-radius-box: 0.75rem;
+  --ff-font: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  color-scheme: light;
+}
+
+/* Same values as the "firefly-dark" daisyUI theme */
+:root[data-theme="firefly-dark"] {
+  --ff-base-100: #2A2A2A;
+  --ff-base-200: #222222;
+  --ff-base-300: #3A3A3A;
+  --ff-content: #F2EFEA;
+  --ff-muted: #B5B0A8;
+  --ff-primary: #E5505B;
+  --ff-primary-hover: #F0707A;
+  --ff-primary-content: #1A1A1A;
+  --ff-primary-soft: #4A2A2D;
+  --ff-neutral: #F2EFEA;
+  --ff-neutral-content: #2A2A2A;
+  --ff-error: #F0707A;
+  --ff-success: #5CC48F;
+  color-scheme: dark;
+}
+
+/* ---- Base ------------------------------------------------------------ */
+html body,
+body .sidebar,
+body .navbar,
+body .btn,
+body .form-control,
+body h1, body h2, body h3, body h4, body h5, body h6,
+body .page-title,
+body .sidebar .nav .nav-item .nav-link .menu-title,
+body .sidebar .nav .nav-item.active > .nav-link .menu-title {
+  font-family: var(--ff-font);
+}
+
+html body,
+body .content-wrapper,
+body .page-body-wrapper,
+body .main-panel {
+  background: var(--ff-base-200);
+  color: var(--ff-content);
+}
+
+body a,
+body .text-primary { color: var(--ff-primary) !important; }
+body a:hover { color: var(--ff-primary-hover); }
+body .text-muted, body p.help_text, body .card-description { color: var(--ff-muted) !important; }
+body h1, body h2, body h3, body h4, body .page-title { color: var(--ff-content); font-weight: 700; letter-spacing: -0.01em; }
+
+/* ---- Top navbar ------------------------------------------------------- */
+body .navbar.default-layout-navbar,
+body .navbar .navbar-brand-wrapper,
+body .navbar .navbar-menu-wrapper {
+  background: var(--ff-base-100) !important;
+  box-shadow: none;
+}
+body .navbar.default-layout-navbar { border-bottom: 1px solid var(--ff-base-300); }
+body .navbar .navbar-brand-wrapper { border-right: 1px solid var(--ff-base-300); }
+body .navbar .navbar-brand img { height: 2rem; width: auto; }
+body .navbar .navbar-toggler,
+body .navbar .navbar-toggler span { color: var(--ff-content) !important; }
+
+/* ---- Sidebar: like the forum's drawer menu ---------------------------- */
+body .sidebar {
+  background: var(--ff-base-100) !important;
+  border-right: 1px solid var(--ff-base-300);
+  padding: 0.75rem;
+}
+body .sidebar .nav .nav-item { padding: 0; border-radius: var(--ff-radius-field); margin-bottom: 2px; }
+body .sidebar .nav .nav-item .nav-link {
+  color: var(--ff-content) !important;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--ff-radius-field);
+}
+body .sidebar .nav .nav-item .nav-link:hover { background: var(--ff-base-200); }
+body .sidebar .nav .nav-item .nav-link i.menu-icon,
+body .sidebar .nav .nav-item .nav-link i.menu-arrow { color: var(--ff-muted) !important; font-size: 0.9rem; }
+body .sidebar .nav .nav-item .nav-link .menu-title { font-size: 0.875rem; font-weight: 500; }
+body .sidebar .nav .nav-item.active { background: transparent !important; }
+body .sidebar .nav .nav-item.active > .nav-link,
+body .sidebar .nav .sub-menu .nav-item .nav-link.active {
+  background: var(--ff-neutral) !important;
+  color: var(--ff-neutral-content) !important;
+}
+body .sidebar .nav .nav-item.active > .nav-link .menu-title,
+body .sidebar .nav .nav-item.active > .nav-link i { color: var(--ff-neutral-content) !important; }
+body .sidebar .nav .sub-menu { padding: 0.25rem 0 0.25rem 1rem; }
+body .sidebar .nav .sub-menu .nav-item .nav-link {
+  color: var(--ff-content) !important;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.75rem;
+}
+body .sidebar .nav .sub-menu .nav-item .nav-link::before { color: var(--ff-muted) !important; margin-right: 0.5rem; }
+body .sidebar .nav.sub-menu .nav-item::before { background: var(--ff-muted) !important; }
+
+/* ---- Cards ----------------------------------------------------------- */
+body .card {
+  background: var(--ff-base-100);
+  border: 1px solid var(--ff-base-300) !important;
+  border-radius: var(--ff-radius-box);
+  box-shadow: none !important;
+  color: var(--ff-content);
+}
+body .card .card-header {
+  background: transparent;
+  border-bottom: 1px solid var(--ff-base-300);
+}
+body .card.border-left-primary,
+body .card.border-left-success { border-left: 1px solid var(--ff-base-300) !important; }
+body .shadow { box-shadow: none !important; }
+
+/* ---- Buttons --------------------------------------------------------- */
+body .btn {
+  border-radius: var(--ff-radius-field);
+  font-weight: 600;
+  font-size: 0.875rem;
+  box-shadow: none !important;
+}
+body .btn-primary,
+body input.btn-primary {
+  background: var(--ff-primary) !important;
+  border-color: var(--ff-primary) !important;
+  color: var(--ff-primary-content) !important;
+}
+body .btn-primary:hover { background: var(--ff-primary-hover) !important; border-color: var(--ff-primary-hover) !important; }
+body .btn-outline-primary {
+  background: transparent !important;
+  border: 1px solid var(--ff-primary) !important;
+  color: var(--ff-primary) !important;
+}
+body .btn-outline-primary:hover { background: var(--ff-primary) !important; color: var(--ff-primary-content) !important; }
+body .btn-light,
+body .btn-secondary {
+  background: var(--ff-base-200) !important;
+  border: 1px solid var(--ff-base-300) !important;
+  color: var(--ff-content) !important;
+}
+body .btn-light:hover,
+body .btn-secondary:hover { background: var(--ff-base-300) !important; }
+body .btn-danger {
+  background: transparent !important;
+  border: 1px solid var(--ff-error) !important;
+  color: var(--ff-error) !important;
+}
+body .btn-danger:hover { background: var(--ff-error) !important; color: var(--ff-primary-content) !important; }
+body .btn-link { color: var(--ff-primary) !important; }
+
+/* ---- Forms ----------------------------------------------------------- */
+body .form-control,
+body select.form-control,
+body textarea.form-control {
+  background: var(--ff-base-100) !important;
+  border: 1px solid var(--ff-base-300) !important;
+  border-radius: var(--ff-radius-field);
+  color: var(--ff-content) !important;
+  font-size: 0.9rem;
+}
+body .form-control:focus {
+  border-color: var(--ff-primary) !important;
+  box-shadow: 0 0 0 3px var(--ff-primary-soft) !important;
+  outline: none;
+}
+body label { color: var(--ff-content); font-weight: 500; font-size: 0.875rem; }
+body .invalid-feedback { color: var(--ff-error); }
+body .custom-control-input:checked ~ .custom-control-label::before {
+  background: var(--ff-primary) !important;
+  border-color: var(--ff-primary) !important;
+}
+
+/* ---- Tables ---------------------------------------------------------- */
+body .table { color: var(--ff-content); }
+body .table thead th,
+body .table tr.bg-light,
+body .table tr.bg-light th {
+  background: var(--ff-base-200) !important;
+  color: var(--ff-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-color: var(--ff-base-300) !important;
+}
+body .table thead th a,
+body .table thead th a.kaffy-order-field { color: var(--ff-muted) !important; }
+body .table thead th a:hover { color: var(--ff-content) !important; }
+body .table td,
+body .table th { border-color: var(--ff-base-300) !important; vertical-align: middle; }
+body .table-striped tbody tr:nth-of-type(odd) { background: color-mix(in srgb, var(--ff-base-200) 55%, transparent); }
+body .table tbody tr:hover { background: var(--ff-base-200); }
+body .table-responsive { border-radius: var(--ff-radius-field); }
+
+/* ---- Badges, breadcrumbs, pagination, alerts, dropdowns, modals -------- */
+body .badge,
+body .badge-secondary {
+  background: var(--ff-base-300) !important;
+  color: var(--ff-content) !important;
+  border-radius: 999px;
+  font-weight: 500;
+}
+body .breadcrumb { background: transparent; padding-left: 0; }
+body .breadcrumb-item.active { color: var(--ff-muted); }
+body .page-link {
+  background: var(--ff-base-100) !important;
+  border-color: var(--ff-base-300) !important;
+  color: var(--ff-content) !important;
+}
+body .page-item.active .page-link {
+  background: var(--ff-neutral) !important;
+  border-color: var(--ff-neutral) !important;
+  color: var(--ff-neutral-content) !important;
+}
+body .page-item.disabled .page-link { color: var(--ff-muted) !important; }
+body .alert { border-radius: var(--ff-radius-field); border: 1px solid var(--ff-base-300); }
+body .alert-success { background: color-mix(in srgb, var(--ff-success) 15%, var(--ff-base-100)); color: var(--ff-content); }
+body .alert-danger { background: var(--ff-primary-soft); color: var(--ff-content); }
+body .dropdown-menu,
+body .modal-content {
+  background: var(--ff-base-100);
+  border: 1px solid var(--ff-base-300);
+  border-radius: var(--ff-radius-box);
+  color: var(--ff-content);
+}
+body .dropdown-item { color: var(--ff-content) !important; }
+body .dropdown-item:hover { background: var(--ff-base-200) !important; }
+body .modal-header, body .modal-footer { border-color: var(--ff-base-300); }
+body .close { color: var(--ff-content); }
+
+/* ---- Footer ------------------------------------------------------------ */
+body .footer {
+  background: transparent;
+  border-top: 1px solid var(--ff-base-300);
+  color: var(--ff-muted);
+}
+
+/* Dark mode: Kaffy hard-codes some light backgrounds */
+:root[data-theme="firefly-dark"] body .bg-light,
+:root[data-theme="firefly-dark"] body .bg-white { background: var(--ff-base-200) !important; }
+:root[data-theme="firefly-dark"] body .navbar .navbar-brand img { filter: none; }

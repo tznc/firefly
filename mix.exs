@@ -106,9 +106,15 @@ defmodule FirestormWeb.Mixfile do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind firestorm_web", "esbuild firestorm_web"],
+      "assets.build": [
+        "compile",
+        "tailwind firestorm_web",
+        "tailwind admin",
+        "esbuild firestorm_web"
+      ],
       "assets.deploy": [
         "tailwind firestorm_web --minify",
+        "tailwind admin --minify",
         "esbuild firestorm_web --minify",
         "phx.digest"
       ],

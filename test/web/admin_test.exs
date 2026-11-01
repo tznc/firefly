@@ -24,6 +24,26 @@ defmodule FirestormWeb.Web.AdminTest do
     |> assert_path(~p"/")
   end
 
+  test "the admin uses the Firefly theme and links back to the forum", %{conn: conn} do
+    conn = log_in_as(conn, admin_fixture())
+
+    html = conn |> get("/admin/forums/category") |> html_response(200)
+    assert html =~ ~s(href="/assets/css/admin.css")
+    assert html =~ ~s(href="/images/firefly-icon.svg")
+    assert html =~ "phx:theme"
+
+    conn
+    |> visit("/admin/forums/category")
+    |> assert_has(~s(.sidebar a[href="/"]), text: "Back to Firefly")
+  end
+
+  test "the admin home is the categories list", %{conn: conn} do
+    conn
+    |> log_in_as(admin_fixture())
+    |> visit("/admin")
+    |> assert_path("/admin/forums/category")
+  end
+
   test "admins can use the Kaffy admin", %{conn: conn} do
     category_fixture("Elixir")
     user_fixture(%{username: "listed_user"})

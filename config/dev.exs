@@ -21,7 +21,8 @@ config :firestorm_web, FirestormWeb.Web.Endpoint,
   secret_key_base: "Q1bBtoEs8F2+MsssVU8zHXvhJBVFDI/4EFEINldDXBlVsBkNr30gi4WIGNwds+YO",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:firestorm_web, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:firestorm_web, ~w(--watch)]}
+    tailwind: {Tailwind, :install_and_run, [:firestorm_web, ~w(--watch)]},
+    tailwind_admin: {Tailwind, :install_and_run, [:admin, ~w(--watch)]}
   ]
 
 # Watch static and templates for browser reloading.

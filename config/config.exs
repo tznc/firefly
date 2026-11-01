@@ -53,8 +53,9 @@ config :kaffy,
   admin_footer: {:safe, ~s(Firefly by <a href="https://tznc.dev">tznc.dev</a>)},
   admin_logo: [url: "/images/firefly-icon.svg", style: "max-height: 40px"],
   admin_logo_mini: "/images/firefly-icon.svg",
-  home_page: [kaffy: :dashboard],
-  resources: &FirestormWeb.Admin.resources/1
+  home_page: [schema: [:forums, :category]],
+  resources: &FirestormWeb.Admin.resources/1,
+  extensions: [FirestormWeb.Admin.Theme]
 
 # Configure esbuild (the version is required)
 config :esbuild,
@@ -76,6 +77,14 @@ config :tailwind,
     ),
     cd: Path.expand("..", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
+  ],
+  # The Firefly skin for the Kaffy admin
+  admin: [
+    args: ~w(
+      --input=assets/css/admin.css
+      --output=priv/static/assets/css/admin.css
+    ),
+    cd: Path.expand("..", __DIR__)
   ]
 
 # Import environment specific config. This must remain at the bottom
