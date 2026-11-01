@@ -16,6 +16,12 @@ defmodule FirestormWeb.Forums.Policy do
       params: the thread) - in a category that allows accepted answers, the
       thread's author unless it's archived, and admins; never on a merged
       stub. Which replies qualify is `FirestormWeb.Solved`'s business.
+    * `:vote_poll` (params `%{post: post, thread: thread}`) - members, on a
+      published post (not deleted, hidden or awaiting approval) in a thread
+      that isn't archived or merged. (`FirestormWeb.Polls` also checks the
+      poll is open and the voter may read the thread.)
+    * `:manage_poll` (close and reopen; same params) - the post's author,
+      unless it's deleted or the thread archived, and admins
     * `:restore_post`, `:view_deleted_posts` - admins
     * `:penalize_user` (silence or suspend; params: the user) - admins, on
       users who aren't admins
@@ -109,6 +115,19 @@ defmodule FirestormWeb.Forums.Policy do
       Forums.thread_author_id(thread) == user.id and not Thread.archived?(thread) -> :ok
       true -> admin(user)
     end
+  end
+
+  def authorize(:vote_poll, %User{}, %{post: %Post{} = post, thread: %Thread{} = thread}) do
+    if Post.readable_by?(post, nil) and not Thread.archived?(thread) and
+         not Thread.merged?(thread),
+       do: :ok,
+       else: {:error, :unauthorized}
+  end
+
+  def authorize(:manage_poll, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread}) do
+    if post.user_id == user.id and not Post.deleted?(post) and not Thread.archived?(thread),
+      do: :ok,
+      else: admin(user)
   end
 
   def authorize(:like_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread}) do

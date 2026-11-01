@@ -6,7 +6,7 @@ defmodule FirestormWeb.Forums.Post do
   use Ecto.Schema
   import Ecto.Changeset, warn: false
   import Ecto.Query
-  alias FirestormWeb.Forums.{Flag, User, Thread, View}
+  alias FirestormWeb.Forums.{Flag, Poll, User, Thread, View}
 
   schema "forums_posts" do
     field(:body, :string)
@@ -18,6 +18,8 @@ defmodule FirestormWeb.Forums.Post do
     belongs_to(:thread, Thread)
     belongs_to(:user, User)
     has_many(:flags, Flag)
+    # Created with the post, in the composer (see `FirestormWeb.Polls`).
+    has_one(:poll, Poll)
     has_many(:views, {"forums_posts_views", View}, foreign_key: :assoc_id)
 
     many_to_many(
@@ -44,6 +46,14 @@ defmodule FirestormWeb.Forums.Post do
     |> cast(attrs, [:body, :thread_id, :user_id])
     |> validate_required([:body, :thread_id, :user_id])
     |> validate_body_length()
+    |> cast_poll(attrs)
+  end
+
+  @doc "Adds the poll in `attrs`' `:poll`, if any, to a new post's changeset."
+  def cast_poll(changeset, attrs) do
+    if Map.has_key?(attrs, :poll),
+      do: cast_assoc(changeset, :poll, with: &Poll.changeset/2),
+      else: changeset
   end
 
   @doc "An edit of the body by its author or an admin."

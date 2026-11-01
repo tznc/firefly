@@ -21,12 +21,16 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   In a Q&A category the thread's author and staff can accept a reply as
   the answer (see `FirestormWeb.Solved`); it's shown under the first post.
+
+  Posts' polls (see `FirestormWeb.Polls`) take votes here, and their
+  results update live.
   """
   use FirestormWeb.Web, :live_view
 
   import FirestormWeb.Web.BookmarkComponents
+  import FirestormWeb.Web.PollComponents, only: [poll: 1]
 
-  alias FirestormWeb.{Bookmarks, Flags, Forums, Mentions, Posting, RateLimit, Repo, Solved}
+  alias FirestormWeb.{Bookmarks, Flags, Forums, Mentions, Polls, Posting, RateLimit, Repo, Solved}
   alias FirestormWeb.TopicTimers
   alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread, ThreadTimer}
 
@@ -68,7 +72,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
      socket
      |> assign(:category, category)
      |> assign(:last_read_post_id, read && read.last_read_post_id)
-     |> assign(:tz_offset, tz_offset(socket))
+     |> assign(:tz_offset, FirestormWeb.LocalTime.offset(socket))
      |> assign(:bookmarking, nil)
      |> load_thread(thread)}
   end
@@ -101,6 +105,23 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     if can?(socket.assigns.current_user, :view_thread, socket.assigns.thread),
       do: {:noreply, refresh_likers(socket, post)},
       else: {:noreply, leave(socket)}
+  end
+
+  # A vote or close: refresh just that poll.
+  def handle_info({:poll_updated, post_id}, socket) do
+    %{current_user: user, thread: thread, polls: polls} = socket.assigns
+
+    cond do
+      not can?(user, :view_thread, thread) ->
+        {:noreply, leave(socket)}
+
+      Map.has_key?(polls, post_id) ->
+        view = Polls.view_for(%Post{id: post_id}, user)
+        {:noreply, assign(socket, :polls, Map.put(polls, post_id, view))}
+
+      true ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info({:thread_updated, thread}, socket) do
@@ -153,7 +174,10 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              "toggle_bookmark",
              "save_bookmark",
              "accept_answer",
-             "unaccept_answer"
+             "unaccept_answer",
+             "vote",
+             "close_poll",
+             "reopen_poll"
            ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
@@ -315,6 +339,39 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     end
   end
 
+  def handle_event("vote", %{"vote" => %{"poll_id" => poll_id} = params}, socket) do
+    with {:ok, post_id, view} <- find_poll(socket, poll_id),
+         {:ok, view} <- Polls.vote(view.poll, socket.assigns.current_user, params) do
+      {:noreply,
+       socket
+       |> put_flash(:info, "Vote saved.")
+       |> assign(:polls, Map.put(socket.assigns.polls, post_id, view))}
+    else
+      {:error, reason} -> {:noreply, put_flash(socket, :error, Polls.message(reason))}
+    end
+  end
+
+  def handle_event(event, %{"id" => poll_id}, socket)
+      when event in ["close_poll", "reopen_poll"] do
+    user = socket.assigns.current_user
+
+    with {:ok, post_id, view} <- find_poll(socket, poll_id),
+         {:ok, _poll} <-
+           if(event == "close_poll",
+             do: Polls.close(view.poll, user),
+             else: Polls.reopen(view.poll, user)
+           ) do
+      view = Polls.view_for(%Post{id: post_id}, user)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, if(event == "close_poll", do: "Poll closed.", else: "Poll reopened."))
+       |> assign(:polls, Map.put(socket.assigns.polls, post_id, view))}
+    else
+      {:error, reason} -> {:noreply, put_flash(socket, :error, Polls.message(reason))}
+    end
+  end
+
   def handle_event("toggle_bookmark", %{"id" => id}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
     post = Forums.get_post!(thread, id)
@@ -409,6 +466,9 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       if(can?(user, :view_flags), do: Flags.pending_counts(thread.posts), else: %{})
     )
     |> assign(:hidden_ids, hidden_ids(user, thread.posts))
+    |> assign(:polls, Polls.views(thread.posts, user))
+    |> assign(:votable_ids, permitted_ids(user, thread, :vote_poll))
+    |> assign(:poll_manageable_ids, permitted_ids(user, thread, :manage_poll))
     |> assign_bookmarks()
     |> assign_new(:flagging, fn -> nil end)
     |> assign_new(:flag_form, &flag_form/0)
@@ -423,6 +483,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
     |> assign(:timer, TopicTimers.get_timer(thread))
     |> assign(:slow_mode_wait, slow_mode_wait(user, thread))
+  end
+
+  # A poll on this page, by id.
+  defp find_poll(socket, poll_id) do
+    Enum.find_value(socket.assigns.polls, {:error, :not_found}, fn {post_id, view} ->
+      to_string(view.poll.id) == to_string(poll_id) && {:ok, post_id, view}
+    end)
   end
 
   defp assign_bookmarks(socket) do
@@ -596,6 +663,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             refs={@refs}
             can_edit={MapSet.member?(@editable_ids, @first_post.id)}
           >
+            <:poll :if={@polls[@first_post.id]}>
+              <.poll
+                view={@polls[@first_post.id]}
+                can_vote={MapSet.member?(@votable_ids, @first_post.id)}
+                can_manage={MapSet.member?(@poll_manageable_ids, @first_post.id)}
+              />
+            </:poll>
             <:actions>
               <.like_button
                 post={@first_post}
@@ -656,6 +730,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             can_edit={MapSet.member?(@editable_ids, post.id)}
             accepted={post.id == @thread.accepted_post_id}
           >
+            <:poll :if={@polls[post.id]}>
+              <.poll
+                view={@polls[post.id]}
+                can_vote={MapSet.member?(@votable_ids, post.id)}
+                can_manage={MapSet.member?(@poll_manageable_ids, post.id)}
+              />
+            </:poll>
             <:actions>
               <.like_button
                 post={post}

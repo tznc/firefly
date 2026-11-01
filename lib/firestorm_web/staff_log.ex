@@ -22,6 +22,7 @@ defmodule FirestormWeb.StaffLog do
     thread.timer thread.timer_cancel thread.slow_mode
     thread.accept_answer thread.unaccept_answer
     post.edit post.delete post.restore post.unhide post.approve post.reject
+    poll.close poll.open
     flag.agree flag.disagree flag.defer
     category.create category.update category.delete
     tag_group.create tag_group.update tag_group.delete tag.synonym tag.unsynonym

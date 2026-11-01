@@ -7,27 +7,14 @@ defmodule FirestormWeb.Web.BookmarkComponents do
 
   import FirestormWeb.Web.CoreComponents, only: [icon: 1, input: 1, button: 1]
 
-  alias FirestormWeb.Bookmarks
-
-  @doc """
-  The browser's offset from UTC in minutes (`getTimezoneOffset()`, sent as a
-  connect param by app.js), so reminder times mean local time. 0 (UTC)
-  until connected.
-  """
-  def tz_offset(socket) do
-    case Phoenix.LiveView.connected?(socket) &&
-           Phoenix.LiveView.get_connect_params(socket)["tz_offset"] do
-      offset when is_integer(offset) and abs(offset) <= 14 * 60 -> offset
-      _unknown -> 0
-    end
-  end
+  alias FirestormWeb.{Bookmarks, LocalTime}
 
   @doc "The form's params for `bookmark`: its note and current reminder."
   def form_params(bookmark, offset) do
     %{
       "note" => bookmark.note,
       "reminder" => if(bookmark.remind_at, do: "custom", else: ""),
-      "custom_at" => Bookmarks.to_local_input(bookmark.remind_at, offset)
+      "custom_at" => LocalTime.to_input(bookmark.remind_at, offset)
     }
   end
 

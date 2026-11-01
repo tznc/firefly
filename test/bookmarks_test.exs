@@ -21,7 +21,7 @@ defmodule FirestormWeb.BookmarksTest do
   defp in_seconds(seconds), do: DateTime.add(DateTime.utc_now(:second), seconds)
 
   defp remind(user, bookmark, at) do
-    custom = Bookmarks.to_local_input(at, 0)
+    custom = FirestormWeb.LocalTime.to_input(at, 0)
 
     {:ok, bookmark} =
       Bookmarks.update(user, bookmark.id, %{"reminder" => "custom", "custom_at" => custom})
@@ -125,7 +125,7 @@ defmodule FirestormWeb.BookmarksTest do
   test "reminders are validated and can be cleared", %{bob: bob, reply: reply} do
     {:ok, bookmark} = Bookmarks.bookmark(bob, reply)
 
-    past = Bookmarks.to_local_input(in_seconds(-3600), 0)
+    past = FirestormWeb.LocalTime.to_input(in_seconds(-3600), 0)
 
     assert {:error, changeset} =
              Bookmarks.update(bob, bookmark.id, %{"reminder" => "custom", "custom_at" => past})
@@ -163,7 +163,7 @@ defmodule FirestormWeb.BookmarksTest do
              ~U[2026-11-06 14:30:00Z]
 
     assert Bookmarks.remind_at("custom", "soon", 300, late) == nil
-    assert Bookmarks.to_local_input(~U[2026-11-06 14:30:00Z], 300) == "2026-11-06T09:30"
+    assert FirestormWeb.LocalTime.to_input(~U[2026-11-06 14:30:00Z], 300) == "2026-11-06T09:30"
   end
 
   test "an unreadable post hides the bookmark and drops its reminder", %{

@@ -1069,11 +1069,13 @@ defmodule FirestormWeb.Forums do
       iex> create_thread(category, user, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
+  A `:poll` in `attrs` (see `FirestormWeb.Polls.attrs/2`) is created with
+  the first post.
   """
   def create_thread(category, user, attrs \\ %{}) do
     post_attrs =
       attrs
-      |> Map.take([:body])
+      |> Map.take([:body, :poll])
       |> Map.put(:user_id, user.id)
       |> Map.put(:queued_at, queued_at(user))
 
@@ -1650,6 +1652,8 @@ defmodule FirestormWeb.Forums do
       iex> create_post(thread, user, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
+  A `:poll` in `attrs` (see `FirestormWeb.Polls.attrs/2`) is created with
+  the post.
   """
   # NOTE: This obviously doesn't need to use `with` if I'm not using the
   # else...whatever

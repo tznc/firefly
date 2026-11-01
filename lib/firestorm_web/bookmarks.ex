@@ -25,7 +25,7 @@ defmodule FirestormWeb.Bookmarks do
 
   import Ecto.Query
 
-  alias FirestormWeb.{Forums, Repo}
+  alias FirestormWeb.{Forums, LocalTime, Repo}
   alias FirestormWeb.Forums.{Bookmark, Notification, Policy, Post, Thread, User}
   alias FirestormWeb.Web.Paths
 
@@ -140,8 +140,8 @@ defmodule FirestormWeb.Bookmarks do
   Updates the note and reminder of one of the user's bookmarks (by id) from
   `attrs`: `"note"`, and `"reminder"`, one of `presets/0`'s values,
   `"custom"` (then `"custom_at"`, a local `datetime-local` value) or `""`
-  (no reminder). `offset` is the browser's `getTimezoneOffset()` in
-  minutes, for the presets and custom times to mean local time.
+  (no reminder). `offset` is the browser's (see `FirestormWeb.LocalTime`),
+  for the presets and custom times to mean local time.
   """
   def update(%User{} = user, id, attrs, offset \\ 0) do
     case get(user, id) do
@@ -179,37 +179,21 @@ defmodule FirestormWeb.Bookmarks do
   def remind_at("next_week", _custom, offset, now),
     do: local_morning(now, offset, &Date.add(&1, 8 - Date.day_of_week(&1)))
 
-  def remind_at("custom", custom, offset, _now) when is_binary(custom) do
-    # datetime-local values have no seconds; with them they parse too.
-    case NaiveDateTime.from_iso8601(
-           if(byte_size(custom) == 16, do: custom <> ":00", else: custom)
-         ) do
-      {:ok, local} -> from_local(local, offset)
-      {:error, _} -> nil
+  def remind_at("custom", custom, offset, _now) do
+    case LocalTime.parse(custom, offset) do
+      {:ok, at} -> at
+      _blank_or_error -> nil
     end
   end
 
   def remind_at(_none, _custom, _offset, _now), do: nil
 
   defp local_morning(now, offset, day_after) do
-    today = now |> DateTime.add(-offset, :minute) |> DateTime.to_date()
-    today |> day_after.() |> NaiveDateTime.new!(~T[08:00:00]) |> from_local(offset)
-  end
-
-  defp from_local(local, offset) do
-    local |> NaiveDateTime.add(offset, :minute) |> DateTime.from_naive!("Etc/UTC")
-  end
-
-  @doc "`at` (UTC) as a local `datetime-local` value, `offset` minutes behind UTC."
-  def to_local_input(nil, _offset), do: nil
-
-  def to_local_input(%DateTime{} = at, offset) do
-    at
-    |> DateTime.add(-offset, :minute)
-    |> DateTime.to_naive()
-    |> NaiveDateTime.truncate(:second)
-    |> NaiveDateTime.to_iso8601()
-    |> binary_part(0, 16)
+    now
+    |> LocalTime.to_date(offset)
+    |> day_after.()
+    |> NaiveDateTime.new!(~T[08:00:00])
+    |> LocalTime.from_local(offset)
   end
 
   @doc "Clears the reminder of one of the user's bookmarks (by id)."
