@@ -9,7 +9,14 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
 
   @impl true
   def mount(params, _session, socket) do
-    {:ok, apply_action(socket, socket.assigns.live_action, params)}
+    if can?(socket.assigns.current_user, :manage_category) do
+      {:ok, apply_action(socket, socket.assigns.live_action, params)}
+    else
+      {:ok,
+       socket
+       |> put_flash(:error, denied_message(socket.assigns.current_user))
+       |> push_navigate(to: ~p"/categories")}
+    end
   end
 
   defp apply_action(socket, :new, _params) do

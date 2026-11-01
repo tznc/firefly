@@ -37,7 +37,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   @impl true
   def handle_event(event, _params, %{assigns: %{current_user: nil}} = socket)
       when event in ["watch", "unwatch", "delete"] do
-    {:noreply, put_flash(socket, :error, "You must be logged in to access this page.")}
+    {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
 
   def handle_event("watch", _params, socket) do
@@ -51,12 +51,16 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   end
 
   def handle_event("delete", _params, socket) do
-    {:ok, _} = Forums.delete_thread(socket.assigns.thread)
+    if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
+      {:ok, _} = Forums.delete_thread(socket.assigns.thread)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Thread deleted successfully.")
-     |> push_navigate(to: ~p"/categories/#{socket.assigns.category}")}
+      {:noreply,
+       socket
+       |> put_flash(:info, "Thread deleted successfully.")
+       |> push_navigate(to: ~p"/categories/#{socket.assigns.category}")}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+    end
   end
 
   defp load_thread(socket, thread) do
@@ -72,6 +76,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:first_post, first_post)
     |> assign(:replies, replies)
     |> assign(:watched, !!user && Forums.watched_by?(thread, user))
+    |> assign(:can_manage?, can?(user, :update_thread, thread))
   end
 
   @impl true
@@ -90,7 +95,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           </.link>
           · <.time_ago id="thread-time" at={@thread.inserted_at} />
           · <span id="reply-count">{ngettext("1 reply", "%{count} replies", length(@replies))}</span>
-          <span :if={@current_user} class="ml-auto flex gap-1">
+          <span :if={@can_manage?} class="ml-auto flex gap-1">
             <.link
               navigate={~p"/categories/#{@category}/threads/#{@thread}/edit"}
               class="btn btn-ghost btn-xs"

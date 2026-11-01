@@ -80,6 +80,7 @@ defmodule FirestormWeb.Web do
       import Phoenix.HTML
       import FirestormWeb.Web.CoreComponents
       import FirestormWeb.Web.ForumComponents
+      import FirestormWeb.Web.Authorization
 
       alias Phoenix.LiveView.JS
       alias FirestormWeb.Web.Layouts

@@ -28,14 +28,25 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
     test "sends visitors away with an error", %{conn: conn} do
       conn
       |> visit(~p"/categories")
-      |> click_link("New Category")
+      |> refute_has("a", text: "New Category")
+      |> visit(~p"/categories/new")
       |> assert_path(~p"/categories")
       |> assert_has("#flash-error", text: "You must be logged in to access this page.")
     end
 
-    test "creates a category", %{conn: conn} do
+    test "is for admins only", %{conn: conn} do
       conn
       |> log_in_as(user_fixture())
+      |> visit(~p"/categories")
+      |> refute_has("a", text: "New Category")
+      |> visit(~p"/categories/new")
+      |> assert_path(~p"/categories")
+      |> assert_has("#flash-error", text: "You are not allowed to do that.")
+    end
+
+    test "creates a category", %{conn: conn} do
+      conn
+      |> log_in_as(admin_fixture())
       |> visit(~p"/categories")
       |> click_link("New Category")
       |> fill_in("Title", with: "Erlang")
@@ -46,7 +57,7 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
 
     test "shows errors for an invalid category", %{conn: conn} do
       conn
-      |> log_in_as(user_fixture())
+      |> log_in_as(admin_fixture())
       |> visit(~p"/categories/new")
       |> fill_in("Title", with: "")
       |> click_button("Create Category")
@@ -60,7 +71,7 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
       category = category_fixture("Elixir")
 
       conn
-      |> log_in_as(user_fixture())
+      |> log_in_as(admin_fixture())
       |> visit(~p"/categories/#{category}")
       |> click_link("Edit")
       |> fill_in("Title", with: "Elixir & OTP")
@@ -101,11 +112,11 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
       assert_has(session, "#thread-#{thread.id}", text: "Live!")
     end
 
-    test "lets a logged-in user delete the category", %{conn: conn} do
+    test "lets an admin delete the category", %{conn: conn} do
       category = category_fixture("Doomed")
 
       conn
-      |> log_in_as(user_fixture())
+      |> log_in_as(admin_fixture())
       |> visit(~p"/categories/#{category}")
       |> click_button("Delete")
       |> assert_path(~p"/categories")
@@ -114,13 +125,40 @@ defmodule FirestormWeb.Web.CategoryLiveTest do
       assert_raise Ecto.NoResultsError, fn -> Forums.get_category!(category.id) end
     end
 
-    test "hides edit and delete from visitors", %{conn: conn} do
+    test "hides edit and delete from visitors and members", %{conn: conn} do
       category = category_fixture("Elixir")
 
       conn
       |> visit(~p"/categories/#{category}")
       |> refute_has("button", text: "Delete")
       |> refute_has("a", text: "Edit")
+
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/#{category}")
+      |> refute_has("button", text: "Delete")
+      |> refute_has("a", text: "Edit")
+    end
+
+    test "refuses a forged delete event from a member", %{conn: conn} do
+      category = category_fixture("Elixir")
+
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/#{category}")
+      |> unwrap(&Phoenix.LiveViewTest.render_click(&1, "delete", %{}))
+
+      assert Forums.get_category!(category.id)
+    end
+
+    test "members can't open the edit page", %{conn: conn} do
+      category = category_fixture("Elixir")
+
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/#{category}/edit")
+      |> assert_path(~p"/categories")
+      |> assert_has("#flash-error", text: "You are not allowed to do that.")
     end
   end
 end

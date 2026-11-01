@@ -385,6 +385,16 @@ defmodule FirestormWeb.Forums do
     |> Repo.get!(id)
   end
 
+  @doc "The id of the user who started `thread` (the author of its first post)."
+  def thread_author_id(%Thread{id: thread_id}) do
+    Post
+    |> where([p], p.thread_id == ^thread_id)
+    |> order_by([p], asc: p.inserted_at, asc: p.id)
+    |> limit(1)
+    |> select([p], p.user_id)
+    |> Repo.one()
+  end
+
   @doc """
   Gets a thread by id.
 

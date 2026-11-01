@@ -150,6 +150,48 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
     end
   end
 
+  describe "permissions" do
+    test "other members can't edit or delete the thread", %{
+      conn: conn,
+      category: category,
+      user: user
+    } do
+      thread = thread_fixture(category, user)
+      other = log_in_as(conn, user_fixture())
+
+      other
+      |> visit(~p"/categories/#{category}/threads/#{thread}")
+      |> refute_has("button", text: "Delete")
+      |> refute_has("a", text: "Edit")
+      |> unwrap(&Phoenix.LiveViewTest.render_click(&1, "delete", %{}))
+
+      assert Forums.get_thread(thread.id)
+
+      other
+      |> visit(~p"/categories/#{category}/threads/#{thread}/edit")
+      |> assert_path(~p"/categories/#{category}/threads/#{thread}")
+      |> assert_has("#flash-error", text: "You are not allowed to do that.")
+    end
+
+    test "admins can edit and delete anyone's thread", %{
+      conn: conn,
+      category: category,
+      user: user
+    } do
+      thread = thread_fixture(category, user)
+
+      conn
+      |> log_in_as(admin_fixture())
+      |> visit(~p"/categories/#{category}/threads/#{thread}")
+      |> click_link("Edit")
+      |> fill_in("Title", with: "Moderated")
+      |> click_button("Submit")
+      |> assert_has("h1", text: "Moderated")
+      |> click_button("Delete")
+      |> assert_has("#flash-info", text: "Thread deleted successfully.")
+    end
+  end
+
   describe "edit" do
     test "renames the thread", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
@@ -186,7 +228,7 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       |> assert_has("#threads td", text: "OTP is cool")
     end
 
-    test "deletes a thread when logged in", %{conn: conn, category: category, user: user} do
+    test "the author can delete their thread", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
 
       conn
@@ -197,13 +239,31 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       |> refute_has("#thread-#{thread.id}")
     end
 
-    test "visitors can't delete", %{conn: conn, category: category, user: user} do
+    test "only shows edit and delete to the author", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
 
       conn
       |> visit(~p"/categories/#{category}/threads")
-      |> within("#thread-#{thread.id}", &click_link(&1, "Delete"))
-      |> assert_has("#flash-error", text: "You must be logged in")
+      |> refute_has("#thread-#{thread.id} a", text: "Delete")
+
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/#{category}/threads")
+      |> refute_has("#thread-#{thread.id} a", text: "Delete")
+      |> refute_has("#thread-#{thread.id} a", text: "Edit")
+    end
+
+    test "refuses a forged delete event from another member", %{
+      conn: conn,
+      category: category,
+      user: user
+    } do
+      thread = thread_fixture(category, user)
+
+      conn
+      |> log_in_as(user_fixture())
+      |> visit(~p"/categories/#{category}/threads")
+      |> unwrap(&Phoenix.LiveViewTest.render_click(&1, "delete", %{"id" => thread.id}))
 
       assert Forums.get_thread(thread.id)
     end

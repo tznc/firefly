@@ -22,18 +22,19 @@ defmodule FirestormWeb.Web.ThreadLive.Index do
   end
 
   @impl true
-  def handle_event("delete", _params, %{assigns: %{current_user: nil}} = socket) do
-    {:noreply, put_flash(socket, :error, "You must be logged in to access this page.")}
-  end
-
   def handle_event("delete", %{"id" => id}, socket) do
     thread = Forums.get_thread!(socket.assigns.category, id)
-    {:ok, _} = Forums.delete_thread(thread)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Thread deleted successfully.")
-     |> assign(:threads, Forums.list_threads(socket.assigns.category))}
+    if can?(socket.assigns.current_user, :delete_thread, thread) do
+      {:ok, _} = Forums.delete_thread(thread)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Thread deleted successfully.")
+       |> assign(:threads, Forums.list_threads(socket.assigns.category))}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+    end
   end
 
   @impl true
@@ -57,10 +58,20 @@ defmodule FirestormWeb.Web.ThreadLive.Index do
           <.link navigate={~p"/categories/#{@category}/threads/#{thread}"}>Show</.link>
         </:action>
         <:action :let={thread}>
-          <.link navigate={~p"/categories/#{@category}/threads/#{thread}/edit"}>Edit</.link>
+          <.link
+            :if={can?(@current_user, :update_thread, thread)}
+            navigate={~p"/categories/#{@category}/threads/#{thread}/edit"}
+          >
+            Edit
+          </.link>
         </:action>
         <:action :let={thread}>
-          <.link phx-click="delete" phx-value-id={thread.id} data-confirm="Are you sure?">
+          <.link
+            :if={can?(@current_user, :delete_thread, thread)}
+            phx-click="delete"
+            phx-value-id={thread.id}
+            data-confirm="Are you sure?"
+          >
             Delete
           </.link>
         </:action>

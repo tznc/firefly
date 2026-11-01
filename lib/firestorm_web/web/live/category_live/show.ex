@@ -20,17 +20,17 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
   def handle_info({_event, _thread}, socket), do: {:noreply, load_threads(socket)}
 
   @impl true
-  def handle_event("delete", _params, %{assigns: %{current_user: nil}} = socket) do
-    {:noreply, put_flash(socket, :error, "You must be logged in to access this page.")}
-  end
-
   def handle_event("delete", _params, socket) do
-    {:ok, _} = Forums.delete_category(socket.assigns.category)
+    if can?(socket.assigns.current_user, :manage_category) do
+      {:ok, _} = Forums.delete_category(socket.assigns.category)
 
-    {:noreply,
-     socket
-     |> put_flash(:info, "Category deleted successfully.")
-     |> push_navigate(to: ~p"/categories")}
+      {:noreply,
+       socket
+       |> put_flash(:info, "Category deleted successfully.")
+       |> push_navigate(to: ~p"/categories")}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+    end
   end
 
   defp load_threads(socket) do
@@ -51,14 +51,14 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
             <.icon name="hero-plus" class="size-4" /> New Thread
           </.link>
           <.link
-            :if={@current_user}
+            :if={can?(@current_user, :manage_category)}
             navigate={~p"/categories/#{@category}/edit"}
             class="btn btn-ghost btn-sm"
           >
             Edit
           </.link>
           <button
-            :if={@current_user}
+            :if={can?(@current_user, :manage_category)}
             phx-click="delete"
             data-confirm="Delete this category and all of its threads?"
             class="btn btn-ghost btn-sm text-error"
