@@ -22,11 +22,16 @@ defmodule FirestormWeb.Web.ForumComponents do
   @doc "Abbreviated month, day and two-digit year, i.e. `Jul 3, '17`."
   def short_date(date), do: Calendar.strftime(date, "%b %-d, '%y")
 
-  @doc "A stable hue (0-359) derived from the category's slug."
+  @doc "A category's CSS color: its chosen color, or a hue derived from its slug."
+  def category_color(%{color: "#" <> _ = color}), do: color
+
   def category_color(category) do
-    for(<<num <- :crypto.hash(:sha, category.slug)>>, do: num)
-    |> Enum.sum()
-    |> rem(360)
+    hue =
+      for(<<num <- :crypto.hash(:sha, category.slug)>>, do: num)
+      |> Enum.sum()
+      |> rem(360)
+
+    "oklch(55% 0.13 #{hue})"
   end
 
   @doc "ISO 8601 UTC string for a timestamp."
@@ -76,7 +81,7 @@ defmodule FirestormWeb.Web.ForumComponents do
     <.link
       navigate={~p"/categories/#{@category}"}
       class="badge badge-sm border-0 font-medium text-white"
-      style={"background-color: oklch(55% 0.13 #{category_color(@category)})"}
+      style={"background-color: #{category_color(@category)}"}
     >
       {@category.title}
     </.link>
@@ -121,6 +126,7 @@ defmodule FirestormWeb.Web.ForumComponents do
         <div class="list-col-grow min-w-0 space-y-1">
           <div class="flex flex-wrap items-center gap-2">
             <.category_badge :if={Ecto.assoc_loaded?(thread.category)} category={thread.category} />
+            <.thread_status thread={thread} />
             <.link
               navigate={~p"/categories/#{thread.category_id}/threads/#{thread}"}
               class="thread-title font-semibold hover:text-primary"
@@ -224,6 +230,32 @@ defmodule FirestormWeb.Web.ForumComponents do
         </li>
       </ul>
     </div>
+    """
+  end
+
+  @doc "Icons for a pinned, closed or archived thread."
+  attr :thread, :any, required: true
+
+  def thread_status(assigns) do
+    ~H"""
+    <span
+      :if={@thread.pinned_at}
+      class="pinned text-primary"
+      title="Pinned"
+      aria-label="Pinned"
+    ><.icon name="hero-bookmark-solid" class="size-4" /></span>
+    <span
+      :if={@thread.archived_at}
+      class="archived text-base-content/60"
+      title="Archived"
+      aria-label="Archived"
+    ><.icon name="hero-archive-box" class="size-4" /></span>
+    <span
+      :if={@thread.closed_at && !@thread.archived_at}
+      class="closed text-base-content/60"
+      title="Closed"
+      aria-label="Closed"
+    ><.icon name="hero-lock-closed" class="size-4" /></span>
     """
   end
 

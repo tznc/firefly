@@ -28,9 +28,14 @@ defmodule FirestormWeb.Web.ForumComponentsTest do
 
   describe "category_color/1" do
     test "is a stable hue derived from the slug" do
-      hue = ForumComponents.category_color(%{slug: "elixir"})
+      assert "oklch(55% 0.13 " <> hue = ForumComponents.category_color(%{slug: "elixir"})
+      hue = hue |> String.trim_trailing(")") |> String.to_integer()
       assert hue in 0..359
-      assert hue == ForumComponents.category_color(%{slug: "elixir"})
+      assert ForumComponents.category_color(%{slug: "elixir"}) == "oklch(55% 0.13 #{hue})"
+    end
+
+    test "uses the category's chosen color" do
+      assert ForumComponents.category_color(%{slug: "elixir", color: "#3b82f6"}) == "#3b82f6"
     end
   end
 

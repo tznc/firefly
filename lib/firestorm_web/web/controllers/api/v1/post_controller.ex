@@ -9,7 +9,7 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
     user = conn.assigns.current_user
 
     with %{} = thread <- Forums.get_thread(thread_id),
-         :ok <- Posting.check(user),
+         :ok <- Posting.check(user, thread),
          {:ok, post} <- Forums.create_post(thread, user, %{body: post_params["body"]}) do
       conn
       |> put_status(201)
@@ -17,6 +17,9 @@ defmodule FirestormWeb.Web.Api.V1.PostController do
     else
       nil ->
         conn |> put_status(:not_found) |> json(%{"error" => "Thread not found"})
+
+      {:error, :closed} ->
+        conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(:closed)})
 
       {:error, :unconfirmed} ->
         conn |> put_status(:forbidden) |> json(%{"error" => Posting.message(:unconfirmed)})

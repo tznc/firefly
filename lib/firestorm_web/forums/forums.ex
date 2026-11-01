@@ -216,8 +216,33 @@ defmodule FirestormWeb.Forums do
   """
   def list_categories do
     Category
-    |> order_by(asc: :slug)
+    |> order_by(asc: :position, asc: :title)
     |> Repo.all()
+  end
+
+  @doc "Top-level categories, each with its subcategories (both in display order)."
+  def list_category_tree do
+    children = from(c in Category, order_by: [asc: c.position, asc: c.title])
+
+    Category
+    |> where([c], is_nil(c.parent_id))
+    |> order_by(asc: :position, asc: :title)
+    |> preload(children: ^children)
+    |> Repo.all()
+  end
+
+  @doc "Top-level categories other than `category` (candidates for its parent)."
+  def parent_category_options(%Category{id: id}) do
+    Category
+    |> where([c], is_nil(c.parent_id))
+    |> then(fn q -> if id, do: where(q, [c], c.id != ^id), else: q end)
+    |> order_by(asc: :position, asc: :title)
+    |> Repo.all()
+  end
+
+  def get_category_with_family!(id) do
+    children = from(c in Category, order_by: [asc: c.position, asc: c.title])
+    Category |> preload([:parent, children: ^children]) |> Repo.get!(id)
   end
 
   @doc """
@@ -273,6 +298,9 @@ defmodule FirestormWeb.Forums do
 
   """
   def get_category!(id), do: Repo.get!(Category, id)
+
+  @doc "Gets a single category, or nil."
+  def get_category(id), do: Repo.get(Category, id)
 
   @doc """
   Creates a category.
@@ -356,6 +384,8 @@ defmodule FirestormWeb.Forums do
   def list_threads(category, user \\ nil) do
     Thread
     |> where([t], t.category_id == ^category.id)
+    |> order_by([t], desc_nulls_last: t.pinned_at)
+    |> by_last_activity()
     |> Repo.all()
     |> decorate_threads(user)
   end
@@ -372,9 +402,13 @@ defmodule FirestormWeb.Forums do
 
   """
   def recent_threads(category, user \\ nil) do
+    subcategory_ids = from(c in Category, where: c.parent_id == ^category.id, select: c.id)
+
     Thread
-    |> where(category_id: ^category.id)
+    |> where([t], t.category_id == ^category.id or t.category_id in subquery(subcategory_ids))
+    |> order_by([t], desc_nulls_last: t.pinned_at)
     |> by_last_activity()
+    |> preload(:category)
     |> Repo.all()
     |> decorate_threads(user)
   end
@@ -454,6 +488,10 @@ defmodule FirestormWeb.Forums do
     |> Map.new(&{&1.thread_id, &1})
   end
 
+  # The cross-category lists (Latest, New, Unread, Top) leave out archived
+  # threads and the user's muted ones.
+  defp listed(query, user), do: query |> where([t], is_nil(t.archived_at)) |> without_muted(user)
+
   defp without_muted(query, nil), do: query
 
   defp without_muted(query, %User{} = user) do
@@ -479,7 +517,7 @@ defmodule FirestormWeb.Forums do
   @doc "Every thread, most recently active first (the Latest list)."
   def latest_threads(user_or_nil) do
     Thread
-    |> without_muted(user_or_nil)
+    |> listed(user_or_nil)
     |> by_last_activity()
     |> preload(:category)
     |> Repo.all()
@@ -496,7 +534,7 @@ defmodule FirestormWeb.Forums do
     query = from(t in Thread, as: :thread)
 
     query
-    |> without_muted(user)
+    |> listed(user)
     |> where([t], t.inserted_at > ^since)
     |> where(
       [t],
@@ -517,7 +555,7 @@ defmodule FirestormWeb.Forums do
     query = from(t in Thread, as: :thread)
 
     query
-    |> without_muted(user)
+    |> listed(user)
     |> join(:inner, [t], r in ThreadRead,
       as: :read,
       on: r.thread_id == t.id and r.user_id == ^user.id
@@ -569,6 +607,7 @@ defmodule FirestormWeb.Forums do
       |> select([p], %{thread_id: p.thread_id, posts: count(p.id), last_at: max(p.inserted_at)})
 
     Thread
+    |> listed(user_or_nil)
     |> join(:inner, [t], r in subquery(ranked), on: r.thread_id == t.id)
     |> order_by([t, r], desc: r.posts, desc: r.last_at)
     |> limit(50)
@@ -803,6 +842,36 @@ defmodule FirestormWeb.Forums do
     |> tap_ok(&broadcast_thread(:thread_updated, &1))
   end
 
+  @doc "Pins or unpins a thread (pinned threads list first in their category)."
+  def pin_thread(%Thread{} = thread, pinned?), do: moderate(thread, pinned_at: stamp(pinned?))
+
+  @doc "Closes or reopens a thread to new replies."
+  def close_thread(%Thread{} = thread, closed?), do: moderate(thread, closed_at: stamp(closed?))
+
+  @doc "Archives (closes and hides from Latest/New/Unread/Top) or unarchives a thread."
+  def archive_thread(%Thread{} = thread, archived?),
+    do: moderate(thread, archived_at: stamp(archived?))
+
+  @doc "Moves a thread to another category."
+  def move_thread(%Thread{category_id: old_category_id} = thread, %Category{id: category_id}) do
+    with {:ok, moved} <- moderate(thread, category_id: category_id) do
+      if old_category_id != category_id,
+        do: broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
+
+      {:ok, moved}
+    end
+  end
+
+  defp stamp(true), do: DateTime.utc_now(:second)
+  defp stamp(false), do: nil
+
+  defp moderate(thread, changes) do
+    thread
+    |> Thread.moderation_changeset(Map.new(changes))
+    |> Repo.update()
+    |> tap_ok(&broadcast_thread(:thread_updated, &1))
+  end
+
   @doc """
   Deletes a Thread.
 
@@ -932,6 +1001,20 @@ defmodule FirestormWeb.Forums do
   # NOTE: This obviously doesn't need to use `with` if I'm not using the
   # else...whatever
   def create_post(%Thread{} = thread, %User{} = user, attrs) do
+    if thread_closed?(thread.id),
+      do: {:error, :closed},
+      else: insert_post(thread, user, attrs)
+  end
+
+  @doc "Whether the thread is closed to new replies (closed or archived)."
+  def thread_closed?(thread_id) do
+    Thread
+    |> where([t], t.id == ^thread_id)
+    |> where([t], not is_nil(t.closed_at) or not is_nil(t.archived_at))
+    |> Repo.exists?()
+  end
+
+  defp insert_post(thread, user, attrs) do
     attrs =
       attrs
       |> Map.put(:thread_id, thread.id)
@@ -1222,6 +1305,12 @@ defmodule FirestormWeb.Forums do
     broadcast("forums:threads", message)
     broadcast("forums:category:#{thread.category_id}", message)
     broadcast("forums:thread:#{thread.id}", message)
+
+    # A parent category's page lists its subcategories' threads too.
+    parent_id =
+      Repo.one(from(c in Category, where: c.id == ^thread.category_id, select: c.parent_id))
+
+    if parent_id, do: broadcast("forums:category:#{parent_id}", message)
   end
 
   defp tap_ok({:ok, value} = result, fun) do

@@ -25,6 +25,7 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
     socket
     |> assign(:page_title, "New Category")
     |> assign(:category, category)
+    |> assign(:parents, Forums.parent_category_options(category))
     |> assign(:form, to_form(Forums.change_category(category)))
   end
 
@@ -34,6 +35,7 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
     socket
     |> assign(:page_title, "Edit #{category.title}")
     |> assign(:category, category)
+    |> assign(:parents, Forums.parent_category_options(category))
     |> assign(:form, to_form(Forums.change_category(category)))
   end
 
@@ -83,6 +85,23 @@ defmodule FirestormWeb.Web.CategoryLive.Form do
 
       <.form for={@form} id="category-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <.input field={@form[:title]} type="text" label="Title" placeholder="Type a title" />
+        <.input field={@form[:description]} type="textarea" label="Description" rows="3" />
+        <div class="grid gap-4 sm:grid-cols-3">
+          <.input
+            field={@form[:parent_id]}
+            type="select"
+            label="Parent category"
+            prompt="None (top level)"
+            options={Enum.map(@parents, &{&1.title, &1.id})}
+          />
+          <.input
+            field={@form[:color]}
+            type="text"
+            label="Color"
+            placeholder="#3b82f6 (blank: automatic)"
+          />
+          <.input field={@form[:position]} type="number" label="Position" min="0" />
+        </div>
         <div class="flex justify-end gap-2">
           <.link navigate={~p"/categories"} class="btn btn-ghost">Cancel</.link>
           <.button variant="primary" phx-disable-with="Saving...">

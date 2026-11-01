@@ -8,7 +8,8 @@ defmodule FirestormWeb.Forums.Subscriptions do
     * `"muted"` - not notified, and hidden from the Latest/New/Unread lists
 
   A thread's level comes from the user's setting on the thread, falling back
-  to their setting on its category, then `"normal"`. Starting a thread sets it
+  to their setting on its category, then on the parent category (for
+  subcategories), then `"normal"`. Starting a thread sets it
   to watching and replying sets it to tracking, unless you've already chosen.
   """
   import Ecto.Query
@@ -48,7 +49,18 @@ defmodule FirestormWeb.Forums.Subscriptions do
 
   def effective_thread_level(%User{} = user, %Thread{} = thread) do
     thread_level(user, thread) ||
-      category_level(user, %Category{id: thread.category_id}) ||
+      effective_category_level(user, Repo.get!(Category, thread.category_id))
+  end
+
+  @doc """
+  The level a category's threads get when the user hasn't chosen one for the
+  thread: their setting on the category, else on its parent, else `"normal"`.
+  """
+  def effective_category_level(nil, _category), do: "normal"
+
+  def effective_category_level(%User{} = user, %Category{} = category) do
+    category_level(user, category) ||
+      (category.parent_id && category_level(user, %Category{id: category.parent_id})) ||
       "normal"
   end
 
@@ -86,12 +98,14 @@ defmodule FirestormWeb.Forums.Subscriptions do
   (watching or tracking).
   """
   def subscribers(%Thread{} = thread) do
+    category = Repo.get!(Category, thread.category_id)
+
+    # The parent's levels apply unless the category's own say otherwise.
     category_levels =
-      CategoryWatch
-      |> where([w], w.assoc_id == ^thread.category_id)
-      |> select([w], {w.user_id, w.level})
-      |> Repo.all()
-      |> Map.new()
+      Map.merge(
+        category_watch_levels(category.parent_id),
+        category_watch_levels(category.id)
+      )
 
     thread_levels =
       thread_watches()
@@ -111,7 +125,20 @@ defmodule FirestormWeb.Forums.Subscriptions do
     |> Enum.map(&{&1, Map.fetch!(levels, &1.id)})
   end
 
-  @doc "Ids of threads that are muted for the user (directly or via their category)."
+  defp category_watch_levels(nil), do: %{}
+
+  defp category_watch_levels(category_id) do
+    CategoryWatch
+    |> where([w], w.assoc_id == ^category_id)
+    |> select([w], {w.user_id, w.level})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc """
+  Ids of threads that are muted for the user: directly, or via their category
+  or its parent (when nothing more specific was chosen).
+  """
   def muted_thread_ids(%User{id: user_id}) do
     muted_directly =
       from(w in thread_watches(),
@@ -121,11 +148,15 @@ defmodule FirestormWeb.Forums.Subscriptions do
 
     muted_by_category =
       from(t in Thread,
-        join: c in CategoryWatch,
-        on: c.assoc_id == t.category_id and c.user_id == ^user_id and c.level == "muted",
+        join: cat in Category,
+        on: cat.id == t.category_id,
         left_join: w in "forums_threads_watches",
         on: w.assoc_id == t.id and w.user_id == ^user_id,
-        where: is_nil(w.id),
+        left_join: c in CategoryWatch,
+        on: c.assoc_id == t.category_id and c.user_id == ^user_id,
+        left_join: pc in CategoryWatch,
+        on: pc.assoc_id == cat.parent_id and pc.user_id == ^user_id,
+        where: is_nil(w.id) and coalesce(c.level, pc.level) == "muted",
         select: t.id
       )
 

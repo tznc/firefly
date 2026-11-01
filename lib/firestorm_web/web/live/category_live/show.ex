@@ -7,7 +7,7 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    category = Forums.get_category!(id)
+    category = Forums.get_category_with_family!(id)
     if connected?(socket), do: Forums.subscribe("forums:category:#{category.id}")
 
     {:ok,
@@ -79,6 +79,18 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
           </button>
         </:actions>
       </.page_header>
+
+      <div :if={@category.parent || @category.description || @category.children != []} class="space-y-2">
+        <p :if={@category.parent} id="parent-category" class="text-sm text-base-content/70">
+          In <.category_badge category={@category.parent} />
+        </p>
+        <p :if={@category.description} id="category-description" class="text-base-content/80">
+          {@category.description}
+        </p>
+        <div :if={@category.children != []} id="subcategories" class="flex flex-wrap gap-1">
+          <.category_badge :for={child <- @category.children} category={child} />
+        </div>
+      </div>
 
       <.thread_list threads={@threads} />
     </Layouts.app>
