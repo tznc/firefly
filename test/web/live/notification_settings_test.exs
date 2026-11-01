@@ -12,7 +12,9 @@ defmodule FirestormWeb.Web.NotificationSettingsTest do
     |> visit(~p"/notifications")
     |> click_link("Settings")
     |> assert_path(~p"/settings/notifications")
-    |> uncheck("Email me about new posts in threads and categories I'm watching")
+    |> uncheck(
+      "Email me about new posts in threads and categories I'm watching, and when I'm mentioned"
+    )
     |> click_button("Save")
     |> assert_has("#flash-info", text: "Notification settings saved.")
 

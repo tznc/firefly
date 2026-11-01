@@ -14,10 +14,17 @@ defmodule FirestormWeb.Markdown do
   Quote replies (a blockquote starting with a `[@user said:](url)` link, see
   `FirestormWeb.Quote`) get a `quote` class and an attribution header.
 
+  `@username` mentions and `#category-slug` references that name an existing
+  user or category link to them (see `FirestormWeb.Mentions`). Rendering
+  several posts, pass `Mentions.refs/1` of all their bodies to `render/2` so
+  the names are looked up once.
+
   Raw HTML is allowed in the input, but the output is always run through an
   allow-list sanitizer, so scripts, event handlers and `javascript:` URLs are
   stripped.
   """
+
+  alias FirestormWeb.Mentions
 
   @options [
     extension: [
@@ -37,11 +44,18 @@ defmodule FirestormWeb.Markdown do
   # "@user said:" (see `FirestormWeb.Quote`).
   @quote_header ~r{<blockquote>\n<p>(<a href="[^"]*"[^>]*>@[^<]+ said:</a>)</p>}
 
-  @spec render(String.t() | nil) :: String.t()
-  def render(nil), do: ""
+  @doc false
+  def options, do: @options
 
-  def render(body) when is_binary(body) do
+  @spec render(String.t() | nil, Mentions.refs() | nil) :: String.t()
+  def render(body, refs \\ nil)
+
+  def render(nil, _refs), do: ""
+
+  def render(body, refs) when is_binary(body) do
     body
+    |> Mentions.parse()
+    |> Mentions.link(refs)
     |> MDEx.to_html!(@options)
     # Safe to do after sanitizing: any literal `<pre>` in user text is escaped.
     |> String.replace("<pre>", ~s(<pre class="line-numbers">))

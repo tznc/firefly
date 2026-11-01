@@ -20,7 +20,8 @@ defmodule FirestormWeb.Web.PostLive.New do
      |> assign(:category, category)
      |> assign(:thread, thread)
      |> assign(:form, to_form(Forums.change_post(%Post{thread_id: thread.id, body: body})))
-     |> Editor.allow_attachments(&handle_progress/3)}
+     |> Editor.allow_attachments(&handle_progress/3)
+     |> Editor.mention_search()}
   end
 
   @impl true

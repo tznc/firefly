@@ -177,4 +177,22 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> click_button("Reply")
     |> assert_has("#flash-info", text: "Post created successfully.")
   end
+
+  test "typing @ in the editor suggests users to mention", %{conn: conn} do
+    alice = member_fixture("alice")
+    member_fixture("bob")
+    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, thread} = Forums.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
+
+    conn
+    |> log_in("bob")
+    |> visit("/categories/#{category.id}/threads/#{thread.id}/posts/new")
+    |> PhoenixTest.Playwright.type("#post_body", "Thanks @ali")
+    |> assert_has("#post_body-mentions [role=option]", text: "@alice")
+    |> PhoenixTest.Playwright.press("#post_body", "Enter")
+    |> refute_has("#post_body-mentions [role=option]")
+    |> assert_has("#post-preview a[href$='/users/#{alice.id}']", text: "@alice")
+    |> click_button("Reply")
+    |> assert_has("#posts article a[href$='/users/#{alice.id}']", text: "@alice")
+  end
 end

@@ -14,6 +14,9 @@ defmodule FirestormWeb.Forums.Policy do
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
     * `:edit_user` - the user themselves
+    * `:view_thread` - everyone, members or not (the one place to restrict
+      who can read a thread, e.g. for private categories; notifications such
+      as mentions check it)
   """
 
   @behaviour Bodyguard.Policy
@@ -22,6 +25,8 @@ defmodule FirestormWeb.Forums.Policy do
   alias FirestormWeb.Forums.{Post, Thread, User}
 
   @impl true
+  def authorize(:view_thread, _user, %Thread{}), do: :ok
+
   def authorize(_action, nil, _params), do: {:error, :unauthenticated}
 
   def authorize(:edit_user, %User{id: id}, %{user: %{id: id}}), do: :ok

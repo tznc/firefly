@@ -5,17 +5,23 @@ defmodule FirestormWeb.Notifications do
     * a new thread notifies users watching or tracking its category
     * a new post notifies users watching or tracking the thread (or its
       category)
+    * a new or edited post notifies the users it @mentions (see
+      `FirestormWeb.Mentions`), once per post: an edit only notifies users it
+      newly mentions. Not the author, users who can't see the thread (the
+      `:view_thread` policy) or users who muted it. A mentioned user gets the
+      mention instead of the new thread/post notification.
 
-  Everyone notified gets an in-app notification; users at `watching` also get
-  an email, if they have email notifications on and a confirmed address. To
-  avoid floods, a thread emails a user once until they read its notifications.
+  Everyone notified gets an in-app notification; users at `watching`, and
+  mentioned users, also get an email, if they have email notifications on and
+  a confirmed address. To avoid floods, a thread emails a user once until they
+  read its notifications.
   """
 
   use GenServer
 
-  import Ecto.Query, only: [where: 2, order_by: 2, first: 1]
+  import Ecto.Query, only: [where: 2, order_by: 2, first: 1, select: 3]
 
-  alias FirestormWeb.{Emails, Forums, Mailer, Repo}
+  alias FirestormWeb.{Emails, Forums, Mailer, Mentions, Repo}
   alias FirestormWeb.Forums.{Notification, Post, Subscriptions, Thread, User}
 
   ### Client API
@@ -26,6 +32,9 @@ defmodule FirestormWeb.Notifications do
 
   @doc "Notify subscribers about a new reply."
   def post_created(%Post{} = post), do: GenServer.cast(__MODULE__, {:post_created, post})
+
+  @doc "Notify users newly mentioned by an edit."
+  def post_edited(%Post{} = post), do: GenServer.cast(__MODULE__, {:post_edited, post})
 
   @doc "Notify category subscribers about a new thread."
   def thread_created(%Thread{} = thread),
@@ -38,12 +47,15 @@ defmodule FirestormWeb.Notifications do
 
   @impl true
   def handle_cast({:post_created, %Post{} = post}, state) do
-    # Reloaded: a post deleted before we get to it notifies no one.
-    with %Post{deleted_at: nil} = post <- Repo.get(Post, post.id),
-         %Post{thread: %Thread{} = thread} = post <- Repo.preload(post, [:user, :thread]) do
-      fan_out("new_post", thread, post)
+    with {:ok, thread, post} <- reload(post) do
+      fan_out("new_post", thread, post, notify_mentions(thread, post))
     end
 
+    {:noreply, state}
+  end
+
+  def handle_cast({:post_edited, %Post{} = post}, state) do
+    with {:ok, thread, post} <- reload(post), do: notify_mentions(thread, post)
     {:noreply, state}
   end
 
@@ -56,19 +68,29 @@ defmodule FirestormWeb.Notifications do
       |> Repo.one()
 
     if first_post do
-      fan_out("new_thread", thread, Repo.preload(first_post, :user))
+      post = Repo.preload(first_post, :user)
+      fan_out("new_thread", thread, post, notify_mentions(thread, post))
     end
 
     {:noreply, state}
   end
 
-  defp fan_out(kind, thread, post) do
-    # Skip anyone who has already read this post, e.g. because they had the
-    # thread open when it arrived.
+  # Reloaded: a post deleted before we get to it notifies no one.
+  defp reload(%Post{id: id}) do
+    with %Post{deleted_at: nil} = post <- Repo.get(Post, id),
+         %Post{thread: %Thread{} = thread} = post <- Repo.preload(post, [:user, :thread]) do
+      {:ok, thread, post}
+    end
+  end
+
+  # `mentioned_ids` already got a mention for this post instead. Anyone who
+  # has already read the post (e.g. had the thread open) is skipped too.
+  defp fan_out(kind, thread, post, mentioned_ids) do
     already_read = Forums.users_who_read(thread, post)
 
     for {user, level} <- Subscriptions.subscribers(thread),
-        user.id != post.user_id and not MapSet.member?(already_read, user.id) do
+        user.id != post.user_id and user.id not in mentioned_ids and
+          not MapSet.member?(already_read, user.id) do
       {:ok, notification} =
         Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
 
@@ -76,6 +98,30 @@ defmodule FirestormWeb.Notifications do
     end
 
     :ok
+  end
+
+  # Notifies the users the post mentions who haven't been notified of a
+  # mention in it yet. Returns the ids of every user mentioned in it so far.
+  defp notify_mentions(thread, post) do
+    already =
+      Notification
+      |> where(post_id: ^post.id, kind: "mentioned")
+      |> select([n], n.user_id)
+      |> Repo.all()
+
+    new =
+      for user <- Mentions.users(post.body),
+          user.id != post.user_id and user.id not in already,
+          Bodyguard.permit?(Forums, :view_thread, user, thread),
+          Subscriptions.effective_thread_level(user, thread) != "muted" do
+        {:ok, notification} =
+          Forums.notify(user, Notification.for_post("mentioned", thread, post, post.user))
+
+        maybe_email(user, notification, thread, post)
+        user.id
+      end
+
+    already ++ new
   end
 
   defp maybe_email(%User{} = user, notification, thread, post) do
@@ -88,6 +134,9 @@ defmodule FirestormWeb.Notifications do
       Forums.notification_emailed(notification)
     end
   end
+
+  defp email_for(user, "mentioned", thread, post),
+    do: Emails.mention_notification(user, thread, post)
 
   defp email_for(user, "new_thread", thread, post),
     do: Emails.thread_created_notification(user, thread, post)

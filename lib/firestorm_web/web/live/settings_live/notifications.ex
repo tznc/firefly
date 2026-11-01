@@ -42,7 +42,7 @@ defmodule FirestormWeb.Web.SettingsLive.Notifications do
         <.input
           field={@form[:email_notifications]}
           type="checkbox"
-          label="Email me about new posts in threads and categories I'm watching"
+          label="Email me about new posts in threads and categories I'm watching, and when I'm mentioned"
         />
         <.button variant="primary" phx-disable-with="Saving...">Save</.button>
       </.form>
@@ -55,8 +55,10 @@ defmodule FirestormWeb.Web.SettingsLive.Notifications do
             <strong>Watching</strong>: notified of every new post, and emailed (once per thread until you've read it).
           </li>
           <li><strong>Tracking</strong>: notified of every new post, no email.</li>
-          <li><strong>Normal</strong>: not notified.</li>
-          <li><strong>Muted</strong>: not notified, and hidden from Latest, New and Unread.</li>
+          <li><strong>Normal</strong>: not notified, unless someone @mentions you.</li>
+          <li>
+            <strong>Muted</strong>: not notified, even of mentions, and hidden from Latest, New and Unread.
+          </li>
         </ul>
         <p>
           Threads you start are watched; threads you reply to are tracked. A category's level applies to its threads unless you set one on the thread.
