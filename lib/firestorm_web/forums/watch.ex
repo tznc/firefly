@@ -10,6 +10,7 @@ defmodule FirestormWeb.Forums.Watch do
     # This will be used by associations on each "concrete" table
     field(:assoc_id, :integer)
     field(:user_id, :integer)
+    field(:level, :string, default: "watching")
 
     timestamps(type: :naive_datetime_usec)
   end

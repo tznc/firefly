@@ -3,6 +3,7 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.Forums
+  alias FirestormWeb.Forums.Subscriptions
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -13,6 +14,7 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
      socket
      |> assign(:page_title, category.title)
      |> assign(:category, category)
+     |> assign(:level, Subscriptions.category_level(socket.assigns.current_user, category))
      |> load_threads()}
   end
 
@@ -20,6 +22,15 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
   def handle_info({_event, _thread}, socket), do: {:noreply, load_threads(socket)}
 
   @impl true
+  def handle_event("set_level", %{"level" => level}, %{assigns: %{current_user: user}} = socket)
+      when not is_nil(user) and level in ["watching", "tracking", "normal", "muted"] do
+    {:ok, _} = Subscriptions.set_category_level(user, socket.assigns.category, level)
+    {:noreply, socket |> assign(:level, level) |> load_threads()}
+  end
+
+  # Unknown levels, or an anonymous viewer.
+  def handle_event("set_level", _params, socket), do: {:noreply, socket}
+
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :manage_category) do
       {:ok, _} = Forums.delete_category(socket.assigns.category)
@@ -47,6 +58,7 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
     <Layouts.app {Layouts.shell(assigns)}>
       <.page_header title={@category.title} navigate={~p"/categories/#{@category}"}>
         <:actions>
+          <.level_picker :if={@current_user} id="category-level" level={@level} />
           <.link navigate={~p"/categories/#{@category}/threads/new"} class="btn btn-primary btn-sm">
             <.icon name="hero-plus" class="size-4" /> New Thread
           </.link>

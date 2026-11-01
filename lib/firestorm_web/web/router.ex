@@ -44,6 +44,7 @@ defmodule FirestormWeb.Web.Router do
       live("/threads/watching", ThreadLive.Watching, :index)
       live("/threads/participating", ThreadLive.Participating, :index)
       live("/new", ThreadLive.NewThreads, :index)
+      live("/settings/notifications", SettingsLive.Notifications, :edit)
       live("/unread", ThreadLive.Unread, :index)
       live("/notifications", NotificationLive.Index, :index)
       live("/notifications/:id", NotificationLive.Show, :show)

@@ -99,29 +99,54 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       assert_has(session, "#post-#{post.id}", text: "Live reply")
     end
 
-    test "watching and unwatching", %{conn: conn, category: category, user: user} do
-      thread = thread_fixture(category, user)
+    test "setting the thread's notification level", %{conn: conn, category: category} do
+      reader = user_fixture()
+      thread = thread_fixture(category, user_fixture())
 
       session =
         conn
-        |> log_in_as(user)
+        |> log_in_as(reader)
         |> visit(~p"/categories/#{category}/threads/#{thread}")
-        |> click_button("watch")
-        |> assert_has("#unwatch")
+        |> assert_has("#thread-level .level-label", text: "Normal")
+        |> click_button("#thread-level button", "Watching")
+        |> assert_has("#thread-level .level-label", text: "Watching")
 
-      assert Forums.watched_by?(thread, user)
+      assert Forums.watched_by?(thread, reader)
 
-      session |> click_button("unwatch") |> assert_has("#watch")
-      refute Forums.watched_by?(thread, user)
+      session
+      |> click_button("#thread-level button", "Muted")
+      |> assert_has("#thread-level .level-label", text: "Muted")
+
+      refute Forums.watched_by?(thread, reader)
     end
 
-    test "visitors can't watch", %{conn: conn, category: category, user: user} do
+    test "an unknown level or an anonymous viewer is ignored, not a crash", %{
+      conn: conn,
+      category: category,
+      user: user
+    } do
+      require Phoenix.LiveViewTest
+      thread = thread_fixture(category, user)
+
+      {:ok, view, _} =
+        conn
+        |> log_in_as(user_fixture())
+        |> Phoenix.LiveViewTest.live(~p"/categories/#{category}/threads/#{thread}")
+
+      Phoenix.LiveViewTest.render_click(view, "set_level", %{"level" => "bogus"})
+      assert Process.alive?(view.pid)
+
+      {:ok, view, _} = Phoenix.LiveViewTest.live(conn, ~p"/categories/#{category}")
+      Phoenix.LiveViewTest.render_click(view, "set_level", %{"level" => "watching"})
+      assert Process.alive?(view.pid)
+    end
+
+    test "visitors don't get a notification level", %{conn: conn, category: category, user: user} do
       thread = thread_fixture(category, user)
 
       conn
       |> visit(~p"/categories/#{category}/threads/#{thread}")
-      |> click_button("watch")
-      |> assert_has("#flash-error", text: "You must be logged in to access this page.")
+      |> refute_has("#thread-level")
     end
 
     test "renders oEmbeds for links in posts", %{conn: conn, category: category, user: user} do
@@ -280,7 +305,8 @@ defmodule FirestormWeb.Web.ThreadLiveTest do
       |> visit(~p"/")
       |> click_link("Watching")
       |> assert_has(".thread-title", text: "Watched one")
-      |> refute_has(".thread-title", text: "My own")
+      # Threads you start are watched automatically
+      |> assert_has(".thread-title", text: "My own")
       |> click_link("Participating in")
       |> assert_has(".thread-title", text: "My own")
       |> refute_has(".thread-title", text: "Watched one")

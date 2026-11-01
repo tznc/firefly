@@ -12,8 +12,18 @@ defmodule FirestormWeb.Emails do
     |> to(user.email)
     |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
     |> subject("There was a new post in a thread you are watching on Firefly")
-    |> html_body(html_body_for(thread, post))
-    |> text_body(text_body_for(thread, post))
+    |> html_body(html_body_for(:reply, thread, post))
+    |> text_body(text_body_for(:reply, thread, post))
+    |> put_header("reply-to", FirestormWeb.ReplyAddress.address(thread, user))
+  end
+
+  def thread_created_notification(%User{} = user, %Thread{} = thread, %Post{} = post) do
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("A new thread was started in a category you are watching on Firefly")
+    |> html_body(html_body_for(:new_thread, thread, post))
+    |> text_body(text_body_for(:new_thread, thread, post))
     |> put_header("reply-to", FirestormWeb.ReplyAddress.address(thread, user))
   end
 
@@ -65,18 +75,58 @@ defmodule FirestormWeb.Emails do
     "#{thread_url(thread)}#post-#{post.id}"
   end
 
-  defp html_body_for(%Thread{} = thread, %Post{} = post) do
+  defp html_body_for(:reply, %Thread{} = thread, %Post{} = post) do
+    html_body_for(
+      "The Firefly thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", post_url(thread, post))}:",
+      "this thread or its category",
+      post
+    )
+  end
+
+  defp html_body_for(:new_thread, %Thread{} = thread, %Post{} = post) do
+    html_body_for(
+      "A new Firefly thread was started: #{link(thread.title, thread_url(thread))}",
+      "its category",
+      post
+    )
+  end
+
+  defp html_body_for(intro, watched, post) do
     """
-    <p>The Firefly thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", post_url(thread, post))}:</p>
+    <p>#{intro}</p>
     <hr />
     #{Markdown.render(post.body)}
+    <hr />
+    <p><small>You're getting this because you watch #{watched}. We won't email you about this thread again until you've read it. #{link("Change your notification settings", settings_url())}.</small></p>
     """
   end
 
-  defp text_body_for(%Thread{} = thread, %Post{} = post) do
+  defp settings_url, do: FirestormWeb.Web.Paths.notification_settings_url()
+
+  defp text_body_for(:reply, %Thread{} = thread, %Post{} = post) do
+    text_body_for(
+      "The Firefly thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{post_url(thread, post)}]:",
+      "this thread or its category",
+      post
+    )
+  end
+
+  defp text_body_for(:new_thread, %Thread{} = thread, %Post{} = post) do
+    text_body_for(
+      "A new Firefly thread was started: #{thread.title} [#{thread_url(thread)}]",
+      "its category",
+      post
+    )
+  end
+
+  defp text_body_for(intro, watched, post) do
     """
-    The Firefly thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{post_url(thread, post)}]:\n\n
+    #{intro}\n\n
     #{post.body}
+
+    --
+    You're getting this because you watch #{watched}. We won't email you about this thread again until you've read it.
+    Change your notification settings: #{settings_url()}
     """
   end
 
