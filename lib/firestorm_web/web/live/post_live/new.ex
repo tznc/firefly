@@ -1,17 +1,19 @@
 defmodule FirestormWeb.Web.PostLive.New do
   @moduledoc """
-  Replies to a thread, optionally quoting one of its posts. What's typed is
-  kept as a draft (see `FirestormWeb.Web.Drafting`) until it's posted.
+  Replies to a thread, optionally quoting one of its posts, optionally
+  with a poll (see `FirestormWeb.Polls`). What's typed is kept as a draft
+  (see `FirestormWeb.Web.Drafting`, the poll excepted) until it's posted.
   """
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{Forums, Quote, Repo}
+  alias FirestormWeb.{Forums, LocalTime, Polls, Quote, Repo}
   alias FirestormWeb.Forums.Post
-  alias FirestormWeb.Web.Editor
+  alias FirestormWeb.Web.{Editor, PollComponents}
 
   import FirestormWeb.Web.Drafting
+  import FirestormWeb.Web.PollComponents, only: [poll_composer: 1]
 
   @impl true
   def mount(%{"category_id" => category_id, "thread_id" => thread_id} = params, _session, socket) do
@@ -47,27 +49,35 @@ defmodule FirestormWeb.Web.PostLive.New do
      |> assign(:category, category)
      |> assign(:thread, thread)
      |> assign(:form, to_form(Forums.change_post(%Post{thread_id: thread.id, body: body})))
+     |> assign(:poll_open?, false)
+     |> assign(:poll_form, to_form(PollComponents.defaults(), as: :poll))
+     |> assign(:tz_offset, LocalTime.offset(socket))
      |> Editor.allow_attachments(&handle_progress/3)
      |> Editor.mention_search()}
   end
 
   @impl true
-  def handle_event("validate", %{"post" => params}, socket) do
+  def handle_event("validate", %{"post" => params} = all, socket) do
     changeset = Post.changeset(%Post{}, post_attrs(socket, params))
 
     {:noreply,
      socket
      |> assign(:form, to_form(changeset, action: :validate))
+     |> keep_poll_params(all["poll"])
      |> autosave(%{body: params["body"]})}
   end
+
+  def handle_event("toggle_poll", _params, socket),
+    do: {:noreply, assign(socket, :poll_open?, !socket.assigns.poll_open?)}
 
   def handle_event("discard_draft", _params, socket) do
     form = to_form(Forums.change_post(%Post{thread_id: socket.assigns.thread.id}))
     {:noreply, socket |> discard_draft() |> assign(:form, form)}
   end
 
-  def handle_event("save", %{"post" => params}, socket) do
+  def handle_event("save", %{"post" => params} = all, socket) do
     %{thread: thread, category: category, current_user: user} = socket.assigns
+    socket = keep_poll_params(socket, all["poll"])
 
     case FirestormWeb.Posting.check(user, thread) do
       :ok ->
@@ -79,7 +89,7 @@ defmodule FirestormWeb.Web.PostLive.New do
   end
 
   defp create_post(socket, thread, category, user, params) do
-    case Forums.create_post(thread, user, %{body: params["body"]}) do
+    case Forums.create_post(thread, user, with_poll(socket, %{body: params["body"]})) do
       {:ok, post} ->
         {:noreply,
          socket
@@ -91,9 +101,31 @@ defmodule FirestormWeb.Web.PostLive.New do
         {:noreply, put_flash(socket, :error, FirestormWeb.Posting.message(:closed))}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, :form, to_form(changeset))}
+        poll_form =
+          to_form(socket.assigns.poll_form.params,
+            as: :poll,
+            errors: PollComponents.errors(changeset),
+            action: :validate
+          )
+
+        {:noreply, assign(socket, form: to_form(changeset), poll_form: poll_form)}
     end
   end
+
+  defp keep_poll_params(socket, nil), do: socket
+
+  defp keep_poll_params(socket, params),
+    do: assign(socket, :poll_form, to_form(params, as: :poll))
+
+  defp with_poll(%{assigns: %{poll_open?: true}} = socket, attrs),
+    do:
+      Map.put(
+        attrs,
+        :poll,
+        Polls.attrs(socket.assigns.poll_form.params, socket.assigns.tz_offset)
+      )
+
+  defp with_poll(_socket, attrs), do: attrs
 
   defp created_message(%Post{queued_at: nil}), do: "Post created successfully."
   defp created_message(_queued), do: "Thanks! Your post is awaiting approval by staff."
@@ -149,6 +181,7 @@ defmodule FirestormWeb.Web.PostLive.New do
 
       <.form for={@form} id="post-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <Editor.body_editor field={@form[:body]} uploads={@uploads} />
+        <.poll_composer form={@poll_form} open={@poll_open?} />
         <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">
           <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"} class="btn btn-ghost">

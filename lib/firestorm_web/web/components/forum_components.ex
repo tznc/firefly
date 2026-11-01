@@ -385,6 +385,7 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :viewer, :any, default: nil, doc: "the current user, to link categories they may read"
   attr :refs, :map, default: nil, doc: "`FirestormWeb.Mentions.refs/2` of the page's posts"
   slot :actions
+  slot :poll, doc: "the post's poll, under its body"
 
   def post(assigns) do
     ~H"""
@@ -439,6 +440,7 @@ defmodule FirestormWeb.Web.ForumComponents do
         </header>
         <.markdown id={"post-#{@post.id}-body"} body={@post.body} viewer={@viewer} refs={@refs} />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
+        {render_slot(@poll)}
         <footer class="flex items-center justify-end gap-1">
           {render_slot(@actions)}
           <.link

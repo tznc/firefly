@@ -90,6 +90,7 @@ defmodule FirestormWeb.Forums.Thread do
       |> cast(post_attrs, [:body, :user_id, :queued_at])
       |> validate_required([:body, :user_id])
       |> Post.validate_body_length()
+      |> Post.cast_poll(post_attrs)
 
     post_changeset =
       if user,

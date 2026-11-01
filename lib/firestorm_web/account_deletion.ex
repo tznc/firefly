@@ -5,7 +5,9 @@ defmodule FirestormWeb.AccountDeletion do
   Forum content isn't deleted with the account: the user row is anonymized
   in place into a placeholder (`deleted-user-<id>`, no name, email, password,
   GitHub link or profile), so posts, threads, revisions and private messages
-  keep an author without saying who it was. Everything else personal goes:
+  keep an author without saying who it was. So do poll votes (see
+  `FirestormWeb.Polls`): closed polls' results don't change, and public
+  polls list the placeholder. Everything else personal goes:
   roles, read positions, notification levels, notifications, likes, post
   views, drafts, bookmarks and conversation memberships. Other users' notifications that named
   the user ("@ada replied in ...") and the staff log name the placeholder

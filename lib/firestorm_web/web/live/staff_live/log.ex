@@ -33,6 +33,8 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "post.unhide" => "Unhid flagged post",
     "post.approve" => "Approved post",
     "post.reject" => "Rejected post",
+    "poll.close" => "Closed poll",
+    "poll.open" => "Reopened poll",
     "flag.agree" => "Agreed with flags",
     "flag.disagree" => "Disagreed with flags",
     "flag.defer" => "Deferred flags",

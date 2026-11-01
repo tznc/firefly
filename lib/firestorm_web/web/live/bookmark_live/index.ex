@@ -18,7 +18,7 @@ defmodule FirestormWeb.Web.BookmarkLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Bookmarks")
-     |> assign(:tz_offset, tz_offset(socket))
+     |> assign(:tz_offset, FirestormWeb.LocalTime.offset(socket))
      |> assign(:editing, nil)
      |> load()}
   end

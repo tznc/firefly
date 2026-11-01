@@ -152,8 +152,9 @@ defmodule FirestormWeb.TopicTimers do
   defmodule Scheduler do
     @moduledoc """
     Runs what's due, from the database: thread timers (see
-    `FirestormWeb.TopicTimers`) and bookmark reminders (see
-    `FirestormWeb.Bookmarks`). At start (so nothing that fell due while the
+    `FirestormWeb.TopicTimers`), bookmark reminders (see
+    `FirestormWeb.Bookmarks`) and polls' closing times (see
+    `FirestormWeb.Polls`). At start (so nothing that fell due while the
     app was down is lost), then every `:interval` milliseconds (the
     `FirestormWeb.TopicTimers` config; 30 seconds by default), so each runs
     at most that late. Every job takes its due rows one locked transaction
@@ -163,7 +164,7 @@ defmodule FirestormWeb.TopicTimers do
     require Logger
 
     # Each has `run_due/0`.
-    @jobs [FirestormWeb.TopicTimers, FirestormWeb.Bookmarks]
+    @jobs [FirestormWeb.TopicTimers, FirestormWeb.Bookmarks, FirestormWeb.Polls]
 
     def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 

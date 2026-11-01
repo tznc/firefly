@@ -3,7 +3,7 @@ defmodule FirestormWeb.AccountExport do
   A user's data as JSON, for download: their profile and preferences, posts
   (with the revisions they made to them), threads started, likes,
   notifications, private messages they sent and the conversations they're
-  in, notification levels, read positions, drafts and bookmarks.
+  in, notification levels, read positions, drafts, bookmarks, poll votes and the polls they created.
 
   Other people appear only by public username: no one else's email, name,
   messages or post bodies. (Notification bodies, which quote other people's
@@ -62,7 +62,8 @@ defmodule FirestormWeb.AccountExport do
       notification_levels: levels(user),
       read_positions: read_positions(user),
       drafts: FirestormWeb.Drafts.export(user),
-      bookmarks: FirestormWeb.Bookmarks.export(user)
+      bookmarks: FirestormWeb.Bookmarks.export(user),
+      polls: FirestormWeb.Polls.export(user)
     }
   end
 

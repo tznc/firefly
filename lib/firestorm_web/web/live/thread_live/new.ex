@@ -1,18 +1,20 @@
 defmodule FirestormWeb.Web.ThreadLive.New do
   @moduledoc """
-  Starts a new thread (title, tags and first post) in a category. What's
-  typed is kept as a draft for that category (see
-  `FirestormWeb.Web.Drafting`) until the thread is created.
+  Starts a new thread (title, tags and first post, optionally with a poll;
+  see `FirestormWeb.Polls`) in a category. What's typed is kept as a draft
+  for that category (see `FirestormWeb.Web.Drafting`, the poll excepted)
+  until the thread is created.
   """
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{Forums, Tags}
+  alias FirestormWeb.{Forums, LocalTime, Polls, Tags}
   alias FirestormWeb.Forums.{Tag, Thread}
-  alias FirestormWeb.Web.Editor
+  alias FirestormWeb.Web.{Editor, PollComponents}
 
   import FirestormWeb.Web.Drafting
+  import FirestormWeb.Web.PollComponents, only: [poll_composer: 1]
 
   @impl true
   def mount(%{"category_id" => category_id}, _session, socket) do
@@ -27,17 +29,24 @@ defmodule FirestormWeb.Web.ThreadLive.New do
      |> assign(:category, category)
      |> assign_form(%{"title" => draft.title, "tags" => draft.tags, "body" => draft.body})
      |> assign(:tag_groups, Tags.picker(socket.assigns.current_user))
+     |> assign(:poll_open?, false)
+     |> assign(:poll_form, to_form(PollComponents.defaults(), as: :poll))
+     |> assign(:tz_offset, LocalTime.offset(socket))
      |> Editor.allow_attachments(&handle_progress/3)
      |> Editor.mention_search()}
   end
 
   @impl true
-  def handle_event("validate", %{"thread" => params}, socket) do
+  def handle_event("validate", %{"thread" => params} = all, socket) do
     {:noreply,
      socket
      |> assign_form(params, validate_errors(socket, params))
+     |> keep_poll_params(all["poll"])
      |> save_draft(params)}
   end
+
+  def handle_event("toggle_poll", _params, socket),
+    do: {:noreply, assign(socket, :poll_open?, !socket.assigns.poll_open?)}
 
   def handle_event("discard_draft", _params, socket) do
     {:noreply,
@@ -49,7 +58,9 @@ defmodule FirestormWeb.Web.ThreadLive.New do
     {:noreply, socket |> assign_form(params, socket.assigns.form.errors) |> save_draft(params)}
   end
 
-  def handle_event("save", %{"thread" => params}, socket) do
+  def handle_event("save", %{"thread" => params} = all, socket) do
+    socket = keep_poll_params(socket, all["poll"])
+
     case FirestormWeb.Posting.check(socket.assigns.current_user) do
       :ok ->
         create_thread(socket, params)
@@ -60,11 +71,13 @@ defmodule FirestormWeb.Web.ThreadLive.New do
   end
 
   defp create_thread(socket, params) do
-    case Forums.create_thread(socket.assigns.category, socket.assigns.current_user, %{
-           title: params["title"],
-           tags: params["tags"],
-           body: params["body"]
-         }) do
+    attrs = %{title: params["title"], tags: params["tags"], body: params["body"]}
+
+    case Forums.create_thread(
+           socket.assigns.category,
+           socket.assigns.current_user,
+           with_poll(socket, attrs)
+         ) do
       {:ok, thread} ->
         {:noreply,
          socket
@@ -79,9 +92,32 @@ defmodule FirestormWeb.Web.ThreadLive.New do
          |> push_navigate(to: ~p"/categories/#{socket.assigns.category}/threads/#{thread}")}
 
       {:error, changeset} ->
-        {:noreply, assign_form(socket, params, errors(changeset))}
+        poll_form =
+          to_form(socket.assigns.poll_form.params,
+            as: :poll,
+            errors: PollComponents.errors(changeset),
+            action: :validate
+          )
+
+        {:noreply,
+         socket |> assign_form(params, errors(changeset)) |> assign(:poll_form, poll_form)}
     end
   end
+
+  defp keep_poll_params(socket, nil), do: socket
+
+  defp keep_poll_params(socket, params),
+    do: assign(socket, :poll_form, to_form(params, as: :poll))
+
+  defp with_poll(%{assigns: %{poll_open?: true}} = socket, attrs),
+    do:
+      Map.put(
+        attrs,
+        :poll,
+        Polls.attrs(socket.assigns.poll_form.params, socket.assigns.tz_offset)
+      )
+
+  defp with_poll(_socket, attrs), do: attrs
 
   defp handle_progress(:attachment, entry, socket) do
     if entry.done? do
@@ -146,6 +182,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
           uploads={@uploads}
           placeholder="Type thread content here. Use markdown syntax."
         />
+        <.poll_composer form={@poll_form} open={@poll_open?} />
         <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">
           <.link navigate={~p"/categories/#{@category}"} class="btn btn-ghost">Cancel</.link>
