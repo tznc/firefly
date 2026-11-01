@@ -72,6 +72,27 @@ defmodule FirestormWeb.Forums do
   """
   def get_user_by_username(username), do: Repo.get_by(User, %{username: username})
 
+  @doc "The users with the given (downcased) usernames, as a map from downcased username to user."
+  def users_by_username([]), do: %{}
+
+  def users_by_username(names) do
+    User
+    |> where([u], fragment("lower(?)", u.username) in ^names)
+    |> Repo.all()
+    |> Map.new(&{String.downcase(&1.username), &1})
+  end
+
+  @doc "Up to `limit` users whose username starts with `prefix` (any case), shortest first."
+  def search_usernames(prefix, limit \\ 6) do
+    pattern = String.replace(prefix, ~r/[\\%_]/, "\\\\\\0") <> "%"
+
+    User
+    |> where([u], ilike(u.username, ^pattern))
+    |> order_by([u], asc: fragment("length(?)", u.username), asc: u.username)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
   @doc """
   Gets a single user by api_token. Maybe.
   """
@@ -299,6 +320,16 @@ defmodule FirestormWeb.Forums do
 
   """
   def get_category!(id), do: Repo.get!(Category, id)
+
+  @doc "The categories with the given (downcased) slugs, as a map from slug to category."
+  def categories_by_slug([]), do: %{}
+
+  def categories_by_slug(slugs) do
+    Category
+    |> where([c], c.slug in ^slugs)
+    |> Repo.all()
+    |> Map.new(&{&1.slug, &1})
+  end
 
   @doc """
   Creates a category.
@@ -1063,7 +1094,7 @@ defmodule FirestormWeb.Forums do
   @doc """
   Edits a post's body as `editor` (its author or an admin; see the
   `:edit_post` policy). The replaced body is kept as a `PostRevision`, so the
-  post's history can be shown. New-account link limits apply to the edit as
+  post's history can be shown. Users the edit newly mentions are notified. New-account link limits apply to the edit as
   they do to new posts. Saving an unchanged body is a no-op.
   """
   def update_post(%Post{} = post, %User{} = editor, attrs) do
@@ -1085,7 +1116,10 @@ defmodule FirestormWeb.Forums do
         Repo.update(changeset)
       end)
 
-    tap_ok(result, &broadcast("forums:thread:#{&1.thread_id}", {:post_updated, &1}))
+    tap_ok(result, fn updated ->
+      :ok = Notifications.post_edited(updated)
+      broadcast("forums:thread:#{updated.thread_id}", {:post_updated, updated})
+    end)
   end
 
   @doc """

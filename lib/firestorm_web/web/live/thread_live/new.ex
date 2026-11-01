@@ -17,7 +17,8 @@ defmodule FirestormWeb.Web.ThreadLive.New do
      |> assign(:page_title, "New Thread - #{category.title}")
      |> assign(:category, category)
      |> assign_form(%{"title" => "", "body" => ""})
-     |> Editor.allow_attachments(&handle_progress/3)}
+     |> Editor.allow_attachments(&handle_progress/3)
+     |> Editor.mention_search()}
   end
 
   @impl true

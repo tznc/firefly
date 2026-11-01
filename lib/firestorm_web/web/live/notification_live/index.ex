@@ -37,6 +37,7 @@ defmodule FirestormWeb.Web.NotificationLive.Index do
 
   defp kind_icon("new_thread"), do: "hero-chat-bubble-left"
   defp kind_icon("liked"), do: "hero-heart"
+  defp kind_icon("mentioned"), do: "hero-at-symbol"
   defp kind_icon(_kind), do: "hero-arrow-uturn-left"
 
   @impl true

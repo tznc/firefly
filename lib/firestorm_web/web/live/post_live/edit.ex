@@ -32,7 +32,8 @@ defmodule FirestormWeb.Web.PostLive.Edit do
      socket
      |> assign(:page_title, "Edit post - #{socket.assigns.thread.title}")
      |> assign(:form, to_form(Post.edit_changeset(socket.assigns.post, %{})))
-     |> Editor.allow_attachments(&handle_progress/3)}
+     |> Editor.allow_attachments(&handle_progress/3)
+     |> Editor.mention_search()}
   end
 
   @impl true

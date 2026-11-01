@@ -3,6 +3,10 @@ defmodule FirestormWeb.Forums.SpamGuard do
   Limits for new accounts, the usual shape of forum spam: until an account is
   a day old and has a few posts, each post may contain only a couple of links.
   Admins are exempt.
+
+  Every post, whoever writes it, may mention at most
+  `FirestormWeb.Mentions.max_mentions/0` users, so mentions can't be used to
+  ping crowds.
   """
   import Ecto.{Changeset, Query}
 
@@ -15,9 +19,11 @@ defmodule FirestormWeb.Forums.SpamGuard do
 
   @link_regex ~r{\bhttps?://|\bwww\.}i
 
-  @doc "Adds a body error when a new user's post has too many links."
+  @doc "Adds a body error when a new user's post has too many links, or any post too many mentions."
   def validate_post(%Ecto.Changeset{} = changeset, %User{} = user) do
-    validate_change(changeset, :body, fn :body, body ->
+    changeset
+    |> FirestormWeb.Mentions.validate_count()
+    |> validate_change(:body, fn :body, body ->
       if link_count(body) > @new_user_max_links and new_user?(user) do
         [
           body:

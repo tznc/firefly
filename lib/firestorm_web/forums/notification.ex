@@ -2,15 +2,16 @@ defmodule FirestormWeb.Forums.Notification do
   @moduledoc """
   An in-app notification. `kind` is `"new_thread"` (a thread started in a
   category you watch or track), `"new_post"` (a reply in a thread you watch
-  or track) or `"liked"` (someone liked your post; never emailed). `read_at` is set when you open it or read the thread;
-  `emailed_at` when it was also sent by email.
+  or track), `"mentioned"` (someone @mentioned you in a post) or `"liked"`
+  (someone liked your post; never emailed). `read_at` is set when you open it
+  or read the thread; `emailed_at` when it was also sent by email.
   """
 
   use Ecto.Schema
   alias FirestormWeb.Forums.{User, Thread, Post}
   import Ecto.Changeset
 
-  @kinds ~w(new_thread new_post liked)
+  @kinds ~w(new_thread new_post mentioned liked)
 
   schema "forums_notifications" do
     field(:kind, :string, default: "new_post")
@@ -26,13 +27,14 @@ defmodule FirestormWeb.Forums.Notification do
     timestamps(type: :naive_datetime_usec)
   end
 
-  @doc "Notification attributes for a new thread or reply."
+  @doc "Notification attributes for a new thread, a reply or a mention in a post."
   def for_post(kind, %Thread{} = thread, %Post{} = post, %User{} = author)
-      when kind in ~w(new_thread new_post) do
+      when kind in ~w(new_thread new_post mentioned) do
     subject =
       case kind do
         "new_thread" -> "@#{author.username} started \"#{thread.title}\""
         "new_post" -> "@#{author.username} replied in \"#{thread.title}\""
+        "mentioned" -> "@#{author.username} mentioned you in \"#{thread.title}\""
       end
 
     %{

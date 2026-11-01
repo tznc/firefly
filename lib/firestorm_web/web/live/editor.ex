@@ -1,14 +1,14 @@
 defmodule FirestormWeb.Web.Editor do
   @moduledoc """
   Shared pieces of the post editor used by the new thread and reply pages:
-  a markdown textarea with a live preview, and file attachments uploaded
-  straight from the browser to S3.
+  a markdown textarea with a live preview, `@username` autocomplete, and file
+  attachments uploaded straight from the browser to S3.
   """
   use FirestormWeb.Web, :html
 
-  import Phoenix.LiveView, only: [allow_upload: 3, consume_uploaded_entry: 3]
+  import Phoenix.LiveView, only: [allow_upload: 3, attach_hook: 4, consume_uploaded_entry: 3]
 
-  alias FirestormWeb.{Markdown, Uploads}
+  alias FirestormWeb.{Forums, Markdown, Uploads}
 
   @image_types ~w(image/png image/jpeg image/jpg image/gif image/webp)
 
@@ -41,6 +41,31 @@ defmodule FirestormWeb.Web.Editor do
   end
 
   @doc """
+  Answers the `MentionAutocomplete` hook's `"mention_search"` event (a
+  username prefix) with matching users, for whichever LiveView hosts the
+  editor.
+  """
+  def mention_search(socket) do
+    attach_hook(socket, :mention_search, :handle_event, fn
+      "mention_search", %{"prefix" => prefix}, socket ->
+        {:halt, %{users: mention_matches(prefix)}, socket}
+
+      _event, _params, socket ->
+        {:cont, socket}
+    end)
+  end
+
+  defp mention_matches(prefix) when is_binary(prefix) do
+    if prefix =~ ~r/^[A-Za-z0-9_-]{1,32}$/ do
+      for user <- Forums.search_usernames(prefix), do: Map.take(user, [:username, :name])
+    else
+      []
+    end
+  end
+
+  defp mention_matches(_prefix), do: []
+
+  @doc """
   Consumes a finished upload and returns the markdown that links to it
   (an image for image types, a plain link otherwise).
   """
@@ -68,15 +93,27 @@ defmodule FirestormWeb.Web.Editor do
   def body_editor(assigns) do
     ~H"""
     <div class="space-y-3">
-      <.input
-        field={@field}
-        type="textarea"
-        label="Body"
-        rows="8"
-        placeholder={@placeholder}
-        phx-debounce="300"
-        class="textarea w-full font-mono text-sm"
-      />
+      <div class="relative">
+        <.input
+          field={@field}
+          type="textarea"
+          label="Body"
+          rows="8"
+          placeholder={@placeholder}
+          phx-debounce="300"
+          phx-hook="MentionAutocomplete"
+          data-menu={"#{@field.id}-mentions"}
+          class="textarea w-full font-mono text-sm"
+        />
+        <ul
+          id={"#{@field.id}-mentions"}
+          phx-update="ignore"
+          role="listbox"
+          aria-label="Mention suggestions"
+          class="menu absolute top-full left-0 z-20 hidden w-64 rounded-box border border-base-300 bg-base-100 p-1 shadow"
+        >
+        </ul>
+      </div>
       <div class="flex items-center gap-3">
         <label class="btn btn-ghost btn-sm" for={@uploads.attachment.ref}>
           <.icon name="hero-paper-clip" class="size-4" /> Attach a file

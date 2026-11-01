@@ -14,5 +14,9 @@ defmodule FirestormWeb.Web.Paths do
 
   def notification_settings_url, do: url(~p"/settings/notifications")
 
+  def user_url(user), do: url(~p"/users/#{user.id}")
+
+  def category_url(category), do: url(~p"/categories/#{category.id}")
+
   def thread_url(thread), do: url(~p"/categories/#{thread.category_id}/threads/#{thread.id}")
 end
