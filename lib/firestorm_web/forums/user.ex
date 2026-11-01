@@ -50,7 +50,7 @@ defmodule FirestormWeb.Forums.User do
     user
     |> changeset(attrs)
     |> cast(attrs, [:password])
-    |> validate_length(:password, min: 6)
+    |> validate_length(:password, min: 8, max: 72)
     |> put_password_hash()
   end
 

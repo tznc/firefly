@@ -8,6 +8,10 @@ defmodule FirestormWeb.Web.Router do
   # Kaffy generates admin routes under /admin, behind the :admin pipeline.
   use Kaffy.Routes, scope: "/admin", pipe_through: [:admin]
 
+  pipeline :webhook do
+    plug(:accepts, ["json"])
+  end
+
   pipeline :browser do
     plug(Ueberauth)
     plug(:accepts, ["html"])
@@ -26,6 +30,8 @@ defmodule FirestormWeb.Web.Router do
 
   pipeline :api do
     plug(:accepts, ["json"])
+    # The API authenticates with bearer tokens (not cookies), so any origin may call it.
+    plug(CORSPlug)
     plug(FirestormWeb.Web.Plugs.ApiCurrentUser)
   end
 
@@ -61,7 +67,7 @@ defmodule FirestormWeb.Web.Router do
   scope "/auth", FirestormWeb.Web do
     pipe_through(:browser)
 
-    get("/logout", AuthController, :delete)
+    # DELETE only: a GET would let any page log users out (CSRF).
     delete("/logout", AuthController, :delete)
     get("/:provider", AuthController, :request)
     get("/:provider/callback", AuthController, :callback)
@@ -80,7 +86,7 @@ defmodule FirestormWeb.Web.Router do
 
   # Inbound email webhooks
   scope "/inbound", FirestormWeb.Web do
-    pipe_through(:api)
+    pipe_through(:webhook)
 
     post("/sendgrid", InboundController, :sendgrid)
   end

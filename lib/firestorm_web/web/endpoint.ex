@@ -8,7 +8,9 @@ defmodule FirestormWeb.Web.Endpoint do
     store: :cookie,
     key: "_firestorm_web_key",
     signing_salt: "YhYEFZld",
-    same_site: "Lax"
+    same_site: "Lax",
+    http_only: true,
+    secure: Mix.env() == :prod
   ]
 
   # Browser (Playwright) tests share the test's database transaction via
@@ -22,8 +24,9 @@ defmodule FirestormWeb.Web.Endpoint do
     longpoll: [connect_info: [:user_agent, session: @session_options]]
   )
 
+  # Origins are checked against the endpoint's host (see :check_origin).
   socket("/socket", FirestormWeb.Web.UserSocket,
-    websocket: [timeout: 45_000, check_origin: false],
+    websocket: [timeout: 45_000],
     longpoll: false
   )
 
@@ -66,6 +69,5 @@ defmodule FirestormWeb.Web.Endpoint do
 
   plug(Plug.Session, @session_options)
 
-  plug(CORSPlug)
   plug(FirestormWeb.Web.Router)
 end
