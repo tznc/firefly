@@ -227,7 +227,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
             </li>
           </ul>
           <p>
-            Threads you start or reply to get the levels chosen above, unless you've set one on the thread. Category and tag levels apply to their threads unless you set one on the thread: a muted category or tag hides the thread, otherwise the most attentive level wins.
+            Threads you start or reply to get the levels chosen above, unless you've set one on the thread or its category or tags already give a more attentive one. Category and tag levels apply to their threads unless you set one on the thread: a muted category or tag hides the thread, otherwise the most attentive level wins.
           </p>
         </div>
       </div>

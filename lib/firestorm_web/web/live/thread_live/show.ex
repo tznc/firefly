@@ -7,7 +7,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Posting, RateLimit, Repo}
+  alias FirestormWeb.{Forums, Mentions, Posting, RateLimit, Repo}
   alias FirestormWeb.Forums.{Category, Post, Subscriptions, Thread}
 
   @impl true
@@ -195,6 +195,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:thread, thread)
     |> assign(:first_post, first_post)
     |> assign(:replies, replies)
+    |> assign(:refs, Mentions.refs(Enum.map(thread.posts, & &1.body)))
     |> assign(:level, Subscriptions.thread_level(user, thread))
     |> assign(:inherited_level, Subscriptions.inherited_level(user, thread))
     |> assign(:editable_ids, permitted_ids(user, thread, :edit_post))
@@ -342,6 +343,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           <.post
             post={@first_post}
             thread={@thread}
+            refs={@refs}
             can_edit={MapSet.member?(@editable_ids, @first_post.id)}
           >
             <:actions>
@@ -373,6 +375,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             :if={not Post.deleted?(post) or @admin?}
             post={post}
             thread={@thread}
+            refs={@refs}
             can_edit={MapSet.member?(@editable_ids, post.id)}
           >
             <:actions>
