@@ -1,12 +1,15 @@
 defmodule FirestormWeb.Web.ThreadLive.Top do
-  @moduledoc "The most active threads in a period (by posts in that period)."
+  @moduledoc """
+  The most active threads in a period (by posts in that period). Not live:
+  period rankings don't need to follow every post, and re-ranking for every
+  viewer on every post anywhere would be costly.
+  """
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.Forums
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket), do: Forums.subscribe("forums:threads")
     {:ok, assign(socket, :page_title, "Top")}
   end
 
@@ -14,12 +17,6 @@ defmodule FirestormWeb.Web.ThreadLive.Top do
   def handle_params(params, _uri, socket) do
     period = if params["period"] in Forums.top_periods(), do: params["period"], else: "week"
     {:noreply, socket |> assign(:period, period) |> load()}
-  end
-
-  @impl true
-  def handle_info({event, _thread}, socket)
-      when event in [:thread_created, :thread_updated, :thread_deleted, :thread_activity] do
-    {:noreply, load(socket)}
   end
 
   defp load(socket) do

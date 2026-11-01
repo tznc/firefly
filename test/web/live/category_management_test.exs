@@ -69,4 +69,14 @@ defmodule FirestormWeb.Web.CategoryManagementTest do
              "a category with subcategories can't be a subcategory"
            ]
   end
+
+  test "a parent's page updates live for subcategory threads", %{conn: conn} do
+    require Phoenix.LiveViewTest
+    {:ok, parent} = Forums.create_category(%{title: "Parent"})
+    {:ok, child} = Forums.create_category(%{title: "Child", parent_id: parent.id})
+    {:ok, view, _} = Phoenix.LiveViewTest.live(conn, ~p"/categories/#{parent}")
+
+    thread_fixture(child, user_fixture(), %{title: "Live in child"})
+    assert Phoenix.LiveViewTest.render(view) =~ "Live in child"
+  end
 end
