@@ -48,9 +48,14 @@ if config_env() == :prod do
   host = System.get_env("PHX_HOST", "firefly.tznc.dev")
   port = String.to_integer(System.get_env("PORT", "4000"))
 
+  # Listen on all IPv4 interfaces; set PHX_IPV6=true to listen on IPv6 (and,
+  # on most systems, IPv4 too), e.g. on Fly.io. IPv6-disabled hosts can't bind "::".
+  ip =
+    if System.get_env("PHX_IPV6") in ~w(true 1), do: {0, 0, 0, 0, 0, 0, 0, 0}, else: {0, 0, 0, 0}
+
   config :firestorm_web, FirestormWeb.Web.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
-    http: [ip: {0, 0, 0, 0, 0, 0, 0, 0}, port: port],
+    http: [ip: ip, port: port],
     secret_key_base: secret_key_base
 
   config :firestorm_web, FirestormWeb.Mailer,

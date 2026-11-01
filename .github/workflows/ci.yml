@@ -108,3 +108,24 @@ jobs:
       - run: mix dialyzer --format github
         env:
           MIX_ENV: dev
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build the release image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: firefly:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Check the release boots
+        run: docker run --rm firefly:ci /app/bin/firestorm_web eval 'IO.puts(Application.spec(:firestorm_web, :vsn))'

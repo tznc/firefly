@@ -48,6 +48,25 @@ variables (see `config/runtime.exs`):
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see
 `FirestormWeb.RateLimit`.
 
+### Docker image
+
+`Dockerfile` builds a production image from a `mix release` (`Dockerfile.dev`
+is the development image used by `docker compose`):
+
+```sh
+docker build -t firefly .
+
+# run database migrations, then the server
+docker run --rm --env-file .env firefly /app/bin/migrate
+docker run -d -p 4000:4000 --env-file .env firefly
+```
+
+The image needs at least `DATABASE_URL` and `SECRET_KEY_BASE` (generate one with
+`mix phx.gen.secret`); `PHX_HOST` sets the public host. It listens on IPv4 port
+`PORT` (default 4000); set `PHX_IPV6=true` to listen on IPv6 as well. Set
+`DATABASE_SSL=false` for a database without TLS. The other settings (GitHub
+login, email, S3 uploads) are read from the environment in `config/runtime.exs`.
+
 ### Admin
 
 `/admin` is a [Kaffy](https://github.com/aesmail/kaffy) admin UI, available to

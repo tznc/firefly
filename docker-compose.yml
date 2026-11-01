@@ -19,7 +19,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     ports:
       - 4000:4000
     volumes:
