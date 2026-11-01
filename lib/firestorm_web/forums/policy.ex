@@ -7,11 +7,12 @@ defmodule FirestormWeb.Forums.Policy do
       archived) and admins
     * `:moderate_thread` (pin, close, archive, move) - admins
     * `:edit_post`, `:delete_post` (params `%{post: post, thread: thread}`) -
-      the post's author while the thread is open, and admins; not once the
-      post is deleted. (`Forums.delete_post/2` also refuses a thread's first
+      the post's author while the thread is open (editing, also only within
+      the `edit_grace_minutes` site setting; 0: forever), and admins; not
+      once the post is deleted. (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
     * `:restore_post`, `:view_deleted_posts` - admins
-    * `:view_staff_log` - admins
+    * `:view_staff_log`, `:manage_site_settings` - admins
     * `:penalize_user` (silence or suspend; params: the user) - admins, on
       users who aren't admins
     * `:lift_penalty` (params: the user) - admins, on anyone (a penalized
@@ -31,7 +32,7 @@ defmodule FirestormWeb.Forums.Policy do
 
   @behaviour Bodyguard.Policy
 
-  alias FirestormWeb.{Forums, Messages}
+  alias FirestormWeb.{Forums, Messages, SiteSettings}
   alias FirestormWeb.Forums.{Conversation, Post, Thread, User}
 
   @impl true
@@ -73,7 +74,7 @@ defmodule FirestormWeb.Forums.Policy do
       when action in [:edit_post, :delete_post] do
     cond do
       Post.deleted?(post) -> {:error, :unauthorized}
-      post.user_id == user.id and not Thread.closed?(thread) -> :ok
+      post.user_id == user.id and not Thread.closed?(thread) and in_window?(action, post) -> :ok
       true -> admin(user)
     end
   end
@@ -85,11 +86,20 @@ defmodule FirestormWeb.Forums.Policy do
   end
 
   def authorize(action, %User{} = user, _params)
-      when action in [:restore_post, :view_deleted_posts, :view_staff_log],
+      when action in [:restore_post, :view_deleted_posts, :view_staff_log, :manage_site_settings],
       do: admin(user)
 
   # Catch-all: deny everything else
   def authorize(_action, _user, _params), do: {:error, :unauthorized}
+
+  defp in_window?(:delete_post, _post), do: true
+
+  defp in_window?(:edit_post, post) do
+    case SiteSettings.get("edit_grace_minutes") do
+      0 -> true
+      minutes -> NaiveDateTime.diff(NaiveDateTime.utc_now(), post.inserted_at, :minute) < minutes
+    end
+  end
 
   defp admin(user), do: if(Forums.admin?(user), do: :ok, else: {:error, :unauthorized})
 

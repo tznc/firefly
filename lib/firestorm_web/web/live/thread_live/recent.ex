@@ -4,6 +4,7 @@ defmodule FirestormWeb.Web.ThreadLive.Recent do
     title: nil,
     path: "/",
     tabs: true,
+    intro: true,
     empty: "No threads yet."
 
   defp load(user), do: Forums.latest_threads(user)

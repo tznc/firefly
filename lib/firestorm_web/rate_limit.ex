@@ -8,7 +8,9 @@ defmodule FirestormWeb.RateLimit do
     * `:login` - password login/registration attempts per username
     * `:login_ip` - password login/registration attempts per client IP
     * `:register` - account registrations per client IP
-    * `:post` - new threads and posts per user (web, API and email)
+    * `:post` - new threads and posts per user (web, API and email). Its
+      count per minute is the `posts_per_minute` site setting, which
+      defaults to the configured count.
     * `:email` - account emails (confirmation, password reset) per user
     * `:password_reset` - password reset requests per client IP
     * `:upload` - upload signatures per user
@@ -60,7 +62,23 @@ defmodule FirestormWeb.RateLimit do
   @doc "The message shown when a limit is hit."
   def message, do: "You're doing that too often. Please wait a moment and try again."
 
-  defp limit(bucket) do
+  @doc "The configured number of hits allowed per window for `bucket`."
+  def configured_limit(bucket), do: bucket |> configured() |> elem(0)
+
+  @doc """
+  The `{hits, window_ms}` in force for `bucket`. For `:post`, that's the
+  `posts_per_minute` site setting once an admin sets it; until then the
+  configured limit with its own window.
+  """
+  def limit(:post) do
+    if FirestormWeb.SiteSettings.customized?("posts_per_minute"),
+      do: {FirestormWeb.SiteSettings.get("posts_per_minute"), :timer.minutes(1)},
+      else: configured(:post)
+  end
+
+  def limit(bucket), do: configured(bucket)
+
+  defp configured(bucket) do
     configured = Application.get_env(:firestorm_web, __MODULE__, [])[:limits] || []
     Keyword.get(configured, bucket) || Keyword.fetch!(@defaults, bucket)
   end

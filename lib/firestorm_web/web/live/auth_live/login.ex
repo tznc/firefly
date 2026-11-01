@@ -19,12 +19,18 @@ defmodule FirestormWeb.Web.AuthLive.Login do
               <.icon name="hero-code-bracket" class="size-5" /> Log in with GitHub
             </a>
             <div class="divider text-xs">or</div>
-            <.link navigate={~p"/register"} class="btn btn-primary">Create Account</.link>
+            <.link
+              :if={FirestormWeb.Forums.registration_open?()}
+              navigate={~p"/register"}
+              class="btn btn-primary"
+            >
+              Create Account
+            </.link>
             <.link navigate={~p"/auth/identity"} class="link text-sm">Sign In</.link>
           </div>
         </div>
         <p class="text-xs text-base-content/60">
-          By signing up, I agree to Firefly's Terms and Privacy Policy.
+          By signing up, I agree to {FirestormWeb.SiteSettings.get("title")}'s Terms and Privacy Policy.
         </p>
         <p class="text-xs text-base-content/60">
           Firefly is made by <a href="https://tznc.dev" class="link">tznc.dev</a>

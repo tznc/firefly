@@ -11,7 +11,9 @@
     <link rel="icon" type="image/png" sizes="16x16" href={~p"/images/favicon-16.png"} />
     <link rel="apple-touch-icon" href={~p"/images/apple-touch-icon.png"} />
     <link rel="manifest" href={~p"/manifest.json"} />
-    <.live_title default="Firefly" suffix=" - Firefly" phx-no-format>{assigns[:page_title]}</.live_title>
+    <% site = FirestormWeb.SiteSettings.all() %>
+    <meta :if={site["description"] != ""} name="description" content={site["description"]} />
+    <.live_title default={site["title"]} suffix={" - " <> site["title"]} phx-no-format>{assigns[:page_title]}</.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>

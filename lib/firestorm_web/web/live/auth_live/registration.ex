@@ -2,7 +2,9 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
   @moduledoc """
   Account registration with a username, email and password. The account is
   created here; the form then posts to the identity callback to log in, which
-  writes the session.
+  writes the session. Closed while the `allow_registrations` site setting is
+  off. New accounts are always sent a confirmation link; with
+  `require_email_confirmation` off they can post before following it.
   """
   use FirestormWeb.Web, :live_view
 
@@ -10,6 +12,18 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
 
   @impl true
   def mount(_params, _session, socket) do
+    if Forums.registration_open?(),
+      do: mount_form(socket),
+      else: {:ok, closed(socket)}
+  end
+
+  defp closed(socket) do
+    socket
+    |> put_flash(:error, "New registrations are closed.")
+    |> push_navigate(to: ~p"/login")
+  end
+
+  defp mount_form(socket) do
     remote_ip =
       case get_connect_info(socket, :peer_data) do
         %{address: address} -> address
@@ -39,7 +53,7 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
   def handle_event("save", %{"user" => params}, socket) do
     with :ok <- RateLimit.check_register(socket.assigns.remote_ip || "unknown"),
          {:ok, user} <- Forums.register_user(params) do
-      EmailConfirmation.deliver(user)
+      unless Forums.User.confirmed?(user), do: EmailConfirmation.deliver(user)
 
       # Keep the submitted values so the form can post them to the login callback.
       {:noreply,
@@ -49,6 +63,9 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
     else
       {:error, :rate_limited} ->
         {:noreply, put_flash(socket, :error, RateLimit.message())}
+
+      {:error, :registration_closed} ->
+        {:noreply, closed(socket)}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign_form(socket, changeset)}

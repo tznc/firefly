@@ -2,7 +2,7 @@ defmodule FirestormWeb.Forums.Tag do
   @moduledoc """
   A tag on threads. Names are lowercase and URL-safe (letters, digits and
   inner dashes, up to 30 characters), so they work as-is in `/tags/:name`.
-  A thread has at most 5 tags.
+  A thread has at most `max_per_thread/0` tags.
   """
 
   use Ecto.Schema
@@ -11,7 +11,6 @@ defmodule FirestormWeb.Forums.Tag do
   alias FirestormWeb.Forums.Thread
 
   @max_length 30
-  @max_per_thread 5
   @name_format ~r/^[a-z0-9]+(-[a-z0-9]+)*$/
 
   schema "forums_tags" do
@@ -22,7 +21,8 @@ defmodule FirestormWeb.Forums.Tag do
     timestamps(type: :naive_datetime_usec)
   end
 
-  def max_per_thread, do: @max_per_thread
+  @doc "How many tags a thread may have (the `max_tags_per_thread` site setting)."
+  def max_per_thread, do: FirestormWeb.SiteSettings.get("max_tags_per_thread")
 
   def changeset(%__MODULE__{} = tag, attrs) do
     tag

@@ -119,7 +119,7 @@ defmodule FirestormWeb.MentionsTest do
       assert {:ok, _} = Forums.update_post(post, author, %{body: prose <> " typo fixed"})
     end
 
-    test "a post may mention at most #{Mentions.max_mentions()} users" do
+    test "a post may mention at most max_mentions users" do
       author = user("author")
       {:ok, category} = Forums.create_category(%{title: "Elixir"})
       {:ok, thread} = Forums.create_thread(category, author, %{title: "OTP", body: "Hi"})

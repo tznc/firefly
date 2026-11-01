@@ -53,6 +53,9 @@ config :phoenix, :plug_init_mode, :runtime
 # Start notification server in app start
 config :firestorm_web, notifications_enabled: false
 
+# Each test reads its own (transactional) site settings: no shared cache.
+config :firestorm_web, site_settings_cache: false
+
 config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.TestAdapter
 
 config :firestorm_web, :email,

@@ -20,8 +20,6 @@ defmodule FirestormWeb.Mentions do
   alias FirestormWeb.Forums
   alias FirestormWeb.Web.Paths
 
-  @max_mentions 10
-
   # An `@name` or `#name` not preceded by a word character, so emails
   # ("bob@example.com") and anchors ("page#top") don't count.
   @token ~r/(?<![\w@#\/&])[@#][A-Za-z0-9_-]+/u
@@ -29,8 +27,8 @@ defmodule FirestormWeb.Mentions do
   # Nodes whose text is never scanned.
   @unscanned [MDEx.Link, MDEx.Image, MDEx.WikiLink, MDEx.Code, MDEx.CodeBlock, MDEx.HtmlBlock]
 
-  @doc "How many users a post may mention."
-  def max_mentions, do: @max_mentions
+  @doc "How many users a post may mention (the `max_mentions` site setting)."
+  def max_mentions, do: FirestormWeb.SiteSettings.get("max_mentions")
 
   @typedoc "Users and categories by the names posts use for them."
   @type refs :: %{users: map, categories: map}
@@ -56,14 +54,16 @@ defmodule FirestormWeb.Mentions do
   end
 
   @doc """
-  Adds a `:body` error when the post mentions more than #{@max_mentions}
+  Adds a `:body` error when the post mentions more than `max_mentions/0`
   users. Only names of existing users count: `@Override` or a list of
   handles elsewhere pings nobody.
   """
   def validate_count(%Ecto.Changeset{} = changeset) do
     validate_change(changeset, :body, fn :body, body ->
-      if length(users(body)) > @max_mentions,
-        do: [body: {"can mention at most %{count} users", count: @max_mentions}],
+      max = max_mentions()
+
+      if length(users(body)) > max,
+        do: [body: {"can mention at most %{count} users", count: max}],
         else: []
     end)
   end
