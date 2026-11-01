@@ -51,6 +51,11 @@ config :firestorm_web, notifications_enabled: false
 
 config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.TestAdapter
 
+config :firestorm_web, :email,
+  from: {"Firefly", "noreply@firefly.tznc.dev"},
+  reply_domain: "reply.firefly.tznc.dev",
+  inbound_token: "test-inbound-token"
+
 config :bamboo, :refute_timeout, 10
 
 config :bcrypt_elixir, :log_rounds, 4

@@ -39,7 +39,10 @@ variables (see `config/runtime.exs`):
 | `DATABASE_URL`, `SECRET_KEY_BASE` | Required |
 | `PHX_HOST` | Public host, default `firefly.tznc.dev` |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub login |
-| `SENDGRID_API_KEY` | Outbound email (sent from `noreply@firefly.tznc.dev`) |
+| `SENDGRID_API_KEY` | Outbound email |
+| `EMAIL_FROM` | Sender, default `noreply@<PHX_HOST>` |
+| `REPLY_EMAIL_DOMAIN` | Reply-by-email domain, default `reply.<PHX_HOST>` (needs an MX record pointing at SendGrid Inbound Parse) |
+| `INBOUND_EMAIL_TOKEN` | Shared secret for the inbound webhook; set the SendGrid Inbound Parse URL to `https://<PHX_HOST>/inbound/sendgrid?token=<INBOUND_EMAIL_TOKEN>`. Reply-by-email is off without it |
 | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`, `AWS_S3_REGION` | Attachment uploads |
 
 ### Admin

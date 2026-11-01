@@ -1,32 +1,63 @@
 defmodule FirestormWeb.Web.InboundController do
-  use FirestormWeb.Web, :controller
-  alias FirestormWeb.Forums
+  @moduledoc """
+  SendGrid Inbound Parse webhook for reply-by-email.
 
-  @inbound_domain "reply.firefly.tznc.dev"
-  # Get the thread id out of something like
-  # "replythread-123@reply.firefly.tznc.dev"
-  @thread_email_regex ~r/reply-thread-([0-9]*)@#{@inbound_domain}/
+  Configure SendGrid to POST to `/inbound/sendgrid?token=<INBOUND_EMAIL_TOKEN>`.
+  Requests without the shared token are rejected (and the endpoint is
+  disabled when no token is configured). A reply is only posted when its
+  reply-to address verifies (see `FirestormWeb.ReplyAddress`) and the sender
+  matches the user the address was issued to.
+  """
+  use FirestormWeb.Web, :controller
+
+  require Logger
+
+  alias FirestormWeb.{Forums, RateLimit, ReplyAddress}
+
   # Get the email part out of something like "Jane Doe <jane@example.com>"
-  @email_regex ~r/[^<]*<?(.*@[^>]*)[^>]*/
+  @email_regex ~r/<?([^<>\s]+@[^<>\s]+)>?\s*$/
+
+  plug(:verify_webhook_token)
 
   def sendgrid(conn, params) do
-    body = params["text"]
-    from_email_param = params["from"]
-    to_email = params["to"]
-
-    with [_, from_email | _] <- Regex.run(@email_regex, from_email_param),
-         [_, thread_id | _] <- Regex.run(@thread_email_regex, to_email),
-         thread <- Forums.get_thread(thread_id),
-         user when not is_nil(user) <- Forums.get_user_by_email(from_email),
-         {:ok, _} <- Forums.create_post(thread, user, %{body: body}) do
-      # FIXME: Post created successfully, maybe I want to instrument this
-      # in the future.
+    with {:ok, thread_id, user_id} <- ReplyAddress.verify(params["to"]),
+         %{} = user <- Forums.get_user(user_id),
+         true <- sender_matches?(params["from"], user) || {:error, :sender_mismatch},
+         %{} = thread <- Forums.get_thread(thread_id),
+         :ok <- RateLimit.check_post(user),
+         {:ok, _post} <- Forums.create_post(thread, user, %{body: params["text"]}) do
+      :ok
     else
-      _ ->
-        :ok
-        # FIXME: Maybe I want to report failures to a logging service here.
+      reason -> Logger.info("Ignored inbound email: #{inspect(reason)}")
     end
 
+    # Always 200 for authenticated requests, so SendGrid doesn't retry
+    # emails we've deliberately ignored.
     send_resp(conn, 200, "ok")
+  end
+
+  defp sender_matches?(from, %{email: email}) when is_binary(from) and is_binary(email) do
+    case Regex.run(@email_regex, String.trim(from)) do
+      [_, address] -> String.downcase(address) == String.downcase(email)
+      _ -> false
+    end
+  end
+
+  defp sender_matches?(_from, _user), do: false
+
+  defp verify_webhook_token(conn, _opts) do
+    expected = Application.get_env(:firestorm_web, :email)[:inbound_token]
+    given = conn.params["token"]
+
+    cond do
+      expected in [nil, ""] ->
+        conn |> send_resp(404, "Not Found") |> halt()
+
+      is_binary(given) and Plug.Crypto.secure_compare(given, expected) ->
+        conn
+
+      true ->
+        conn |> send_resp(403, "Forbidden") |> halt()
+    end
   end
 end
