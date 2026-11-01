@@ -136,6 +136,30 @@ defmodule FirestormWeb.Forums do
     |> Repo.update()
   end
 
+  @doc "Users with a password whose email matches (case-insensitively)."
+  def list_password_users_by_email(email) when is_binary(email) do
+    email = email |> String.trim() |> String.downcase()
+
+    User
+    |> where([u], fragment("lower(?)", u.email) == ^email and not is_nil(u.password_hash))
+    |> Repo.all()
+  end
+
+  @doc """
+  Sets a new password from a reset link. Following the emailed link proves the
+  address, so it also confirms the email.
+  """
+  def reset_user_password(%User{} = user, attrs) do
+    changeset = User.password_changeset(user, attrs)
+
+    changeset =
+      if User.confirmed?(user),
+        do: changeset,
+        else: Ecto.Changeset.put_change(changeset, :confirmed_at, DateTime.utc_now(:second))
+
+    Repo.update(changeset)
+  end
+
   @doc "Marks the user's email address as confirmed."
   def confirm_user(%User{} = user) do
     if User.confirmed?(user),

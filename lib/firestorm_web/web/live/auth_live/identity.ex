@@ -64,6 +64,9 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
             autocomplete="current-password"
           />
           <.button variant="primary" class="btn btn-primary w-full">Log in</.button>
+          <p class="text-center text-sm">
+            <.link navigate={~p"/reset-password"} class="link">Forgot your password?</.link>
+          </p>
         </.form>
       </section>
     </Layouts.app>

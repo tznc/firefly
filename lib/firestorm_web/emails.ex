@@ -38,6 +38,27 @@ defmodule FirestormWeb.Emails do
     """)
   end
 
+  def password_reset(%User{} = user, url) do
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("Reset your Firefly password")
+    |> html_body("""
+    <p>Hi #{escape(user.username)},</p>
+    <p>Someone asked to reset the password for your Firefly account. #{link("Choose a new password", url)}.</p>
+    <p>The link expires in an hour and works once. If it wasn't you, ignore this email.</p>
+    """)
+    |> text_body("""
+    Hi #{user.username},
+
+    Someone asked to reset the password for your Firefly account. Choose a new password here:
+
+    #{url}
+
+    The link expires in an hour and works once. If it wasn't you, ignore this email.
+    """)
+  end
+
   defdelegate thread_url(thread), to: FirestormWeb.Web.Paths
 
   def post_url(thread, post) do

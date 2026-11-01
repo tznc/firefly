@@ -35,6 +35,16 @@ defmodule FirestormWeb.Forums.User do
   @doc "Whether the user has confirmed their email address."
   def confirmed?(%__MODULE__{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)
 
+  @doc "Sets a new password (password reset)."
+  def password_changeset(%__MODULE__{} = user, attrs) do
+    user
+    |> cast(attrs, [:password])
+    |> validate_required([:password])
+    |> validate_length(:password, min: 8, max: 72)
+    |> validate_confirmation(:password, message: "does not match password")
+    |> put_password_hash()
+  end
+
   @doc "Marks the user's email address as confirmed."
   def confirm_changeset(%__MODULE__{} = user) do
     change(user, confirmed_at: DateTime.utc_now(:second))

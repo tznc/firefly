@@ -56,6 +56,8 @@ defmodule FirestormWeb.Web.Router do
       live("/login", AuthLive.Login, :login)
       live("/auth/identity", AuthLive.Identity, :new)
       live("/register", AuthLive.Registration, :new)
+      live("/reset-password", AuthLive.ForgotPassword, :new)
+      live("/reset-password/:token", AuthLive.ResetPassword, :edit)
       live("/users", UserLive.Index, :index)
       live("/users/:id", UserLive.Show, :show)
       live("/categories", CategoryLive.Index, :index)
