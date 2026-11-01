@@ -43,6 +43,7 @@ defmodule FirestormWeb.Web.NotificationLive.Index do
   defp kind_icon("post_hidden"), do: "hero-eye-slash"
   defp kind_icon("flagged"), do: "hero-flag"
   defp kind_icon("post_rejected"), do: "hero-x-circle"
+  defp kind_icon("moved"), do: "hero-arrows-right-left"
   defp kind_icon(_kind), do: "hero-arrow-uturn-left"
 
   @impl true

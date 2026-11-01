@@ -6,7 +6,7 @@ defmodule FirestormWeb.Forums.Thread do
   use Ecto.Schema
   import Ecto.Changeset, warn: false
 
-  alias FirestormWeb.Forums.{Category, Post, Tag, Watch, User}
+  alias FirestormWeb.Forums.{Category, Post, Tag, ThreadTimer, Watch, User}
   alias FirestormWeb.Forums.Slugs.ThreadTitleSlug
 
   schema "forums_threads" do
@@ -22,7 +22,12 @@ defmodule FirestormWeb.Forums.Thread do
     field(:pinned_at, :utc_datetime)
     field(:closed_at, :utc_datetime)
     field(:archived_at, :utc_datetime)
+    field(:slow_mode_seconds, :integer)
     belongs_to(:category, Category)
+    # Set once the thread's posts were merged into another (see
+    # `FirestormWeb.TopicTools`): it's then a closed stub that redirects.
+    belongs_to(:merged_into, __MODULE__)
+    has_one(:timer, ThreadTimer)
     # Explicit order: an edited post's row moves in the table, so the
     # database's natural order isn't the posting order.
     has_many(:posts, Post, preload_order: [asc: :inserted_at, asc: :id])
@@ -61,6 +66,14 @@ defmodule FirestormWeb.Forums.Thread do
     |> foreign_key_constraint(:category_id)
   end
 
+  @doc "Slow mode: the least time, in seconds, between one member's replies (nil: off)."
+  def slow_mode_changeset(%__MODULE__{} = thread, attrs) do
+    thread
+    |> cast(attrs, [:slow_mode_seconds])
+    |> validate_number(:slow_mode_seconds, greater_than: 0, less_than_or_equal_to: 7 * 86_400)
+  end
+
+  def merged?(%__MODULE__{merged_into_id: id}), do: not is_nil(id)
   def pinned?(%__MODULE__{pinned_at: at}), do: not is_nil(at)
   def archived?(%__MODULE__{archived_at: at}), do: not is_nil(at)
 

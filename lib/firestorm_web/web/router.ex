@@ -68,6 +68,7 @@ defmodule FirestormWeb.Web.Router do
       live("/categories/:id/edit", CategoryLive.Form, :edit)
       live("/categories/:category_id/threads/new", ThreadLive.New, :new)
       live("/categories/:category_id/threads/:id/edit", ThreadLive.Edit, :edit)
+      live("/categories/:category_id/threads/:id/tools", ThreadLive.Tools, :edit)
       live("/categories/:category_id/threads/:thread_id/posts/new", PostLive.New, :new)
       live("/categories/:category_id/threads/:thread_id/posts/:id/edit", PostLive.Edit, :edit)
 
