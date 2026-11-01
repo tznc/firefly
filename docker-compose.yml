@@ -1,0 +1,38 @@
+services:
+  postgres:
+    container_name: firestorm-pg
+    image: postgres:18
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: firestorm_web_dev
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  firestorm:
+    container_name: firestorm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    build: .
+    ports:
+      - 4000:4000
+    volumes:
+      - .:/firestorm
+      - /firestorm/deps
+      - /firestorm/_build
+      - /firestorm/assets/node_modules
+    command: bash -c "mix deps.get && npm ci --prefix assets && mix ecto.create && mix ecto.migrate && mix phx.server"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+
+volumes:
+  pgdata:

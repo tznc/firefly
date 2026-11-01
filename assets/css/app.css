@@ -1,0 +1,117 @@
+/* See the Tailwind configuration guide for advanced usage
+   https://tailwindcss.com/docs/configuration */
+
+@import "tailwindcss" source(none);
+@import "../node_modules/prismjs/themes/prism-solarizedlight.css";
+@import "../node_modules/prismjs/plugins/line-numbers/prism-line-numbers.css";
+@source "../css";
+@source "../js";
+@source "../../lib/firestorm_web";
+
+/* "prose" styles for rendered markdown */
+@plugin "@tailwindcss/typography";
+
+/* A Tailwind plugin that makes "hero-#{ICON}" classes available.
+   The heroicons installation itself is managed by mix.exs */
+@plugin "../vendor/heroicons";
+
+/* daisyUI Tailwind plugin, managed by mix.exs */
+@plugin "daisyui/packages/bundle/daisyui" {
+  themes: false;
+}
+
+/* Firefly themes, from the brand palette (see brand/README.md):
+   red #DB3440, amber #FAAF3F, halo #FDE3B8, charcoal #4A4A4A, cream #F2EFEA. */
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "firefly";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: #FFFFFF;
+  --color-base-200: #F7F5F1;
+  --color-base-300: #E9E5DE;
+  --color-base-content: #2E2E2E;
+  --color-primary: #DB3440;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #4A4A4A;
+  --color-secondary-content: #F2EFEA;
+  --color-accent: #FAAF3F;
+  --color-accent-content: #3A2A0E;
+  --color-neutral: #4A4A4A;
+  --color-neutral-content: #F2EFEA;
+  --color-info: #2F7FD1;
+  --color-info-content: #FFFFFF;
+  --color-success: #2E9A63;
+  --color-success-content: #FFFFFF;
+  --color-warning: #FAAF3F;
+  --color-warning-content: #3A2A0E;
+  --color-error: #C42A35;
+  --color-error-content: #FFFFFF;
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/packages/bundle/daisyui-theme" {
+  name: "firefly-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: "dark";
+  --color-base-100: #2A2A2A;
+  --color-base-200: #222222;
+  --color-base-300: #1A1A1A;
+  --color-base-content: #F2EFEA;
+  --color-primary: #E5505B;
+  --color-primary-content: #1A1A1A;
+  --color-secondary: #F2EFEA;
+  --color-secondary-content: #2A2A2A;
+  --color-accent: #FAAF3F;
+  --color-accent-content: #2A1E08;
+  --color-neutral: #4A4A4A;
+  --color-neutral-content: #F2EFEA;
+  --color-info: #6BA9EA;
+  --color-info-content: #10213A;
+  --color-success: #5CC48F;
+  --color-success-content: #0E2A1C;
+  --color-warning: #FDE3B8;
+  --color-warning-content: #2A1E08;
+  --color-error: #F0707A;
+  --color-error-content: #2A0B0E;
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+/* Fira Sans, self-hosted from priv/static/fonts */
+@font-face { font-family: "Fira Sans"; font-weight: 400; font-display: swap; src: url("/fonts/fira-sans-v7-latin-regular.woff2") format("woff2"), url("/fonts/fira-sans-v7-latin-regular.woff") format("woff"); }
+@font-face { font-family: "Fira Sans"; font-weight: 500; font-display: swap; src: url("/fonts/fira-sans-v7-latin-500.woff2") format("woff2"), url("/fonts/fira-sans-v7-latin-500.woff") format("woff"); }
+@font-face { font-family: "Fira Sans"; font-weight: 600; font-display: swap; src: url("/fonts/fira-sans-v7-latin-600.woff2") format("woff2"), url("/fonts/fira-sans-v7-latin-600.woff") format("woff"); }
+@font-face { font-family: "Fira Sans"; font-weight: 700; font-display: swap; src: url("/fonts/fira-sans-v7-latin-700.woff2") format("woff2"), url("/fonts/fira-sans-v7-latin-700.woff") format("woff"); }
+
+@theme {
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Add variants based on LiveView classes */
+@custom-variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@custom-variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@custom-variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+
+/* Use the data attribute for dark mode */
+@custom-variant dark (&:where([data-theme=firefly-dark], [data-theme=firefly-dark] *));
+
+/* Make LiveView wrapper divs transparent for layout */
+[data-phx-session], [data-phx-teleported-src] { display: contents }
+
+/* Rendered markdown: keep embedded media inside the post column */
+.post-body iframe, .post-body img, .oembed iframe, .oembed img { max-width: 100%; }
