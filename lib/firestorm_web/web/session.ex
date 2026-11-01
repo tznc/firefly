@@ -1,7 +1,7 @@
 defmodule FirestormWeb.Web.Session do
   @moduledoc """
   Helpers for the logged-in user stored in the session (`"current_user"` holds
-  the user id).
+  the user id). A deleted account's sessions resolve to nobody.
   """
 
   alias FirestormWeb.Forums
@@ -17,7 +17,19 @@ defmodule FirestormWeb.Web.Session do
 
   @doc "Loads the user for a session user id, or nil."
   def user_from_id(nil), do: nil
-  def user_from_id(id), do: Forums.get_user(id)
+
+  def user_from_id(id) do
+    case Forums.get_user(id) do
+      %{deleted_at: nil} = user -> user
+      _missing_or_deleted -> nil
+    end
+  end
+
+  @doc """
+  The id LiveView sockets of `user` share (stored as `"live_socket_id"` at
+  login), so they can all be disconnected at once.
+  """
+  def live_socket_id(%{id: id}), do: "users_sockets:#{id}"
 
   def logged_in?(conn), do: !!current_user(conn)
 

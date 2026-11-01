@@ -19,12 +19,12 @@ defmodule FirestormWeb.Web.Plugs.ApiCurrentUser do
           |> String.replace("Bearer ", "")
 
         case Forums.get_user_by_api_token(api_token) do
-          nil ->
-            conn
-
-          user ->
+          %{deleted_at: nil} = user ->
             conn
             |> assign(:current_user, user)
+
+          _missing_or_deleted ->
+            conn
         end
     end
   end

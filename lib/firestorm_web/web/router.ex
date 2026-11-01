@@ -39,6 +39,8 @@ defmodule FirestormWeb.Web.Router do
     pipe_through(:browser)
 
     get("/users/:id/edit", UserController, :edit)
+    get("/settings/export", AccountController, :export)
+    delete("/settings/account", AccountController, :delete)
 
     live_session :default, on_mount: [{FirestormWeb.Web.UserAuth, :mount_current_user}] do
       # Declared first so that e.g. /categories/new wins over /categories/:id.
@@ -51,6 +53,7 @@ defmodule FirestormWeb.Web.Router do
       live("/settings/interface", SettingsLive.Index, :interface)
       live("/settings/notifications", SettingsLive.Index, :notifications)
       live("/settings/privacy", SettingsLive.Index, :privacy)
+      live("/settings/account", SettingsLive.Index, :account)
       live("/unread", ThreadLive.Unread, :index)
       live("/notifications", NotificationLive.Index, :index)
       live("/messages", MessageLive.Index, :index)

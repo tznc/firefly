@@ -9,6 +9,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       the levels threads get when you reply or start one
     * Privacy: hiding your activity from your profile, and yourself from the
       users directory
+    * Account: downloading your data and deleting your account (both handled
+      by `FirestormWeb.Web.AccountController`)
   """
   use FirestormWeb.Web, :live_view
 
@@ -21,7 +23,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     profile: {"Profile", "hero-user-circle"},
     interface: {"Interface", "hero-swatch"},
     notifications: {"Notifications", "hero-bell"},
-    privacy: {"Privacy", "hero-eye-slash"}
+    privacy: {"Privacy", "hero-eye-slash"},
+    account: {"Account", "hero-identification"}
   ]
 
   # Each preferences form only submits its own fields.
@@ -108,6 +111,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   defp section_path(:interface), do: ~p"/settings/interface"
   defp section_path(:notifications), do: ~p"/settings/notifications"
   defp section_path(:privacy), do: ~p"/settings/privacy"
+  defp section_path(:account), do: ~p"/settings/account"
 
   defp level_options(levels), do: Enum.map(levels, &{@level_labels[&1], &1})
 
@@ -250,6 +254,61 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
         </p>
         <.button variant="primary" phx-disable-with="Saving...">Save</.button>
       </.form>
+      <div :if={@live_action == :account} class="space-y-6">
+        <section class="card border border-base-300 bg-base-100">
+          <div class="card-body">
+            <h2 class="card-title text-base">Download your data</h2>
+            <p class="text-sm text-base-content/70">
+              A JSON file with your profile, settings, posts and their edits, threads, likes, notifications, private messages you sent and the conversations you're in.
+            </p>
+            <div class="card-actions">
+              <a href={~p"/settings/export"} id="export-data" class="btn btn-sm" download>
+                <.icon name="hero-arrow-down-tray" class="size-4" /> Download my data
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section class="card border border-error/40 bg-base-100">
+          <div class="card-body">
+            <h2 class="card-title text-base text-error">Delete your account</h2>
+            <p class="text-sm text-base-content/70">
+              Your profile, email, settings, notifications, likes and read positions are deleted, and you're logged out everywhere. Your posts, threads and private messages stay, credited to an anonymous deleted user. This can't be undone.
+            </p>
+            <.form
+              for={%{}}
+              as={:account}
+              id="delete-account-form"
+              action={~p"/settings/account"}
+              method="delete"
+              class="space-y-2"
+            >
+              <.input
+                :if={@current_user.password_hash}
+                name="confirmation"
+                type="password"
+                value=""
+                label="Your password"
+                autocomplete="current-password"
+              />
+              <.input
+                :if={!@current_user.password_hash}
+                name="confirmation"
+                type="text"
+                value=""
+                label={"Type your username (#{@current_user.username}) to confirm"}
+                autocomplete="off"
+              />
+              <button
+                class="btn btn-error btn-sm"
+                data-confirm="Delete your account for good?"
+              >
+                Delete my account
+              </button>
+            </.form>
+          </div>
+        </section>
+      </div>
     </Layouts.app>
     """
   end

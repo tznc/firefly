@@ -75,12 +75,15 @@ defmodule FirestormWeb.Forums do
   """
   def get_user_by_username(username), do: Repo.get_by(User, %{username: username})
 
-  @doc "The users with the given (downcased) usernames, as a map from downcased username to user."
+  @doc """
+  The users with the given (downcased) usernames, as a map from downcased
+  username to user. Deleted accounts can't be mentioned or messaged.
+  """
   def users_by_username([]), do: %{}
 
   def users_by_username(names) do
     User
-    |> where([u], fragment("lower(?)", u.username) in ^names)
+    |> where([u], fragment("lower(?)", u.username) in ^names and is_nil(u.deleted_at))
     |> Repo.all()
     |> Map.new(&{String.downcase(&1.username), &1})
   end
@@ -90,7 +93,7 @@ defmodule FirestormWeb.Forums do
     pattern = String.replace(prefix, ~r/[\\%_]/, "\\\\\\0") <> "%"
 
     User
-    |> where([u], ilike(u.username, ^pattern))
+    |> where([u], ilike(u.username, ^pattern) and is_nil(u.deleted_at))
     |> order_by([u], asc: fragment("length(?)", u.username), asc: u.username)
     |> limit(^limit)
     |> Repo.all()

@@ -14,6 +14,7 @@ defmodule FirestormWeb.RateLimit do
     * `:upload` - upload signatures per user
     * `:like` - likes and unlikes per user
     * `:message` - new private conversations per user
+    * `:export` - account data exports per user
   """
   use Hammer, backend: :ets
 
@@ -25,6 +26,7 @@ defmodule FirestormWeb.RateLimit do
     upload: {30, :timer.hours(1)},
     like: {30, :timer.minutes(5)},
     message: {10, :timer.hours(1)},
+    export: {3, :timer.hours(1)},
     email: {3, :timer.hours(1)},
     password_reset: {10, :timer.hours(1)}
   ]
@@ -53,6 +55,7 @@ defmodule FirestormWeb.RateLimit do
   def check_upload(%{id: user_id}), do: check(:upload, user_id)
   def check_like(%{id: user_id}), do: check(:like, user_id)
   def check_message(%{id: user_id}), do: check(:message, user_id)
+  def check_export(%{id: user_id}), do: check(:export, user_id)
 
   @doc "The message shown when a limit is hit."
   def message, do: "You're doing that too often. Please wait a moment and try again."

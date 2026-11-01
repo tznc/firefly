@@ -27,6 +27,7 @@ defmodule FirestormWeb.Forums.User do
     field(:new_thread_level, :string, default: "watching")
     field(:hide_profile_activity, :boolean, default: false)
     field(:hide_from_directory, :boolean, default: false)
+    field(:deleted_at, :utc_datetime)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -68,6 +69,9 @@ defmodule FirestormWeb.Forums.User do
     |> validate_inclusion(:reply_level, reply_levels())
     |> validate_inclusion(:new_thread_level, new_thread_levels())
   end
+
+  @doc "Whether the account was deleted (it remains, anonymized, as its posts' author)."
+  def deleted?(%__MODULE__{deleted_at: deleted_at}), do: not is_nil(deleted_at)
 
   @doc "Whether the user has confirmed their email address."
   def confirmed?(%__MODULE__{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)
