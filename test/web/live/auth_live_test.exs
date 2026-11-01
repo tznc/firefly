@@ -22,7 +22,7 @@ defmodule FirestormWeb.Web.AuthLiveTest do
     conn
     |> visit(~p"/auth/identity")
     |> fill_in("Username", with: "newbie")
-    |> fill_in("Password", with: "s3cret!")
+    |> fill_in("Password", with: "s3cret-password")
     |> click_button("Log in or register")
     |> assert_path(~p"/")
     |> assert_has("#flash-info", text: "Successfully authenticated.")
@@ -32,7 +32,8 @@ defmodule FirestormWeb.Web.AuthLiveTest do
   end
 
   test "a wrong password is rejected", %{conn: conn} do
-    {:ok, _} = Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+    {:ok, _} =
+      Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret-password"})
 
     conn
     |> visit(~p"/auth/identity")
@@ -49,7 +50,7 @@ defmodule FirestormWeb.Web.AuthLiveTest do
     |> fill_in("Username", with: "newbie")
     |> fill_in("Password", with: "abc")
     |> click_button("Log in or register")
-    |> assert_has("#flash-error", text: "password should be at least 6")
+    |> assert_has("#flash-error", text: "password should be at least 8")
   end
 
   test "logging out clears the session", %{conn: conn} do
@@ -67,5 +68,31 @@ defmodule FirestormWeb.Web.AuthLiveTest do
     |> visit("/auth/myspace")
     |> assert_path(~p"/login")
     |> assert_has("#flash-error", text: "Unknown login provider.")
+  end
+
+  test "logging out requires DELETE (a GET can't log you out)", %{conn: conn} do
+    user = user_fixture()
+    conn = conn |> log_in_as(user) |> get("/auth/logout")
+
+    assert get_session(conn, :current_user) == user.id
+    refute Phoenix.Flash.get(conn.assigns.flash, :info) == "You have been logged out!"
+  end
+
+  test "GitHub callbacks pass the GitHub user id", %{conn: conn} do
+    auth = %Ueberauth.Auth{
+      provider: :github,
+      uid: 4242,
+      info: %Ueberauth.Auth.Info{nickname: "octocat", name: "Octo", email: "octo@example.com"}
+    }
+
+    conn =
+      conn
+      |> Plug.Test.init_test_session(%{})
+      |> fetch_flash()
+      |> assign(:ueberauth_auth, auth)
+      |> FirestormWeb.Web.AuthController.callback(%{})
+
+    assert redirected_to(conn) == ~p"/"
+    assert Forums.get_user!(get_session(conn, :current_user)).github_uid == "4242"
   end
 end

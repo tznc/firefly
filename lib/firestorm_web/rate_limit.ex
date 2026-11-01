@@ -1,0 +1,51 @@
+defmodule FirestormWeb.RateLimit do
+  @moduledoc """
+  Rate limits (Hammer, in-memory ETS buckets per node).
+
+  Limits are `{max_hits, window_ms}` tuples from
+  `config :firestorm_web, FirestormWeb.RateLimit, limits: [...]`:
+
+    * `:login` - password login/registration attempts per username
+    * `:login_ip` - password login/registration attempts per client IP
+    * `:post` - new threads and posts per user (web, API and email)
+    * `:upload` - upload signatures per user
+  """
+  use Hammer, backend: :ets
+
+  @defaults [
+    login: {10, :timer.minutes(5)},
+    login_ip: {100, :timer.minutes(5)},
+    post: {10, :timer.minutes(1)},
+    upload: {30, :timer.hours(1)}
+  ]
+
+  @doc "Checks the `bucket` limit for `key`: `:ok` or `{:error, :rate_limited}`."
+  def check(bucket, key) do
+    {limit, scale} = limit(bucket)
+
+    case hit("#{bucket}:#{key}", scale, limit) do
+      {:allow, _count} -> :ok
+      {:deny, _retry_after} -> {:error, :rate_limited}
+    end
+  end
+
+  def check_login(username, remote_ip) do
+    with :ok <- check(:login_ip, format_ip(remote_ip)) do
+      check(:login, String.downcase(username || ""))
+    end
+  end
+
+  def check_post(%{id: user_id}), do: check(:post, user_id)
+  def check_upload(%{id: user_id}), do: check(:upload, user_id)
+
+  @doc "The message shown when a limit is hit."
+  def message, do: "You're doing that too often. Please wait a moment and try again."
+
+  defp limit(bucket) do
+    configured = Application.get_env(:firestorm_web, __MODULE__, [])[:limits] || []
+    Keyword.get(configured, bucket) || Keyword.fetch!(@defaults, bucket)
+  end
+
+  defp format_ip(ip) when is_tuple(ip), do: ip |> :inet.ntoa() |> to_string()
+  defp format_ip(ip), do: to_string(ip)
+end

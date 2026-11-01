@@ -57,7 +57,7 @@ defmodule FirestormWeb.Web.PostLiveTest do
     session
     |> assert_has("textarea", text: "Look:")
     |> assert_has("textarea",
-      text: "![cat.png](https://s3-us-east-1.amazonaws.com/firestorm-test/uploads/"
+      text: "![cat.png](https://firestorm-test.s3.us-east-1.amazonaws.com/uploads/"
     )
     |> assert_has("textarea", text: "/cat.png)")
   end

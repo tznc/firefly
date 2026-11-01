@@ -302,44 +302,76 @@ defmodule FirestormWeb.ForumsTest do
     assert user == Forums.get_user_by_username(user.username)
   end
 
-  describe "login_or_register_from_github/1 returns a user after creating one" do
-    test "when the user has name and public email on GitHub" do
-      auth_info = %{
-        name: "Josh Adams",
-        nickname: "knewter",
-        email: "josh@example.com"
-      }
+  describe "login_or_register_from_github/1" do
+    @github %{uid: 1001, name: "Josh Adams", nickname: "knewter", email: "josh@example.com"}
 
-      result = Forums.login_or_register_from_github(auth_info)
-      assert {:ok, user} = result
+    test "creates a user linked to the GitHub account id" do
+      assert {:ok, user} = Forums.login_or_register_from_github(@github)
       assert user.email == "josh@example.com"
+      assert user.username == "knewter"
+      assert user.github_uid == "1001"
     end
 
-    test "when the user doesn't have name and public email on GitHub" do
-      auth_info = %{
-        name: nil,
-        nickname: "knewter",
-        email: nil
-      }
+    test "fills in a missing name and email" do
+      assert {:ok, user} =
+               Forums.login_or_register_from_github(%{@github | name: nil, email: nil})
 
-      result = Forums.login_or_register_from_github(auth_info)
-      assert {:ok, user} = result
       assert user.name == "knewter"
       assert user.email == "knewter@users.noreply.github.com"
     end
-  end
 
-  test "login_or_register_from_github/1 returns a user if it already exists" do
-    auth_info = %{
-      name: "Josh Adams",
-      nickname: "knewter",
-      email: "josh@example.com"
-    }
+    test "logs the same GitHub account into the same user, even after a rename" do
+      {:ok, %{id: id}} = Forums.login_or_register_from_github(@github)
 
-    Forums.login_or_register_from_github(auth_info)
-    result = Forums.login_or_register_from_github(auth_info)
-    assert {:ok, user} = result
-    assert user.email == "josh@example.com"
+      assert {:ok, %{id: ^id}} = Forums.login_or_register_from_github(@github)
+
+      assert {:ok, %{id: ^id}} =
+               Forums.login_or_register_from_github(%{@github | nickname: "renamed"})
+    end
+
+    test "never logs a GitHub user into a password account with the same username" do
+      {:ok, victim} =
+        Forums.login_or_register_from_identity(%{
+          username: "knewter",
+          password: "s3cret-password"
+        })
+
+      assert {:ok, attacker} = Forums.login_or_register_from_github(@github)
+      refute attacker.id == victim.id
+      assert attacker.username == "knewter-1"
+    end
+
+    test "never logs a different GitHub account into an existing GitHub user" do
+      {:ok, first} = Forums.login_or_register_from_github(@github)
+
+      assert {:ok, other} = Forums.login_or_register_from_github(%{@github | uid: 2002})
+      refute other.id == first.id
+    end
+
+    test "links a pre-existing GitHub-created account only when the email matches" do
+      {:ok, legacy} =
+        Forums.create_user(%{username: "knewter", name: "Josh", email: "josh@example.com"})
+
+      assert {:ok, %{id: id, github_uid: "1001"}} = Forums.login_or_register_from_github(@github)
+      assert id == legacy.id
+
+      {:ok, other_legacy} =
+        Forums.create_user(%{username: "octo", name: "Octo", email: "octo@example.com"})
+
+      assert {:ok, impostor} =
+               Forums.login_or_register_from_github(%{
+                 uid: 3003,
+                 nickname: "octo",
+                 name: "X",
+                 email: "x@example.com"
+               })
+
+      refute impostor.id == other_legacy.id
+    end
+
+    test "requires a GitHub account id" do
+      assert {:error, _} = Forums.login_or_register_from_github(Map.delete(@github, :uid))
+    end
   end
 
   describe "posting in a thread" do
@@ -387,25 +419,31 @@ defmodule FirestormWeb.ForumsTest do
   describe "login_or_register_from_identity/1" do
     test "registers a new user with a hashed password" do
       assert {:ok, user} =
-               Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+               Forums.login_or_register_from_identity(%{
+                 username: "newbie",
+                 password: "s3cret-password"
+               })
 
       assert user.username == "newbie"
       assert is_binary(user.password_hash)
-      refute user.password_hash == "s3cret!"
-      assert Bcrypt.verify_pass("s3cret!", user.password_hash)
+      refute user.password_hash == "s3cret-password"
+      assert Bcrypt.verify_pass("s3cret-password", user.password_hash)
     end
 
     test "logs in an existing user with the right password" do
       {:ok, %{id: id}} =
-        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret-password"})
 
       assert {:ok, %{id: ^id}} =
-               Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+               Forums.login_or_register_from_identity(%{
+                 username: "newbie",
+                 password: "s3cret-password"
+               })
     end
 
     test "rejects an existing user with the wrong password" do
       {:ok, _} =
-        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret!"})
+        Forums.login_or_register_from_identity(%{username: "newbie", password: "s3cret-password"})
 
       assert {:error, _} =
                Forums.login_or_register_from_identity(%{username: "newbie", password: "wrong"})

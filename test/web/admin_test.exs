@@ -1,15 +1,6 @@
 defmodule FirestormWeb.Web.AdminTest do
   use FirestormWeb.Web.ConnCase
 
-  alias FirestormWeb.Forums
-
-  defp admin_fixture do
-    user = user_fixture()
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(user, role)
-    user
-  end
-
   test "visitors are sent away from /admin", %{conn: conn} do
     conn
     |> visit("/admin")

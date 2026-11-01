@@ -385,6 +385,16 @@ defmodule FirestormWeb.Forums do
     |> Repo.get!(id)
   end
 
+  @doc "The id of the user who started `thread` (the author of its first post)."
+  def thread_author_id(%Thread{id: thread_id}) do
+    Post
+    |> where([p], p.thread_id == ^thread_id)
+    |> order_by([p], asc: p.inserted_at, asc: p.id)
+    |> limit(1)
+    |> select([p], p.user_id)
+    |> Repo.one()
+  end
+
   @doc """
   Gets a thread by id.
 
@@ -546,27 +556,62 @@ defmodule FirestormWeb.Forums do
     |> put_assoc(:posts, thread.posts)
   end
 
-  def login_or_register_from_github(%{nickname: nickname, name: nil, email: _email} = user) do
-    login_or_register_from_github(%{user | name: nickname})
-  end
+  @doc """
+  Logs in (or registers) a GitHub user, identified by GitHub's immutable user
+  id (`uid`). Accounts are never matched by username alone: anyone can take a
+  GitHub username that matches a local account.
 
-  def login_or_register_from_github(%{nickname: nickname, name: _name, email: nil} = user) do
-    login_or_register_from_github(%{user | email: nickname <> "@users.noreply.github.com"})
-  end
+  For accounts created by GitHub logins before ids were stored, the account is
+  linked only if it has no password and the GitHub email matches its email.
+  New accounts get the GitHub username, or a suffixed one if it is taken.
+  """
+  def login_or_register_from_github(%{uid: uid} = info) when not is_nil(uid) do
+    uid = to_string(uid)
+    nickname = info[:nickname]
+    name = info[:name] || nickname
+    email = info[:email] || "#{nickname}@users.noreply.github.com"
 
-  def login_or_register_from_github(%{nickname: nickname, name: name, email: email}) do
-    case get_user_by_username(nickname) do
-      nil ->
-        create_user(%{
-          email: email,
-          name: name,
-          username: nickname,
-          api_token: generate_api_token()
-        })
-
-      user ->
-        {:ok, user}
+    case Repo.get_by(User, github_uid: uid) do
+      %User{} = user -> {:ok, user}
+      nil -> link_or_register_github_user(uid, nickname, name, email)
     end
+  end
+
+  def login_or_register_from_github(_info), do: {:error, "GitHub did not return an account id."}
+
+  # Links a legacy GitHub-created account (no password, no stored id) only when
+  # its email matches GitHub's; anything else gets a new account.
+  defp link_or_register_github_user(uid, nickname, name, email) do
+    case get_user_by_username(nickname) do
+      %User{github_uid: nil, password_hash: nil, email: user_email} = user
+      when is_binary(user_email) ->
+        if String.downcase(user_email) == String.downcase(email),
+          do: user |> User.github_changeset(%{github_uid: uid}) |> Repo.update(),
+          else: register_github_user(uid, nickname, name, email)
+
+      _taken_or_free ->
+        register_github_user(uid, nickname, name, email)
+    end
+  end
+
+  defp register_github_user(uid, nickname, name, email) do
+    %User{}
+    |> User.github_changeset(%{
+      github_uid: uid,
+      username: available_username(nickname),
+      name: name,
+      email: email,
+      api_token: generate_api_token()
+    })
+    |> Repo.insert()
+  end
+
+  defp available_username(nickname, attempt \\ 0) do
+    candidate = if attempt == 0, do: nickname, else: "#{nickname}-#{attempt}"
+
+    if get_user_by_username(candidate),
+      do: available_username(nickname, attempt + 1),
+      else: candidate
   end
 
   def login_or_register_from_identity(%{username: username, password: password}) do

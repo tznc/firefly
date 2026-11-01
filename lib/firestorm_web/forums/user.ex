@@ -15,6 +15,7 @@ defmodule FirestormWeb.Forums.User do
     field(:password_hash, :string)
     field(:password, :string, virtual: true)
     field(:api_token, :string)
+    field(:github_uid, :string)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -30,6 +31,15 @@ defmodule FirestormWeb.Forums.User do
     |> unique_constraint(:username)
   end
 
+  @doc "Links a user to a GitHub account (by GitHub's immutable user id)."
+  def github_changeset(%__MODULE__{} = user, attrs) do
+    user
+    |> changeset(attrs)
+    |> cast(attrs, [:github_uid])
+    |> validate_required([:github_uid])
+    |> unique_constraint(:github_uid)
+  end
+
   def admin_changeset(%__MODULE__{} = user, attrs \\ %{}) do
     user
     |> changeset(attrs)
@@ -40,7 +50,7 @@ defmodule FirestormWeb.Forums.User do
     user
     |> changeset(attrs)
     |> cast(attrs, [:password])
-    |> validate_length(:password, min: 6)
+    |> validate_length(:password, min: 8, max: 72)
     |> put_password_hash()
   end
 

@@ -10,20 +10,11 @@ defmodule FirestormWeb.Emails do
   def thread_new_post_notification(%User{} = user, %Thread{} = thread, %Post{} = post) do
     new_email()
     |> to(user.email)
-    |> from("noreply@firestormforum.org")
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
     |> subject("There was a new post in a thread you are watching on Firefly")
     |> html_body(html_body_for(thread, post))
     |> text_body(text_body_for(thread, post))
-    |> put_header("reply-to", reply_to_thread_address(thread))
-  end
-
-  defp reply_to_thread_address(%{id: id}) do
-    "reply-thread-#{id}@#{inbound_email_domain()}"
-  end
-
-  defp inbound_email_domain do
-    # This goes into config at some point
-    "notifier.firestormforum.org"
+    |> put_header("reply-to", FirestormWeb.ReplyAddress.address(thread, user))
   end
 
   defdelegate thread_url(thread), to: FirestormWeb.Web.Paths

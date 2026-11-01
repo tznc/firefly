@@ -44,6 +44,13 @@ config :ueberauth, Ueberauth,
 
 config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.LocalAdapter
 
+# Outbound email and reply-by-email. `inbound_token` is the shared secret the
+# SendGrid Inbound Parse webhook must send (reply-by-email is off without it).
+config :firestorm_web, :email,
+  from: {"Firefly", "noreply@firefly.tznc.dev"},
+  reply_domain: "reply.firefly.tznc.dev",
+  inbound_token: nil
+
 # Kaffy admin UI, mounted at /admin for users with the "admin" role
 config :kaffy,
   otp_app: :firestorm_web,

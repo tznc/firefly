@@ -26,8 +26,8 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> assert_path("/auth/identity")
   end
 
-  test "a member creates a category and starts a thread with a live preview", %{conn: conn} do
-    member_fixture("alice")
+  test "an admin creates a category and starts a thread with a live preview", %{conn: conn} do
+    admin_fixture("alice")
 
     conn
     |> log_in("alice")

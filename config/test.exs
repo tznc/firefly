@@ -51,6 +51,11 @@ config :firestorm_web, notifications_enabled: false
 
 config :firestorm_web, FirestormWeb.Mailer, adapter: Bamboo.TestAdapter
 
+config :firestorm_web, :email,
+  from: {"Firefly", "noreply@firefly.tznc.dev"},
+  reply_domain: "reply.firefly.tznc.dev",
+  inbound_token: "test-inbound-token"
+
 config :bamboo, :refute_timeout, 10
 
 config :bcrypt_elixir, :log_rounds, 4
@@ -63,3 +68,13 @@ config :firestorm_web, :aws,
 
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view, enable_expensive_runtime_checks: true
+
+# Generous limits so ordinary tests never trip them; rate limit tests lower
+# them explicitly.
+config :firestorm_web, FirestormWeb.RateLimit,
+  limits: [
+    login: {1_000, 60_000},
+    login_ip: {10_000, 60_000},
+    post: {1_000, 60_000},
+    upload: {1_000, 60_000}
+  ]

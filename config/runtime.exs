@@ -45,7 +45,7 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST", "forum.firestormforum.org")
+  host = System.get_env("PHX_HOST", "firefly.tznc.dev")
   port = String.to_integer(System.get_env("PORT", "4000"))
 
   config :firestorm_web, FirestormWeb.Web.Endpoint,
@@ -56,4 +56,9 @@ if config_env() == :prod do
   config :firestorm_web, FirestormWeb.Mailer,
     adapter: Bamboo.SendGridAdapter,
     api_key: System.get_env("SENDGRID_API_KEY")
+
+  config :firestorm_web, :email,
+    from: {"Firefly", System.get_env("EMAIL_FROM", "noreply@#{host}")},
+    reply_domain: System.get_env("REPLY_EMAIL_DOMAIN", "reply.#{host}"),
+    inbound_token: System.get_env("INBOUND_EMAIL_TOKEN")
 end

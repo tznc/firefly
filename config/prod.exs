@@ -6,8 +6,8 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :firestorm_web, FirestormWeb.Web.Endpoint,
-  url: [scheme: "https", host: "forum.firestormforum.org", port: 443],
-  force_ssl: [rewrite_on: [:x_forwarded_proto]],
+  url: [scheme: "https", host: "firefly.tznc.dev", port: 443],
+  force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production
