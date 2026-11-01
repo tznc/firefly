@@ -15,6 +15,7 @@ defmodule FirestormWeb.Web.Api.V1.PostJSON do
       body_html: Markdown.render(body),
       deleted: Post.deleted?(post),
       hidden: Post.hidden?(post),
+      awaiting_approval: Post.queued?(post),
       user_id: post.user_id,
       oembeds:
         Enum.map(post.oembeds || [], fn {url, oembed} -> [url, OEmbed.to_html(oembed)] end),

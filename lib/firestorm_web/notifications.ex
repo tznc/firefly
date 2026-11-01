@@ -134,9 +134,10 @@ defmodule FirestormWeb.Notifications do
     end
   end
 
-  # Reloaded: a post deleted before we get to it notifies no one.
+  # Reloaded: a post deleted (or not yet approved) before we get to it
+  # notifies no one.
   defp reload(%Post{id: id}) do
-    with %Post{deleted_at: nil} = post <- Repo.get(Post, id),
+    with %Post{deleted_at: nil, queued_at: nil} = post <- Repo.get(Post, id),
          %Post{thread: %Thread{} = thread} = post <- Repo.preload(post, [:user, :thread]) do
       {:ok, thread, post}
     end

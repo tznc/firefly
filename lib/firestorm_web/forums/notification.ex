@@ -7,7 +7,8 @@ defmodule FirestormWeb.Forums.Notification do
   or being added to a conversation; with `conversation_id`) or `"silenced"`/
   `"suspended"` (a staff penalty; the body is the reason), `"post_hidden"`
   (your post was hidden after flags) or `"flagged"` (for admins: a post was
-  flagged; one per post while unread). `read_at` is set when you open it
+  flagged; one per post while unread) or `"post_rejected"` (staff rejected
+  your post awaiting approval; the body is the reason). `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
 
@@ -15,7 +16,7 @@ defmodule FirestormWeb.Forums.Notification do
   alias FirestormWeb.Forums.{Conversation, Message, User, Thread, Post}
   import Ecto.Changeset
 
-  @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged)
+  @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected)
 
   schema "forums_notifications" do
     field(:kind, :string, default: "new_post")

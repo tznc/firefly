@@ -6,16 +6,18 @@ defmodule FirestormWeb.Forums.Post do
   use Ecto.Schema
   import Ecto.Changeset, warn: false
   import Ecto.Query
-  alias FirestormWeb.Forums.{User, Thread, View}
+  alias FirestormWeb.Forums.{Flag, User, Thread, View}
 
   schema "forums_posts" do
     field(:body, :string)
     field(:edited_at, :naive_datetime_usec)
     field(:deleted_at, :utc_datetime)
     field(:hidden_at, :utc_datetime)
+    field(:queued_at, :utc_datetime)
     belongs_to(:deleted_by, User)
     belongs_to(:thread, Thread)
     belongs_to(:user, User)
+    has_many(:flags, Flag)
     has_many(:views, {"forums_posts_views", View}, foreign_key: :assoc_id)
 
     many_to_many(
@@ -52,8 +54,15 @@ defmodule FirestormWeb.Forums.Post do
   """
   def hidden?(%__MODULE__{hidden_at: at}), do: not is_nil(at)
 
-  @doc "Posts that aren't deleted."
-  def visible(query \\ __MODULE__), do: where(query, [p], is_nil(p.deleted_at))
+  @doc """
+  Whether the post waits for staff approval (see `FirestormWeb.Review`).
+  Until then only its author and admins see it.
+  """
+  def queued?(%__MODULE__{queued_at: at}), do: not is_nil(at)
+
+  @doc "Posts that are published: not deleted or awaiting approval."
+  def visible(query \\ __MODULE__),
+    do: where(query, [p], is_nil(p.deleted_at) and is_nil(p.queued_at))
 
   def ordered(query) do
     query

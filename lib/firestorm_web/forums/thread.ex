@@ -70,7 +70,7 @@ defmodule FirestormWeb.Forums.Thread do
   def new_changeset(%{thread: thread_attrs, post: post_attrs}, user \\ nil) do
     post_changeset =
       %Post{}
-      |> cast(post_attrs, [:body, :user_id])
+      |> cast(post_attrs, [:body, :user_id, :queued_at])
       |> validate_required([:body, :user_id])
 
     post_changeset =

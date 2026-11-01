@@ -3,7 +3,9 @@ defmodule FirestormWeb.Web.UserAuth do
   `on_mount` hooks for LiveViews:
 
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
-      the unread notification and conversation counts and the current path.
+      the unread notification and conversation counts, for admins the review
+      queue's count (kept live; views can export `review_changed/1` to react
+      too) and the current path.
       For a user, it also handles the theme toggle's `"set_theme"` event on
       every page, saving their theme.
     * `:require_user` - redirects to the categories page when nobody is
@@ -16,7 +18,7 @@ defmodule FirestormWeb.Web.UserAuth do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
   import Phoenix.LiveView
 
-  alias FirestormWeb.{Forums, Messages}
+  alias FirestormWeb.{Forums, Messages, Review}
   alias FirestormWeb.Web.Session
 
   def on_mount(:mount_current_user, _params, session, socket) do
@@ -46,6 +48,7 @@ defmodule FirestormWeb.Web.UserAuth do
     |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
     |> assign_counts()
     |> subscribe_to_notifications()
+    |> subscribe_to_review()
     |> handle_set_theme()
     |> attach_hook(:current_path, :handle_params, fn _params, uri, socket ->
       {:cont, assign(socket, :current_path, URI.parse(uri).path)}
@@ -59,6 +62,34 @@ defmodule FirestormWeb.Web.UserAuth do
     |> assign(:notification_count, notification_count(user))
     |> assign(:message_count, Messages.unread_conversation_count(user))
   end
+
+  defp staff?(%{assigns: %{current_user: %{} = user}}), do: Forums.admin?(user)
+  defp staff?(_socket), do: false
+
+  defp subscribe_to_review(socket) do
+    if staff?(socket) do
+      if connected?(socket), do: Review.subscribe()
+
+      socket
+      |> assign(:review_count, Review.pending_count())
+      |> attach_hook(:review, :handle_info, &handle_review/2)
+    else
+      assign(socket, :review_count, 0)
+    end
+  end
+
+  defp handle_review(:review_changed, socket) do
+    socket = assign(socket, :review_count, Review.pending_count())
+
+    socket =
+      if function_exported?(socket.view, :review_changed, 1),
+        do: socket.view.review_changed(socket),
+        else: socket
+
+    {:halt, socket}
+  end
+
+  defp handle_review(_other, socket), do: {:cont, socket}
 
   defp notification_count(nil), do: 0
   defp notification_count(user), do: Forums.unread_notification_count(user)

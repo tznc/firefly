@@ -44,16 +44,19 @@ defmodule FirestormWeb.Web.PostLive.New do
 
   defp create_post(socket, thread, category, user, params) do
     case Forums.create_post(thread, user, %{body: params["body"]}) do
-      {:ok, _post} ->
+      {:ok, post} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Post created successfully.")
+         |> put_flash(:info, created_message(post))
          |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :form, to_form(changeset))}
     end
   end
+
+  defp created_message(%Post{queued_at: nil}), do: "Post created successfully."
+  defp created_message(_queued), do: "Thanks! Your post is awaiting approval by staff."
 
   # `?quote=<post id>` starts the reply with a quote of that post (of just
   # `&selection=` if it's really part of the post).

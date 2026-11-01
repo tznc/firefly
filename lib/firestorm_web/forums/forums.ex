@@ -352,10 +352,16 @@ defmodule FirestormWeb.Forums do
   policy). Raises `Ecto.NoResultsError` otherwise.
   """
   def get_visible_thread!(%Category{id: category_id}, id, viewer) do
-    threads_query()
-    |> where([t], t.category_id == ^category_id)
-    |> Policy.readable_threads(viewer)
-    |> Repo.get!(id)
+    thread =
+      threads_query()
+      |> where([t], t.category_id == ^category_id)
+      |> Policy.readable_threads(viewer)
+      |> Repo.get!(id)
+
+    # Lists leave out threads awaiting approval; this catches a direct link.
+    if Policy.authorize(:view_thread, viewer, thread) == :ok,
+      do: thread,
+      else: raise(Ecto.NoResultsError, queryable: Thread)
   end
 
   # Threads, bound as `:thread` (see `Policy.readable_threads/2`).
@@ -700,13 +706,14 @@ defmodule FirestormWeb.Forums do
   end
 
   # A thread whose first post is hidden after flags (see `FirestormWeb.Flags`)
-  # is off the lists until staff review it.
+  # or awaiting approval (see `FirestormWeb.Review`) is off the lists until
+  # staff review it.
   defp without_hidden_first_post(query) do
     where(
       query,
       [thread: t],
       fragment(
-        "NOT EXISTS (SELECT 1 FROM forums_posts fp WHERE fp.id = (SELECT f.id FROM forums_posts f WHERE f.thread_id = ? ORDER BY f.inserted_at, f.id LIMIT 1) AND fp.hidden_at IS NOT NULL)",
+        "NOT EXISTS (SELECT 1 FROM forums_posts fp WHERE fp.id = (SELECT f.id FROM forums_posts f WHERE f.thread_id = ? ORDER BY f.inserted_at, f.id LIMIT 1) AND (fp.hidden_at IS NOT NULL OR fp.queued_at IS NOT NULL))",
         t.id
       )
     )
@@ -725,7 +732,7 @@ defmodule FirestormWeb.Forums do
       :left_lateral,
       [t],
       lp in fragment(
-        "SELECT max(inserted_at) AS at FROM forums_posts WHERE forums_posts.thread_id = ? AND forums_posts.deleted_at IS NULL",
+        "SELECT max(inserted_at) AS at FROM forums_posts WHERE forums_posts.thread_id = ? AND forums_posts.deleted_at IS NULL AND forums_posts.queued_at IS NULL",
         t.id
       ),
       on: true,
@@ -1005,6 +1012,7 @@ defmodule FirestormWeb.Forums do
       attrs
       |> Map.take([:body])
       |> Map.put(:user_id, user.id)
+      |> Map.put(:queued_at, queued_at(user))
 
     thread_attrs =
       attrs
@@ -1019,35 +1027,95 @@ defmodule FirestormWeb.Forums do
 
     case thread_result do
       {:ok, thread} ->
-        thread =
-          thread
-          |> Repo.preload([:category, posts: [:user]])
-
-        [thread] =
-          [thread]
-          |> decorate_threads(nil)
-
-        {posts, users} =
-          case thread.first_post do
-            nil -> {[], []}
-            post -> {[post], [post.user]}
-          end
-
-        payload = %ReplenishResponse{
-          categories: [thread.category],
-          threads: [thread],
-          users: users,
-          posts: posts
-        }
-
-        :ok = Endpoint.broadcast!("categories:#{thread.category_id}", "update", payload)
-        broadcast_thread(:thread_created, thread)
         {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.new_thread_level)
-        :ok = Notifications.thread_created(thread)
-        {:ok, thread}
+
+        # A new user's thread waits for approval (see FirestormWeb.Review),
+        # announced only once approved.
+        if Enum.any?(thread.posts, &Post.queued?/1) do
+          FirestormWeb.Review.changed()
+
+          {:ok,
+           thread
+           |> Repo.preload([:category, posts: [:user]])
+           |> List.wrap()
+           |> decorate_threads(nil)
+           |> hd()}
+        else
+          {:ok, announce_thread(thread)}
+        end
 
       e ->
         e
+    end
+  end
+
+  @doc """
+  Tells everyone about a new (or newly approved) thread: live pages and
+  the category's subscribers. Returns the thread, loaded for lists.
+  """
+  def announce_thread(%Thread{} = thread) do
+    thread =
+      thread
+      |> Repo.preload([:category, posts: [:user]], force: true)
+
+    [thread] =
+      [thread]
+      |> decorate_threads(nil)
+
+    {posts, users} =
+      case thread.first_post do
+        nil -> {[], []}
+        post -> {[post], [post.user]}
+      end
+
+    payload = %ReplenishResponse{
+      categories: [thread.category],
+      threads: [thread],
+      users: users,
+      posts: posts
+    }
+
+    :ok = Endpoint.broadcast!("categories:#{thread.category_id}", "update", payload)
+    broadcast_thread(:thread_created, thread)
+    :ok = Notifications.thread_created(thread)
+    thread
+  end
+
+  # Set on a post that must wait for approval (see `approval_required?/1`).
+  defp queued_at(user), do: if(approval_required?(user), do: DateTime.utc_now(:second))
+
+  @doc """
+  Whether `user`'s next thread or reply waits for staff approval: their
+  first `approve_new_user_posts` (a site setting; 0: off) posts do, unless
+  they're an admin.
+  """
+  def approval_required?(%User{} = user) do
+    case SiteSettings.get("approve_new_user_posts") do
+      0 -> false
+      count -> not admin?(user) and published_post_count(user) < count
+    end
+  end
+
+  defp published_post_count(user) do
+    Post
+    |> where([p], p.user_id == ^user.id and is_nil(p.queued_at))
+    |> Repo.aggregate(:count)
+  end
+
+  @doc """
+  The id of the author of `thread`, if it's awaiting approval (its first
+  post is queued); nil for a published thread.
+  """
+  def queued_thread_author_id(%Thread{id: thread_id}) do
+    Post
+    |> where([p], p.thread_id == ^thread_id)
+    |> order_by([p], asc: p.inserted_at, asc: p.id)
+    |> limit(1)
+    |> select([p], {p.user_id, p.queued_at})
+    |> Repo.one()
+    |> case do
+      {author_id, %DateTime{}} -> author_id
+      _published_or_empty -> nil
     end
   end
 
@@ -1419,26 +1487,45 @@ defmodule FirestormWeb.Forums do
       |> Map.put(:thread_id, thread.id)
       |> Map.put(:user_id, user.id)
 
-    changeset = %Post{} |> Post.changeset(attrs) |> SpamGuard.validate_post(user)
+    changeset =
+      %Post{queued_at: queued_at(user)}
+      |> Post.changeset(attrs)
+      |> SpamGuard.validate_post(user)
 
     with {:ok, post} <- Repo.insert(changeset) do
       {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.reply_level)
-      :ok = Notifications.post_created(post)
 
-      post = Repo.preload(post, [:thread, :user])
-
-      payload = %ReplenishResponse{
-        categories: [],
-        threads: [post.thread],
-        users: [post.user],
-        posts: [post]
-      }
-
-      :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
-      broadcast("forums:thread:#{post.thread_id}", {:post_created, post})
-      broadcast_thread(:thread_activity, post.thread)
-      {:ok, post}
+      if Post.queued?(post) do
+        FirestormWeb.Review.changed()
+        # The author's open thread page shows it, awaiting approval.
+        broadcast("forums:thread:#{post.thread_id}", {:post_created, post})
+        {:ok, post}
+      else
+        {:ok, announce_post(post)}
+      end
     end
+  end
+
+  @doc """
+  Tells everyone about a new (or newly approved) reply: live pages and the
+  thread's subscribers. Returns the post with its thread and user.
+  """
+  def announce_post(%Post{} = post) do
+    :ok = Notifications.post_created(post)
+
+    post = Repo.preload(post, [:thread, :user])
+
+    payload = %ReplenishResponse{
+      categories: [],
+      threads: [post.thread],
+      users: [post.user],
+      posts: [post]
+    }
+
+    :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
+    broadcast("forums:thread:#{post.thread_id}", {:post_created, post})
+    broadcast_thread(:thread_activity, post.thread)
+    post
   end
 
   @doc """
@@ -1572,7 +1659,8 @@ defmodule FirestormWeb.Forums do
     )
   end
 
-  defp first_post?(%Post{id: id, thread_id: thread_id}) do
+  @doc "Whether `post` is its thread's first post."
+  def first_post?(%Post{id: id, thread_id: thread_id}) do
     Post
     |> where([p], p.thread_id == ^thread_id)
     |> order_by([p], asc: p.inserted_at, asc: p.id)

@@ -120,6 +120,17 @@ defmodule FirestormWeb.SiteSettings do
         help: "On: members can only use existing tags."
       },
       %{
+        key: "approve_new_user_posts",
+        section: "Spam and new users",
+        type: :integer,
+        label: "Posts needing approval",
+        default: 0,
+        min: 0,
+        max: 100,
+        help:
+          "A new user's first this-many threads and replies wait in the review queue until staff approve them. 0: off."
+      },
+      %{
         key: "max_tags_per_thread",
         section: "Content",
         type: :integer,
