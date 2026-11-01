@@ -4,8 +4,8 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{Forums, Posting, Repo}
-  alias FirestormWeb.Forums.Thread
+  alias FirestormWeb.{Forums, Posting, Repo, Tags}
+  alias FirestormWeb.Forums.{Tag, Thread}
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
@@ -31,7 +31,8 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
        :tags,
        thread |> Repo.preload(:tags) |> Map.get(:tags) |> Enum.map_join(", ", & &1.name)
      )
-     |> assign(:form, to_form(Forums.change_thread(thread)))}
+     |> assign(:form, to_form(Forums.change_thread(thread)))
+     |> assign(:tag_groups, Tags.picker(socket.assigns.current_user))}
   end
 
   @impl true
@@ -43,6 +44,9 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
      |> assign(:tags, params["tags"])
      |> assign(:form, to_form(changeset, action: :validate))}
   end
+
+  def handle_event("pick_tag", %{"name" => name}, socket),
+    do: {:noreply, assign(socket, :tags, Tag.append(socket.assigns.tags, name))}
 
   def handle_event("save", %{"thread" => params}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
@@ -71,6 +75,7 @@ defmodule FirestormWeb.Web.ThreadLive.Edit do
       <.form for={@form} id="thread-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <.input field={@form[:title]} type="text" label="Title" />
         <.tags_input field={@form[:tags]} value={@tags} />
+        <.tag_picker groups={@tag_groups} />
         <div class="flex justify-end gap-2">
           <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"} class="btn btn-ghost">
             Back

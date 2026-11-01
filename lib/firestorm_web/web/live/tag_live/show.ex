@@ -1,13 +1,25 @@
 defmodule FirestormWeb.Web.TagLive.Show do
-  @moduledoc "A tag's threads, most recently active first; updates live."
+  @moduledoc """
+  A tag's threads, most recently active first; updates live. A synonym's
+  page redirects to its canonical tag's (see `FirestormWeb.Tags`).
+  """
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.Forums
-  alias FirestormWeb.Forums.Subscriptions
+  alias FirestormWeb.Forums.{Subscriptions, Tag}
 
   @impl true
   def mount(%{"name" => name}, _session, socket) do
-    tag = Forums.get_tag!(name)
+    case Forums.get_tag!(name) do
+      %{synonym_of: %Tag{name: canonical}} ->
+        {:ok, push_navigate(socket, to: ~p"/tags/#{canonical}")}
+
+      tag ->
+        mount_tag(tag, socket)
+    end
+  end
+
+  defp mount_tag(tag, socket) do
     if connected?(socket), do: Forums.subscribe("forums:threads")
 
     {:ok,

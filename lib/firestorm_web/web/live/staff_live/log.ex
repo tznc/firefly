@@ -37,6 +37,11 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "category.create" => "Created category",
     "category.update" => "Updated category",
     "category.delete" => "Deleted category",
+    "tag_group.create" => "Created tag group",
+    "tag_group.update" => "Updated tag group",
+    "tag_group.delete" => "Deleted tag group",
+    "tag.synonym" => "Made tag a synonym",
+    "tag.unsynonym" => "Removed tag synonym",
     "role.create" => "Created group",
     "role.grant" => "Granted role",
     "role.revoke" => "Revoked role",
@@ -103,7 +108,12 @@ defmodule FirestormWeb.Web.StaffLive.Log do
   defp target_link(%{target_type: "role", details: %{"role" => role}}, _target),
     do: {role, ~p"/staff/groups"}
 
+  defp target_link(%{target_type: "tag_group", details: %{"name" => name}}, _target),
+    do: {name, ~p"/staff/tags"}
+
   defp target_link(_entry, nil), do: nil
+
+  defp target_link(%{target_type: "tag"}, tag), do: {"#" <> tag.name, ~p"/tags/#{tag.name}"}
 
   defp target_link(%{target_type: "thread"}, thread),
     do: {thread.title, ~p"/categories/#{thread.category_id}/threads/#{thread}"}

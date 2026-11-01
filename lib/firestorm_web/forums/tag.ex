@@ -3,12 +3,16 @@ defmodule FirestormWeb.Forums.Tag do
   A tag on threads. Names are lowercase and URL-safe (letters, digits and
   inner dashes, up to 30 characters), so they work as-is in `/tags/:name`.
   A thread has at most `max_per_thread/0` tags.
+
+  A tag may be in a group (see `FirestormWeb.Forums.TagGroup`) and may be a
+  synonym of another, canonical tag: applying the synonym applies the
+  canonical tag, and its page redirects there (see `FirestormWeb.Tags`).
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias FirestormWeb.Forums.Thread
+  alias FirestormWeb.Forums.{TagGroup, Thread}
 
   @max_length 30
   @name_format ~r/^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -16,6 +20,9 @@ defmodule FirestormWeb.Forums.Tag do
   schema "forums_tags" do
     field(:name, :string)
     field(:threads_count, :integer, virtual: true)
+    belongs_to(:group, TagGroup)
+    belongs_to(:synonym_of, __MODULE__)
+    has_many(:synonyms, __MODULE__, foreign_key: :synonym_of_id, preload_order: [asc: :name])
     many_to_many(:threads, Thread, join_through: "forums_threads_tags")
 
     timestamps(type: :naive_datetime_usec)
@@ -47,6 +54,18 @@ defmodule FirestormWeb.Forums.Tag do
     |> Enum.reject(&(&1 == ""))
     |> Enum.uniq()
   end
+
+  @doc "The tag a synonym stands for (its `synonym_of` loaded), or the tag itself."
+  def canonical(%__MODULE__{synonym_of: %__MODULE__{} = canonical}), do: canonical
+  def canonical(%__MODULE__{} = tag), do: tag
+
+  @doc "Whether only staff may apply the tag (its `group` loaded)."
+  def staff_only?(%__MODULE__{group: %TagGroup{staff_only: true}}), do: true
+  def staff_only?(%__MODULE__{}), do: false
+
+  @doc "Tags input with `name` added (once), as the picker fills the field."
+  def append(input, name),
+    do: input |> parse() |> Kernel.++([name]) |> Enum.uniq() |> Enum.join(", ")
 
   @doc "Whether `name` (already parsed) is a valid tag name."
   def valid_name?(name),
