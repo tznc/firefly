@@ -730,13 +730,15 @@ defmodule FirestormWeb.Forums do
 
   # A thread whose first post is hidden after flags (see `FirestormWeb.Flags`)
   # or awaiting approval (see `FirestormWeb.Review`) is off the lists until
-  # staff review it.
+  # staff review it. Hidden and queued posts are looked up first (partial
+  # indexes; there are few), so the first post is only worked out for
+  # threads that have one.
   defp without_hidden_first_post(query) do
     where(
       query,
       [thread: t],
       fragment(
-        "NOT EXISTS (SELECT 1 FROM forums_posts fp WHERE fp.id = (SELECT f.id FROM forums_posts f WHERE f.thread_id = ? ORDER BY f.inserted_at, f.id LIMIT 1) AND (fp.hidden_at IS NOT NULL OR fp.queued_at IS NOT NULL))",
+        "NOT EXISTS (SELECT 1 FROM forums_posts h WHERE h.thread_id = ? AND (h.hidden_at IS NOT NULL OR h.queued_at IS NOT NULL) AND h.id = (SELECT f.id FROM forums_posts f WHERE f.thread_id = h.thread_id ORDER BY f.inserted_at, f.id LIMIT 1))",
         t.id
       )
     )
@@ -2119,7 +2121,12 @@ defmodule FirestormWeb.Forums do
 
     Notification
     |> where([n], n.user_id == ^user.id)
-    |> where([n], is_nil(n.thread_id) or n.thread_id in subquery(readable))
+    |> where(
+      [n],
+      not is_nil(n.conversation_id) or
+        (is_nil(n.thread_id) and n.kind in ^Notification.threadless_kinds()) or
+        n.thread_id in subquery(readable)
+    )
   end
 
   def notifications_topic(user_id), do: "user:#{user_id}:notifications"

@@ -8,16 +8,10 @@ defmodule FirestormWeb.Web.AuthLive.ForgotPassword do
 
   @impl true
   def mount(_params, _session, socket) do
-    remote_ip =
-      case get_connect_info(socket, :peer_data) do
-        %{address: address} -> address
-        _ -> "unknown"
-      end
-
     {:ok,
      socket
      |> assign(:page_title, "Reset your password")
-     |> assign(:remote_ip, remote_ip)
+     |> assign(:remote_ip, FirestormWeb.Web.ClientIP.from_socket(socket))
      |> assign(:form, to_form(%{"email" => ""}, as: :user))}
   end
 

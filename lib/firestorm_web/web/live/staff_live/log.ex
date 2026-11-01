@@ -23,6 +23,7 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "post.edit" => "Edited post",
     "post.delete" => "Deleted post",
     "post.restore" => "Restored post",
+    "post.unhide" => "Unhid flagged post",
     "post.approve" => "Approved post",
     "post.reject" => "Rejected post",
     "flag.agree" => "Agreed with flags",

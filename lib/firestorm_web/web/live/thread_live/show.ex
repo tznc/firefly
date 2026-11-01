@@ -108,7 +108,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              "restore_post",
              "toggle_like",
              "flag",
-             "submit_flag"
+             "submit_flag",
+             "unhide"
            ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
@@ -211,6 +212,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   def handle_event("cancel_flag", _params, socket),
     do: {:noreply, assign(socket, :flagging, nil)}
 
+  # Only after a "flag" event picked the post (a stale or crafted submit
+  # without one is ignored).
+  def handle_event("submit_flag", _params, %{assigns: %{flagging: nil}} = socket),
+    do: {:noreply, socket}
+
   def handle_event("submit_flag", %{"flag" => params}, socket) do
     %{thread: thread, current_user: user, flagging: post_id} = socket.assigns
     post = Forums.get_post!(thread, post_id)
@@ -228,6 +234,17 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
       {:error, reason} ->
         {:noreply, socket |> assign(:flagging, nil) |> put_flash(:error, Flags.message(reason))}
+    end
+  end
+
+  def handle_event("unhide", %{"id" => id}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+
+    with true <- can?(user, :unhide_post) || {:error, :unauthorized},
+         {:ok, _post} <- thread |> Forums.get_post!(id) |> Flags.unhide(user) do
+      {:noreply, socket |> put_flash(:info, "Post unhidden.") |> load_thread(thread)}
+    else
+      {:error, reason} -> {:noreply, put_flash(socket, :error, Flags.message(reason))}
     end
   end
 
@@ -426,7 +443,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       <ol id="posts" class="space-y-4">
         <li>
           <.hidden_post :if={MapSet.member?(@hidden_ids, @first_post.id)} post={@first_post} />
-          <.hidden_notice :if={Post.hidden?(@first_post) and not MapSet.member?(@hidden_ids, @first_post.id)} />
+          <.hidden_notice
+            :if={Post.hidden?(@first_post) and not MapSet.member?(@hidden_ids, @first_post.id)}
+            post={@first_post}
+            can_unhide={@admin?}
+          />
           <.awaiting_notice :if={Post.queued?(@first_post)} />
           <.post
             :if={not MapSet.member?(@hidden_ids, @first_post.id)}
@@ -472,7 +493,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             :if={not Post.deleted?(post) and MapSet.member?(@hidden_ids, post.id)}
             post={post}
           />
-          <.hidden_notice :if={Post.hidden?(post) and not MapSet.member?(@hidden_ids, post.id)} />
+          <.hidden_notice
+            :if={Post.hidden?(post) and not MapSet.member?(@hidden_ids, post.id)}
+            post={post}
+            can_unhide={@admin?}
+          />
           <.awaiting_notice :if={Post.queued?(post) and not Post.deleted?(post)} />
           <.post
             :if={

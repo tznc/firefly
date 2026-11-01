@@ -1,6 +1,8 @@
 defmodule FirestormWeb.Web.FlaggingLiveTest do
   use FirestormWeb.Web.ConnCase
 
+  require Phoenix.LiveViewTest
+
   alias FirestormWeb.{Flags, Forums, Repo}
   alias FirestormWeb.Forums.{Flag, Post}
 
@@ -95,6 +97,36 @@ defmodule FirestormWeb.Web.FlaggingLiveTest do
     |> refute_has("textarea", text: "buy pills")
     |> visit(~p"/users/#{ctx.author}")
     |> refute_has("#user-posts", text: "buy pills")
+  end
+
+  test "an admin unhides a post from the thread page", ctx do
+    hide(ctx.reply)
+
+    ctx.conn
+    |> log_in_as(ctx.author)
+    |> visit(path(ctx.thread))
+    |> refute_has(".hidden-notice button", text: "Unhide")
+
+    ctx.conn
+    |> log_in_as(ctx.admin)
+    |> visit(path(ctx.thread))
+    |> click_button(".hidden-notice button", "Unhide")
+    |> assert_has("#flash-info", text: "Post unhidden.")
+    |> refute_has(".hidden-notice")
+
+    ctx.conn
+    |> log_in_as(ctx.member)
+    |> visit(path(ctx.thread))
+    |> assert_has("#post-#{ctx.reply.id}", text: "buy pills")
+  end
+
+  test "a flag submit without a picked post is ignored", ctx do
+    {:ok, view, _html} =
+      ctx.conn |> log_in_as(ctx.member) |> Phoenix.LiveViewTest.live(path(ctx.thread))
+
+    Phoenix.LiveViewTest.render_hook(view, "submit_flag", %{"flag" => %{"reason" => "spam"}})
+    assert Process.alive?(view.pid)
+    assert Repo.all(Flag) == []
   end
 
   test "the author is notified", %{conn: conn, author: author, reply: reply} do

@@ -4,9 +4,10 @@ defmodule FirestormWeb.Web.SearchLive.Index do
   the URL (`/search?q=...&category=...`), so results can be linked and paged.
 
   Searches are rate limited (the `:search` bucket, per user or per client IP
-  for visitors). Opening a search in the browser runs it twice, for the
-  static render and once connected, and both count: the static one can't be
-  skipped, or plain HTTP requests would search for free.
+  for visitors, see `FirestormWeb.Web.ClientIP`). Only the connected render
+  searches: the static one shows the form alone, so a page load counts
+  once and plain HTTP requests get no results (the JSON API, also limited,
+  is for those).
   """
   use FirestormWeb.Web, :live_view
 
@@ -19,17 +20,11 @@ defmodule FirestormWeb.Web.SearchLive.Index do
     categories =
       Enum.map(Forums.list_categories(socket.assigns.current_user), &{&1.title, &1.slug})
 
-    remote_ip =
-      case get_connect_info(socket, :peer_data) do
-        %{address: address} -> address
-        _unknown -> "unknown"
-      end
-
     {:ok,
      assign(socket,
        page_title: "Search",
        categories: categories,
-       remote_ip: remote_ip,
+       remote_ip: FirestormWeb.Web.ClientIP.from_socket(socket),
        rate_limited?: false
      )}
   end
@@ -42,7 +37,7 @@ defmodule FirestormWeb.Web.SearchLive.Index do
     {:noreply,
      socket
      |> assign(:query, query)
-     |> assign(:searched?, Search.present?(search))
+     |> assign(:searched?, connected?(socket) and Search.present?(search))
      |> assign(:form, to_form(query, as: :search))
      |> run(search, params["page"] || 1)}
   end
@@ -51,7 +46,7 @@ defmodule FirestormWeb.Web.SearchLive.Index do
     %{current_user: user, remote_ip: remote_ip} = socket.assigns
 
     cond do
-      not Search.present?(search) ->
+      not connected?(socket) or not Search.present?(search) ->
         assign(socket, results: Search.no_results(), rate_limited?: false)
 
       RateLimit.check_search(user, remote_ip) == :ok ->

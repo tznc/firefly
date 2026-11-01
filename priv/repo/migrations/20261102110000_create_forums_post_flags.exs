@@ -22,5 +22,12 @@ defmodule FirestormWeb.Repo.Migrations.CreateForumsPostFlags do
     alter table(:forums_posts) do
       add :hidden_at, :utc_datetime
     end
+
+    # Lists leave out threads whose first post is hidden: checking the few
+    # hidden posts first keeps that cheap.
+    create index(:forums_posts, [:thread_id],
+             where: "hidden_at IS NOT NULL",
+             name: :forums_posts_hidden_thread_id_index
+           )
   end
 end

@@ -39,9 +39,16 @@ defmodule FirestormWeb.Web.PostLive.History do
     end
   end
 
+  # Access is re-checked on every edit pushed: the thread may have moved
+  # into a restricted category (or the user left its group) since mount.
   @impl true
-  def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket),
-    do: {:noreply, load(socket, FirestormWeb.Repo.preload(post, :user))}
+  def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket) do
+    thread = Forums.get_thread(socket.assigns.thread.id)
+
+    if thread && can?(socket.assigns.current_user, :view_thread, thread),
+      do: {:noreply, load(socket, FirestormWeb.Repo.preload(post, :user))},
+      else: {:noreply, leave(socket)}
+  end
 
   def handle_info({:post_deleted, %{id: id}}, %{assigns: %{post: %{id: id}}} = socket) do
     if can?(socket.assigns.current_user, :view_deleted_posts) do
@@ -57,6 +64,12 @@ defmodule FirestormWeb.Web.PostLive.History do
   end
 
   def handle_info(_event, socket), do: {:noreply, socket}
+
+  defp leave(socket) do
+    socket
+    |> put_flash(:error, "This thread is no longer available.")
+    |> push_navigate(to: ~p"/")
+  end
 
   defp load(socket, post), do: assign(socket, post: post, edits: Forums.post_edits(post))
 

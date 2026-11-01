@@ -9,6 +9,11 @@ defmodule FirestormWeb.Repo.Migrations.AddQueuedAtToPosts do
     end
 
     create index(:forums_posts, [:queued_at], where: "queued_at IS NOT NULL")
+    # For the lists' check for threads whose first post is queued.
+    create index(:forums_posts, [:thread_id],
+             where: "queued_at IS NOT NULL",
+             name: :forums_posts_queued_thread_id_index
+           )
 
     create index(:forums_post_flags, [:post_id],
              where: "status = 'pending'",
