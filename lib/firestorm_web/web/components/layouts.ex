@@ -62,7 +62,7 @@ defmodule FirestormWeb.Web.Layouts do
                 </span>
               </div>
             </.link>
-            <.theme_toggle />
+            <.theme_toggle persist={!!@current_user} />
             <label for="nav-drawer" class="btn btn-ghost btn-square lg:hidden" aria-label="Open menu">
               <.icon name="hero-bars-3" class="size-6" />
             </label>
@@ -125,6 +125,9 @@ defmodule FirestormWeb.Web.Layouts do
               icon="hero-user-circle"
             >
               Your profile
+            </.nav_item>
+            <.nav_item path={~p"/settings/profile"} current_path={@current_path} icon="hero-cog-6-tooth">
+              Settings
             </.nav_item>
             <li :if={FirestormWeb.Forums.admin?(@current_user)}>
               <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
@@ -262,16 +265,25 @@ defmodule FirestormWeb.Web.Layouts do
     """
   end
 
+  defp set_theme(theme, persist) do
+    js = JS.dispatch("phx:set-theme")
+    if persist, do: JS.push(js, "set_theme", value: %{theme: theme}), else: js
+  end
+
   @doc """
   Light / dark / system theme toggle. See the script in root.html.heex.
+  With `persist`, the choice is also saved as the user's theme (see
+  `FirestormWeb.Web.UserAuth`).
   """
+  attr :persist, :boolean, default: false
+
   def theme_toggle(assigns) do
     ~H"""
     <div class="card relative flex flex-row items-center rounded-full border-2 border-base-300 bg-base-300">
       <div class="absolute left-0 h-full w-1/3 rounded-full border-1 border-base-200 bg-base-100 brightness-200 transition-[left] [[data-theme=firefly]_&]:left-1/3 [[data-theme=firefly-dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0" />
       <button
         class="flex w-1/3 cursor-pointer p-2"
-        phx-click={JS.dispatch("phx:set-theme")}
+        phx-click={set_theme("system", @persist)}
         data-phx-theme="system"
         aria-label="Use system theme"
       >
@@ -279,7 +291,7 @@ defmodule FirestormWeb.Web.Layouts do
       </button>
       <button
         class="flex w-1/3 cursor-pointer p-2"
-        phx-click={JS.dispatch("phx:set-theme")}
+        phx-click={set_theme("light", @persist)}
         data-phx-theme="light"
         aria-label="Use light theme"
       >
@@ -287,7 +299,7 @@ defmodule FirestormWeb.Web.Layouts do
       </button>
       <button
         class="flex w-1/3 cursor-pointer p-2"
-        phx-click={JS.dispatch("phx:set-theme")}
+        phx-click={set_theme("dark", @persist)}
         data-phx-theme="dark"
         aria-label="Use dark theme"
       >

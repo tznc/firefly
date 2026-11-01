@@ -10,7 +10,7 @@ defmodule FirestormWeb.Web.NotificationSettingsTest do
     conn
     |> log_in_as(user)
     |> visit(~p"/notifications")
-    |> click_link("Settings")
+    |> click_link("main a", "Settings")
     |> assert_path(~p"/settings/notifications")
     |> uncheck(
       "Email me about new posts in threads and categories I'm watching, private messages, and when I'm mentioned"

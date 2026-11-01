@@ -4,6 +4,8 @@ defmodule FirestormWeb.Web.UserAuth do
 
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
       the unread notification and conversation counts and the current path.
+      For a user, it also handles the theme toggle's `"set_theme"` event on
+      every page, saving their theme.
     * `:require_user` - redirects to the categories page when nobody is
       logged in. Used by individual LiveViews, after the live session's
       `:mount_current_user`.
@@ -44,6 +46,7 @@ defmodule FirestormWeb.Web.UserAuth do
     |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
     |> assign_counts()
     |> subscribe_to_notifications()
+    |> handle_set_theme()
     |> attach_hook(:current_path, :handle_params, fn _params, uri, socket ->
       {:cont, assign(socket, :current_path, URI.parse(uri).path)}
     end)
@@ -74,6 +77,21 @@ defmodule FirestormWeb.Web.UserAuth do
   end
 
   defp subscribe_to_notifications(socket), do: socket
+
+  defp handle_set_theme(%{assigns: %{current_user: %{}}} = socket) do
+    attach_hook(socket, :set_theme, :handle_event, fn
+      "set_theme", %{"theme" => theme}, socket ->
+        case Forums.update_preferences(socket.assigns.current_user, %{theme: theme}) do
+          {:ok, user} -> {:halt, assign(socket, :current_user, user)}
+          {:error, _changeset} -> {:halt, socket}
+        end
+
+      _event, _params, socket ->
+        {:cont, socket}
+    end)
+  end
+
+  defp handle_set_theme(socket), do: socket
 
   defp handle_notifications(:notifications_changed, socket) do
     socket = assign_counts(socket)
