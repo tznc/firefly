@@ -7,7 +7,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   use FirestormWeb.Web, :live_view
 
   alias FirestormWeb.{Forums, Repo}
-  alias FirestormWeb.Forums.Subscriptions
+  alias FirestormWeb.Forums.{Subscriptions, Thread}
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
@@ -29,7 +29,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   def handle_info({:post_created, _post}, socket),
     do: {:noreply, load_thread(socket, socket.assigns.thread)}
 
-  def handle_info({:thread_updated, thread}, socket), do: {:noreply, load_thread(socket, thread)}
+  def handle_info({:thread_updated, thread}, socket) do
+    if thread.category_id == socket.assigns.category.id,
+      do: {:noreply, load_thread(socket, thread)},
+      else:
+        {:noreply,
+         push_navigate(socket, to: ~p"/categories/#{thread.category_id}/threads/#{thread}")}
+  end
 
   def handle_info({:thread_deleted, _thread}, socket) do
     {:noreply,
@@ -42,7 +48,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   @impl true
   def handle_event(event, _params, %{assigns: %{current_user: nil}} = socket)
-      when event in ["set_level", "delete"] do
+      when event in ["set_level", "delete", "moderate", "move"] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
   end
 
@@ -52,6 +58,43 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
       Subscriptions.set_thread_level(socket.assigns.current_user, socket.assigns.thread, level)
 
     {:noreply, assign(socket, :level, level)}
+  end
+
+  def handle_event("moderate", %{"action" => action}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+
+    if can?(user, :moderate_thread) do
+      result =
+        case action do
+          "pin" -> Forums.pin_thread(thread, true)
+          "unpin" -> Forums.pin_thread(thread, false)
+          "close" -> Forums.close_thread(thread, true)
+          "open" -> Forums.close_thread(thread, false)
+          "archive" -> Forums.archive_thread(thread, true)
+          "unarchive" -> Forums.archive_thread(thread, false)
+        end
+
+      {:ok, thread} = result
+      {:noreply, socket |> put_flash(:info, moderation_message(action)) |> load_thread(thread)}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(user))}
+    end
+  end
+
+  def handle_event("move", %{"move" => %{"category_id" => category_id}}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+
+    if can?(user, :moderate_thread) do
+      category = Forums.get_category!(category_id)
+      {:ok, moved} = Forums.move_thread(thread, category)
+
+      {:noreply,
+       socket
+       |> put_flash(:info, "Thread moved to #{category.title}.")
+       |> push_navigate(to: ~p"/categories/#{category}/threads/#{moved}")}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(user))}
+    end
   end
 
   def handle_event("delete", _params, socket) do
@@ -82,7 +125,19 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:level, Subscriptions.thread_level(user, thread))
     |> assign(:inherited_level, inherited_level(user, socket.assigns.category))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
+    |> assign(:can_moderate?, can?(user, :moderate_thread))
+    |> assign(
+      :categories,
+      if(can?(user, :moderate_thread), do: Forums.list_categories(), else: [])
+    )
   end
+
+  defp moderation_message("pin"), do: "Thread pinned."
+  defp moderation_message("unpin"), do: "Thread unpinned."
+  defp moderation_message("close"), do: "Thread closed."
+  defp moderation_message("open"), do: "Thread reopened."
+  defp moderation_message("archive"), do: "Thread archived."
+  defp moderation_message("unarchive"), do: "Thread unarchived."
 
   defp inherited_level(user, category),
     do: Subscriptions.category_level(user, category) || "normal"
@@ -99,7 +154,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     <Layouts.app {Layouts.shell(assigns)}>
       <header class="space-y-3">
         <.category_badge category={@category} />
-        <h1 class="text-2xl font-bold tracking-tight">
+        <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
+          <.thread_status thread={@thread} />
           <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"}>{@thread.title}</.link>
         </h1>
         <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/70">
@@ -109,14 +165,63 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           </.link>
           · <.time_ago id="thread-time" at={@thread.inserted_at} />
           · <span id="reply-count">{ngettext("1 reply", "%{count} replies", length(@replies))}</span>
-          <span :if={@can_manage?} class="ml-auto flex gap-1">
+          <span :if={@can_manage? or @can_moderate?} class="ml-auto flex gap-1">
+            <div :if={@can_moderate?} id="moderation" class="dropdown dropdown-end">
+              <div tabindex="0" role="button" class="btn btn-ghost btn-xs">
+                <.icon name="hero-shield-check" class="size-4" /> Moderate
+              </div>
+              <div
+                tabindex="0"
+                class="dropdown-content z-10 w-64 space-y-2 rounded-box border border-base-300 bg-base-100 p-2 shadow"
+              >
+                <ul class="menu w-full p-0">
+                  <li>
+                    <button
+                      phx-click="moderate"
+                      phx-value-action={if @thread.pinned_at, do: "unpin", else: "pin"}
+                    >
+                      <.icon name="hero-bookmark" class="size-4" />
+                      {if @thread.pinned_at, do: "Unpin", else: "Pin"}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      phx-click="moderate"
+                      phx-value-action={if @thread.closed_at, do: "open", else: "close"}
+                    >
+                      <.icon name="hero-lock-closed" class="size-4" />
+                      {if @thread.closed_at, do: "Reopen", else: "Close"}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      phx-click="moderate"
+                      phx-value-action={if @thread.archived_at, do: "unarchive", else: "archive"}
+                    >
+                      <.icon name="hero-archive-box" class="size-4" />
+                      {if @thread.archived_at, do: "Unarchive", else: "Archive"}
+                    </button>
+                  </li>
+                </ul>
+                <.form for={%{}} as={:move} id="move-thread-form" phx-submit="move" class="flex gap-1">
+                  <select name="move[category_id]" class="select select-sm flex-1" aria-label="Move to category">
+                    <option :for={c <- @categories} value={c.id} selected={c.id == @thread.category_id}>
+                      {c.title}
+                    </option>
+                  </select>
+                  <button class="btn btn-sm">Move</button>
+                </.form>
+              </div>
+            </div>
             <.link
+              :if={@can_manage?}
               navigate={~p"/categories/#{@category}/threads/#{@thread}/edit"}
               class="btn btn-ghost btn-xs"
             >
               Edit
             </.link>
             <button
+              :if={@can_manage?}
               phx-click="delete"
               data-confirm="Delete this thread?"
               class="btn btn-ghost btn-xs text-error"
@@ -152,7 +257,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
         </li>
       </ol>
 
-      <div class="flex justify-end">
+      <div :if={Thread.closed?(@thread)} id="closed-notice" role="status" class="alert">
+        <.icon name="hero-lock-closed" class="size-5" />
+        {if Thread.archived?(@thread),
+          do: "This thread is archived. It's read-only.",
+          else: "This thread is closed to new replies."}
+      </div>
+      <div :if={!Thread.closed?(@thread)} class="flex justify-end">
         <.link
           navigate={~p"/categories/#{@category}/threads/#{@thread}/posts/new"}
           class="btn btn-primary"

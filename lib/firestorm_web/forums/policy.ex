@@ -4,6 +4,7 @@ defmodule FirestormWeb.Forums.Policy do
 
     * `:manage_category` (create, edit, delete) - admins
     * `:update_thread`, `:delete_thread` - the thread's author and admins
+    * `:moderate_thread` (pin, close, archive, move) - admins
     * `:edit_user` - the user themselves
   """
 
@@ -18,6 +19,7 @@ defmodule FirestormWeb.Forums.Policy do
   def authorize(:edit_user, %User{id: id}, %{user: %{id: id}}), do: :ok
 
   def authorize(:manage_category, %User{} = user, _params), do: admin(user)
+  def authorize(:moderate_thread, %User{} = user, _params), do: admin(user)
 
   def authorize(action, %User{} = user, %Thread{} = thread)
       when action in [:update_thread, :delete_thread] do

@@ -11,12 +11,12 @@ defmodule FirestormWeb.Web.CategoryLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Categories")
-     |> assign(:categories, Forums.list_categories())}
+     |> assign(:categories, Forums.list_category_tree())}
   end
 
   @impl true
   def handle_info({_event, _category}, socket) do
-    {:noreply, assign(socket, :categories, Forums.list_categories())}
+    {:noreply, assign(socket, :categories, Forums.list_category_tree())}
   end
 
   @impl true
@@ -33,19 +33,23 @@ defmodule FirestormWeb.Web.CategoryLive.Index do
 
       <ol id="categories" class="grid gap-3 sm:grid-cols-2">
         <li :if={@categories == []} class="text-base-content/60">No categories yet.</li>
-        <li :for={category <- @categories} id={"category-#{category.id}"}>
-          <.link
-            navigate={~p"/categories/#{category}"}
-            class="card border border-base-300 bg-base-100 transition hover:border-primary"
-          >
-            <div class="card-body flex-row items-center gap-3 p-4">
-              <span
-                class="size-3 rounded-full"
-                style={"background-color: oklch(55% 0.13 #{category_color(category)})"}
-              />
+        <li
+          :for={category <- @categories}
+          id={"category-#{category.id}"}
+          class="card border border-base-300 bg-base-100 transition hover:border-primary"
+        >
+          <div class="card-body gap-2 p-4">
+            <.link navigate={~p"/categories/#{category}"} class="flex items-center gap-3">
+              <span class="size-3 rounded-full" style={"background-color: #{category_color(category)}"} />
               <h2 class="card-title text-base">{category.title}</h2>
+            </.link>
+            <p :if={category.description} class="text-sm text-base-content/70">
+              {category.description}
+            </p>
+            <div :if={category.children != []} class="flex flex-wrap gap-1">
+              <.category_badge :for={child <- category.children} category={child} />
             </div>
-          </.link>
+          </div>
         </li>
       </ol>
     </Layouts.app>

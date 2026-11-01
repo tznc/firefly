@@ -31,7 +31,7 @@ defmodule FirestormWeb.Web.PostLive.New do
   def handle_event("save", %{"post" => params}, socket) do
     %{thread: thread, category: category, current_user: user} = socket.assigns
 
-    case FirestormWeb.Posting.check(user) do
+    case FirestormWeb.Posting.check(user, thread) do
       :ok ->
         create_post(socket, thread, category, user, params)
 

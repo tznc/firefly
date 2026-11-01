@@ -19,6 +19,9 @@ defmodule FirestormWeb.Forums.Thread do
     field(:first_unread_post_id, :integer, virtual: true)
     field(:new?, :boolean, virtual: true)
     field(:last_post_at, :naive_datetime_usec, virtual: true)
+    field(:pinned_at, :utc_datetime)
+    field(:closed_at, :utc_datetime)
+    field(:archived_at, :utc_datetime)
     belongs_to(:category, Category)
     has_many(:posts, Post)
     has_many(:watches, {"forums_threads_watches", Watch}, foreign_key: :assoc_id)
@@ -40,6 +43,20 @@ defmodule FirestormWeb.Forums.Thread do
     |> ThreadTitleSlug.maybe_generate_slug()
     |> ThreadTitleSlug.unique_constraint()
   end
+
+  @doc "Moderation changes: pin, close, archive, move to another category."
+  def moderation_changeset(%__MODULE__{} = thread, attrs) do
+    thread
+    |> cast(attrs, [:pinned_at, :closed_at, :archived_at, :category_id])
+    |> validate_required([:category_id])
+    |> foreign_key_constraint(:category_id)
+  end
+
+  def pinned?(%__MODULE__{pinned_at: at}), do: not is_nil(at)
+  def archived?(%__MODULE__{archived_at: at}), do: not is_nil(at)
+
+  @doc "Closed threads take no new replies. Archived threads are closed too."
+  def closed?(%__MODULE__{} = thread), do: not is_nil(thread.closed_at) or archived?(thread)
 
   def new_changeset(%{thread: thread_attrs, post: post_attrs}, user \\ nil) do
     post_changeset =
