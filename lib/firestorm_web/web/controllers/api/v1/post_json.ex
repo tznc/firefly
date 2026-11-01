@@ -5,14 +5,15 @@ defmodule FirestormWeb.Web.Api.V1.PostJSON do
 
   def show(%{post: %Post{} = post}), do: data(post)
 
-  def data(%Post{} = post) do
+  @doc "`refs`: see `FirestormWeb.Markdown.render/2`."
+  def data(%Post{} = post, refs \\ nil) do
     # A deleted or hidden post's content is only for admins, on the site.
     body = if Post.deleted?(post) or Post.hidden?(post), do: "", else: post.body
 
     %{
       id: post.id,
       body: body,
-      body_html: Markdown.render(body),
+      body_html: Markdown.render(body, refs),
       deleted: Post.deleted?(post),
       hidden: Post.hidden?(post),
       user_id: post.user_id,

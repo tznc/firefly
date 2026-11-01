@@ -1,7 +1,7 @@
 defmodule FirestormWeb.TagsTest do
   use FirestormWeb.DataCase
 
-  alias FirestormWeb.{Forums, Notifications}
+  alias FirestormWeb.{Forums, Notifications, Repo}
   alias FirestormWeb.Forums.{Subscriptions, Tag}
 
   setup do
@@ -44,6 +44,12 @@ defmodule FirestormWeb.TagsTest do
     # Editing other fields leaves the tags alone
     {:ok, thread} = Forums.update_thread(thread, %{"title" => "Renamed"}, author)
     assert tag_names(thread) == ["genserver", "otp"]
+  end
+
+  test "ensure_tags/1 takes tags created concurrently as they are" do
+    [existing] = Forums.ensure_tags(["otp"])
+    assert [^existing, %Tag{name: "beam"}] = Forums.ensure_tags(["otp", "beam"])
+    assert Repo.aggregate(Tag, :count) == 2
   end
 
   test "at most 5 valid tags", %{category: category, author: author} do

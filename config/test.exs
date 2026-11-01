@@ -31,6 +31,10 @@ config :phoenix_test,
       browser: :chromium,
       assets_dir: "assets",
       ecto_sandbox_stop_owner_delay: 100,
+      # How long assertions wait for the page. The 2s default flaked on busy
+      # CI runners (e.g. the redirect after logging in); passing assertions
+      # don't wait any longer.
+      timeout: to_timeout(second: 10),
       trace: System.get_env("FIREFLY_PW_TRACE", "false") in ~w(t true),
       screenshot: System.get_env("FIREFLY_PW_SCREENSHOT", "false") in ~w(t true)
     ] ++

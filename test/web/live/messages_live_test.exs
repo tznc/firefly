@@ -3,6 +3,8 @@ defmodule FirestormWeb.Web.MessagesLiveTest do
   # Emails go to the test process (they're tested in MessagesTest).
   use Bamboo.Test, shared: true
 
+  require Ecto.Query
+
   alias FirestormWeb.{Forums, Messages, Notifications}
 
   setup do
@@ -142,6 +144,24 @@ defmodule FirestormWeb.Web.MessagesLiveTest do
     |> refute_has("#conversations", text: "Hush")
 
     refute Messages.participant?(conversation, bob)
+  end
+
+  test "a deleted author's messages show as from a deleted user", %{
+    conn: conn,
+    alice: alice,
+    bob: bob
+  } do
+    conversation = start(alice, "bob")
+    {:ok, _} = Messages.reply(conversation, bob, %{body: "Bye now"})
+    # As Kaffy's user delete would, once nothing else references bob.
+    FirestormWeb.Repo.delete_all(Ecto.Query.where(Forums.Notification, user_id: ^bob.id))
+    {:ok, _} = Forums.delete_user(bob)
+
+    conn
+    |> log_in_as(alice)
+    |> visit(~p"/messages/#{conversation.id}")
+    |> assert_has("#messages article", text: "Bye now")
+    |> assert_has("#messages article", text: "deleted user")
   end
 
   test "messages don't show up in public pages or the API", %{conn: conn, alice: alice} do

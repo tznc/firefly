@@ -97,6 +97,11 @@ defmodule FirestormWeb.SearchTest do
 
     assert post_ids("crash in:title") == []
     assert post_ids("supervisors in:title") == [first]
+    # in:title narrows terms; alone it searches nothing
+    refute Search.present?(Search.parse("in:title"))
+    assert post_ids("in:title") == []
+    assert post_ids("", %{"in" => "title"}) == []
+    assert post_ids("in:title @alice") == [first]
 
     # Filters alone list matching posts, newest first
     assert post_ids("@alice") == [first]
