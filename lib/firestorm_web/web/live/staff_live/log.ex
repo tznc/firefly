@@ -39,6 +39,7 @@ defmodule FirestormWeb.Web.StaffLive.Log do
       {:ok,
        socket
        |> assign(:page_title, "Staff log")
+       |> assign(:linked_types, StaffLog.linked_types())
        |> assign(:actors, Enum.map(StaffLog.actors(), &{&1.username, &1.id}))
        |> assign(:action_options, Enum.map(StaffLog.actions(), &{@labels[&1], &1}))}
     else
@@ -144,7 +145,7 @@ defmodule FirestormWeb.Web.StaffLive.Log do
                 <%= case @targets[{entry.target_type, entry.target_id}] do %>
                   <% nil -> %>
                     <span class="text-base-content/60">
-                      Deleted {entry.target_type} #{entry.target_id}
+                      {if entry.target_type in @linked_types, do: "Deleted "}{entry.target_type} #{entry.target_id}
                     </span>
                   <% target -> %>
                     <% {name, path} = target_link(entry, target) %>
