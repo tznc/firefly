@@ -1,5 +1,7 @@
 defmodule FirestormWeb.Admin.PostAdmin do
   @moduledoc "Kaffy admin for posts."
+  use FirestormWeb.Admin.Logged, as: "post"
+
   def index(_) do
     [
       body: %{value: &String.slice(&1.body || "", 0..79)},

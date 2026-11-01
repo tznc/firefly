@@ -82,12 +82,12 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     if can?(user, :moderate_thread) do
       result =
         case action do
-          "pin" -> Forums.pin_thread(thread, true)
-          "unpin" -> Forums.pin_thread(thread, false)
-          "close" -> Forums.close_thread(thread, true)
-          "open" -> Forums.close_thread(thread, false)
-          "archive" -> Forums.archive_thread(thread, true)
-          "unarchive" -> Forums.archive_thread(thread, false)
+          "pin" -> Forums.pin_thread(thread, true, user)
+          "unpin" -> Forums.pin_thread(thread, false, user)
+          "close" -> Forums.close_thread(thread, true, user)
+          "open" -> Forums.close_thread(thread, false, user)
+          "archive" -> Forums.archive_thread(thread, true, user)
+          "unarchive" -> Forums.archive_thread(thread, false, user)
         end
 
       {:ok, thread} = result
@@ -102,7 +102,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
     if can?(user, :moderate_thread) do
       category = Forums.get_category!(category_id)
-      {:ok, moved} = Forums.move_thread(thread, category)
+      {:ok, moved} = Forums.move_thread(thread, category, user)
 
       {:noreply,
        socket
@@ -133,7 +133,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     %{thread: thread, current_user: user} = socket.assigns
 
     if can?(user, :restore_post) do
-      {:ok, _} = thread |> Forums.get_post!(id) |> Forums.restore_post()
+      {:ok, _} = thread |> Forums.get_post!(id) |> Forums.restore_post(user)
       {:noreply, socket |> put_flash(:info, "Post restored.") |> load_thread(thread)}
     else
       {:noreply, put_flash(socket, :error, denied_message(user))}
@@ -159,7 +159,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
-      {:ok, _} = Forums.delete_thread(socket.assigns.thread)
+      {:ok, _} = Forums.delete_thread(socket.assigns.thread, socket.assigns.current_user)
 
       {:noreply,
        socket

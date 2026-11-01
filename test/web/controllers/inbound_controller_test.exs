@@ -100,7 +100,7 @@ defmodule FirestormWeb.InboundControllerTest do
 
   test "ignores replies to deleted threads", %{conn: conn, user: user, thread: thread} do
     to = ReplyAddress.address(thread, user)
-    {:ok, _} = Forums.delete_thread(thread)
+    {:ok, _} = Forums.delete_thread(thread, user)
 
     assert conn |> inbound(email(to, "josh@example.com")) |> response(200)
   end

@@ -63,7 +63,7 @@ defmodule FirestormWeb.Web.QuoteReplyTest do
     |> visit(path <> "/posts/new?quote=#{reply.id}")
     |> refute_has("textarea", text: "Supervisors")
 
-    {:ok, _} = Forums.close_thread(thread, true)
+    {:ok, _} = Forums.close_thread(thread, true, admin_fixture())
     conn |> visit(path) |> refute_has(".quote-link")
   end
 end

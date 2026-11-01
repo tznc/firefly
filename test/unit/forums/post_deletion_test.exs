@@ -34,7 +34,7 @@ defmodule FirestormWeb.Forums.PostDeletionTest do
     assert Forums.decorate_post_oembeds(deleted).oembeds == []
     assert %{body: "", deleted: true} = PostJSON.data(deleted)
 
-    assert {:ok, restored} = Forums.restore_post(deleted)
+    assert {:ok, restored} = Forums.restore_post(deleted, admin_fixture())
     assert restored.deleted_at == nil
     assert [%{posts_count: 3}] = Forums.list_threads(category, author)
   end
@@ -79,7 +79,7 @@ defmodule FirestormWeb.Forums.PostDeletionTest do
     assert {:error, :unauthorized} = Policy.authorize(:restore_post, replier, %{})
     assert :ok = Policy.authorize(:restore_post, admin, %{})
 
-    {:ok, closed} = Forums.close_thread(thread, true)
+    {:ok, closed} = Forums.close_thread(thread, true, admin)
 
     assert {:error, :unauthorized} =
              Policy.authorize(:delete_post, replier, %{params | thread: closed})

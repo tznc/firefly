@@ -30,7 +30,7 @@ defmodule FirestormWeb.Web.CategoryLive.Show do
 
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :manage_category) do
-      {:ok, _} = Forums.delete_category(socket.assigns.category)
+      {:ok, _} = Forums.delete_category(socket.assigns.category, socket.assigns.current_user)
 
       {:noreply,
        socket

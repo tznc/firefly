@@ -84,7 +84,7 @@ defmodule FirestormWeb.TagsTest do
     one = thread(category, author, "otp", "One")
     two = thread(category, author, "otp beam", "Two")
     archived = thread(category, author, "otp", "Old")
-    {:ok, _} = Forums.archive_thread(archived, true)
+    {:ok, _} = Forums.archive_thread(archived, true, author)
 
     assert [%{name: "otp", threads_count: 2}, %{name: "beam", threads_count: 1}] =
              Forums.list_tags()

@@ -99,7 +99,7 @@ defmodule FirestormWeb.Forums.LikesTest do
     assert {:error, :unauthenticated} = Policy.authorize(:like_post, nil, params)
 
     {:ok, reply} = Forums.create_post(thread, author, %{body: "reply"})
-    {:ok, archived} = Forums.archive_thread(thread, true)
+    {:ok, archived} = Forums.archive_thread(thread, true, author)
 
     assert {:error, :unauthorized} =
              Policy.authorize(:like_post, bob, %{params | thread: archived})

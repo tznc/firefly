@@ -58,7 +58,7 @@ defmodule FirestormWeb.Web.PostEditingTest do
 
   test "closed threads can only be edited by admins", ctx do
     %{conn: conn, author: author, thread: thread, reply: reply} = ctx
-    {:ok, _} = Forums.close_thread(thread, true)
+    {:ok, _} = Forums.close_thread(thread, true, admin_fixture())
 
     conn
     |> log_in_as(author)
@@ -81,7 +81,7 @@ defmodule FirestormWeb.Web.PostEditingTest do
       |> log_in_as(author)
       |> visit(thread_path(thread) <> "/posts/#{reply.id}/edit")
 
-    {:ok, _} = Forums.close_thread(thread, true)
+    {:ok, _} = Forums.close_thread(thread, true, admin_fixture())
 
     session
     |> fill_in("Body", with: "Too late")
