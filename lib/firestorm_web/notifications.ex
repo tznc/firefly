@@ -10,19 +10,31 @@ defmodule FirestormWeb.Notifications do
       newly mentions. Not the author, users who can't see the thread (the
       `:view_thread` policy) or users who muted it. A mentioned user gets the
       mention instead of the new thread/post notification.
+    * a private message notifies the conversation's other participants, and
+      adding people to a conversation notifies them (see
+      `FirestormWeb.Messages`)
 
-  Everyone notified gets an in-app notification; users at `watching`, and
-  mentioned users, also get an email, if they have email notifications on and
-  a confirmed address. To avoid floods, a thread emails a user once until they
-  read its notifications.
+  Everyone notified gets an in-app notification; users at `watching`,
+  mentioned users and message recipients also get an email, if they have
+  email notifications on and a confirmed address. To avoid floods, a thread
+  (or conversation) emails a user once until they read its notifications.
   """
 
   use GenServer
 
   import Ecto.Query, only: [where: 2, order_by: 2, first: 1, select: 3]
 
-  alias FirestormWeb.{Emails, Forums, Mailer, Mentions, Repo}
-  alias FirestormWeb.Forums.{Notification, Post, Subscriptions, Thread, User}
+  alias FirestormWeb.{Emails, Forums, Mailer, Mentions, Messages, Repo}
+
+  alias FirestormWeb.Forums.{
+    Conversation,
+    Message,
+    Notification,
+    Post,
+    Subscriptions,
+    Thread,
+    User
+  }
 
   ### Client API
 
@@ -39,6 +51,14 @@ defmodule FirestormWeb.Notifications do
   @doc "Notify category subscribers about a new thread."
   def thread_created(%Thread{} = thread),
     do: GenServer.cast(__MODULE__, {:thread_created, thread})
+
+  @doc "Notify a conversation's other participants about a new message."
+  def message_created(%Message{} = message),
+    do: GenServer.cast(__MODULE__, {:message_created, message})
+
+  @doc "Notify `users` that `actor` added them to a conversation."
+  def participants_added(%Conversation{} = conversation, %User{} = actor, users),
+    do: GenServer.cast(__MODULE__, {:participants_added, conversation, actor, users})
 
   ### Server API
 
@@ -73,6 +93,42 @@ defmodule FirestormWeb.Notifications do
     end
 
     {:noreply, state}
+  end
+
+  def handle_cast({:message_created, %Message{} = message}, state) do
+    message = Repo.preload(message, [:user, :conversation])
+    conversation = message.conversation
+    author = message.user
+    first? = Messages.first_message(conversation).id == message.id
+
+    subject =
+      if first?,
+        do: "@#{author.username} sent you a message: \"#{conversation.title}\"",
+        else: "@#{author.username} replied to \"#{conversation.title}\""
+
+    for user <- Messages.participants(conversation), user.id != author.id do
+      notify_message(user, conversation, message, subject)
+    end
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:participants_added, conversation, actor, users}, state) do
+    message = Messages.latest_message(conversation)
+    subject = "@#{actor.username} added you to \"#{conversation.title}\""
+
+    for user <- users, do: notify_message(user, conversation, message, subject)
+    {:noreply, state}
+  end
+
+  defp notify_message(user, conversation, message, subject) do
+    {:ok, notification} =
+      Forums.notify(user, Notification.for_message(conversation, message, subject))
+
+    if email?(user, notification) do
+      Mailer.deliver_now(Emails.message_notification(user, conversation, message, subject))
+      Forums.notification_emailed(notification)
+    end
   end
 
   # Reloaded: a post deleted before we get to it notifies no one.
@@ -121,8 +177,7 @@ defmodule FirestormWeb.Notifications do
   end
 
   defp maybe_email(%User{} = user, notification, thread, post) do
-    if user.email_notifications and User.confirmed?(user) and
-         not Forums.unread_emailed_notification?(user, thread.id, notification.id) do
+    if email?(user, notification) do
       email =
         if notification.kind == "mentioned",
           do: Emails.mention_notification(user, thread, post),
@@ -132,5 +187,10 @@ defmodule FirestormWeb.Notifications do
 
       Forums.notification_emailed(notification)
     end
+  end
+
+  defp email?(%User{} = user, notification) do
+    user.email_notifications and User.confirmed?(user) and
+      not Forums.unread_emailed_notification?(user, notification)
   end
 end

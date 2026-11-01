@@ -18,6 +18,7 @@ defmodule FirestormWeb.Forums.User do
     field(:github_uid, :string)
     field(:confirmed_at, :utc_datetime)
     field(:email_notifications, :boolean, default: true)
+    field(:allow_private_messages, :boolean, default: true)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
@@ -33,9 +34,9 @@ defmodule FirestormWeb.Forums.User do
     |> unique_constraint(:username)
   end
 
-  @doc "Notification preferences."
+  @doc "Notification and messaging preferences."
   def preferences_changeset(%__MODULE__{} = user, attrs) do
-    cast(user, attrs, [:email_notifications])
+    cast(user, attrs, [:email_notifications, :allow_private_messages])
   end
 
   @doc "Whether the user has confirmed their email address."

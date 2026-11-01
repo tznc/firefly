@@ -51,6 +51,13 @@ defmodule FirestormWeb.Web.UserLive.Show do
             </dl>
           </div>
           <.link
+            :if={@current_user && @current_user.id != @user.id && @user.allow_private_messages}
+            navigate={~p"/messages/new?#{[to: @user.username]}"}
+            class="btn btn-primary btn-sm"
+          >
+            <.icon name="hero-envelope" class="size-5" /> Message
+          </.link>
+          <.link
             :if={@current_user && @current_user.id == @user.id}
             navigate={~p"/users/#{@user}/edit"}
             class="btn btn-ghost btn-sm"

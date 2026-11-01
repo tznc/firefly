@@ -42,7 +42,12 @@ defmodule FirestormWeb.Web.SettingsLive.Notifications do
         <.input
           field={@form[:email_notifications]}
           type="checkbox"
-          label="Email me about new posts in threads and categories I'm watching, and when I'm mentioned"
+          label="Email me about new posts in threads and categories I'm watching, private messages, and when I'm mentioned"
+        />
+        <.input
+          field={@form[:allow_private_messages]}
+          type="checkbox"
+          label="Allow other members to send me private messages"
         />
         <.button variant="primary" phx-disable-with="Saving...">Save</.button>
       </.form>

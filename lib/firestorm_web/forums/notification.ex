@@ -2,16 +2,17 @@ defmodule FirestormWeb.Forums.Notification do
   @moduledoc """
   An in-app notification. `kind` is `"new_thread"` (a thread started in a
   category you watch or track), `"new_post"` (a reply in a thread you watch
-  or track), `"mentioned"` (someone @mentioned you in a post) or `"liked"`
-  (someone liked your post; never emailed). `read_at` is set when you open it
+  or track), `"mentioned"` (someone @mentioned you in a post) `"liked"`
+  (someone liked your post; never emailed) or `"message"` (a private message,
+  or being added to a conversation; with `conversation_id`). `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
 
   use Ecto.Schema
-  alias FirestormWeb.Forums.{User, Thread, Post}
+  alias FirestormWeb.Forums.{Conversation, Message, User, Thread, Post}
   import Ecto.Changeset
 
-  @kinds ~w(new_thread new_post mentioned liked)
+  @kinds ~w(new_thread new_post mentioned liked message)
 
   schema "forums_notifications" do
     field(:kind, :string, default: "new_post")
@@ -23,6 +24,7 @@ defmodule FirestormWeb.Forums.Notification do
     belongs_to(:user, User)
     belongs_to(:thread, Thread)
     belongs_to(:post, Post)
+    belongs_to(:conversation, Conversation)
 
     timestamps(type: :naive_datetime_usec)
   end
@@ -69,6 +71,20 @@ defmodule FirestormWeb.Forums.Notification do
     }
   end
 
+  @doc """
+  Notification attributes for a private `message` (`subject` says what
+  happened: a new conversation, a reply, being added).
+  """
+  def for_message(%Conversation{} = conversation, %Message{} = message, subject) do
+    %{
+      kind: "message",
+      subject: subject,
+      body: message.body,
+      url: "#{FirestormWeb.Web.Paths.conversation_url(conversation)}#message-#{message.id}",
+      conversation_id: conversation.id
+    }
+  end
+
   # Kept for callers that predate typed notifications.
   def thread_new_post_notification(%Thread{} = thread, %Post{} = post) do
     %{
@@ -88,7 +104,16 @@ defmodule FirestormWeb.Forums.Notification do
 
   def changeset(%__MODULE__{} = notification, attrs) do
     notification
-    |> cast(attrs, [:user_id, :kind, :body, :subject, :url, :thread_id, :post_id])
+    |> cast(attrs, [
+      :user_id,
+      :kind,
+      :body,
+      :subject,
+      :url,
+      :thread_id,
+      :post_id,
+      :conversation_id
+    ])
     |> validate_required([:user_id, :body, :subject, :url])
     |> validate_inclusion(:kind, @kinds)
   end

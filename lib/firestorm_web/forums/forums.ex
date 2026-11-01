@@ -1514,19 +1514,30 @@ defmodule FirestormWeb.Forums do
   end
 
   @doc """
-  Whether the user already has an unread, emailed notification for the
-  thread. Used to send one email per thread until the user comes back.
+  Whether the user already has an unread, emailed notification about the
+  same thread or conversation as `notification`. Used to send one email per
+  thread (or conversation) until the user comes back.
   """
-  def unread_emailed_notification?(%User{} = user, thread_id, except_id) do
+  def unread_emailed_notification?(%User{} = user, %Notification{} = notification) do
+    about =
+      if notification.conversation_id,
+        do: dynamic([n], n.conversation_id == ^notification.conversation_id),
+        else: dynamic([n], n.thread_id == ^notification.thread_id)
+
     Notification
-    |> where([n], n.user_id == ^user.id and n.thread_id == ^thread_id and n.id != ^except_id)
+    |> where([n], n.user_id == ^user.id and n.id != ^notification.id)
+    |> where(^about)
     |> where([n], is_nil(n.read_at) and not is_nil(n.emailed_at))
     |> Repo.exists?()
   end
 
   def notifications_topic(user_id), do: "user:#{user_id}:notifications"
 
-  defp notifications_changed(user_id) do
+  @doc """
+  Tells the user's open pages their notifications (or unread messages)
+  changed, so the badges update.
+  """
+  def notifications_changed(user_id) do
     Phoenix.PubSub.broadcast(
       FirestormWeb.PubSub,
       notifications_topic(user_id),

@@ -17,6 +17,7 @@ defmodule FirestormWeb.Web.Layouts do
   attr :flash, :map, required: true, doc: "the map of flash messages"
   attr :current_user, :any, default: nil, doc: "the logged-in user, if any"
   attr :notification_count, :integer, default: 0
+  attr :message_count, :integer, default: 0, doc: "conversations with unread messages"
   attr :current_path, :string, default: nil, doc: "used to highlight the active link"
   slot :inner_block, required: true
 
@@ -97,6 +98,17 @@ defmodule FirestormWeb.Web.Layouts do
                 {@notification_count}
               </span>
             </.nav_item>
+            <.nav_item path={~p"/messages"} current_path={@current_path} icon="hero-envelope">
+              Messages
+              <span
+                :if={@message_count > 0}
+                id="message-count"
+                class="badge badge-sm badge-primary"
+                aria-label={"#{@message_count} unread"}
+              >
+                {@message_count}
+              </span>
+            </.nav_item>
           <% end %>
           <li class="menu-title">Forum</li>
           <.nav_item path={~p"/"} current_path={@current_path} icon="hero-fire">Latest</.nav_item>
@@ -172,7 +184,7 @@ defmodule FirestormWeb.Web.Layouts do
       <Layouts.app {Layouts.shell(assigns)}>...</Layouts.app>
   """
   def shell(assigns) do
-    Map.take(assigns, [:flash, :current_user, :notification_count, :current_path])
+    Map.take(assigns, [:flash, :current_user, :notification_count, :message_count, :current_path])
   end
 
   attr :path, :string, required: true
