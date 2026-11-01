@@ -4,8 +4,7 @@ defmodule FirestormWeb.Forums.SpamGuard do
   a day old and has a few posts, each post may contain only a couple of links.
   Admins are exempt.
   """
-  import Ecto.Changeset
-  import Ecto.Query
+  import Ecto.{Changeset, Query}
 
   alias FirestormWeb.{Forums, Repo}
   alias FirestormWeb.Forums.{Post, User}
