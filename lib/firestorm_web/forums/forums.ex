@@ -1072,27 +1072,52 @@ defmodule FirestormWeb.Forums do
   `:edit_post` policy). The replaced body is kept as a `PostRevision`, so the
   post's history can be shown. New-account link limits apply to the edit as
   they do to new posts. Saving an unchanged body is a no-op.
+
+  `post` is the version the editor started from: if someone else edited it
+  since, this returns `{:error, :edited_elsewhere}` instead of overwriting
+  their edit.
   """
   def update_post(%Post{} = post, %User{} = editor, attrs) do
-    changeset = post |> Post.edit_changeset(attrs) |> SpamGuard.validate_post(editor)
+    result =
+      Repo.transact(fn ->
+        # Edit the row as it is now, not the caller's copy, so the revision
+        # holds the body this edit actually replaces.
+        current = Post |> lock("FOR UPDATE") |> Repo.get!(post.id)
+
+        if current.edited_at == post.edited_at,
+          do: edit_post(current, editor, attrs),
+          else: {:error, :edited_elsewhere}
+      end)
+
+    tap_ok(result, &broadcast_post_updated/1)
+  end
+
+  defp edit_post(current, editor, attrs) do
+    changeset = current |> Post.edit_changeset(attrs) |> SpamGuard.validate_post(editor)
 
     if changeset.valid? and not Map.has_key?(changeset.changes, :body) do
-      {:ok, post}
+      {:ok, current}
     else
+      Repo.insert!(%PostRevision{post_id: current.id, user_id: editor.id, body: current.body})
+
       changeset
       |> put_change(:edited_at, NaiveDateTime.utc_now())
-      |> save_edit(post, editor)
+      |> Repo.update()
     end
   end
 
-  defp save_edit(changeset, post, editor) do
-    result =
-      Repo.transact(fn ->
-        Repo.insert!(%PostRevision{post_id: post.id, user_id: editor.id, body: post.body})
-        Repo.update(changeset)
-      end)
+  defp broadcast_post_updated(post) do
+    post = Repo.preload(post, [:thread, :user])
 
-    tap_ok(result, &broadcast("forums:thread:#{&1.thread_id}", {:post_updated, &1}))
+    payload = %ReplenishResponse{
+      categories: [],
+      threads: [post.thread],
+      users: [post.user],
+      posts: [post]
+    }
+
+    :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
+    broadcast("forums:thread:#{post.thread_id}", {:post_updated, post})
   end
 
   @doc """
