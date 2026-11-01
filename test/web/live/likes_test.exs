@@ -35,6 +35,29 @@ defmodule FirestormWeb.Web.LikesTest do
     |> refute_has("#post-#{post.id}-likes .like-count")
   end
 
+  test "a like refreshes only the likes, not the whole thread", ctx do
+    %{conn: conn, author: author, thread: thread, post: post, path: path} = ctx
+    reader = user_fixture(%{username: "reader"})
+    session = conn |> log_in_as(reader) |> visit(path)
+    read_before = Forums.thread_read(reader, thread).last_read_post_id
+
+    # A post that arrives without a live update: a full reload would show it
+    # and move the reader's read position.
+    FirestormWeb.Repo.insert!(%Forums.Post{
+      thread_id: thread.id,
+      user_id: author.id,
+      body: "Quiet"
+    })
+
+    Forums.like_post(post, user_fixture(%{username: "bob"}))
+
+    session
+    |> assert_has("#post-#{post.id}-likes .like-count", text: "1")
+    |> refute_has("p", text: "Quiet")
+
+    assert Forums.thread_read(reader, thread).last_read_post_id == read_before
+  end
+
   test "authors can't like their own posts", %{conn: conn, author: author, post: post, path: path} do
     Forums.like_post(post, user_fixture(%{username: "fan"}))
 
