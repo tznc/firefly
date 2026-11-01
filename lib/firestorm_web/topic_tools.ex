@@ -16,7 +16,7 @@ defmodule FirestormWeb.TopicTools do
 
   Post counts and last activity are worked out from the posts, so they
   follow by themselves. The rest is moved over in the same transaction:
-  read positions (see `rebase_reads/3`), notification levels (see
+  reply drafts (on a merge), read positions (see `rebase_reads/3`), notification levels (see
   `FirestormWeb.Forums.Subscriptions.copy_thread_levels/3`), the
   notifications about the moved posts (now pointing at the target), and a
   staff log entry. Open pages are told once it has committed.
@@ -24,7 +24,7 @@ defmodule FirestormWeb.TopicTools do
 
   import Ecto.Query
 
-  alias FirestormWeb.{Forums, Repo, StaffLog}
+  alias FirestormWeb.{Drafts, Forums, Repo, StaffLog}
   alias FirestormWeb.Forums.{Category, Notification, Policy, Post, Subscriptions}
   alias FirestormWeb.Forums.{Thread, ThreadRead, User}
   alias FirestormWeb.Web.Paths
@@ -45,6 +45,7 @@ defmodule FirestormWeb.TopicTools do
           Repo.delete_all(from(r in ThreadRead, where: r.thread_id == ^source.id))
           move_posts(moved_ids, target)
           Subscriptions.copy_thread_levels(source.id, target.id, :combine)
+          Drafts.move_replies(source.id, target.id)
           notified = repoint_notifications(where(Notification, thread_id: ^source.id), target)
 
           # The stub keeps its title (for the log and old links) but not

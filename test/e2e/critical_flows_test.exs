@@ -195,4 +195,26 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> click_button("Reply")
     |> assert_has("#posts article a[href$='/users/#{alice.id}']", text: "@alice")
   end
+
+  test "a reply draft survives leaving the page straight after typing", %{conn: conn} do
+    alice = member_fixture("alice")
+    category = Forums.create_category(%{title: "Elixir"}) |> elem(1)
+    {:ok, thread} = Forums.create_thread(category, alice, %{title: "OTP", body: "Thoughts?"})
+    reply_path = "/categories/#{category.id}/threads/#{thread.id}/posts/new"
+
+    conn
+    |> log_in("alice")
+    |> visit(reply_path)
+    |> assert_has("[data-phx-main].phx-connected")
+    # Typed, then away at once: within the autosave debounce, so the draft
+    # is only saved because leaving the field flushes it.
+    |> PhoenixTest.Playwright.type("#post_body", "Not finished yet")
+    |> click_link("nav a", "Latest")
+    |> assert_path("/")
+    |> visit(reply_path)
+    |> assert_has("#draft-status", text: "Draft saved")
+    |> assert_has("#post_body", text: "Not finished yet")
+    |> click_link("nav a", "Drafts")
+    |> assert_has("#drafts li", text: "Reply to OTP")
+  end
 end

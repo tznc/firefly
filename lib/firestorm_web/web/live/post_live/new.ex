@@ -1,5 +1,8 @@
 defmodule FirestormWeb.Web.PostLive.New do
-  @moduledoc "Replies to a thread, optionally quoting one of its posts."
+  @moduledoc """
+  Replies to a thread, optionally quoting one of its posts. What's typed is
+  kept as a draft (see `FirestormWeb.Web.Drafting`) until it's posted.
+  """
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
@@ -7,6 +10,8 @@ defmodule FirestormWeb.Web.PostLive.New do
   alias FirestormWeb.{Forums, Quote, Repo}
   alias FirestormWeb.Forums.Post
   alias FirestormWeb.Web.Editor
+
+  import FirestormWeb.Web.Drafting
 
   @impl true
   def mount(%{"category_id" => category_id, "thread_id" => thread_id} = params, _session, socket) do
@@ -27,7 +32,14 @@ defmodule FirestormWeb.Web.PostLive.New do
   end
 
   defp mount_reply(category, thread, params, socket) do
-    body = quote_body(category, thread, params)
+    socket = assign_draft(socket, {:reply, thread})
+    # A quote opened over a draft is added to it.
+    body =
+      case {socket.assigns.draft, quote_body(category, thread, params)} do
+        {nil, quoted} -> quoted
+        {draft, nil} -> draft.body
+        {draft, quoted} -> Editor.append(draft.body, quoted)
+      end
 
     {:ok,
      socket
@@ -42,7 +54,16 @@ defmodule FirestormWeb.Web.PostLive.New do
   @impl true
   def handle_event("validate", %{"post" => params}, socket) do
     changeset = Post.changeset(%Post{}, post_attrs(socket, params))
-    {:noreply, assign(socket, :form, to_form(changeset, action: :validate))}
+
+    {:noreply,
+     socket
+     |> assign(:form, to_form(changeset, action: :validate))
+     |> autosave(%{body: params["body"]})}
+  end
+
+  def handle_event("discard_draft", _params, socket) do
+    form = to_form(Forums.change_post(%Post{thread_id: socket.assigns.thread.id}))
+    {:noreply, socket |> discard_draft() |> assign(:form, form)}
   end
 
   def handle_event("save", %{"post" => params}, socket) do
@@ -62,6 +83,7 @@ defmodule FirestormWeb.Web.PostLive.New do
       {:ok, post} ->
         {:noreply,
          socket
+         |> discard_draft()
          |> put_flash(:info, created_message(post))
          |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
 
@@ -98,7 +120,7 @@ defmodule FirestormWeb.Web.PostLive.New do
       markdown = Editor.consume_attachment(socket, entry)
       body = Editor.append(socket.assigns.form[:body].value, markdown)
       changeset = Post.changeset(%Post{}, post_attrs(socket, %{"body" => body}))
-      {:noreply, assign(socket, :form, to_form(changeset))}
+      {:noreply, socket |> assign(:form, to_form(changeset)) |> autosave(%{body: body})}
     else
       {:noreply, socket}
     end
@@ -127,6 +149,7 @@ defmodule FirestormWeb.Web.PostLive.New do
 
       <.form for={@form} id="post-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <Editor.body_editor field={@form[:body]} uploads={@uploads} />
+        <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">
           <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"} class="btn btn-ghost">
             Cancel

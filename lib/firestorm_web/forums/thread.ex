@@ -85,6 +85,7 @@ defmodule FirestormWeb.Forums.Thread do
       %Post{}
       |> cast(post_attrs, [:body, :user_id, :queued_at])
       |> validate_required([:body, :user_id])
+      |> Post.validate_body_length()
 
     post_changeset =
       if user,

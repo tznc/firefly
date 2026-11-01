@@ -96,6 +96,9 @@ defmodule FirestormWeb.Web.Layouts do
             >
               Participating in
             </.nav_item>
+            <.nav_item path={~p"/drafts"} current_path={@current_path} icon="hero-pencil-square">
+              Drafts
+            </.nav_item>
             <.nav_item path={~p"/notifications"} current_path={@current_path} icon="hero-bell">
               Notifications
               <span :if={@notification_count > 0} class="badge badge-sm badge-primary">

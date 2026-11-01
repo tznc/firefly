@@ -32,10 +32,18 @@ defmodule FirestormWeb.Forums.Post do
     timestamps(type: :naive_datetime_usec)
   end
 
+  # Discourse's default: long enough for any real post, short enough that
+  # one can't fill pages (or a draft, see FirestormWeb.Drafts) with junk.
+  @max_body_length 32_000
+
+  @doc "The longest a post body (or a draft's) may be, in characters."
+  def max_body_length, do: @max_body_length
+
   def changeset(%__MODULE__{} = post, attrs \\ %{}) do
     post
     |> cast(attrs, [:body, :thread_id, :user_id])
     |> validate_required([:body, :thread_id, :user_id])
+    |> validate_body_length()
   end
 
   @doc "An edit of the body by its author or an admin."
@@ -43,7 +51,12 @@ defmodule FirestormWeb.Forums.Post do
     post
     |> cast(attrs, [:body])
     |> validate_required([:body])
+    |> validate_body_length()
   end
+
+  @doc "Validates that the changeset's `:body` fits `max_body_length/0`."
+  def validate_body_length(changeset),
+    do: validate_length(changeset, :body, max: @max_body_length)
 
   @doc "Whether the post was (soft) deleted. Its content is then hidden from members."
   def deleted?(%__MODULE__{deleted_at: at}), do: not is_nil(at)
