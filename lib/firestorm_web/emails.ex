@@ -9,6 +9,7 @@ defmodule FirestormWeb.Emails do
 
   @watching "You're getting this because you watch this thread, its category or one of its tags."
   @mentioned "You're getting this because you were mentioned."
+  @watching_category "You're getting this because you watch its category."
 
   def thread_new_post_notification(%User{} = user, %Thread{} = thread, %Post{} = post) do
     reply = post_url(thread, post)
@@ -20,6 +21,15 @@ defmodule FirestormWeb.Emails do
       text:
         "The Firefly thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{reply}]:",
       reason: @watching
+    )
+  end
+
+  def thread_created_notification(%User{} = user, %Thread{} = thread, %Post{} = post) do
+    post_notification(user, thread, post,
+      subject: "A new thread was started in a category you are watching on Firefly",
+      html: "A new Firefly thread was started: #{link(thread.title, thread_url(thread))}",
+      text: "A new Firefly thread was started: #{thread.title} [#{thread_url(thread)}]",
+      reason: @watching_category
     )
   end
 
