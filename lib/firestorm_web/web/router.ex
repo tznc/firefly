@@ -54,6 +54,7 @@ defmodule FirestormWeb.Web.Router do
       live("/categories/:category_id/threads/new", ThreadLive.New, :new)
       live("/categories/:category_id/threads/:id/edit", ThreadLive.Edit, :edit)
       live("/categories/:category_id/threads/:thread_id/posts/new", PostLive.New, :new)
+      live("/categories/:category_id/threads/:thread_id/posts/:id/edit", PostLive.Edit, :edit)
 
       live("/", ThreadLive.Recent, :index)
       live("/top", ThreadLive.Top, :index)
@@ -68,6 +69,12 @@ defmodule FirestormWeb.Web.Router do
       live("/categories/:id", CategoryLive.Show, :show)
       live("/categories/:category_id/threads", ThreadLive.Index, :index)
       live("/categories/:category_id/threads/:id", ThreadLive.Show, :show)
+
+      live(
+        "/categories/:category_id/threads/:thread_id/posts/:id/history",
+        PostLive.History,
+        :show
+      )
     end
   end
 

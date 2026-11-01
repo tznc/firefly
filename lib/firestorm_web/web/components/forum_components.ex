@@ -287,10 +287,14 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
-  @doc "A post with its author, timestamp, rendered body and oEmbeds."
+  @doc """
+  A post with its author, timestamp, rendered body and oEmbeds. Edited posts
+  link to their edit history.
+  """
   attr :post, :any, required: true
   attr :thread, :any, required: true
   attr :headline, :boolean, default: false, doc: "show the thread title instead of the author"
+  attr :can_edit, :boolean, default: false
   slot :actions
 
   def post(assigns) do
@@ -318,6 +322,16 @@ defmodule FirestormWeb.Web.ForumComponents do
               <.link navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}>
                 <.time_ago id={"post-#{@post.id}-time"} at={@post.inserted_at} />
               </.link>
+              <.link
+                :if={@post.edited_at}
+                navigate={
+                  ~p"/categories/#{@thread.category_id}/threads/#{@thread}/posts/#{@post.id}/history"
+                }
+                class="edited link-hover"
+                title="Edited: view the edit history"
+              >
+                · <.icon name="hero-pencil" class="size-3" /> edited
+              </.link>
             </div>
           </div>
         </header>
@@ -325,6 +339,14 @@ defmodule FirestormWeb.Web.ForumComponents do
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
         <footer class="flex items-center justify-end gap-1">
           {render_slot(@actions)}
+          <.link
+            :if={@can_edit}
+            navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}/posts/#{@post.id}/edit"}
+            class="btn btn-ghost btn-sm btn-square"
+            aria-label={"Edit post #{@post.id}"}
+          >
+            <.icon name="hero-pencil-square" class="size-4" />
+          </.link>
           <.link
             navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}
             class="btn btn-ghost btn-sm btn-square"
@@ -355,6 +377,34 @@ defmodule FirestormWeb.Web.ForumComponents do
       {Phoenix.HTML.raw(Markdown.render(@body))}
     </div>
     """
+  end
+
+  @doc """
+  A word diff (see `FirestormWeb.Forums.Diff`) with insertions and deletions
+  highlighted. The text is HTML-escaped; the markup is built here so that no
+  stray template whitespace ends up inside the preformatted text.
+  """
+  attr :diff, :list, required: true
+
+  def post_diff(assigns) do
+    assigns = assign(assigns, :html, diff_html(assigns.diff))
+
+    ~H"""
+    <div class="post-diff whitespace-pre-wrap break-words rounded-box bg-base-200 p-4 font-mono text-sm">{@html}</div>
+    """
+  end
+
+  defp diff_html(diff) do
+    {:safe,
+     Enum.map(diff, fn {op, text} ->
+       {:safe, escaped} = Phoenix.HTML.html_escape(text)
+
+       case op do
+         :eq -> escaped
+         :ins -> [~s(<ins class="bg-success/25 no-underline">), escaped, "</ins>"]
+         :del -> [~s(<del class="bg-error/20 text-error">), escaped, "</del>"]
+       end
+     end)}
   end
 
   @doc "Rendered oEmbeds for the URLs in a post."

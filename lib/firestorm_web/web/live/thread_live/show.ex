@@ -1,6 +1,6 @@
 defmodule FirestormWeb.Web.ThreadLive.Show do
   @moduledoc """
-  A thread and its posts. New posts appear live. Viewing the thread moves the
+  A thread and its posts. New and edited posts appear live. Viewing the thread moves the
   current user's read position to its newest post; posts that were unread when
   the page opened are marked with a "new since your last visit" divider.
   """
@@ -36,7 +36,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   end
 
   @impl true
-  def handle_info({:post_created, _post}, socket),
+  def handle_info({event, _post}, socket) when event in [:post_created, :post_updated],
     do: {:noreply, load_thread(socket, socket.assigns.thread)}
 
   def handle_info({:thread_updated, thread}, socket) do
@@ -133,6 +133,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:replies, replies)
     |> assign(:level, Subscriptions.thread_level(user, thread))
     |> assign(:inherited_level, inherited_level(user, socket.assigns.category))
+    |> assign(:editable_ids, editable_ids(user, thread))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
     |> assign(:can_moderate?, can?(user, :moderate_thread))
     |> assign(
@@ -149,6 +150,19 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   defp moderate(thread, "archive"), do: Forums.archive_thread(thread, true)
   defp moderate(thread, "unarchive"), do: Forums.archive_thread(thread, false)
   defp moderate(_thread, _action), do: {:error, :unknown_action}
+
+  # The posts the user may edit (roles loaded once, not per post).
+  defp editable_ids(nil, _thread), do: MapSet.new()
+
+  defp editable_ids(user, thread) do
+    user = Repo.preload(user, :roles)
+
+    for post <- thread.posts,
+        can?(user, :edit_post, %{post: post, thread: thread}),
+        into: MapSet.new() do
+      post.id
+    end
+  end
 
   defp moderation_message("pin"), do: "Thread pinned."
   defp moderation_message("unpin"), do: "Thread unpinned."
@@ -251,7 +265,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
       <ol id="posts" class="space-y-4">
         <li>
-          <.post post={@first_post} thread={@thread}>
+          <.post
+            post={@first_post}
+            thread={@thread}
+            can_edit={MapSet.member?(@editable_ids, @first_post.id)}
+          >
             <:actions>
               <.level_picker
                 :if={@current_user}
@@ -270,7 +288,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           >
             New since your last visit
           </div>
-          <.post post={post} thread={@thread} />
+          <.post post={post} thread={@thread} can_edit={MapSet.member?(@editable_ids, post.id)} />
         </li>
       </ol>
 

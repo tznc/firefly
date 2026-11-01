@@ -23,7 +23,9 @@ defmodule FirestormWeb.Forums.Thread do
     field(:closed_at, :utc_datetime)
     field(:archived_at, :utc_datetime)
     belongs_to(:category, Category)
-    has_many(:posts, Post)
+    # Explicit order: an edited post's row moves in the table, so the
+    # database's natural order isn't the posting order.
+    has_many(:posts, Post, preload_order: [asc: :inserted_at, asc: :id])
     has_many(:watches, {"forums_threads_watches", Watch}, foreign_key: :assoc_id)
 
     many_to_many(

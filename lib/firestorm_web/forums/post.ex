@@ -10,6 +10,7 @@ defmodule FirestormWeb.Forums.Post do
 
   schema "forums_posts" do
     field(:body, :string)
+    field(:edited_at, :naive_datetime_usec)
     belongs_to(:thread, Thread)
     belongs_to(:user, User)
     has_many(:views, {"forums_posts_views", View}, foreign_key: :assoc_id)
@@ -30,6 +31,13 @@ defmodule FirestormWeb.Forums.Post do
     post
     |> cast(attrs, [:body, :thread_id, :user_id])
     |> validate_required([:body, :thread_id, :user_id])
+  end
+
+  @doc "An edit of the body by its author or an admin."
+  def edit_changeset(%__MODULE__{} = post, attrs) do
+    post
+    |> cast(attrs, [:body])
+    |> validate_required([:body])
   end
 
   def ordered(query) do
