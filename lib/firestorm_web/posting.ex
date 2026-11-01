@@ -6,7 +6,6 @@ defmodule FirestormWeb.Posting do
   alias FirestormWeb.RateLimit
   alias FirestormWeb.Forums.User
 
-  @spec check(User.t()) :: :ok | {:error, :unconfirmed | :rate_limited}
   def check(%User{} = user) do
     if User.confirmed?(user), do: RateLimit.check_post(user), else: {:error, :unconfirmed}
   end
