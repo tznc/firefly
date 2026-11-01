@@ -56,6 +56,7 @@ defmodule FirestormWeb.Web.Router do
       live("/settings/account", SettingsLive.Index, :account)
       live("/unread", ThreadLive.Unread, :index)
       live("/drafts", DraftLive.Index, :index)
+      live("/bookmarks", BookmarkLive.Index, :index)
       live("/notifications", NotificationLive.Index, :index)
       live("/messages", MessageLive.Index, :index)
       live("/messages/new", MessageLive.New, :new)

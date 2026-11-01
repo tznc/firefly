@@ -8,7 +8,9 @@ import Hooks from "./hooks"
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
-  params: {_csrf_token: csrfToken},
+  // The browser's offset from UTC, in minutes (as getTimezoneOffset()), so
+  // times picked on the server (bookmark reminders) mean local time.
+  params: {_csrf_token: csrfToken, tz_offset: new Date().getTimezoneOffset()},
   hooks: Hooks,
   uploaders: Hooks.Uploaders,
 })
