@@ -31,7 +31,8 @@ defmodule FirestormWeb.TrustLevels do
   `tl3_promotion_min_duration` grace period has passed. Promotion notifies
   the member (`"promoted"`). Admins set a level, optionally locking it so
   the review leaves it alone (`set_level/4`, staff-logged); automatic
-  changes are logged as the system's.
+  changes are logged as the system's. A change grants the trust level
+  badges at once (see `FirestormWeb.Badges`).
 
   Each level has an automatic group, `trust_level_0` to `trust_level_4`: a
   member is in their level's and every lower level's. A database trigger
@@ -121,6 +122,7 @@ defmodule FirestormWeb.TrustLevels do
       end)
 
     if level > user.trust_level, do: notify_promotion(updated)
+    FirestormWeb.Badges.grant_earned([updated.id])
     {:ok, updated}
   end
 
@@ -225,6 +227,7 @@ defmodule FirestormWeb.TrustLevels do
       end)
 
     if level > user.trust_level, do: notify_promotion(updated)
+    FirestormWeb.Badges.grant_earned([updated.id])
   end
 
   ## Requirements

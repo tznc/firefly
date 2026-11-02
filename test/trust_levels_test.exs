@@ -76,7 +76,7 @@ defmodule FirestormWeb.TrustLevelsTest do
       assert group_names(user) == ["trust_level_0", "trust_level_1"]
 
       assert [%Notification{kind: "promoted", subject: "You're now a basic user (trust level 1)"}] =
-               Repo.all(where(Notification, user_id: ^user.id))
+               Repo.all(where(Notification, user_id: ^user.id, kind: "promoted"))
 
       assert %StaffAction{actor_id: nil, details: %{"from" => 0, "to" => 1}} =
                Repo.get_by!(StaffAction, action: "user.trust_level", target_id: user.id)
@@ -200,7 +200,7 @@ defmodule FirestormWeb.TrustLevelsTest do
                Repo.get_by!(StaffAction, action: "user.trust_level", target_id: user.id)
 
       assert actor_id == admin.id
-      assert Repo.get_by!(Notification, user_id: user.id).kind == "promoted"
+      assert Repo.get_by!(Notification, user_id: user.id, kind: "promoted")
     end
 
     test "members see their progress, not others' or the form", %{conn: conn} do

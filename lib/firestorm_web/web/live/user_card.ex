@@ -3,7 +3,8 @@ defmodule FirestormWeb.Web.UserCard do
   The user card: clicking a post's avatar or username (on pages that
   render this component, with the post component's `card_target`) opens a
   card with the member's avatar, name, card background, the start of their
-  bio, trust level (see `FirestormWeb.TrustLevels`), stats, when they
+  bio, trust level (see `FirestormWeb.TrustLevels`), title and best three
+  badges (see `FirestormWeb.Badges`), stats, when they
   joined and were last seen, and actions: message
   them, open their profile, mute or ignore them (see
   `FirestormWeb.Ignores`). A hidden profile (see `FirestormWeb.Profiles`)
@@ -16,7 +17,7 @@ defmodule FirestormWeb.Web.UserCard do
   """
   use FirestormWeb.Web, :live_component
 
-  alias FirestormWeb.{Forums, Ignores, Profiles, TrustLevels}
+  alias FirestormWeb.{Badges, Forums, Ignores, Profiles, TrustLevels}
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -57,6 +58,8 @@ defmodule FirestormWeb.Web.UserCard do
     |> assign(:user, user)
     |> assign(:visible?, visible?)
     |> assign(:stats, if(visible?, do: Profiles.stats(user)))
+    |> assign(:badges, if(visible?, do: user |> Badges.user_badges() |> Enum.take(3), else: []))
+    |> assign(:title, if(visible?, do: Badges.title(user)))
     |> assign(:ignorable?, ignorable?)
     |> assign(:ignore_level, if(ignorable?, do: Ignores.level(viewer, user)))
     |> assign(:notice, nil)
@@ -78,6 +81,7 @@ defmodule FirestormWeb.Web.UserCard do
               <div class="rounded-full bg-base-100 p-1"><.avatar user={@user} size="size-20" /></div>
               <div class="min-w-0 pb-1">
                 <p class="truncate text-lg font-bold">@{@user.username}</p>
+                <span :if={@title} class="user-card-title block text-sm text-primary">{@title}</span>
                 <span :if={@visible?} class="user-card-trust badge badge-ghost badge-sm">
                   {TrustLevels.name(@user.trust_level)}
                 </span>
@@ -95,6 +99,15 @@ defmodule FirestormWeb.Web.UserCard do
               <div><dt class="text-xs text-base-content/60">Replies</dt><dd class="font-semibold">{@stats.post_count}</dd></div>
               <div><dt class="text-xs text-base-content/60">Likes</dt><dd class="font-semibold">{@stats.likes_received}</dd></div>
             </dl>
+            <div :if={@badges != []} class="user-card-badges flex flex-wrap gap-2">
+              <.link
+                :for={{badge, _count, _at} <- @badges}
+                navigate={~p"/badges/#{badge.id}"}
+                class="flex items-center gap-1 text-sm"
+              >
+                <.badge_icon badge={badge} size="size-4" /> {badge.name}
+              </.link>
+            </div>
             <p :if={@visible?} class="flex flex-wrap gap-x-4 text-xs text-base-content/70">
               <span>Joined {short_date(@user.inserted_at)}</span>
               <span :if={@user.last_seen_at}>

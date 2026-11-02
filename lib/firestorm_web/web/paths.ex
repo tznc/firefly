@@ -23,6 +23,8 @@ defmodule FirestormWeb.Web.Paths do
   def group_url(group, nil), do: url(~p"/groups/#{group.name}")
   def group_url(group, tab), do: url(~p"/groups/#{group.name}/#{tab}")
 
+  def badge_url(badge), do: url(~p"/badges/#{badge.id}")
+
   def category_url(category), do: url(~p"/categories/#{category.id}")
 
   def conversation_url(conversation), do: url(~p"/messages/#{conversation.id}")

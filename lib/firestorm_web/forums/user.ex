@@ -44,6 +44,8 @@ defmodule FirestormWeb.Forums.User do
     field(:trust_level, :integer, default: 0)
     field(:manual_locked_trust_level, :integer)
     field(:trust_level_changed_at, :utc_datetime)
+    # The badge shown as their title, if it allows that (see FirestormWeb.Badges).
+    belongs_to(:title_badge, FirestormWeb.Forums.Badge)
     # The plugin this account acts for (see FirestormWeb.Plugins.Bots), if any.
     field(:plugin_bot, :string)
 

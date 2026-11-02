@@ -22,6 +22,28 @@ defmodule FirestormWeb.Web.ForumComponents do
   @doc "Abbreviated month, day and two-digit year, i.e. `Jul 3, '17`."
   def short_date(date), do: Calendar.strftime(date, "%b %-d, '%y")
 
+  @doc "A badge's icon, colored by its type (gold, silver, bronze); see `FirestormWeb.Badges`."
+  attr :badge, :any, required: true
+  attr :size, :string, default: "size-6"
+
+  def badge_icon(assigns) do
+    ~H"""
+    <span
+      class={[
+        "badge-icon inline-flex shrink-0 items-center justify-center rounded-full p-1",
+        badge_color(@badge.badge_type)
+      ]}
+      title={@badge.name}
+    >
+      <.icon name={@badge.icon} class={@size} />
+    </span>
+    """
+  end
+
+  defp badge_color("gold"), do: "bg-warning/20 text-warning"
+  defp badge_color("silver"), do: "bg-base-300 text-base-content/70"
+  defp badge_color(_bronze), do: "bg-orange-200/40 text-orange-700"
+
   @doc "A category's CSS color: its chosen color, or a hue derived from its slug."
   def category_color(%{color: "#" <> _ = color}), do: color
 
