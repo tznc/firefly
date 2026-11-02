@@ -58,7 +58,16 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "setting.update" => "Changed setting",
     "admin.create" => "Created in admin",
     "admin.update" => "Updated in admin",
-    "admin.delete" => "Deleted in admin"
+    "admin.delete" => "Deleted in admin",
+    "plugin.install" => "Installed plugin",
+    "plugin.upgrade" => "Upgraded plugin",
+    "plugin.enable" => "Enabled plugin",
+    "plugin.disable" => "Disabled plugin",
+    "plugin.uninstall" => "Uninstalled plugin",
+    "plugin.settings" => "Changed plugin settings",
+    "plugin.auto_disable" => "Turned off failing plugin",
+    "plugin.suspend" => "Suspended plugin",
+    "plugin.resume" => "Resumed plugin"
   }
 
   @impl true
@@ -116,6 +125,9 @@ defmodule FirestormWeb.Web.StaffLive.Log do
 
   defp target_link(%{target_type: "tag_group", details: %{"name" => name}}, _target),
     do: {name, ~p"/staff/tags"}
+
+  defp target_link(%{target_type: "plugin", details: %{"plugin" => id}}, _target),
+    do: {id, ~p"/staff/plugins/#{id}"}
 
   defp target_link(_entry, nil), do: nil
 
@@ -180,6 +192,7 @@ defmodule FirestormWeb.Web.StaffLive.Log do
                 <.link :if={entry.actor} navigate={~p"/users/#{entry.actor}"} class="link">
                   {entry.actor.username}
                 </.link>
+                <span :if={is_nil(entry.actor_id)} class="text-base-content/60">System</span>
               </td>
               <td class="whitespace-nowrap">{label(entry.action)}</td>
               <td class="target">
