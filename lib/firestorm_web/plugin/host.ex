@@ -40,7 +40,10 @@ defmodule FirestormWeb.Plugin.Host do
       an hour per plugin.
     * `threads.close`, `threads.pin` (`moderate`) - `{thread_id, closed}`,
       `{thread_id, pinned}`.
-    * `http.fetch` (`http`) - see `FirestormWeb.Plugins.HTTP`.
+    * `http.fetch` (`http`) - see `FirestormWeb.Plugins.HTTP`. Only in
+      hooks that run in the background or on the plugin's own surfaces
+      (see "Network access" below), and every attempt is logged (see
+      `FirestormWeb.Plugins.Egress`).
     * `fields.get`, `fields.set` (`fields`) - `{type, id}`, `{type, id, key,
       value}`: see `FirestormWeb.Plugins.Fields`.
 
@@ -48,6 +51,19 @@ defmodule FirestormWeb.Plugin.Host do
   through the same contexts, policies and checks as a member's
   (`FirestormWeb.Posting`, rate limits, tag groups, the review queue), and
   only on threads and posts anyone can read.
+
+  ## Network access
+
+  `http.fetch` is refused, whatever the plugin's permissions, while a
+  hook runs synchronously in a member's request on forum content
+  (`render_shortcodes`, `render_post`, `moderate_post`, `flag_created`): a slow or hostile host would hold up
+  every page view, and content would leave the site each time it's shown.
+  It's allowed in `enabled` and `disabled` (staff actions), `handle_event`
+  and `run_job` (background work), and in an export when the call chain
+  started in one of those (see `FirestormWeb.Plugin.Runner.context/0`).
+  The check reads the context the runner gave the calling process, so it
+  holds the same for core and sandboxed plugins, and a process a core
+  plugin starts outside a hook gets no network either.
   """
 
   require Logger
@@ -55,19 +71,27 @@ defmodule FirestormWeb.Plugin.Host do
   alias FirestormWeb.{Flags, Forums, Plugins, Posting, RateLimit, Repo, SiteSettings}
   alias FirestormWeb.Forums.{Post, Thread, User}
   alias FirestormWeb.Plugin
-  alias FirestormWeb.Plugins.{Bots, Fields, HTTP, Storage}
+  alias FirestormWeb.Plugin.{Manifest, Runner}
+  alias FirestormWeb.Plugins.{Bots, Egress, Fields, HTTP, Storage}
   alias FirestormWeb.Web.Paths
 
+  # What each permission lets a plugin do, in words for staff deciding
+  # whether to install it. `http` is followed by the hosts it names.
   @permissions %{
-    "read" => "Read public posts, threads and user profiles, and hear about events",
-    "tags" => "Add and remove tags on public threads, as its bot",
-    "flag" => "Flag public posts as its bot, and hear about flags raised",
-    "post" => "Reply in public threads as its bot",
-    "notify" => "Send members notifications",
-    "moderate" => "Close, reopen, pin and unpin public threads as its bot",
-    "http" => "Make HTTP requests to the hosts it lists",
-    "fields" => "Keep its own fields on posts, threads and users"
+    "read" =>
+      "Can read public posts, threads and member profiles, and is told when they're created, edited or deleted",
+    "tags" => "Can add and remove tags on public threads, as its bot account",
+    "flag" =>
+      "Can flag public posts for staff review, as its bot account, and is told when members flag posts",
+    "post" => "Can reply in public threads, as its bot account",
+    "notify" => "Can send members notifications (at most 100 an hour)",
+    "moderate" => "Can close, reopen, pin and unpin public threads, as its bot account",
+    "http" => "Can send forum content to:",
+    "fields" => "Can keep its own data on posts, threads and member profiles"
   }
+
+  # Where `http.fetch` may run (see "Network access").
+  @network_contexts ~w(enabled disabled handle_event run_job)
 
   # Function name => the permission it needs (nil: none).
   @functions %{
@@ -97,8 +121,53 @@ defmodule FirestormWeb.Plugin.Host do
   @doc "Every permission a manifest may request."
   def permissions, do: Map.keys(@permissions)
 
-  @doc "What a permission lets a plugin do, for staff."
-  def describe_permission(permission), do: Map.fetch!(@permissions, permission)
+  @doc """
+  What `permission` lets the plugin with `manifest` do, in plain words for
+  staff: for `http`, "Can send forum content to: " and its hosts.
+  """
+  def describe_permission(permission, %Manifest{} = manifest) do
+    case permission do
+      "http" -> "#{@permissions["http"]} #{Enum.map_join(manifest.http_hosts, ", ", &host/1)}"
+      _ -> Map.fetch!(@permissions, permission)
+    end
+  end
+
+  @doc """
+  What `manifest` asks for, for staff, in its order:
+  `[%{permission, text, new, hosts}]` (`text` from `describe_permission/2`),
+  `hosts` being the `http` permission's `[%{name, new}]`. Given `previous` (the installed version's
+  manifest, when upgrading), `new` marks what this version adds.
+  """
+  def permission_summary(%Manifest{} = manifest, previous \\ nil) do
+    for permission <- manifest.permissions do
+      %{
+        permission: permission,
+        text: describe_permission(permission, manifest),
+        new: added?(previous, :permissions, permission),
+        hosts:
+          if(permission == "http",
+            do: for(pattern <- manifest.http_hosts, do: host_summary(previous, pattern)),
+            else: []
+          )
+      }
+    end
+  end
+
+  @doc "Whether `manifest` asks for any permission or host `previous` didn't."
+  def more_access?(%Manifest{} = manifest, %Manifest{} = previous) do
+    manifest
+    |> permission_summary(previous)
+    |> Enum.any?(fn item -> item.new or Enum.any?(item.hosts, & &1.new) end)
+  end
+
+  defp host_summary(previous, pattern),
+    do: %{name: host(pattern), new: added?(previous, :http_hosts, pattern)}
+
+  defp added?(nil, _key, _value), do: false
+  defp added?(%Manifest{} = previous, key, value), do: value not in Map.fetch!(previous, key)
+
+  defp host("*." <> domain), do: "any subdomain of #{domain}"
+  defp host(name), do: name
 
   @doc "Every host function, with the permission it needs."
   def functions, do: @functions
@@ -108,20 +177,64 @@ defmodule FirestormWeb.Plugin.Host do
   `{:error, message}` (the message is for the plugin).
   """
   @spec call(Plugin.t(), String.t(), term) :: {:ok, term} | {:error, String.t()}
-  def call(%Plugin{} = plugin, name, args) do
-    case Map.fetch(@functions, name) do
-      :error ->
-        {:error, "unknown function #{name}"}
+  def call(%Plugin{} = plugin, "http.fetch", args) do
+    started = System.monotonic_time(:millisecond)
 
-      {:ok, permission} ->
-        if is_nil(permission) or permission in plugin.manifest.permissions do
-          run(name, plugin, args)
-        else
-          message = "permission denied: #{name} needs the \"#{permission}\" permission"
-          Plugins.log_error(plugin.id, name, :denied, message)
-          {:error, message}
-        end
+    result =
+      with :ok <- permitted(plugin, "http.fetch"),
+           :ok <- network_context(),
+           do: HTTP.fetch(plugin.manifest.http_hosts, args)
+
+    Egress.record(plugin.id, args, result, System.monotonic_time(:millisecond) - started)
+
+    case result do
+      {:ok, response} ->
+        {:ok, response}
+
+      {:error, kind, message} when kind in [:no_permission, :sync_hook] ->
+        denied(plugin, "http.fetch", message)
+
+      {:error, _kind, message} ->
+        {:error, message}
     end
+  end
+
+  def call(%Plugin{} = plugin, name, args) do
+    if Map.has_key?(@functions, name) do
+      case permitted(plugin, name) do
+        :ok -> run(name, plugin, args)
+        {:error, _kind, message} -> denied(plugin, name, message)
+      end
+    else
+      {:error, "unknown function #{name}"}
+    end
+  end
+
+  defp permitted(plugin, name) do
+    permission = @functions[name]
+
+    if is_nil(permission) or permission in plugin.manifest.permissions,
+      do: :ok,
+      else:
+        {:error, :no_permission,
+         "permission denied: #{name} needs the \"#{permission}\" permission"}
+  end
+
+  defp network_context do
+    case Runner.context() do
+      context when context in @network_contexts ->
+        :ok
+
+      context ->
+        {:error, :sync_hook,
+         "permission denied: http.fetch is not available in synchronous hooks (#{context || "outside a hook"}); use an event or job"}
+    end
+  end
+
+  # A denial is logged in the plugin's error log.
+  defp denied(plugin, name, message) do
+    Plugins.log_error(plugin.id, name, :denied, message)
+    {:error, message}
   end
 
   defp run("log", plugin, args) do
@@ -308,9 +421,6 @@ defmodule FirestormWeb.Plugin.Host do
       end
     end
   end
-
-  defp run("http.fetch", plugin, args) when is_map(args),
-    do: HTTP.fetch(plugin.manifest.http_hosts, args)
 
   defp run("fields.get", plugin, %{"type" => type, "id" => id}) when is_integer(id) do
     with :ok <- field_target(type, id), do: {:ok, Fields.get(plugin.id, type, id)}
