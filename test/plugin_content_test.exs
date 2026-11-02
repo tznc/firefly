@@ -26,7 +26,9 @@ defmodule FirestormWeb.PluginContentTest do
     install_plugin!(
       admin,
       Map.merge(%{"id" => id, "name" => id, "hooks" => ["render_post"]}, extra),
-      %{"index.js" => js}, enable: true)
+      %{"index.js" => js},
+      enable: true
+    )
   end
 
   @spoiler """
