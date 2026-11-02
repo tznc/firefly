@@ -5,7 +5,7 @@ defmodule FirestormWeb.Forums do
 
   defdelegate authorize(action, user, params), to: FirestormWeb.Forums.Policy
   import Ecto.{Query, Changeset}, warn: false
-  alias FirestormWeb.{Ignores, Repo, Notifications, SiteSettings, StaffLog}
+  alias FirestormWeb.{Ignores, Repo, Notifications, SiteSettings, StaffLog, Visits}
   alias FirestormWeb.Plugins.{Events, Moderation}
   alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Store.ReplenishResponse
@@ -41,14 +41,6 @@ defmodule FirestormWeb.Forums do
   """
   def list_users do
     Repo.all(User)
-  end
-
-  @doc "The user directory: newest first, leaving out users who hid themselves from it."
-  def paginate_users(page) do
-    User
-    |> where([u], not u.hide_from_directory)
-    |> order_by([p], desc: p.inserted_at)
-    |> Repo.paginate(page: page)
   end
 
   @doc """
@@ -949,12 +941,29 @@ defmodule FirestormWeb.Forums do
       |> Repo.one()
 
     if last_post_id do
+      :ok = Visits.read_posts(user.id, newly_read_count(user.id, thread.id, last_post_id))
       result = advance_read(user.id, thread.id, last_post_id)
       read_thread_notifications(user, thread)
       result
     else
       {:ok, nil}
     end
+  end
+
+  # How many published posts up to `last_post_id` the user hadn't read yet
+  # (for their visit stats; see `FirestormWeb.Visits`).
+  defp newly_read_count(user_id, thread_id, last_post_id) do
+    read_up_to =
+      Repo.one(
+        from(r in ThreadRead,
+          where: r.user_id == ^user_id and r.thread_id == ^thread_id,
+          select: r.last_read_post_id
+        )
+      ) || 0
+
+    Post.visible()
+    |> where([p], p.thread_id == ^thread_id and p.id > ^read_up_to and p.id <= ^last_post_id)
+    |> Repo.aggregate(:count)
   end
 
   # Moves a read position forward to `post_id` (never backwards).
@@ -2234,16 +2243,8 @@ defmodule FirestormWeb.Forums do
   defp sees_hidden_posts_of?(%User{id: id}, %User{id: id}), do: true
   defp sees_hidden_posts_of?(viewer, _user), do: admin?(viewer)
 
-  # FIXME: Should track when users log in rather than proxying that by
-  # pretending them making a view always happens when they're on the site.
-  def user_last_seen(user) do
-    "forums_posts_views"
-    |> where([v], v.user_id == ^user.id)
-    |> order_by([v], desc: v.inserted_at)
-    |> select([v], v.inserted_at)
-    |> limit(1)
-    |> Repo.one()
-  end
+  @doc "When `user` last had a page open (see `FirestormWeb.Visits`), or nil."
+  def user_last_seen(%User{last_seen_at: at}), do: at
 
   @doc "Have a user watch a thread (notification level `watching`)."
   def watch(%User{} = user, %Thread{} = thread),

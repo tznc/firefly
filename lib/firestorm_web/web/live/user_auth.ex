@@ -5,7 +5,8 @@ defmodule FirestormWeb.Web.UserAuth do
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
       the unread notification and conversation counts, for admins the review
       queue's count (kept live; views can export `review_changed/1` to react
-      too) and the current path.
+      too) and the current path. It records the user's visit (see
+      `FirestormWeb.Visits`) once the page connects.
       For a user, it also handles the theme toggle's `"set_theme"` event on
       every page, saving their theme.
     * `:require_user` - redirects to the categories page when nobody is
@@ -18,7 +19,7 @@ defmodule FirestormWeb.Web.UserAuth do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
   import Phoenix.LiveView
 
-  alias FirestormWeb.{Forums, Messages, Review}
+  alias FirestormWeb.{Forums, Messages, Review, Visits}
   alias FirestormWeb.Web.Session
 
   def on_mount(:mount_current_user, _params, session, socket) do
@@ -46,6 +47,7 @@ defmodule FirestormWeb.Web.UserAuth do
   defp mount_current_user(socket, session) do
     socket
     |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
+    |> record_visit()
     |> assign_counts()
     |> subscribe_to_notifications()
     |> subscribe_to_review()
@@ -53,6 +55,12 @@ defmodule FirestormWeb.Web.UserAuth do
     |> attach_hook(:current_path, :handle_params, fn _params, uri, socket ->
       {:cont, assign(socket, :current_path, URI.parse(uri).path)}
     end)
+  end
+
+  # Once the page is live, not for the static render before it.
+  defp record_visit(socket) do
+    if connected?(socket), do: Visits.seen(socket.assigns.current_user)
+    socket
   end
 
   defp assign_counts(socket) do

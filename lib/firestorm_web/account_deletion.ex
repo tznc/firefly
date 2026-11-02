@@ -9,7 +9,7 @@ defmodule FirestormWeb.AccountDeletion do
   `FirestormWeb.Polls`): closed polls' results don't change, and public
   polls list the placeholder. Everything else personal goes:
   roles, read positions, notification levels, notifications, likes, post
-  views, drafts, bookmarks, mutes and ignores, conversation memberships, the avatar and
+  views, drafts, bookmarks, mutes and ignores, visits and directory stats, conversation memberships, the avatar and
   uploads not used in any post or message (see
   `FirestormWeb.Uploads.delete_account_uploads/1`; files in posts and
   messages stay with them), and what plugins keep for the user (their
@@ -92,7 +92,8 @@ defmodule FirestormWeb.AccountDeletion do
 
         for table <- ~w(forums_role_memberships forums_thread_reads forums_threads_watches
                         forums_categories_watches forums_tags_watches forums_post_likes
-                        forums_posts_views forums_drafts forums_bookmarks user_ignores),
+                        forums_posts_views forums_drafts forums_bookmarks user_ignores
+                        user_visits directory_items),
             do: Repo.delete_all(from(r in table, where: r.user_id == ^id))
 
         Repo.delete_all(from(n in Notification, where: n.user_id == ^id))
@@ -115,6 +116,7 @@ defmodule FirestormWeb.AccountDeletion do
           website: nil,
           location: nil,
           avatar_upload_id: nil,
+          last_seen_at: nil,
           email_notifications: false,
           allow_private_messages: false,
           hide_from_directory: true,
