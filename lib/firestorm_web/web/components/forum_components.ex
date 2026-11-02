@@ -583,6 +583,83 @@ defmodule FirestormWeb.Web.ForumComponents do
     """
   end
 
+  @doc """
+  What members see in place of a post by someone they ignore (see
+  `FirestormWeb.Ignores`); Show sends `reveal_ignored` with the post `id`.
+  """
+  attr :post, :any, required: true
+
+  def ignored_post(assigns) do
+    ~H"""
+    <article
+      id={"post-#{@post.id}"}
+      class="ignored-post flex items-center gap-2 rounded-box border border-dashed border-base-300 px-5 py-3 text-sm italic text-base-content/60"
+    >
+      <.icon name="hero-eye-slash" class="size-4" />
+      <span class="flex-1">Ignored content</span>
+      <button
+        type="button"
+        phx-click="reveal_ignored"
+        phx-value-id={@post.id}
+        class="btn btn-ghost btn-xs not-italic"
+        aria-label={"Show ignored post #{@post.id}"}
+      >
+        Show
+      </button>
+    </article>
+    """
+  end
+
+  @doc """
+  How the viewer treats another member: normal, muted or ignored (for a
+  while; see `FirestormWeb.Ignores`). Submits `set_ignore` with
+  `ignore[user_id]`, `ignore[level]` and `ignore[duration]`.
+  """
+  attr :id, :string, required: true
+  attr :user, :any, required: true, doc: "the member to mute or ignore"
+  attr :level, :string, default: nil, doc: "the viewer's current choice, or nil"
+
+  def ignore_form(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :form,
+        Phoenix.Component.to_form(
+          %{"level" => assigns.level || "normal", "duration" => "forever"},
+          as: :ignore
+        )
+      )
+
+    ~H"""
+    <.form for={@form} id={@id} phx-submit="set_ignore" class="ignore-form flex flex-wrap items-end gap-2">
+      <input type="hidden" name="ignore[user_id]" value={@user.id} />
+      <div class="w-56">
+        <.input
+          field={@form[:level]}
+          id={"#{@id}-level"}
+          type="select"
+          label={"How you see @#{@user.username}"}
+          options={[
+            {"Normal", "normal"},
+            {"Muted: no notifications", "mute"},
+            {"Ignored: also hide their posts", "ignore"}
+          ]}
+        />
+      </div>
+      <div class="w-36">
+        <.input
+          field={@form[:duration]}
+          id={"#{@id}-duration"}
+          type="select"
+          label="Ignore for"
+          options={FirestormWeb.Ignores.durations()}
+        />
+      </div>
+      <button class="btn btn-sm mb-2">Save</button>
+    </.form>
+    """
+  end
+
   @doc "What members see in place of a post hidden after flags."
   attr :post, :any, required: true
 

@@ -4,7 +4,7 @@ defmodule FirestormWeb.AccountExport do
   (with the revisions they made to them), edits of other people's (wiki)
   posts, threads started, likes,
   notifications, private messages they sent and the conversations they're
-  in, notification levels, read positions, drafts, bookmarks, poll votes and the polls they created,
+  in, notification levels, read positions, drafts, bookmarks, the members they mute or ignore, poll votes and the polls they created,
   their uploads (with links, which work while the user may still see them),
   the custom emoji they added as staff, and what plugins keep for them
   (their storage entries and custom fields on the user, by plugin id).
@@ -68,6 +68,7 @@ defmodule FirestormWeb.AccountExport do
       read_positions: read_positions(user),
       drafts: FirestormWeb.Drafts.export(user),
       bookmarks: FirestormWeb.Bookmarks.export(user),
+      muted_and_ignored: FirestormWeb.Ignores.export(user),
       polls: FirestormWeb.Polls.export(user),
       uploads: FirestormWeb.Uploads.export(user),
       custom_emoji_added: FirestormWeb.Emoji.export(user),

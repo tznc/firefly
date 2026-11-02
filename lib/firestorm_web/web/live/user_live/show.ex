@@ -3,11 +3,12 @@ defmodule FirestormWeb.Web.UserLive.Show do
   A user's profile (bio, website, location) and their posts, paginated. Users
   can hide their posts and activity from others here; admins still see them.
   Admins see a member's penalties here, and silence or suspend them (see
-  `FirestormWeb.Penalties`).
+  `FirestormWeb.Penalties`). Members mute or ignore others here (see
+  `FirestormWeb.Ignores`).
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Mentions, Penalties}
+  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties}
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -22,7 +23,18 @@ defmodule FirestormWeb.Web.UserLive.Show do
      |> assign(:penalty_form, penalty_form())
      |> assign(:activity?, activity_visible?(user, socket.assigns.current_user))
      |> assign(:last_post, Forums.user_last_post(user, socket.assigns.current_user))
-     |> assign(:last_seen, Forums.user_last_seen(user))}
+     |> assign(:last_seen, Forums.user_last_seen(user))
+     |> assign_ignore()}
+  end
+
+  # Members may mute or ignore anyone but themselves and staff.
+  defp assign_ignore(socket) do
+    %{current_user: viewer, user: user} = socket.assigns
+    ignorable? = viewer != nil and viewer.id != user.id and not Forums.admin?(user)
+
+    socket
+    |> assign(:ignorable?, ignorable?)
+    |> assign(:ignore_level, if(ignorable?, do: Ignores.level(viewer, user)))
   end
 
   defp staff?(nil), do: false
@@ -62,6 +74,18 @@ defmodule FirestormWeb.Web.UserLive.Show do
     do: to_form(params, as: :penalty)
 
   @impl true
+  def handle_event("set_ignore", %{"ignore" => params}, %{assigns: %{ignorable?: true}} = socket) do
+    %{current_user: viewer, user: user} = socket.assigns
+
+    case Ignores.choose(viewer, user, params["level"], params["duration"]) do
+      {:ok, message} -> {:noreply, socket |> assign_ignore() |> put_flash(:info, message)}
+      {:error, message} -> {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  def handle_event("set_ignore", _params, socket),
+    do: {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+
   def handle_event(event, params, socket) when event in ["penalize", "lift"] do
     %{current_user: admin, user: user} = socket.assigns
     action = if event == "lift", do: :lift_penalty, else: :penalize_user
@@ -152,6 +176,20 @@ defmodule FirestormWeb.Web.UserLive.Show do
           </.link>
         </div>
       </section>
+
+      <details :if={@ignorable?} id="ignore" class="collapse-arrow collapse border border-base-300 bg-base-100">
+        <summary class="collapse-title font-semibold">
+          <.icon name="hero-speaker-x-mark" class="size-4" /> Mute or ignore
+          <span :if={@ignore_level == "mute"} class="badge badge-sm ml-2">Muted</span>
+          <span :if={@ignore_level == "ignore"} class="badge badge-sm ml-2">Ignored</span>
+        </summary>
+        <div class="collapse-content space-y-2">
+          <p class="text-sm text-base-content/70">
+            Muting stops notifications and private messages from them. Ignoring also collapses their posts and hides the threads they start. They aren't told.
+          </p>
+          <.ignore_form id="ignore-form" user={@user} level={@ignore_level} />
+        </div>
+      </details>
 
       <div :if={@staff?} id="penalties" class="space-y-2">
         <div :if={User.silenced?(@user)} id="silenced-badge" class="flex flex-wrap items-center gap-2">

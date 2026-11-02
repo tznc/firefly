@@ -10,6 +10,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       the levels threads get when you reply or start one
     * Privacy: hiding your activity from your profile, and yourself from the
       users directory
+    * Muted & ignored (`/settings/users`): the members you mute or ignore
+      (see `FirestormWeb.Ignores`), to add or remove
     * Account: downloading your data and deleting your account (both handled
       by `FirestormWeb.Web.AccountController`)
   """
@@ -17,7 +19,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{EmailConfirmation, Forums, Posting, RateLimit, Uploads}
+  alias FirestormWeb.{EmailConfirmation, Forums, Ignores, Posting, RateLimit, Uploads}
   alias FirestormWeb.Forums.User
 
   @sections [
@@ -25,6 +27,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     interface: {"Interface", "hero-swatch"},
     notifications: {"Notifications", "hero-bell"},
     privacy: {"Privacy", "hero-eye-slash"},
+    users: {"Muted & ignored", "hero-speaker-x-mark"},
     account: {"Account", "hero-identification"}
   ]
 
@@ -100,6 +103,16 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     |> assign(:current_user, user)
     |> assign(:profile_form, to_form(User.update_changeset(user, %{})))
     |> assign(:form, to_form(User.preferences_changeset(user, %{}), as: :preferences))
+    |> assign_ignores()
+  end
+
+  defp assign_ignores(socket) do
+    socket
+    |> assign(:ignores, Ignores.list(socket.assigns.current_user))
+    |> assign(
+      :ignore_add_form,
+      to_form(%{"username" => "", "level" => "mute", "duration" => "forever"}, as: :ignore)
+    )
   end
 
   @impl true
@@ -157,6 +170,33 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     end
   end
 
+  def handle_event("add_ignore", %{"ignore" => params}, socket) do
+    user = socket.assigns.current_user
+    username = params |> Map.get("username", "") |> String.trim() |> String.trim_leading("@")
+
+    case Forums.users_by_username([username]) do
+      %{^username => target} ->
+        case Ignores.choose(user, target, params["level"], params["duration"]) do
+          {:ok, message} -> {:noreply, socket |> assign_ignores() |> put_flash(:info, message)}
+          {:error, message} -> {:noreply, put_flash(socket, :error, message)}
+        end
+
+      _none ->
+        {:noreply, put_flash(socket, :error, "No such user: @#{username}")}
+    end
+  end
+
+  def handle_event("remove_ignore", %{"id" => id}, socket) do
+    case Forums.get_user(id) do
+      nil ->
+        {:noreply, assign_ignores(socket)}
+
+      target ->
+        {:ok, message} = Ignores.choose(socket.assigns.current_user, target, "normal", nil)
+        {:noreply, socket |> assign_ignores() |> put_flash(:info, message)}
+    end
+  end
+
   # Only the fields on the form; never e.g. the API token.
   defp profile_params(params), do: Map.take(params, ~w(username name email bio website location))
 
@@ -164,6 +204,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   defp section_path(:interface), do: ~p"/settings/interface"
   defp section_path(:notifications), do: ~p"/settings/notifications"
   defp section_path(:privacy), do: ~p"/settings/privacy"
+  defp section_path(:users), do: ~p"/settings/users"
   defp section_path(:account), do: ~p"/settings/account"
 
   defp avatar_error(:too_large), do: "That file is too large."
@@ -336,6 +377,66 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
         </p>
         <.button variant="primary" phx-disable-with="Saving...">Save</.button>
       </.form>
+      <div :if={@live_action == :users} class="space-y-6">
+        <p class="text-sm text-base-content/70">
+          Muting someone stops notifications and private messages from them. Ignoring them also collapses their posts (you can still open each one) and hides the threads and conversations they start. They aren't told. Staff can't be muted or ignored.
+        </p>
+        <ul id="ignores" class="list rounded-box border border-base-300 bg-base-100">
+          <li :if={@ignores == []} class="list-row text-base-content/60">
+            You don't mute or ignore anyone.
+          </li>
+          <li :for={ignore <- @ignores} id={"ignore-#{ignore.ignored_user_id}"} class="list-row items-center">
+            <.avatar user={ignore.ignored_user} size="size-8" />
+            <div class="list-col-grow">
+              <.link navigate={~p"/users/#{ignore.ignored_user}"} class="font-medium hover:text-primary">
+                @{ignore.ignored_user.username}
+              </.link>
+              <span class="badge badge-sm ml-2">
+                {if ignore.level == "ignore", do: "Ignored", else: "Muted"}
+              </span>
+              <span :if={ignore.expires_at} class="text-xs text-base-content/60">
+                until {short_date(ignore.expires_at)}
+              </span>
+            </div>
+            <button
+              type="button"
+              phx-click="remove_ignore"
+              phx-value-id={ignore.ignored_user_id}
+              class="btn btn-ghost btn-sm"
+              aria-label={"Stop muting or ignoring @#{ignore.ignored_user.username}"}
+            >
+              Remove
+            </button>
+          </li>
+        </ul>
+        <.form
+          for={@ignore_add_form}
+          id="add-ignore-form"
+          phx-submit="add_ignore"
+          class="flex flex-wrap items-end gap-2"
+        >
+          <div class="w-48">
+            <.input field={@ignore_add_form[:username]} type="text" label="Username" />
+          </div>
+          <div class="w-36">
+            <.input
+              field={@ignore_add_form[:level]}
+              type="select"
+              label="Level"
+              options={[{"Mute", "mute"}, {"Ignore", "ignore"}]}
+            />
+          </div>
+          <div class="w-36">
+            <.input
+              field={@ignore_add_form[:duration]}
+              type="select"
+              label="Ignore for"
+              options={Ignores.durations()}
+            />
+          </div>
+          <button class="btn btn-sm mb-2">Add</button>
+        </.form>
+      </div>
       <div :if={@live_action == :account} class="space-y-6">
         <section class="card border border-base-300 bg-base-100">
           <div class="card-body">

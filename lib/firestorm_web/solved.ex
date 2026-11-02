@@ -120,6 +120,7 @@ defmodule FirestormWeb.Solved do
     author = Repo.get(User, post.user_id)
 
     if (author && author.id != actor.id) and not User.deleted?(author) and
+         not FirestormWeb.Ignores.muted?(author, actor) and
          Policy.thread_readers(thread, [author]) != [] do
       Forums.notify(author, %{
         kind: "answer_accepted",

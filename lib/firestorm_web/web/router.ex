@@ -95,6 +95,7 @@ defmodule FirestormWeb.Web.Router do
       live("/settings/interface", SettingsLive.Index, :interface)
       live("/settings/notifications", SettingsLive.Index, :notifications)
       live("/settings/privacy", SettingsLive.Index, :privacy)
+      live("/settings/users", SettingsLive.Index, :users)
       live("/settings/account", SettingsLive.Index, :account)
       live("/unread", ThreadLive.Unread, :index)
       live("/drafts", DraftLive.Index, :index)

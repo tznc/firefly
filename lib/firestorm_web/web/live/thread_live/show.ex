@@ -28,15 +28,17 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
 
   Admins make posts wikis (or not); members may then edit them (see the
   `:edit_post` policy).
+
+  Posts by users the viewer ignores (see `FirestormWeb.Ignores`) are
+  collapsed into an "ignored content" placeholder until revealed.
   """
   use FirestormWeb.Web, :live_view
 
   import FirestormWeb.Web.BookmarkComponents
   import FirestormWeb.Web.PollComponents, only: [poll: 1]
 
-  alias FirestormWeb.{Bookmarks, Flags, Forums, LinkPreviews, Mentions, Polls, Posting, RateLimit}
-  alias FirestormWeb.{Repo, Solved}
-  alias FirestormWeb.TopicTimers
+  alias FirestormWeb.{Bookmarks, Flags, Forums, Ignores, LinkPreviews, Mentions, Polls, Posting}
+  alias FirestormWeb.{RateLimit, Repo, Solved, TopicTimers}
   alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread, ThreadTimer}
 
   @impl true
@@ -79,6 +81,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
      |> assign(:last_read_post_id, read && read.last_read_post_id)
      |> assign(:tz_offset, FirestormWeb.LocalTime.offset(socket))
      |> assign(:bookmarking, nil)
+     |> assign(:ignored_user_ids, MapSet.new(Ignores.ignored_ids(socket.assigns.current_user)))
+     |> assign(:revealed_ids, MapSet.new())
      |> load_thread(thread)}
   end
 
@@ -282,6 +286,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     if can?(socket.assigns.current_user, :flag_post, %{post: post, thread: socket.assigns.thread}),
        do: {:noreply, assign(socket, flagging: post.id, flag_form: flag_form())},
        else: {:noreply, put_flash(socket, :error, Flags.message(:unauthorized))}
+  end
+
+  def handle_event("reveal_ignored", %{"id" => id}, socket) do
+    {id, ""} = Integer.parse(id)
+    {:noreply, update(socket, :revealed_ids, &MapSet.put(&1, id))}
   end
 
   def handle_event("cancel_flag", _params, socket),
@@ -560,6 +569,11 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     assign(socket, :likers, Map.put(socket.assigns.likers, post.id, likers))
   end
 
+  # A post by someone the viewer ignores, not revealed yet.
+  defp collapsed?(post, ignored_user_ids, revealed_ids),
+    do:
+      MapSet.member?(ignored_user_ids, post.user_id) and not MapSet.member?(revealed_ids, post.id)
+
   defp reply_count(replies), do: Enum.count(replies, &(!Post.deleted?(&1)))
 
   defp moderation_message("pin"), do: "Thread pinned."
@@ -685,8 +699,18 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             can_unhide={@admin?}
           />
           <.awaiting_notice :if={Post.queued?(@first_post)} />
+          <.ignored_post
+            :if={
+              not MapSet.member?(@hidden_ids, @first_post.id) and
+                collapsed?(@first_post, @ignored_user_ids, @revealed_ids)
+            }
+            post={@first_post}
+          />
           <.post
-            :if={not MapSet.member?(@hidden_ids, @first_post.id)}
+            :if={
+              not MapSet.member?(@hidden_ids, @first_post.id) and
+                not collapsed?(@first_post, @ignored_user_ids, @revealed_ids)
+            }
             post={@first_post}
             thread={@thread}
             viewer={@current_user}
@@ -750,9 +774,17 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             can_unhide={@admin?}
           />
           <.awaiting_notice :if={Post.queued?(post) and not Post.deleted?(post)} />
+          <.ignored_post
+            :if={
+              (not Post.deleted?(post) or @admin?) and not MapSet.member?(@hidden_ids, post.id) and
+                collapsed?(post, @ignored_user_ids, @revealed_ids)
+            }
+            post={post}
+          />
           <.post
             :if={
-              (not Post.deleted?(post) or @admin?) and not MapSet.member?(@hidden_ids, post.id)
+              (not Post.deleted?(post) or @admin?) and not MapSet.member?(@hidden_ids, post.id) and
+                not collapsed?(post, @ignored_user_ids, @revealed_ids)
             }
             post={post}
             thread={@thread}
