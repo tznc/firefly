@@ -8,7 +8,10 @@ defmodule FirestormWeb.Plugins.Fields do
 
   Fields declared `public` are exposed in the JSON API, under each post's
   `plugin_fields` (by plugin id, then key), while the plugin is active.
-  Uninstalling a plugin deletes its fields.
+  Uninstalling a plugin deletes its fields. Fields on a member are theirs:
+  they're in the member's account export and deleted with the account (see
+  `export/1`, `delete_user/1`). Fields on posts and threads stay with the
+  content.
   """
 
   import Ecto.Query
@@ -93,6 +96,21 @@ defmodule FirestormWeb.Plugins.Fields do
       end)
     end
   end
+
+  @doc "Every plugin's fields on the member, `%{plugin_id => %{key => value}}`, for their account export."
+  def export(%{id: user_id}) do
+    Field
+    |> where(target_type: "user", target_id: ^user_id)
+    |> order_by([:plugin_id, :key])
+    |> Repo.all()
+    |> Enum.reduce(%{}, fn field, acc ->
+      put_in(acc, [Access.key(field.plugin_id, %{}), field.key], field.value["v"])
+    end)
+  end
+
+  @doc "Deletes every plugin's fields on the member (on account deletion)."
+  def delete_user(%{id: user_id}),
+    do: Repo.delete_all(where(Field, target_type: "user", target_id: ^user_id))
 
   @doc "Deletes `plugin_id`'s fields (on uninstall)."
   def clear(plugin_id), do: Repo.delete_all(where(Field, plugin_id: ^plugin_id))

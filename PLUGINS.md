@@ -209,7 +209,7 @@ text. They're data, not code: nothing runs in the browser.
 | `posts.get` | `read` | `{id}` | a public post |
 | `threads.get` | `read` | `{id}` | a public thread |
 | `users.get` | `read` | `{id}` or `{username}` | a public profile |
-| `kv.get` / `kv.set` / `kv.delete` / `kv.list` | | `{key}` / `{key, value}` / `{key}` / `{prefix}` | value / `null` / `null` / keys |
+| `kv.get` / `kv.set` / `kv.delete` / `kv.list` | | `{key}` / `{key, value}` / `{key}` / `{prefix}`, each with an optional `user_id` | value / `null` / `null` / keys |
 | `tags.add` / `tags.remove` | `tags` | `{thread_id, tag}` | the thread's tags |
 | `posts.reply` | `post` | `{thread_id, body}` | `{id}` |
 | `posts.flag` | `flag` | `{post_id, reason, note}` | `{id}` |
@@ -331,9 +331,27 @@ fields are values a plugin keeps on posts, threads or users, namespaced by
 plugin, limited to the keys its manifest declares; `public` post fields
 appear in the JSON API as `plugin_fields: {plugin_id: {key: value}}`.
 
+Passing `user_id` to `kv.*` uses the store the plugin keeps for that
+member instead: a separate namespace per (plugin, member), so `score` in
+the global store and in two members' stores are three keys. Each has its
+own quota (200 keys and 64 KB by default, `user_max_keys:`,
+`user_max_bytes:`). Server-side code may pass any existing member's id;
+an unknown or deleted one is an error. Member data is the member's: their
+entries and the plugin's fields on them (`type: "user"`) are in their
+account export, grouped by plugin id, and are deleted with their account.
+Fields on their posts and threads stay with the content.
+
+```js
+// One counter for the forum, one per member.
+const total = (firefly.call("kv.get", { key: "posts" }) || 0) + 1;
+firefly.call("kv.set", { key: "posts", value: total });
+const mine = (firefly.call("kv.get", { key: "posts", user_id: data.post.user_id }) || 0) + 1;
+firefly.call("kv.set", { key: "posts", value: mine, user_id: data.post.user_id });
+```
+
 Uninstalling a plugin (after a confirm step) deletes its bundle, settings,
-error log, storage, custom fields, queued events and job schedule; its bot
-user stays with its posts.
+error log, storage (global and every member's), custom fields, queued
+events and job schedule; its bot user stays with its posts.
 
 ## The WebAssembly runtime
 
