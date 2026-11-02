@@ -51,7 +51,7 @@ defmodule FirestormWeb.Web.DiscourseConnectController do
 
   defp finish(conn, fields) do
     case DiscourseConnect.login(fields) do
-      {:ok, user} -> Login.complete(conn, user, ~p"/login")
+      {:ok, user} -> Login.complete(conn, user, ~p"/login", :sso)
       {:error, reason} -> Login.fail(conn, ~p"/login", reason)
     end
   end

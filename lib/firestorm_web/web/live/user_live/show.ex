@@ -8,12 +8,13 @@ defmodule FirestormWeb.Web.UserLive.Show do
   follows the user's privacy preferences (see `FirestormWeb.Profiles`);
   admins see everything.
   Admins see a member's penalties here, and silence or suspend them (see
-  `FirestormWeb.Penalties`). Members mute or ignore others here (see
+  `FirestormWeb.Penalties`), and reset their two-factor authentication
+  (see `FirestormWeb.TwoFactor.reset/2`). Members mute or ignore others here (see
   `FirestormWeb.Ignores`).
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties, Profiles}
+  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties, Profiles, TwoFactor}
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -26,6 +27,10 @@ defmodule FirestormWeb.Web.UserLive.Show do
      |> assign(:user, user)
      |> assign(:staff?, staff?(socket.assigns.current_user))
      |> assign(:penalty_form, penalty_form())
+     |> assign(
+       :two_factor?,
+       can?(socket.assigns.current_user, :reset_two_factor, user) and TwoFactor.enabled?(user)
+     )
      |> assign(:visible?, Profiles.visible?(user, socket.assigns.current_user))
      |> assign(:activity?, Profiles.activity_visible?(user, socket.assigns.current_user))
      |> assign(:last_post, Forums.user_last_post(user, socket.assigns.current_user))
@@ -98,6 +103,21 @@ defmodule FirestormWeb.Web.UserLive.Show do
 
   def handle_event("set_ignore", _params, socket),
     do: {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+
+  def handle_event("reset_two_factor", _params, socket) do
+    %{current_user: admin, user: user} = socket.assigns
+
+    if can?(admin, :reset_two_factor, user) do
+      {:ok, _} = TwoFactor.reset(user, admin)
+
+      {:noreply,
+       socket
+       |> assign(:two_factor?, false)
+       |> put_flash(:info, "#{user.username}'s two-factor authentication was reset.")}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(admin))}
+    end
+  end
 
   def handle_event(event, params, socket) when event in ["penalize", "lift"] do
     %{current_user: admin, user: user} = socket.assigns
@@ -240,6 +260,16 @@ defmodule FirestormWeb.Web.UserLive.Show do
             class="btn btn-ghost btn-xs"
           >
             Lift suspension
+          </button>
+        </div>
+        <div :if={@two_factor?} id="two-factor-reset" class="flex flex-wrap items-center gap-2">
+          <span class="badge badge-info">Two-factor on</span>
+          <button
+            phx-click="reset_two_factor"
+            data-confirm={"Turn off every second factor of #{@user.username}? They'll log in with just their first one until they set it up again."}
+            class="btn btn-ghost btn-xs"
+          >
+            Reset two-factor
           </button>
         </div>
         <details :if={can?(@current_user, :penalize_user, @user)} class="collapse-arrow collapse border border-base-300 bg-base-100">

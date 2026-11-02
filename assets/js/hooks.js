@@ -441,4 +441,76 @@ const PluginWidget = {
   },
 }
 
-export default {ComposerButtons, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}
+// WebAuthn: binary fields travel as unpadded base64url (see FirestormWeb.WebAuthn).
+const fromB64url = text => {
+  const base64 = text.replace(/-/g, "+").replace(/_/g, "/")
+  return Uint8Array.from(atob(base64 + "===".slice((base64.length + 3) % 4)), c => c.charCodeAt(0)).buffer
+}
+const toB64url = buffer =>
+  btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
+const withCredentialIds = list => (list || []).map(c => ({...c, id: fromB64url(c.id)}))
+
+// The browser's answer to navigator.credentials.get, as the server reads it.
+const assertionParams = credential => ({
+  id: toB64url(credential.rawId),
+  authenticator_data: toB64url(credential.response.authenticatorData),
+  signature: toB64url(credential.response.signature),
+  client_data_json: toB64url(credential.response.clientDataJSON),
+  user_handle: credential.response.userHandle ? toB64url(credential.response.userHandle) : "",
+})
+
+const requestOptions = options => ({
+  ...options,
+  challenge: fromB64url(options.challenge),
+  allowCredentials: withCredentialIds(options.allowCredentials),
+})
+
+// Logging in with a security key (second factor): asks the browser to sign
+// the challenge in data-options, then posts the answer with the hook's form.
+const SecurityKeyLogin = {
+  mounted() {
+    this.el.addEventListener("click", async () => {
+      try {
+        const options = JSON.parse(this.el.dataset.options)
+        const credential = await navigator.credentials.get({publicKey: requestOptions(options)})
+        const params = assertionParams(credential)
+        this.el.form.querySelectorAll("input[data-field]").forEach(input => { input.value = params[input.dataset.field] })
+        this.el.form.submit()
+      } catch (_error) {
+        this.el.dataset.error = "true"
+      }
+    })
+  },
+}
+
+// Registering a security key from the settings: the server makes the
+// options (security_key_options), the browser makes the credential, the
+// server checks and saves it (security_key_register) under the name typed
+// in the input data-name-input points to.
+const SecurityKeyRegister = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      this.pushEvent(this.el.dataset.optionsEvent || "security_key_options", {}, async ({options}) => {
+        try {
+          const publicKey = {
+            ...options,
+            challenge: fromB64url(options.challenge),
+            user: {...options.user, id: fromB64url(options.user.id)},
+            excludeCredentials: withCredentialIds(options.excludeCredentials),
+          }
+          const credential = await navigator.credentials.create({publicKey})
+          const name = document.getElementById(this.el.dataset.nameInput)
+          this.pushEvent(this.el.dataset.registerEvent || "security_key_register", {
+            name: name ? name.value : "",
+            attestation_object: toB64url(credential.response.attestationObject),
+            client_data_json: toB64url(credential.response.clientDataJSON),
+          })
+        } catch (_error) {
+          this.pushEvent("security_key_error", {})
+        }
+      })
+    })
+  },
+}
+
+export default {ComposerButtons, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

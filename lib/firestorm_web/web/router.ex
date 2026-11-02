@@ -86,6 +86,8 @@ defmodule FirestormWeb.Web.Router do
 
     get("/users/:id/edit", UserController, :edit)
     get("/settings/export", AccountController, :export)
+    post("/login/two-factor", TwoFactorController, :create)
+    post("/login/two-factor/key", TwoFactorController, :key)
     delete("/settings/account", AccountController, :delete)
 
     live_session :default,
@@ -105,6 +107,7 @@ defmodule FirestormWeb.Web.Router do
       live("/settings/privacy", SettingsLive.Index, :privacy)
       live("/settings/users", SettingsLive.Index, :users)
       live("/settings/logins", SettingsLive.Index, :logins)
+      live("/settings/security", SettingsLive.Index, :security)
       live("/settings/account", SettingsLive.Index, :account)
       live("/unread", ThreadLive.Unread, :index)
       live("/drafts", DraftLive.Index, :index)
@@ -134,6 +137,7 @@ defmodule FirestormWeb.Web.Router do
       live("/", ThreadLive.Recent, :index)
       live("/top", ThreadLive.Top, :index)
       live("/login", AuthLive.Login, :login)
+      live("/login/two-factor", AuthLive.TwoFactor, :show)
       live("/auth/identity", AuthLive.Identity, :new)
       live("/register", AuthLive.Registration, :new)
       live("/reset-password", AuthLive.ForgotPassword, :new)

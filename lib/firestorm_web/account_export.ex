@@ -71,6 +71,7 @@ defmodule FirestormWeb.AccountExport do
       bookmarks: FirestormWeb.Bookmarks.export(user),
       muted_and_ignored: FirestormWeb.Ignores.export(user),
       connected_accounts: FirestormWeb.Auth.export(user),
+      two_factor: FirestormWeb.TwoFactor.export(user),
       visits: visits(user),
       polls: FirestormWeb.Polls.export(user),
       uploads: FirestormWeb.Uploads.export(user),

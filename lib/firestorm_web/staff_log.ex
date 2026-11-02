@@ -27,7 +27,7 @@ defmodule FirestormWeb.StaffLog do
     category.create category.update category.delete
     tag_group.create tag_group.update tag_group.delete tag.synonym tag.unsynonym
     role.create role.grant role.revoke
-    user.silence user.unsilence user.suspend user.unsuspend
+    user.silence user.unsilence user.suspend user.unsuspend user.reset_two_factor
     setting.update
     admin.create admin.update admin.delete
     plugin.install plugin.upgrade plugin.enable plugin.disable plugin.uninstall plugin.settings

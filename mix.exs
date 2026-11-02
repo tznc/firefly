@@ -59,6 +59,11 @@ defmodule FirestormWeb.Mixfile do
       {:ueberauth_facebook, "~> 0.10"},
       {:ueberauth_apple, "~> 0.7"},
       {:ueberauth_identity, "~> 0.4"},
+      # Two-factor authentication: TOTP codes, their QR codes, and WebAuthn
+      # security keys and passkeys.
+      {:nimble_totp, "~> 1.0"},
+      {:eqrcode, "~> 0.2.1"},
+      {:wax_, "~> 0.7.0"},
       {:mdex, "~> 0.14"},
       {:scrivener_ecto, "~> 3.1"},
       {:kaffy, "~> 0.11"},

@@ -15,6 +15,9 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       (see `FirestormWeb.Ignores`), to add or remove
     * Logins (`/settings/logins`): connecting and disconnecting social
       login accounts (see `FirestormWeb.Auth`)
+    * Security (`/settings/security`): two-factor authentication (see
+      `FirestormWeb.TwoFactor`): an authenticator app, security keys
+      (registered through the `SecurityKeyRegister` hook) and backup codes
     * Account: downloading your data and deleting your account (both handled
       by `FirestormWeb.Web.AccountController`)
   """
@@ -22,7 +25,18 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{Auth, EmailConfirmation, Forums, Ignores, Posting, RateLimit, Uploads}
+  alias FirestormWeb.{
+    Auth,
+    EmailConfirmation,
+    Forums,
+    Ignores,
+    Posting,
+    RateLimit,
+    TwoFactor,
+    Uploads,
+    WebAuthn
+  }
+
   alias FirestormWeb.Forums.User
 
   @sections [
@@ -32,6 +46,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     privacy: {"Privacy", "hero-eye-slash"},
     users: {"Muted & ignored", "hero-speaker-x-mark"},
     logins: {"Logins", "hero-key"},
+    security: {"Security", "hero-shield-check"},
     account: {"Account", "hero-identification"}
   ]
 
@@ -59,7 +74,14 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    socket = assign(socket, sections: @sections, image_labels: @image_labels)
+    socket =
+      assign(socket,
+        sections: @sections,
+        image_labels: @image_labels,
+        totp_secret: nil,
+        key_challenge: nil,
+        new_backup_codes: []
+      )
 
     {:ok,
      Enum.reduce(Uploads.profile_images(), socket, fn image, socket ->
@@ -118,6 +140,16 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     |> assign(:form, to_form(User.preferences_changeset(user, %{}), as: :preferences))
     |> assign_ignores()
     |> assign(:identities, Auth.identities(user))
+    |> assign_security(user)
+  end
+
+  defp assign_security(socket, user) do
+    assign(socket,
+      two_factor?: TwoFactor.enabled?(user),
+      totp?: TwoFactor.totp?(user),
+      credentials: TwoFactor.credentials(user),
+      backup_codes_left: TwoFactor.backup_codes_left(user)
+    )
   end
 
   defp assign_ignores(socket) do
@@ -220,6 +252,104 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     end
   end
 
+  def handle_event("start_totp", _params, socket),
+    do: {:noreply, assign(socket, :totp_secret, TwoFactor.new_secret())}
+
+  def handle_event("cancel_totp", _params, socket),
+    do: {:noreply, assign(socket, :totp_secret, nil)}
+
+  def handle_event("enable_totp", %{"code" => code}, %{assigns: %{totp_secret: secret}} = socket)
+      when is_binary(secret) do
+    case TwoFactor.enable_totp(socket.assigns.current_user, secret, code) do
+      {:ok, codes} ->
+        {:noreply,
+         socket
+         |> assign(totp_secret: nil, new_backup_codes: codes)
+         |> assign_forms()
+         |> put_flash(:info, "Two-factor authentication is on.")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, TwoFactor.message(reason))}
+    end
+  end
+
+  def handle_event("disable_totp", %{"confirmation" => confirmation}, socket) do
+    security_change(
+      socket,
+      TwoFactor.disable_totp(socket.assigns.current_user, confirmation),
+      "Authenticator app removed."
+    )
+  end
+
+  def handle_event("regenerate_backup_codes", _params, socket) do
+    case TwoFactor.regenerate_backup_codes(socket.assigns.current_user) do
+      {:ok, codes} ->
+        {:noreply,
+         socket
+         |> assign(:new_backup_codes, codes)
+         |> assign_forms()
+         |> put_flash(:info, "New backup codes made: the old ones no longer work.")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, TwoFactor.message(reason))}
+    end
+  end
+
+  def handle_event("security_key_options", _params, socket) do
+    {challenge, options} =
+      WebAuthn.registration(socket.assigns.current_user, socket.assigns.credentials)
+
+    {:reply, %{options: options}, assign(socket, :key_challenge, challenge)}
+  end
+
+  def handle_event("security_key_register", params, %{assigns: %{key_challenge: %{}}} = socket) do
+    %{current_user: user, key_challenge: challenge} = socket.assigns
+    socket = assign(socket, :key_challenge, nil)
+
+    with {:ok, attrs} <- WebAuthn.register(challenge, params),
+         {:ok, _credential, codes} <- TwoFactor.add_credential(user, attrs, params["name"]) do
+      {:noreply,
+       socket
+       |> assign(:new_backup_codes, codes)
+       |> assign_forms()
+       |> put_flash(:info, "Security key added.")}
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, put_flash(socket, :error, changeset_message(changeset))}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "That security key couldn't be added.")}
+    end
+  end
+
+  def handle_event("security_key_register", _params, socket), do: {:noreply, socket}
+
+  def handle_event("security_key_error", _params, socket),
+    do: {:noreply, put_flash(socket, :error, "The browser didn't create a security key.")}
+
+  def handle_event("rename_key", %{"key_id" => id, "name" => name}, socket) do
+    case TwoFactor.rename_credential(socket.assigns.current_user, id, name) do
+      {:ok, _credential} ->
+        {:noreply, socket |> assign_forms() |> put_flash(:info, "Renamed.")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, put_flash(socket, :error, changeset_message(changeset))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, TwoFactor.message(reason))}
+    end
+  end
+
+  def handle_event("delete_key", %{"key_id" => id, "confirmation" => confirmation}, socket) do
+    user = socket.assigns.current_user
+
+    security_change(
+      socket,
+      TwoFactor.delete_credential(user, id, confirmation),
+      "Security key removed."
+    )
+  end
+
   def handle_event("remove_ignore", %{"id" => id}, socket) do
     case Forums.get_user(id) do
       nil ->
@@ -231,6 +361,19 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     end
   end
 
+  defp security_change(socket, :ok, message),
+    do: {:noreply, socket |> assign_forms() |> put_flash(:info, message)}
+
+  defp security_change(socket, {:error, reason}, _message),
+    do: {:noreply, put_flash(socket, :error, TwoFactor.message(reason))}
+
+  defp changeset_message(changeset) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(&FirestormWeb.Web.CoreComponents.translate_error/1)
+    |> Enum.map_join("; ", fn {field, messages} -> "#{field} #{Enum.join(messages, ", ")}" end)
+    |> String.capitalize()
+  end
+
   # Only the fields on the form; never e.g. the API token.
   defp profile_params(params), do: Map.take(params, ~w(username name email bio website location))
 
@@ -240,6 +383,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   defp section_path(:privacy), do: ~p"/settings/privacy"
   defp section_path(:users), do: ~p"/settings/users"
   defp section_path(:logins), do: ~p"/settings/logins"
+  defp section_path(:security), do: ~p"/settings/security"
   defp section_path(:account), do: ~p"/settings/account"
 
   attr :image, :atom, required: true
@@ -306,6 +450,11 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       name -> " as #{name}"
     end
   end
+
+  defp confirmation_label(%User{password_hash: hash}) when is_binary(hash),
+    do: "Your password or a current code"
+
+  defp confirmation_label(_user), do: "A current code"
 
   defp image_field(:avatar), do: :avatar_upload_id
   defp image_field(:profile_background), do: :profile_background_upload_id
@@ -565,6 +714,122 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
             </a>
           </li>
         </ul>
+      </div>
+      <div :if={@live_action == :security} class="space-y-6" id="security">
+        <p class="text-sm text-base-content/70">
+          Two-factor authentication is <strong>{if @two_factor?, do: "on", else: "off"}</strong>.
+          With it on, logging in also asks for a code from your authenticator app or one of your security keys.
+        </p>
+
+        <section class="card border border-base-300 bg-base-100" id="authenticator-app">
+          <div class="card-body gap-3">
+            <h2 class="card-title text-base">Authenticator app</h2>
+            <div :if={!@totp? and is_nil(@totp_secret)}>
+              <button type="button" phx-click="start_totp" class="btn btn-sm">
+                Set up an authenticator app
+              </button>
+            </div>
+            <div :if={@totp_secret} class="space-y-3">
+              <p class="text-sm">
+                Scan this with your authenticator app (or type the key), then enter the code it shows.
+              </p>
+              <div id="totp-qr" class="w-48 rounded bg-white p-2">
+                {Phoenix.HTML.raw(TwoFactor.qr_svg(TwoFactor.totp_uri(@current_user, @totp_secret)))}
+              </div>
+              <p class="font-mono text-sm" id="totp-secret">{TwoFactor.display_secret(@totp_secret)}</p>
+              <.form for={%{}} id="enable-totp-form" phx-submit="enable_totp" class="flex items-end gap-2">
+                <.input name="code" value="" label="Code" autocomplete="one-time-code" inputmode="numeric" />
+                <button class="btn btn-primary btn-sm mb-2">Turn on</button>
+                <button type="button" phx-click="cancel_totp" class="btn btn-ghost btn-sm mb-2">Cancel</button>
+              </.form>
+            </div>
+            <.form
+              :if={@totp?}
+              for={%{}}
+              id="disable-totp-form"
+              phx-submit="disable_totp"
+              class="flex flex-wrap items-end gap-2"
+            >
+              <.input
+                name="confirmation"
+                value=""
+                type="password"
+                label={confirmation_label(@current_user)}
+                autocomplete="off"
+              />
+              <button class="btn btn-sm mb-2">Remove authenticator app</button>
+            </.form>
+          </div>
+        </section>
+
+        <section class="card border border-base-300 bg-base-100" id="security-keys">
+          <div class="card-body gap-3">
+            <h2 class="card-title text-base">Security keys</h2>
+            <ul class="list rounded-box border border-base-300">
+              <li :if={@credentials == []} class="list-row text-base-content/60">No security keys.</li>
+              <li :for={key <- @credentials} id={"key-#{key.id}"} class="list-row items-end">
+                <.form
+                  for={%{}}
+                  id={"rename-key-#{key.id}"}
+                  phx-submit="rename_key"
+                  class="list-col-grow flex items-end gap-2"
+                >
+                  <input type="hidden" name="key_id" value={key.id} />
+                  <.input name="name" value={key.name} label="Name" />
+                  <button class="btn btn-ghost btn-sm mb-2">Rename</button>
+                </.form>
+                <.form for={%{}} id={"delete-key-#{key.id}"} phx-submit="delete_key" class="flex items-end gap-2">
+                  <input type="hidden" name="key_id" value={key.id} />
+                  <.input
+                    name="confirmation"
+                    value=""
+                    type="password"
+                    label={confirmation_label(@current_user)}
+                    autocomplete="off"
+                  />
+                  <button class="btn btn-ghost btn-sm mb-2" aria-label={"Remove #{key.name}"}>Remove</button>
+                </.form>
+              </li>
+            </ul>
+            <div class="flex items-end gap-2">
+              <.input id="new-key-name" name="new_key_name" value="" label="New key's name" />
+              <button
+                type="button"
+                id="add-security-key"
+                phx-hook="SecurityKeyRegister"
+                data-name-input="new-key-name"
+                class="btn btn-sm mb-2"
+              >
+                <.icon name="hero-key" class="size-4" /> Add a security key
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section :if={@two_factor? or @new_backup_codes != []} class="card border border-base-300 bg-base-100" id="backup-codes">
+          <div class="card-body gap-3">
+            <h2 class="card-title text-base">Backup codes</h2>
+            <div :if={@new_backup_codes != []} class="alert alert-warning block">
+              <p class="mb-2 text-sm">
+                Save these somewhere safe now: they won't be shown again. Each works once, in place of a code.
+              </p>
+              <ul id="new-backup-codes" class="grid grid-cols-2 gap-1 font-mono">
+                <li :for={code <- @new_backup_codes}>{code}</li>
+              </ul>
+            </div>
+            <p class="text-sm" id="backup-codes-left">{@backup_codes_left} unused backup codes.</p>
+            <div>
+              <button
+                type="button"
+                phx-click="regenerate_backup_codes"
+                data-confirm="Make new backup codes? The old ones will stop working."
+                class="btn btn-sm"
+              >
+                Generate new backup codes
+              </button>
+            </div>
+          </div>
+        </section>
       </div>
       <div :if={@live_action == :account} class="space-y-6">
         <section class="card border border-base-300 bg-base-100">
