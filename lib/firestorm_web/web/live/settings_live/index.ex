@@ -5,7 +5,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     * Profile (`/settings/profile`): account fields, the bio, website and
       location shown on their profile, an uploaded avatar (else their
       Gravatar), and profile and user card backgrounds (see
-      `FirestormWeb.Uploads.set_profile_image/4`)
+      `FirestormWeb.Uploads.set_profile_image/4`), and a title: one of
+      their badges that allows it (see `FirestormWeb.Badges`)
     * Interface: the theme
     * Notifications (`/settings/notifications`): email, private messages and
       the levels threads get when you reply or start one
@@ -28,6 +29,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   alias FirestormWeb.{
     Auth,
+    Badges,
     EmailConfirmation,
     Forums,
     Ignores,
@@ -140,6 +142,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     socket
     |> assign(:current_user, user)
     |> assign(:profile_form, to_form(User.update_changeset(user, %{})))
+    |> assign(:titles, Badges.titles(user))
     |> assign(:form, to_form(User.preferences_changeset(user, %{}), as: :preferences))
     |> assign_ignores()
     |> assign(:identities, Auth.identities(user))
@@ -193,6 +196,16 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, Posting.message(reason))}
+    end
+  end
+
+  def handle_event("set_title", %{"title" => %{"badge_id" => badge_id}}, socket) do
+    case Badges.set_title(socket.assigns.current_user, badge_id) do
+      {:ok, user} ->
+        {:noreply, socket |> assign_forms(user) |> put_flash(:info, "Title updated.")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Badges.message(reason))}
     end
   end
 
@@ -568,6 +581,25 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
         <div class="flex justify-end">
           <.button variant="primary" phx-disable-with="Saving...">Save</.button>
         </div>
+      </.form>
+
+      <.form
+        :if={@live_action == :profile && @titles != []}
+        for={%{"badge_id" => @current_user.title_badge_id}}
+        as={:title}
+        id="title-form"
+        phx-submit="set_title"
+        class="flex items-end gap-2"
+      >
+        <.input
+          name="title[badge_id]"
+          value={@current_user.title_badge_id}
+          type="select"
+          label="Title"
+          prompt="None"
+          options={Enum.map(@titles, &{&1.name, &1.id})}
+        />
+        <.button phx-disable-with="Saving...">Set title</.button>
       </.form>
 
       <.form

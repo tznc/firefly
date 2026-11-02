@@ -1,8 +1,9 @@
 defmodule FirestormWeb.Web.UserLive.Show do
   @moduledoc """
-  A user's profile (bio, website, location, profile background), with two
+  A user's profile (bio, website, location, profile background), with three
   tabs: the summary (`/users/:id/summary`: stats and most liked threads and
-  replies) and the activity stream (`/users/:id`, filtered by `?filter=`:
+  replies), badges (`/users/:id/badges`, see `FirestormWeb.Badges`; a
+  title badge also shows under their name) and the activity stream (`/users/:id`, filtered by `?filter=`:
   all posts, topics, replies, likes given, solved; see
   `FirestormWeb.Profiles.activity_filters/0`), paginated. What others see
   follows the user's privacy preferences (see `FirestormWeb.Profiles`);
@@ -16,7 +17,17 @@ defmodule FirestormWeb.Web.UserLive.Show do
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties, Profiles, TrustLevels, TwoFactor}
+  alias FirestormWeb.{
+    Badges,
+    Forums,
+    Ignores,
+    Mentions,
+    Penalties,
+    Profiles,
+    TrustLevels,
+    TwoFactor
+  }
+
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -38,6 +49,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
      |> assign(:activity?, Profiles.activity_visible?(user, socket.assigns.current_user))
      |> assign(:last_post, Forums.user_last_post(user, socket.assigns.current_user))
      |> assign(:last_seen, Forums.user_last_seen(user))
+     |> assign(:title, Badges.title(user))
      |> assign_ignore()}
   end
 
@@ -76,6 +88,11 @@ defmodule FirestormWeb.Web.UserLive.Show do
   @impl true
   def handle_params(_params, _uri, %{assigns: %{visible?: false}} = socket),
     do: {:noreply, assign(socket, :filter, "all")}
+
+  def handle_params(_params, _uri, %{assigns: %{live_action: :badges}} = socket) do
+    badges = Badges.user_badges(socket.assigns.user)
+    {:noreply, socket |> assign(:filter, nil) |> assign(:badges, badges)}
+  end
 
   def handle_params(_params, _uri, %{assigns: %{live_action: :summary}} = socket) do
     %{user: user, current_user: viewer} = socket.assigns
@@ -210,6 +227,9 @@ defmodule FirestormWeb.Web.UserLive.Show do
           <.avatar user={@user} size="size-24" />
           <div class="min-w-0 flex-1 space-y-1">
             <h1 class="text-2xl font-bold">{@user.username}</h1>
+            <p :if={@visible? && @title} id="user-title" class="text-sm font-medium text-primary">
+              {@title}
+            </p>
             <p :if={@visible? && @user.name} class="text-base-content/70">{@user.name}</p>
             <p :if={!@visible?} id="profile-hidden" class="text-base-content/60">
               This profile is private.
@@ -391,6 +411,32 @@ defmodule FirestormWeb.Web.UserLive.Show do
         >
           Activity
         </.link>
+        <.link
+          patch={~p"/users/#{@user}/badges"}
+          role="tab"
+          class={["tab", @live_action == :badges && "tab-active"]}
+        >
+          Badges
+        </.link>
+      </div>
+
+      <div :if={@visible? && @live_action == :badges} id="user-badges" class="space-y-2">
+        <p :if={@badges == []} class="text-base-content/60">No badges yet.</p>
+        <ul class="grid gap-2 sm:grid-cols-2">
+          <li :for={{badge, count, at} <- @badges}>
+            <.link
+              navigate={~p"/badges/#{badge.id}"}
+              class="flex items-center gap-3 rounded-box border border-base-300 bg-base-100 p-3 hover:border-primary"
+            >
+              <.badge_icon badge={badge} />
+              <span class="flex-1">
+                <span class="font-semibold">{badge.name}</span>
+                <span :if={count > 1} class="badge badge-ghost badge-xs">×{count}</span>
+                <span class="block text-xs text-base-content/60">{short_date(at)}</span>
+              </span>
+            </.link>
+          </li>
+        </ul>
       </div>
 
       <div :if={@visible? && @live_action == :summary} id="user-summary" class="space-y-6">

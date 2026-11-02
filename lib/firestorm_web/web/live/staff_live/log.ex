@@ -76,7 +76,12 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "plugin.secret" => "Changed plugin endpoint secret",
     "upload.delete" => "Deleted upload",
     "emoji.create" => "Added emoji",
-    "emoji.delete" => "Removed emoji"
+    "emoji.delete" => "Removed emoji",
+    "badge.create" => "Created badge",
+    "badge.update" => "Updated badge",
+    "badge.delete" => "Deleted badge",
+    "badge.grant" => "Granted badge",
+    "badge.revoke" => "Revoked badge"
   }
 
   @impl true
@@ -143,6 +148,9 @@ defmodule FirestormWeb.Web.StaffLive.Log do
 
   defp target_link(%{target_type: "emoji", details: %{"name" => name}}, _target),
     do: {":#{name}:", ~p"/staff/emoji"}
+
+  defp target_link(%{target_type: "badge", details: %{"badge" => name}}, _target),
+    do: {name, ~p"/staff/badges"}
 
   defp target_link(_entry, nil), do: nil
 

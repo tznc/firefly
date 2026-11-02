@@ -130,6 +130,9 @@ defmodule FirestormWeb.Web.Layouts do
           <.nav_item path={~p"/groups"} current_path={@current_path} icon="hero-user-group">
             Groups
           </.nav_item>
+          <.nav_item path={~p"/badges"} current_path={@current_path} icon="hero-trophy">
+            Badges
+          </.nav_item>
           <li class="menu-title">Account</li>
           <%= if @current_user do %>
             <.nav_item
@@ -186,6 +189,9 @@ defmodule FirestormWeb.Web.Layouts do
               </.nav_item>
               <.nav_item path={~p"/staff/emoji"} current_path={@current_path} icon="hero-face-smile">
                 Emoji
+              </.nav_item>
+              <.nav_item path={~p"/staff/badges"} current_path={@current_path} icon="hero-trophy">
+                Badges
               </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>

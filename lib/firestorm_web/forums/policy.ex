@@ -57,7 +57,7 @@ defmodule FirestormWeb.Forums.Policy do
     * `:add_participants` - participants who started the conversation, and
       admin participants
     * `:view_staff_log`, `:manage_site_settings`, `:manage_groups`,
-      `:manage_tags` (tag groups and synonyms), `:manage_plugins`,
+      `:manage_tags` (tag groups and synonyms), `:manage_badges`, `:manage_plugins`,
       `:manage_uploads` (list and delete any upload), `:manage_emoji`
       (custom emoji) - admins
     * `:view_category`, `:view_thread` (in its category) - everyone, members
@@ -201,6 +201,7 @@ defmodule FirestormWeb.Forums.Policy do
              :manage_plugins,
              :manage_uploads,
              :manage_emoji,
+             :manage_badges,
              :set_trust_level
            ],
       do: admin(user)

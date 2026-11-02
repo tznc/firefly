@@ -34,6 +34,7 @@ defmodule FirestormWeb.StaffLog do
     plugin.install plugin.upgrade plugin.enable plugin.disable plugin.uninstall plugin.settings
     plugin.auto_disable plugin.suspend plugin.resume plugin.secret
     upload.delete emoji.create emoji.delete
+    badge.create badge.update badge.delete badge.grant badge.revoke
   )
 
   @doc "Every action the log records, in display order."
