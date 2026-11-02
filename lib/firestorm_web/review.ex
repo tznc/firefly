@@ -191,11 +191,11 @@ defmodule FirestormWeb.Review do
         {count, _} =
           Post
           |> where([p], p.id == ^post.id and not is_nil(p.queued_at) and is_nil(p.deleted_at))
-          |> Repo.update_all(set: [queued_at: nil])
+          |> Repo.update_all(set: [queued_at: nil, queued_reason: nil])
 
         if count == 1 do
           StaffLog.record(admin, "post.approve", post, post_details(post))
-          {:ok, %{post | queued_at: nil}}
+          {:ok, %{post | queued_at: nil, queued_reason: nil}}
         else
           {:error, :not_queued}
         end

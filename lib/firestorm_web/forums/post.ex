@@ -14,6 +14,8 @@ defmodule FirestormWeb.Forums.Post do
     field(:deleted_at, :utc_datetime)
     field(:hidden_at, :utc_datetime)
     field(:queued_at, :utc_datetime)
+    # Set when a plugin's moderation hook queued it (see FirestormWeb.Plugins.Moderation).
+    field(:queued_reason, :string)
     # A wiki post: anyone who may post in its thread may edit it (see the
     # `:edit_post` policy). Set by staff (`Forums.set_wiki/3`).
     field(:wiki, :boolean, default: false)
