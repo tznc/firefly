@@ -17,6 +17,9 @@ defmodule FirestormWeb.Notifications do
       adding people to a conversation notifies them (see
       `FirestormWeb.Messages`)
 
+  Nobody is notified of what a user they mute or ignore did (see
+  `FirestormWeb.Ignores`).
+
   Everyone notified gets an in-app notification; users at `watching`,
   mentioned users and message recipients also get an email, if they have
   email notifications on and a confirmed address. To avoid floods, a thread
@@ -27,7 +30,7 @@ defmodule FirestormWeb.Notifications do
 
   import Ecto.Query, only: [where: 2, order_by: 2, first: 1, select: 3]
 
-  alias FirestormWeb.{Emails, Forums, Mailer, Mentions, Messages, Repo}
+  alias FirestormWeb.{Emails, Forums, Ignores, Mailer, Mentions, Messages, Repo}
 
   alias FirestormWeb.Forums.{
     Conversation,
@@ -113,7 +116,10 @@ defmodule FirestormWeb.Notifications do
         do: "#{author} sent you a message: \"#{conversation.title}\"",
         else: "#{author} replied to \"#{conversation.title}\""
 
-    for user <- Messages.participants(conversation), user.id != author_id do
+    recipients = Enum.reject(Messages.participants(conversation), &(&1.id == author_id))
+    muters = Ignores.muters(author_id, Enum.map(recipients, & &1.id))
+
+    for user <- recipients, not MapSet.member?(muters, user.id) do
       notify_message(user, conversation, message, subject)
     end
 
@@ -154,10 +160,11 @@ defmodule FirestormWeb.Notifications do
 
     subscribers = Subscriptions.subscribers(thread)
     readers = readers(thread, Enum.map(subscribers, &elem(&1, 0)))
+    muters = Ignores.muters(post.user_id, Enum.map(subscribers, fn {user, _level} -> user.id end))
 
     for {user, level} <- subscribers,
         user.id != post.user_id and user.id not in mentioned_ids and
-          not MapSet.member?(already_read, user.id),
+          not MapSet.member?(already_read, user.id) and not MapSet.member?(muters, user.id),
         MapSet.member?(readers, user.id) do
       {:ok, notification} =
         Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
@@ -179,10 +186,12 @@ defmodule FirestormWeb.Notifications do
 
     mentioned = Mentions.users(post.body)
     readers = readers(thread, mentioned)
+    muters = Ignores.muters(post.user_id, Enum.map(mentioned, & &1.id))
 
     new =
       for user <- mentioned,
           user.id != post.user_id and user.id not in already,
+          not MapSet.member?(muters, user.id),
           MapSet.member?(readers, user.id),
           Subscriptions.effective_thread_level(user, thread) != "muted" do
         {:ok, notification} =

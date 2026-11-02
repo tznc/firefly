@@ -5,7 +5,7 @@ defmodule FirestormWeb.Forums do
 
   defdelegate authorize(action, user, params), to: FirestormWeb.Forums.Policy
   import Ecto.{Query, Changeset}, warn: false
-  alias FirestormWeb.{Repo, Notifications, SiteSettings, StaffLog}
+  alias FirestormWeb.{Ignores, Repo, Notifications, SiteSettings, StaffLog}
   alias FirestormWeb.Plugins.{Events, Moderation}
   alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Store.ReplenishResponse
@@ -399,6 +399,7 @@ defmodule FirestormWeb.Forums do
       |> order_by([t, p], desc: p.inserted_at)
       |> where([t, p], t.category_id in ^Enum.map(categories, & &1.id))
       |> where([t], is_nil(t.merged_into_id))
+      |> without_ignored_authors(user)
       |> limit(3)
       |> select([t], t)
       |> Repo.all()
@@ -595,6 +596,7 @@ defmodule FirestormWeb.Forums do
     |> where([t], t.category_id == ^category.id)
     |> unmerged()
     |> without_hidden_first_post()
+    |> without_ignored_authors(user)
     |> Policy.readable_threads(user)
     |> order_by([t], desc_nulls_last: t.pinned_at)
     |> by_last_activity()
@@ -620,6 +622,7 @@ defmodule FirestormWeb.Forums do
     |> where([t], t.category_id == ^category.id or t.category_id in subquery(subcategory_ids))
     |> unmerged()
     |> without_hidden_first_post()
+    |> without_ignored_authors(user)
     |> Policy.readable_threads(user)
     |> order_by([t], desc_nulls_last: t.pinned_at)
     |> by_last_activity()
@@ -733,7 +736,28 @@ defmodule FirestormWeb.Forums do
     |> unmerged()
     |> without_muted(if opts[:keep_muted], do: nil, else: user)
     |> without_hidden_first_post()
+    |> without_ignored_authors(user)
     |> Policy.readable_threads(user)
+  end
+
+  # Threads started by users the viewer ignores (see `FirestormWeb.Ignores`)
+  # are left out of their lists. The query's first binding is the thread.
+  defp without_ignored_authors(query, user) do
+    case Ignores.ignored_ids(user) do
+      [] ->
+        query
+
+      ids ->
+        where(
+          query,
+          [t],
+          fragment(
+            "(SELECT f.user_id FROM forums_posts f WHERE f.thread_id = ? ORDER BY f.inserted_at, f.id LIMIT 1) <> ALL(?)",
+            t.id,
+            type(^ids, {:array, :id})
+          )
+        )
+    end
   end
 
   # A thread merged into another is only a stub that redirects there (see
@@ -2126,6 +2150,7 @@ defmodule FirestormWeb.Forums do
           |> order_by([l], desc: l.inserted_at, desc: l.id)
           |> select([l, u], u)
           |> Repo.all()
+          |> without_muted_by(post.user_id)
 
         unread =
           Notification
@@ -2145,6 +2170,7 @@ defmodule FirestormWeb.Forums do
   end
 
   defp write_like_notification(nil, _likers, _post, :unliked), do: false
+  defp write_like_notification(nil, [], _post, :liked), do: false
 
   defp write_like_notification(nil, likers, post, :liked) do
     {:ok, _} =
@@ -2166,6 +2192,12 @@ defmodule FirestormWeb.Forums do
     attrs = Notification.for_likes(post.thread, post, likers)
     {:ok, _} = unread |> change(subject: attrs.subject, body: attrs.body) |> Repo.update()
     true
+  end
+
+  # Likes from users the author mutes or ignores don't notify them.
+  defp without_muted_by(users, user_id) do
+    muted = Ignores.muted_by(user_id, Enum.map(users, & &1.id))
+    Enum.reject(users, &MapSet.member?(muted, &1.id))
   end
 
   @doc "A page of `user`'s posts that `viewer` may read, newest first."

@@ -7,14 +7,16 @@ defmodule FirestormWeb.Messages do
   read or reply (the `:view_conversation` policy); the starter or an admin
   among them can add people (`:add_participants`). Anyone may leave.
 
-  Users who turned off "allow private messages" can't be messaged or added,
-  except by admins. Each recipient gets a `"message"` notification and an
+  Users who turned off "allow private messages", or who mute or ignore the
+  sender (see `FirestormWeb.Ignores`), can't be messaged or added, except by
+  admins. Conversations started by someone you ignore are left out of your
+  inbox. Each recipient gets a `"message"` notification and an
   email (see `FirestormWeb.Notifications.message_created/1`).
   """
 
   import Ecto.{Query, Changeset}
 
-  alias FirestormWeb.{Forums, Notifications, RateLimit, Repo}
+  alias FirestormWeb.{Forums, Ignores, Notifications, RateLimit, Repo}
 
   alias FirestormWeb.Forums.{
     Conversation,
@@ -217,9 +219,16 @@ defmodule FirestormWeb.Messages do
     |> Enum.uniq()
   end
 
-  # Admins may message anyone.
+  # Admins may message anyone. Otherwise users who turned messages off, or
+  # who mute or ignore `actor`, are closed (told apart from neither, so an
+  # ignore stays private).
   defp closed_to(users, actor) do
-    if Forums.admin?(actor), do: [], else: Enum.reject(users, & &1.allow_private_messages)
+    if Forums.admin?(actor) do
+      []
+    else
+      muters = Ignores.muters(actor.id, Enum.map(users, & &1.id))
+      Enum.filter(users, &(not &1.allow_private_messages or MapSet.member?(muters, &1.id)))
+    end
   end
 
   defp at(names), do: Enum.map_join(names, ", ", &"@#{&1}")
@@ -295,6 +304,7 @@ defmodule FirestormWeb.Messages do
       |> join(:inner, [c], p in ConversationParticipant,
         on: p.conversation_id == c.id and p.user_id == ^user.id and is_nil(p.left_at)
       )
+      |> without_ignored_starters(:id, user)
       |> order_by([c], desc: c.last_message_at, desc: c.id)
       |> preload(
         participants:
@@ -322,10 +332,25 @@ defmodule FirestormWeb.Messages do
       on: p.conversation_id == m.conversation_id and p.user_id == ^user.id and is_nil(p.left_at)
     )
     |> where([m, p], m.id > coalesce(p.last_read_message_id, 0))
+    |> without_ignored_starters(:conversation_id, user)
     |> group_by([m], m.conversation_id)
     |> select([m], {m.conversation_id, count(m.id)})
     |> Repo.all()
     |> Map.new()
+  end
+
+  # Conversations started by someone `user` ignores stay out of the inbox
+  # and its unread count. `field` of the query's first binding is the
+  # conversation id.
+  defp without_ignored_starters(query, field, user) do
+    case Ignores.ignored_ids(user) do
+      [] ->
+        query
+
+      ids ->
+        started = from(c in Conversation, where: c.user_id in ^ids, select: c.id)
+        where(query, [x], field(x, ^field) not in subquery(started))
+    end
   end
 
   @doc "Where `user` had read up to in the conversation (a message id), or nil."
