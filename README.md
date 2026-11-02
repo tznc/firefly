@@ -43,7 +43,9 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_EMAIL_FROM` | Sender, default `noreply@<FIREFLY_DOMAIN>` |
 | `FIREFLY_REPLY_EMAIL_DOMAIN` | Reply-by-email domain, default `reply.<FIREFLY_DOMAIN>` (needs an MX record pointing at SendGrid Inbound Parse) |
 | `FIREFLY_INBOUND_EMAIL_TOKEN` | Shared secret for the inbound webhook; set the SendGrid Inbound Parse URL to `https://<FIREFLY_DOMAIN>/inbound/sendgrid?token=<FIREFLY_INBOUND_EMAIL_TOKEN>`. Reply-by-email is off without it |
-| `FIREFLY_AWS_ACCESS_KEY_ID`, `FIREFLY_AWS_SECRET_ACCESS_KEY`, `FIREFLY_AWS_S3_BUCKET`, `FIREFLY_AWS_S3_REGION` | Attachment uploads |
+| `FIREFLY_UPLOAD_STORAGE` | Where uploads are kept: `local` (default, a directory on disk) or `s3` |
+| `FIREFLY_UPLOAD_DIR` | The local upload directory, default `uploads` under the working directory (`/app/uploads` in the Docker image: mount a volume there) |
+| `FIREFLY_AWS_ACCESS_KEY_ID`, `FIREFLY_AWS_SECRET_ACCESS_KEY`, `FIREFLY_AWS_S3_BUCKET`, `FIREFLY_AWS_S3_REGION` | The S3 bucket for uploads, with `FIREFLY_UPLOAD_STORAGE=s3` (kept private: files are served through Firefly's access checks) |
 | `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones) |
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
@@ -51,6 +53,12 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see
 `FirestormWeb.RateLimit`.
+
+Image uploads are processed with [libvips](https://www.libvips.org) (through
+[Vix](https://github.com/akash-akya/vix)), built against the system library:
+install it (`apt-get install libvips-dev`, `brew install vips`) and set
+`VIX_COMPILATION_MODE=PLATFORM_PROVIDED_LIBVIPS` before `mix deps.compile`. The
+Docker images include it.
 
 ### Docker image
 

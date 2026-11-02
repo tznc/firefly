@@ -13,6 +13,8 @@ env:
   ELIXIR_VERSION: "1.20.5"
   OTP_VERSION: "29.1.2"
   NODE_VERSION: "26.13.0"
+  # Image uploads: Vix builds against the libvips installed below.
+  VIX_COMPILATION_MODE: PLATFORM_PROVIDED_LIBVIPS
 
 jobs:
   test:
@@ -39,6 +41,9 @@ jobs:
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Install libvips
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
 
       - uses: actions/setup-node@v7
         with:
@@ -90,6 +95,9 @@ jobs:
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Install libvips
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
 
       - name: Cache deps, _build and PLTs
         uses: actions/cache@v6

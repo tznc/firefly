@@ -2,8 +2,9 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   @moduledoc """
   The current user's settings, one tab per section:
 
-    * Profile (`/settings/profile`): account fields and the bio, website and
-      location shown on their profile
+    * Profile (`/settings/profile`): account fields, the bio, website and
+      location shown on their profile, and an uploaded avatar (else their
+      Gravatar; see `FirestormWeb.Uploads.set_avatar/3`)
     * Interface: the theme
     * Notifications (`/settings/notifications`): email, private messages and
       the levels threads get when you reply or start one
@@ -16,7 +17,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{EmailConfirmation, Forums, Posting}
+  alias FirestormWeb.{EmailConfirmation, Forums, Posting, RateLimit, Uploads}
   alias FirestormWeb.Forums.User
 
   @sections [
@@ -44,7 +45,47 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   @level_labels %{"watching" => "Watching", "tracking" => "Tracking", "normal" => "Normal"}
 
   @impl true
-  def mount(_params, _session, socket), do: {:ok, assign(socket, :sections, @sections)}
+  def mount(_params, _session, socket) do
+    {:ok,
+     socket
+     |> assign(:sections, @sections)
+     |> allow_upload(:avatar,
+       accept: ~w(.png .jpg .jpeg .gif .webp),
+       max_entries: 1,
+       max_file_size: Uploads.max_size(),
+       auto_upload: true,
+       progress: &avatar_progress/3
+     )}
+  end
+
+  # The profile is public: silenced users can't change their avatar either.
+  defp avatar_progress(:avatar, %{done?: true} = entry, socket) do
+    user = socket.assigns.current_user
+
+    result =
+      consume_uploaded_entry(socket, entry, fn %{path: path} ->
+        case Posting.check(user, :like) do
+          :ok -> {:ok, Uploads.set_avatar(user, path, entry.client_name)}
+          penalized -> {:ok, penalized}
+        end
+      end)
+
+    case result do
+      {:ok, user} ->
+        {:noreply, socket |> assign_forms(user) |> put_flash(:info, "Avatar updated.")}
+
+      {:error, :rate_limited} ->
+        {:noreply, put_flash(socket, :error, RateLimit.message())}
+
+      {:error, message} when is_binary(message) ->
+        {:noreply, put_flash(socket, :error, message)}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Posting.message(reason))}
+    end
+  end
+
+  defp avatar_progress(:avatar, _entry, socket), do: {:noreply, socket}
 
   @impl true
   def handle_params(_params, _uri, socket) do
@@ -92,6 +133,13 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     end
   end
 
+  def handle_event("validate_avatar", _params, socket), do: {:noreply, socket}
+
+  def handle_event("remove_avatar", _params, socket) do
+    {:ok, user} = Uploads.remove_avatar(socket.assigns.current_user)
+    {:noreply, socket |> assign_forms(user) |> put_flash(:info, "Avatar removed.")}
+  end
+
   def handle_event("save_" <> section, %{"preferences" => params}, socket)
       when is_map_key(@preference_fields, section) do
     params = Map.take(params, @preference_fields[section])
@@ -118,6 +166,10 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   defp section_path(:privacy), do: ~p"/settings/privacy"
   defp section_path(:account), do: ~p"/settings/account"
 
+  defp avatar_error(:too_large), do: "That file is too large."
+  defp avatar_error(:not_accepted), do: "Pick a PNG, JPEG, GIF or WebP image."
+  defp avatar_error(other), do: "Upload error: #{other}"
+
   defp level_options(levels), do: Enum.map(levels, &{@level_labels[&1], &1})
 
   @impl true
@@ -137,6 +189,37 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
           <.icon name={icon} class="size-4" /> {title}
         </.link>
       </div>
+
+      <.form
+        :if={@live_action == :profile}
+        for={%{}}
+        id="avatar-form"
+        phx-change="validate_avatar"
+        class="flex flex-wrap items-center gap-3 py-2"
+      >
+        <.avatar user={@current_user} size="size-14" />
+        <label class="btn btn-sm" for={@uploads.avatar.ref}>
+          <.icon name="hero-photo" class="size-4" /> Upload a picture
+        </label>
+        <.live_file_input upload={@uploads.avatar} class="hidden" aria-label="Avatar picture" />
+        <button
+          :if={@current_user.avatar_upload_id}
+          type="button"
+          class="btn btn-ghost btn-sm"
+          phx-click="remove_avatar"
+        >
+          Remove
+        </button>
+        <p :if={!@current_user.avatar_upload_id} class="text-sm text-base-content/70">
+          Or set it at <a href="https://gravatar.com" class="link">gravatar.com</a>
+        </p>
+        <span :for={entry <- @uploads.avatar.entries} class="flex items-center gap-2 text-sm">
+          <progress class="progress progress-primary w-24" value={entry.progress} max="100" />
+          <span :for={err <- upload_errors(@uploads.avatar, entry)} class="text-error">
+            {avatar_error(err)}
+          </span>
+        </span>
+      </.form>
 
       <.form
         :if={@live_action == :profile}
@@ -161,12 +244,6 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
           placeholder="https://example.com"
         />
         <.input field={@profile_form[:location]} type="text" label="Location" />
-        <div class="flex items-center gap-3 py-2">
-          <.avatar user={@current_user} size="size-14" />
-          <p class="text-sm text-base-content/70">
-            Your avatar is set at <a href="https://gravatar.com" class="link">gravatar.com</a>
-          </p>
-        </div>
         <div class="flex justify-end">
           <.button variant="primary" phx-disable-with="Saving...">Save</.button>
         </div>

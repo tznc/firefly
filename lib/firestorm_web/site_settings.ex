@@ -163,6 +163,47 @@ defmodule FirestormWeb.SiteSettings do
         min: 1,
         max: 100,
         help: "A post flagged by this many members is hidden until staff review it."
+      },
+      %{
+        key: "max_upload_kb",
+        section: "Uploads",
+        type: :integer,
+        label: "Largest upload (KB)",
+        default: 10_240,
+        min: 1,
+        max: 102_400,
+        help: "The largest file a member may attach."
+      },
+      %{
+        key: "upload_quota_mb",
+        section: "Uploads",
+        type: :integer,
+        label: "Upload space per member (MB)",
+        default: 500,
+        min: 0,
+        max: 1_000_000,
+        help:
+          "How much a member may upload in all (each distinct file counted once). 0: no limit."
+      },
+      %{
+        key: "max_image_dimension",
+        section: "Uploads",
+        type: :integer,
+        label: "Largest image side (pixels)",
+        default: 4096,
+        min: 256,
+        max: 16_384,
+        help: "Bigger images are scaled down to fit when uploaded."
+      },
+      %{
+        key: "orphan_upload_hours",
+        section: "Uploads",
+        type: :integer,
+        label: "Keep unused uploads (hours)",
+        default: 24,
+        min: 1,
+        max: 24 * 30,
+        help: "Uploads no post, message or draft uses are deleted after this long."
       }
     ]
   end

@@ -28,6 +28,8 @@ defmodule FirestormWeb.Forums.User do
     field(:hide_profile_activity, :boolean, default: false)
     field(:hide_from_directory, :boolean, default: false)
     field(:deleted_at, :utc_datetime)
+    # An uploaded profile picture (see FirestormWeb.Uploads.set_avatar/3).
+    field(:avatar_upload_id, :id)
     field(:silenced_until, :utc_datetime)
     field(:silence_reason, :string)
     field(:suspended_until, :utc_datetime)
@@ -206,10 +208,16 @@ defmodule FirestormWeb.Forums.User do
   end
 
   @doc """
-  The user's Gravatar, falling back to a generated identicon. Users without an
-  email get an identicon derived from their username.
+  The user's uploaded avatar, or else their Gravatar, falling back to a
+  generated identicon. Users without an email get an identicon derived from
+  their username.
   """
-  def avatar_url(%__MODULE__{email: email, username: username}, size \\ 256) do
+  def avatar_url(user, size \\ 256)
+
+  def avatar_url(%__MODULE__{avatar_upload_id: id}, _size) when is_integer(id),
+    do: "/avatars/#{id}"
+
+  def avatar_url(%__MODULE__{email: email, username: username}, size) do
     (email || "#{username}@users.firestorm.invalid")
     |> Exgravatar.gravatar_url(d: "identicon", s: size)
   end

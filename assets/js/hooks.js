@@ -153,28 +153,31 @@ const MentionAutocomplete = {
   },
 }
 
-// Upload directly from the browser to S3 with a presigned POST policy.
-const Uploaders = {
-  S3(entries, onViewError) {
-    entries.forEach(entry => {
-      const {url, fields} = entry.meta
-      const formData = new FormData()
-      Object.entries(fields).forEach(([key, val]) => formData.append(key, val))
-      formData.append("file", entry.file)
-
-      const xhr = new XMLHttpRequest()
-      onViewError(() => xhr.abort())
-      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? entry.progress(100) : entry.error()
-      xhr.onerror = () => entry.error()
-      xhr.upload.addEventListener("progress", event => {
-        if (event.lengthComputable) {
-          const percent = Math.round((event.loaded / event.total) * 100)
-          if (percent < 100) { entry.progress(percent) }
-        }
-      })
-      xhr.open("POST", url, true)
-      xhr.send(formData)
+// The post editor's attachments: files pasted into it (e.g. a screenshot)
+// are uploaded like picked or dropped ones, to the LiveView upload named
+// by `data-upload`. While files are dragged over it, it's highlighted
+// (dropping is LiveView's own phx-drop-target). The server appends each
+// upload's markdown to the body, but LiveView doesn't touch a focused
+// textarea, so then this does the same ("attachment_added").
+const PasteUpload = {
+  mounted() {
+    this.handleEvent("attachment_added", ({markdown}) => {
+      const textarea = this.el.querySelector("textarea")
+      if (!textarea || document.activeElement !== textarea) { return }
+      textarea.value = textarea.value.trim() === "" ? markdown : `${textarea.value}\n\n${markdown}`
+      textarea.dispatchEvent(new Event("input", {bubbles: true}))
     })
+    this.el.addEventListener("paste", e => {
+      const files = Array.from((e.clipboardData && e.clipboardData.files) || [])
+      if (files.length > 0) {
+        e.preventDefault()
+        this.upload(this.el.dataset.upload, files)
+      }
+    })
+    const highlight = on => ["ring-2", "ring-primary"].forEach(c => this.el.classList.toggle(c, on))
+    this.el.addEventListener("dragover", () => highlight(true))
+    this.el.addEventListener("dragleave", () => highlight(false))
+    this.el.addEventListener("drop", () => highlight(false))
   },
 }
 
@@ -232,4 +235,4 @@ const PluginWidget = {
   },
 }
 
-export default {ComposerButtons, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection, Uploaders}
+export default {ComposerButtons, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

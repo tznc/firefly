@@ -178,6 +178,9 @@ defmodule FirestormWeb.Web.Layouts do
               >
                 Plugins
               </.nav_item>
+              <.nav_item path={~p"/staff/uploads"} current_path={@current_path} icon="hero-photo">
+                Uploads
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>
