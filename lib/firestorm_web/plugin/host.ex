@@ -58,7 +58,7 @@ defmodule FirestormWeb.Plugin.Host do
 
   `http.fetch` is refused, whatever the plugin's permissions, while a
   hook runs synchronously in a member's request on forum content
-  (`render_shortcodes`, `render_post`): a slow or hostile host would hold up
+  (`render_shortcodes`, `render_post`, `moderate_post`, `flag_created`): a slow or hostile host would hold up
   every page view, and content would leave the site each time it's shown.
   It's allowed in `enabled` and `disabled` (staff actions), `handle_event`
   and `run_job` (background work), and in an export when the call chain

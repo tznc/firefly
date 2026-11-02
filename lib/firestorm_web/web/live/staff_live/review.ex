@@ -151,6 +151,7 @@ defmodule FirestormWeb.Web.StaffLive.Review do
           <div class="card-body gap-3">
             <.item_header post={post} />
             <p class="text-xs text-base-content/60">{if post.first?, do: "New thread", else: "Reply"}</p>
+            <p :if={post.queued_reason} class="alert alert-info py-2 text-sm">{post.queued_reason}</p>
             <div class="flex flex-wrap items-end gap-2">
               <button phx-click="approve" phx-value-post_id={post.id} class="btn btn-sm btn-primary">
                 Approve

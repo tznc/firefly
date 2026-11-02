@@ -58,6 +58,12 @@ defmodule FirestormWeb.Plugin.Sandboxed do
   @impl true
   def run_job(%Plugin{} = plugin, input), do: run(plugin, "run_job", input)
 
+  @impl true
+  def moderate_post(%Plugin{} = plugin, input), do: run(plugin, "moderate_post", input)
+
+  @impl true
+  def flag_created(%Plugin{} = plugin, input), do: run(plugin, "flag_created", input)
+
   @doc """
   Runs the plugin's handler `hook` with `input`. The time limit is the
   runner's (see `FirestormWeb.Plugin.Runner`), less a margin so the sandbox

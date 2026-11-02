@@ -34,7 +34,10 @@ defmodule FirestormWeb.Flags do
          :ok <- Posting.check(user, :flag),
          :ok <- if(flagged?(post, user), do: {:error, :already_flagged}, else: :ok),
          {:ok, flag} <- insert(post, user, attrs) do
-      maybe_hide(post)
+      if FirestormWeb.Plugins.Moderation.flag_created(post, post.thread, flag) == :hide,
+        do: hide(post),
+        else: maybe_hide(post)
+
       notify_admins(post, user)
       FirestormWeb.Review.changed()
 
@@ -146,8 +149,13 @@ defmodule FirestormWeb.Flags do
   # a visible post, so concurrent flags hide (and notify) once. Admins' posts
   # (staff announcements, say) are left for staff to review instead.
   defp maybe_hide(post) do
-    if length(pending_flags(post)) >= SiteSettings.get("flags_to_hide") and
-         not (post.user && Forums.admin?(post.user)) do
+    if length(pending_flags(post)) >= SiteSettings.get("flags_to_hide"), do: hide(post)
+  end
+
+  # Also when a plugin's `flag_created` hook asks (see
+  # FirestormWeb.Plugins.Moderation).
+  defp hide(post) do
+    if not (post.user && Forums.admin?(post.user)) do
       {count, _} =
         Post
         |> where([p], p.id == ^post.id and is_nil(p.hidden_at))

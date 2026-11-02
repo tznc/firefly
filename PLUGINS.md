@@ -168,6 +168,8 @@ requirements; core and uploaded plugins can depend on each other.
 | `render_post` | `render_post(plugin, input)` | `{html, post}` | the new HTML |
 | `handle_event` | `handle_event(plugin, input)` | `{event, data}` | ignored; a failure is retried |
 | `run_job` | `run_job(plugin, input)` | `{job}` | ignored |
+| `moderate_post` | `moderate_post(plugin, input)` | `{kind, title, body, user, thread, category_id}` | `{action: "allow"}`, `{action: "queue", reason}` or `{action: "reject", message}` |
+| `flag_created` | `flag_created(plugin, input)` | `{post, thread, flag: {reason, note}}` | `{action: "none"}` or `{action: "hide"}` |
 
 `post` is `{id, thread_id, category_id, user_id}`.
 
@@ -248,6 +250,7 @@ job", which also goes to the plugin's error log.
 | Hook | `http.fetch` |
 |---|---|
 | `render_shortcodes`, `render_post` | refused: they run while a page renders |
+| `moderate_post`, `flag_created` | refused: they run while a member's post or flag is saved |
 | `handle_event`, `run_job` | allowed: background work |
 | `enabled`, `disabled` | allowed: a staff action, once (e.g. registering a webhook) |
 | exports | as the hook the call chain started in: allowed when a plugin's `handle_event` calls another's export through `plugins.call`, refused from its `render_post`; refused when Elixir code calls an export directly |
@@ -268,6 +271,40 @@ exports.render_post = ({ html, post }) => {
   return card ? html + `<p>${card.title}</p>` : html;
 };
 ```
+
+To check posts with a remote service, decide what you can in
+`moderate_post` from what's in hand, queue the rest for staff review, and
+ask the service from an event once the post is public:
+
+```js
+// Synchronous: no network. Queue what needs a closer look.
+exports.moderate_post = ({ body, user }) =>
+  /https?:\/\//.test(body) && firefly.call("kv.get", { key: "trusted", user_id: user.id }) !== true
+    ? { action: "queue", reason: "links from a member not yet checked" }
+    : { action: "allow" };
+
+// In the background, on post_created and post_edited: ask the service and
+// put what it flags in front of staff (needs "flag").
+exports.handle_event = ({ event, data }) => {
+  const res = firefly.call("http.fetch", {
+    url: "https://api.example.com/check",
+    method: "POST",
+    body: JSON.stringify({ text: data.post.body }),
+  });
+  if (JSON.parse(res.body).spam) {
+    firefly.call("posts.flag", { post_id: data.post.id, reason: "spam", note: "api.example.com says spam" });
+  } else {
+    firefly.call("kv.set", { key: "trusted", value: true, user_id: data.post.user_id });
+  }
+};
+```
+
+Queued posts produce no events until staff approve them, and plugins can't
+approve or reject them, so the remote check runs on what's published (a
+post staff approved, or one `moderate_post` allowed) and reports through
+flags, which staff review and which `flags_to_hide` turns into hiding.
+`trusted` is kept in each member's own store (`user_id`), so it's in their
+account export and goes with their account.
 
 ### Egress log
 
@@ -322,6 +359,26 @@ produces events, and a plugin never hears about its own bot's actions.
 `{"name", "cron": "m h dom mon dow"}` (UTC). Due jobs call `run_job` with
 `{job}`; the next run time is stored, so jobs survive restarts and run once
 across nodes. A failed run isn't retried before its next time.
+
+## Moderation
+
+`moderate_post` (needs `read`) runs synchronously before a new thread,
+reply or edited body is saved, for every way of posting (web, API, inbound
+email all go through `FirestormWeb.Forums`), as a changeset validation:
+
+- `reject`: the post isn't saved; the author sees the message as a form
+  (or API) error. The first rejection wins.
+- `queue`: the post waits in the review queue at `/staff/review`, which
+  shows "Plugin <name>: <reason>"; staff approve or reject it as usual.
+
+The time limit is strict (300 ms, `FirestormWeb.Plugins.Moderation,
+timeout:`). If a plugin fails or times out, posting goes ahead by default
+(fail open); staff can switch a plugin to fail closed on its admin page, so
+posts are refused with a "try again" message instead. Admins' posts and
+posts in categories anonymous visitors can't read aren't checked.
+
+`flag_created` (needs `flag`) runs when a member flags a public post;
+answering `hide` hides it until staff review it, as enough flags would.
 
 ## Storage and custom fields
 

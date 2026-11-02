@@ -6,7 +6,8 @@ defmodule FirestormWeb.PluginNetworkTest do
   import Ecto.Query, only: [from: 2]
   import FirestormWeb.PluginHelpers
 
-  alias FirestormWeb.{Markdown, Plugins, Repo, SiteSettings}
+  alias FirestormWeb.{Flags, Forums, Markdown, Plugins, Repo, Review, SiteSettings}
+  alias FirestormWeb.Forums.Post
   alias FirestormWeb.Plugin.{Host, Manifest, Runner}
   alias FirestormWeb.Plugins.{Egress, EgressEntry, Health, HTTP}
 
@@ -113,6 +114,46 @@ defmodule FirestormWeb.PluginNetworkTest do
       # Called from Elixir rather than from a hook: no network.
       assert {:ok, direct} = Runner.invoke(Plugins.get_active("net"), "call_export", ["go", nil])
       assert direct =~ "#{@sync_error} (call_export)"
+    end
+
+    test "is refused while moderating posts and flags", %{admin: admin} do
+      install_plugin!(
+        admin,
+        %{
+          "id" => "checker",
+          "name" => "Checker",
+          "hooks" => ["moderate_post", "flag_created"],
+          "permissions" => ["read", "flag", "http"],
+          "http_hosts" => ["127.0.0.1"]
+        },
+        %{
+          "index.js" => """
+          const attempt = () => {
+            try { firefly.call('http.fetch', {url: '#{@url}'}); return null }
+            catch (e) { return e.message }
+          };
+          // Can't ask the remote service: queue for staff, saying why.
+          exports.moderate_post = () => {
+            const refused = attempt();
+            return refused ? {action: 'queue', reason: refused} : {action: 'allow'};
+          };
+          // Hides the post only when the fetch was refused, so the test sees it.
+          exports.flag_created = () => ({action: attempt() ? 'hide' : 'none'});
+          """
+        },
+        enable: true
+      )
+
+      member = user_fixture()
+      thread = thread_fixture(category_fixture("Public"), admin, %{body: "Hi"})
+      {:ok, post} = Forums.create_post(thread, member, %{body: "check me"})
+      assert post.queued_reason =~ "#{@sync_error} (moderate_post); use an event or job"
+
+      {:ok, approved} = Review.approve(post, admin)
+      {:ok, _} = Flags.flag_post(approved, user_fixture(), %{reason: "spam"})
+      assert Post.hidden?(Repo.get!(Post, post.id))
+
+      assert [%{error: "sync_hook"}, %{error: "sync_hook"}] = entries()
     end
 
     test "applies the same way to core plugins" do

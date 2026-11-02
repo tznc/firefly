@@ -173,7 +173,8 @@ defmodule FirestormWeb.Plugins do
         manifest: entry.manifest,
         state: entry.state,
         source: entry.source,
-        settings: Settings.values(entry.manifest.settings, entry.row && entry.row.settings)
+        settings: Settings.values(entry.manifest.settings, entry.row && entry.row.settings),
+        fail_closed: (entry.row && entry.row.fail_closed) || false
       }
     end
   end
@@ -774,6 +775,28 @@ defmodule FirestormWeb.Plugins do
       end)
 
     changed()
+  end
+
+  @doc """
+  Sets whether posting is refused when `id`'s moderation hook fails
+  (`true`, fail closed) or goes ahead (`false`, fail open), as `admin`.
+  """
+  def set_fail_closed(id, fail_closed, %User{} = admin) when is_boolean(fail_closed) do
+    {:ok, _} =
+      Repo.transact(fn ->
+        before = Repo.get_by(InstalledPlugin, plugin_id: id)
+        row = save_state(id, %{fail_closed: fail_closed})
+
+        details = %{
+          plugin: id,
+          fail_closed: %{before: (before && before.fail_closed) || false, after: fail_closed}
+        }
+
+        {:ok, StaffLog.record(admin, "plugin.settings", {"plugin", row.id}, details)}
+      end)
+
+    changed()
+    :ok
   end
 
   ## Errors
