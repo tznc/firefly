@@ -69,7 +69,9 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "plugin.suspend" => "Suspended plugin",
     "plugin.resume" => "Resumed plugin",
     "plugin.secret" => "Changed plugin endpoint secret",
-    "upload.delete" => "Deleted upload"
+    "upload.delete" => "Deleted upload",
+    "emoji.create" => "Added emoji",
+    "emoji.delete" => "Removed emoji"
   }
 
   @impl true
@@ -133,6 +135,9 @@ defmodule FirestormWeb.Web.StaffLive.Log do
 
   defp target_link(%{target_type: "upload", details: %{"filename" => name}}, _target),
     do: {name, ~p"/staff/uploads"}
+
+  defp target_link(%{target_type: "emoji", details: %{"name" => name}}, _target),
+    do: {":#{name}:", ~p"/staff/emoji"}
 
   defp target_link(_entry, nil), do: nil
 
