@@ -102,7 +102,8 @@ config :firestorm_web, FirestormWeb.RateLimit,
     flag: {1_000, 60_000},
     plugin_notify: {1_000, 60_000},
     plugin_call: {1_000, 60_000},
-    plugin_api: {1_000, 60_000}
+    plugin_api: {1_000, 60_000},
+    plugin_storage: {1_000, 60_000}
   ]
 
 # Each test sees its own (transactional) plugins: no shared cache.

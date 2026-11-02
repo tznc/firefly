@@ -10,11 +10,19 @@
     <p id="views">…</p>
     <script src="/plugins/sdk.js"></script>
     <script>
-      Firefly.ready(() => {
-        Firefly.call("view").then(({views, greeting}) => {
-          document.getElementById("views").textContent = `${greeting} This widget was seen ${views} times.`;
-          Firefly.resize(48);
-        });
+      // Members also get their own count, kept in their storage.
+      const countMine = async () => {
+        if (!Firefly.isLoggedIn()) return "";
+        const seen = ((await Firefly.storage.get("seen")) || 0) + 1;
+        await Firefly.storage.set("seen", seen);
+        return ` You've seen it ${seen}.`;
+      };
+
+      Firefly.ready(async () => {
+        const {views, greeting} = await Firefly.call("view");
+        const mine = await countMine();
+        document.getElementById("views").textContent = `${greeting} Seen ${views} times.${mine}`;
+        Firefly.resize(48);
       });
     </script>
   </body>

@@ -19,7 +19,8 @@ defmodule FirestormWeb.E2E.PluginsTest do
     |> visit("/categories/#{category.id}/threads/#{thread.id}")
     |> assert_has(".hello", text: "Hello, World!")
     # The sandboxed widget loaded, got its context over postMessage, called
-    # the plugin's handler through the LiveView and asked to be resized.
+    # the plugin's handler through the LiveView, counted the viewer's visit
+    # in their own storage and asked to be resized.
     |> assert_has("[phx-hook='PluginWidget'][data-ready='true'][data-height='48']")
     |> visit("/categories/#{category.id}/threads/#{thread.id}/posts/new")
     |> assert_has("[data-phx-main].phx-connected")
@@ -30,5 +31,7 @@ defmodule FirestormWeb.E2E.PluginsTest do
     |> assert_has(".plugin-view", text: "Widget views: 1")
 
     assert Storage.get("hello", "views") == 1
+    assert Storage.get({"hello", admin.id}, "seen") == 1
+    assert Storage.get("hello", "seen") == nil
   end
 end

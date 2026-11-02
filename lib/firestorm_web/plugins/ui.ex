@@ -16,6 +16,13 @@ defmodule FirestormWeb.Plugins.UI do
   `handle_widget` handler on the server. Widgets about a post or thread only
   appear on content anonymous visitors can read.
 
+  A widget can also keep data for the **viewer** (`Firefly.storage`, see
+  `widget_storage/4`): the plugin's per-member store (see
+  `FirestormWeb.Plugins.Storage`), always the logged-in viewer's, whatever
+  the widget sends. It needs no permission beyond having a widget; it's the
+  viewer's own data, in their account export and deleted with their account.
+  Visitors have none.
+
   **Pages** at `/plugins/:id/*path` come from `render_page`: sanitized HTML
   in the site's layout, or the plugin's asset as a sandboxed app. A plugin's
   **staff section** on `/staff/plugins/:id` comes from `render_admin`,
@@ -31,7 +38,10 @@ defmodule FirestormWeb.Plugins.UI do
   alias FirestormWeb.{Plugin, Plugins, RateLimit}
   alias FirestormWeb.Forums.User
   alias FirestormWeb.Plugin.Runner
-  alias FirestormWeb.Plugins.Content
+  alias FirestormWeb.Plugins.{Content, Storage}
+
+  # Largest JSON value a widget may store under one key.
+  @max_widget_value 8 * 1024
 
   @doc "The active plugins' widgets for `outlet`, in plugin order: `[{plugin, widget}]`."
   def widgets(outlet) do
@@ -69,6 +79,57 @@ defmodule FirestormWeb.Plugins.UI do
     else
       {:error, :rate_limited} -> {:error, "too many calls: slow down"}
       _ -> {:error, "no such plugin"}
+    end
+  end
+
+  @doc """
+  A widget of plugin `id` reads or writes the viewer's own storage: `op` is
+  `"get"` (`key`), `"set"` (`key`, `value`), `"delete"` (`key`) or `"list"`
+  (`prefix`). The store is always `user`'s: nothing in `params` chooses it.
+  Writes are rate limited per plugin and member, values are at most 8 KB of
+  JSON, and the per-member quota applies. Returns `{:ok, result}` or
+  `{:error, message}` for the widget.
+  """
+  def widget_storage(id, op, params, user) do
+    with %User{} <- user || {:error, "sign in to save data"},
+         %Plugin{} = plugin <- Plugins.get_active(id),
+         true <- plugin.manifest.widgets != [] do
+      storage_op(op, {plugin.id, user.id}, params)
+    else
+      {:error, message} -> {:error, message}
+      _ -> {:error, "no such plugin"}
+    end
+  end
+
+  defp storage_op("get", scope, %{"key" => key}) when is_binary(key),
+    do: {:ok, Storage.get(scope, key)}
+
+  defp storage_op("list", scope, params),
+    do: {:ok, Storage.list(scope, to_string(params["prefix"] || ""))}
+
+  defp storage_op("set", scope, %{"key" => key} = params) when is_binary(key) do
+    with :ok <- check_value(params["value"]),
+         :ok <- check_writes(scope),
+         :ok <- Storage.put(scope, key, params["value"]),
+         do: {:ok, nil}
+  end
+
+  defp storage_op("delete", scope, %{"key" => key}) when is_binary(key) do
+    with :ok <- check_writes(scope), :ok <- Storage.delete(scope, key), do: {:ok, nil}
+  end
+
+  defp storage_op(_op, _scope, _params), do: {:error, "invalid storage request"}
+
+  defp check_value(value) do
+    if byte_size(Jason.encode!(value)) <= @max_widget_value,
+      do: :ok,
+      else: {:error, "values must be at most 8 KB"}
+  end
+
+  defp check_writes({plugin_id, user_id}) do
+    case RateLimit.check(:plugin_storage, "#{plugin_id}:#{user_id}") do
+      :ok -> :ok
+      {:error, :rate_limited} -> {:error, "too many writes: slow down"}
     end
   end
 
