@@ -76,6 +76,12 @@ login, email, S3 uploads) are read from the environment in `config/runtime.exs`.
 `/admin` is a [Kaffy](https://github.com/aesmail/kaffy) admin UI, available to
 users with the `admin` role (the seeds create `admin` / `password`).
 
+### Plugins
+
+Staff install and manage plugins at `/staff/plugins`: core plugins written
+in Elixir, and third-party JavaScript plugins that run sandboxed in QuickJS
+on WebAssembly. See [PLUGINS.md](PLUGINS.md) for the plugin API.
+
 ### Tests
 
 Page tests use [PhoenixTest](https://hexdocs.pm/phoenix_test); critical user
