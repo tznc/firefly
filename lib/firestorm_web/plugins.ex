@@ -47,7 +47,7 @@ defmodule FirestormWeb.Plugins do
   alias FirestormWeb.{Forums, Plugin, Repo, StaffLog}
   alias FirestormWeb.Forums.User
   alias FirestormWeb.Plugin.{Bundle, Graph, Manifest, Runner, Sandboxed, Settings}
-  alias FirestormWeb.Plugins.{Health, InstalledPlugin}
+  alias FirestormWeb.Plugins.{Bots, Events, Fields, Health, InstalledPlugin, Jobs, Storage}
 
   @pubsub FirestormWeb.PubSub
   @topic "plugins"
@@ -198,6 +198,14 @@ defmodule FirestormWeb.Plugins do
         {plugin.id, plugin.manifest.version, code, plugin.settings}
       end
     )
+  end
+
+  @doc "Whether the active plugin `id` has `permission`."
+  def permitted?(id, permission) do
+    case get_active(id) do
+      %Plugin{manifest: manifest} -> permission in manifest.permissions
+      nil -> false
+    end
   end
 
   @doc "The active plugins implementing `hook`, in order."
@@ -466,6 +474,7 @@ defmodule FirestormWeb.Plugins do
     {:ok, row} =
       Repo.transact(fn ->
         row = Repo.insert_or_update!(Ecto.Changeset.change(row, attrs))
+        Bots.ensure(manifest)
 
         {action, details} =
           if current,
@@ -606,7 +615,11 @@ defmodule FirestormWeb.Plugins do
     StaffLog.record(admin, action, {"plugin", row.id}, details)
   end
 
-  @doc "Uninstalls `id` as `admin`, with its error log (see `uninstall_check/1`)."
+  @doc """
+  Uninstalls `id` as `admin` (see `uninstall_check/1`), deleting its data:
+  error log, queued events, job schedule, storage and custom fields. Its
+  bot user stays, with its posts.
+  """
   def uninstall(id, %User{} = admin) do
     with :ok <- uninstall_check(id) do
       row = Repo.get_by!(InstalledPlugin, plugin_id: id)
@@ -614,6 +627,10 @@ defmodule FirestormWeb.Plugins do
       transition(active(), fn ->
         Repo.delete!(row)
         Health.clear(id)
+        Events.clear(id)
+        Jobs.clear(id)
+        Storage.clear(id)
+        Fields.clear(id)
 
         StaffLog.record(admin, "plugin.uninstall", {"plugin", row.id}, %{
           plugin: id,

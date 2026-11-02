@@ -52,6 +52,12 @@ defmodule FirestormWeb.Plugin.Sandboxed do
   @impl true
   def render_shortcodes(%Plugin{} = plugin, input), do: run(plugin, "render_shortcodes", input)
 
+  @impl true
+  def handle_event(%Plugin{} = plugin, input), do: run(plugin, "handle_event", input)
+
+  @impl true
+  def run_job(%Plugin{} = plugin, input), do: run(plugin, "run_job", input)
+
   @doc """
   Runs the plugin's handler `hook` with `input`. The time limit is the
   runner's (see `FirestormWeb.Plugin.Runner`), less a margin so the sandbox
