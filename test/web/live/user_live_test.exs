@@ -14,14 +14,14 @@ defmodule FirestormWeb.Web.UserLiveTest do
   end
 
   test "paginates users", %{conn: conn} do
-    for _ <- 1..11, do: user_fixture()
+    for _ <- 1..21, do: user_fixture()
 
     conn
     |> visit(~p"/users")
-    |> assert_has("#users li", count: 10)
+    |> assert_has("#users tbody tr", count: 20)
     |> click_link("Next page")
     |> assert_path(~p"/users", query_params: %{page: "2"})
-    |> assert_has("#users li", count: 1)
+    |> assert_has("#users tbody tr", count: 1)
   end
 
   test "shows a user's profile and posts", %{conn: conn} do

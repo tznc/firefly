@@ -28,6 +28,8 @@ defmodule FirestormWeb.Forums.User do
     field(:hide_profile_activity, :boolean, default: false)
     field(:hide_from_directory, :boolean, default: false)
     field(:deleted_at, :utc_datetime)
+    # When the user last had a page open (see FirestormWeb.Visits).
+    field(:last_seen_at, :utc_datetime)
     # An uploaded profile picture (see FirestormWeb.Uploads.set_avatar/3).
     field(:avatar_upload_id, :id)
     field(:silenced_until, :utc_datetime)

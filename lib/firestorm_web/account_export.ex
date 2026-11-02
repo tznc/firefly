@@ -4,7 +4,7 @@ defmodule FirestormWeb.AccountExport do
   (with the revisions they made to them), edits of other people's (wiki)
   posts, threads started, likes,
   notifications, private messages they sent and the conversations they're
-  in, notification levels, read positions, drafts, bookmarks, the members they mute or ignore, poll votes and the polls they created,
+  in, notification levels, read positions, drafts, bookmarks, the members they mute or ignore, the days they visited, poll votes and the polls they created,
   their uploads (with links, which work while the user may still see them),
   the custom emoji they added as staff, and what plugins keep for them
   (their storage entries and custom fields on the user, by plugin id).
@@ -42,7 +42,8 @@ defmodule FirestormWeb.AccountExport do
     User
   }
 
-  @profile ~w(id username name email bio website location github_uid confirmed_at inserted_at)a
+  @profile ~w(id username name email bio website location github_uid confirmed_at inserted_at
+              last_seen_at)a
   @preferences ~w(theme email_notifications allow_private_messages reply_level new_thread_level
                   hide_profile_activity hide_from_directory)a
 
@@ -69,12 +70,23 @@ defmodule FirestormWeb.AccountExport do
       drafts: FirestormWeb.Drafts.export(user),
       bookmarks: FirestormWeb.Bookmarks.export(user),
       muted_and_ignored: FirestormWeb.Ignores.export(user),
+      visits: visits(user),
       polls: FirestormWeb.Polls.export(user),
       uploads: FirestormWeb.Uploads.export(user),
       custom_emoji_added: FirestormWeb.Emoji.export(user),
       plugin_storage: FirestormWeb.Plugins.Storage.export(user),
       plugin_fields: FirestormWeb.Plugins.Fields.export(user)
     }
+  end
+
+  defp visits(user) do
+    Repo.all(
+      from(v in "user_visits",
+        where: v.user_id == ^user.id,
+        order_by: v.visited_on,
+        select: %{date: v.visited_on, posts_read: v.posts_read}
+      )
+    )
   end
 
   defp posts(user) do
