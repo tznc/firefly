@@ -267,6 +267,20 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> assert_has("#{second}[data-spoiler=revealed]")
   end
 
+  test "math is typeset with the vendored KaTeX", %{conn: conn} do
+    alice = member_fixture("alice")
+    {:ok, category} = Forums.create_category(%{title: "Math"})
+
+    {:ok, thread} =
+      Forums.create_thread(category, alice, %{title: "Circles", body: "Area: $\\pi r^2$"})
+
+    [post] = thread.posts
+
+    conn
+    |> visit("/categories/#{category.id}/threads/#{thread.id}")
+    |> assert_has("#post-#{post.id}-body [data-math-rendered] .katex")
+  end
+
   test "a reply draft survives leaving the page straight after typing", %{conn: conn} do
     alice = member_fixture("alice")
     category = Forums.create_category(%{title: "Elixir"}) |> elem(1)

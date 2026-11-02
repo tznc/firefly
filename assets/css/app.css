@@ -135,3 +135,9 @@ img.emoji { display: inline-block; height: 1.25em; width: auto; margin: 0 0.05em
 .post-body .spoiler:not([data-spoiler="revealed"]) { filter: blur(0.35em); cursor: pointer; user-select: none; border-radius: 0.25rem; background-color: var(--color-base-300); }
 .post-body .spoiler:not([data-spoiler="revealed"]):focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 .post-body .spoiler:not([data-spoiler="revealed"]) * { pointer-events: none; }
+
+/* Display math scrolls rather than overflowing the post column */
+.post-body [data-math-style="display"] { display: block; overflow-x: auto; overflow-y: hidden; }
+
+/* Footnotes: the list at the end of a post */
+.post-body > section { margin-top: 1rem; border-top: 1px solid var(--color-base-300); font-size: 0.875em; }

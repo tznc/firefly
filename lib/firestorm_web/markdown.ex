@@ -22,16 +22,28 @@ defmodule FirestormWeb.Markdown do
   instead of the viewer, so the names are looked up once.
 
   BBCode (see `FirestormWeb.BBCode`, the `bbcode` site setting) is
-  converted to Markdown first. `<span class="spoiler">` and
-  `<div class="spoiler">` (from `[spoiler]`) are hidden until clicked.
+  converted to Markdown first.
+
+  Each of these has a site setting to turn it off:
+
+    * spoilers: `>!text!<` and `[spoiler]` become `<span class="spoiler">`
+      (`<div>` when spanning paragraphs), hidden until clicked
+    * math: `$...$` and `$$...$$` become `<span data-math-style>`, typeset
+      in the browser by the vendored KaTeX (`priv/static/vendor/katex`)
+    * footnotes: `[^name]` references and `[^name]: text` definitions.
+      Their ids are scoped to the post (several posts' footnotes share a
+      page) and prefixed `user-content-`, as every id in a post is, so
+      no post can clash with the page's own ids
 
   Custom emoji (see `FirestormWeb.Emoji`) written `:name:` become
   `<img class="emoji">` (not in code).
 
   Raw HTML is allowed in the input, but the output is always run through an
   allow-list sanitizer (`sanitize_options/0`: MDEx's defaults plus only what
-  the steps above need, e.g. the `emoji` class on images), so scripts,
-  event handlers and `javascript:` URLs are stripped.
+  the steps above need: the `emoji` class on images, `data-math-style`
+  set to `inline` or `display` on spans, `<section>` and `id`s on links
+  and list items for footnotes), so scripts, event handlers and
+  `javascript:` URLs are stripped.
 
   A post's body (rendered with the `:post` and `:thread` options) also goes
   through the plugins' content hooks (see `FirestormWeb.Plugins.Content`),
@@ -43,7 +55,16 @@ defmodule FirestormWeb.Markdown do
   @sanitize MDEx.Document.default_sanitize_options()
             |> Keyword.merge(
               # Custom emoji: `class` on images may only be "emoji".
-              add_allowed_classes: %{"img" => ["emoji"]}
+              add_allowed_classes: %{"img" => ["emoji"]},
+              # Math: only these two values.
+              add_tag_attribute_values: %{
+                "span" => %{"data-math-style" => ["inline", "display"]}
+              },
+              # Footnotes: the list's section, and the anchors' ids,
+              # always prefixed so they can't clash with the page's.
+              add_tags: ["section"],
+              add_tag_attributes: %{"a" => ["id"], "li" => ["id"]},
+              id_prefix: "user-content-"
             )
 
   @options [
@@ -64,8 +85,12 @@ defmodule FirestormWeb.Markdown do
   # "@user said:" (see `FirestormWeb.Quote`).
   @quote_header ~r{<blockquote>\n<p>(<a href="[^"]*"[^>]*>@[^<]+ said:</a>)</p>}
 
-  @doc false
-  def options, do: @options
+  @doc "The MDEx options, with the extensions the site settings turn on."
+  def options do
+    @options
+    |> put_in([:extension, :math_dollars], SiteSettings.get("math"))
+    |> put_in([:extension, :footnotes], SiteSettings.get("footnotes"))
+  end
 
   @doc """
   The sanitizer allow-list for post HTML, also applied to what plugins
@@ -79,12 +104,18 @@ defmodule FirestormWeb.Markdown do
   def render(nil, _refs_or_viewer, _opts), do: ""
 
   def render(body, refs_or_viewer, opts) when is_binary(body) do
+    spoilers? = SiteSettings.get("spoilers")
+    options = options()
+
     body
-    |> bbcode()
+    |> bbcode(spoilers?)
+    |> spoilers(spoilers?)
     |> Mentions.parse()
     |> Mentions.link(refs_or_viewer)
     |> custom_emoji(Emoji.custom())
-    |> MDEx.to_html!(@options)
+    |> footnotes(opts[:post])
+    |> MDEx.to_html!(options)
+    |> footnote_links()
     |> plugins(opts[:post], opts[:thread])
     # Safe to do after sanitizing: any literal `<pre>` in user text is escaped.
     |> String.replace("<pre>", ~s(<pre class="line-numbers">))
@@ -138,11 +169,46 @@ defmodule FirestormWeb.Markdown do
 
   # A shortcode an active plugin declares (see FirestormWeb.Plugins.Content)
   # is the plugin's, even when BBCode has a tag of that name.
-  defp bbcode(body) do
-    if SiteSettings.get("bbcode"),
-      do: BBCode.to_markdown(body, FirestormWeb.Plugins.Content.shortcode_names()),
-      else: body
+  defp bbcode(body, spoilers?) do
+    skip =
+      FirestormWeb.Plugins.Content.shortcode_names() ++ if(spoilers?, do: [], else: ["spoiler"])
+
+    if SiteSettings.get("bbcode"), do: BBCode.to_markdown(body, skip), else: body
   end
+
+  # `>!text!<` on one line, outside code.
+  defp spoilers(body, false), do: body
+
+  defp spoilers(body, true) do
+    if String.contains?(body, ">!") do
+      BBCode.outside_code(body, fn text ->
+        Regex.replace(~r/>!(?=\S)(.+?)(?<=\S)!</, text, ~s(<span class="spoiler">\\1</span>))
+      end)
+    else
+      body
+    end
+  end
+
+  # Footnote names get the post's id (or "preview"), so two posts on one
+  # page don't share anchors.
+  defp footnotes(document, post) do
+    scope = if post, do: "p#{post.id}", else: "preview"
+
+    MDEx.traverse_and_update(document, fn
+      %MDEx.FootnoteReference{name: name} = node -> %{node | name: "#{scope}-#{name}"}
+      %MDEx.FootnoteDefinition{name: name} = node -> %{node | name: "#{scope}-#{name}"}
+      node -> node
+    end)
+  end
+
+  # The sanitizer prefixed the footnotes' ids; their links follow.
+  defp footnote_links(html),
+    do:
+      String.replace(
+        html,
+        [~s(href="#fn-), ~s(href="#fnref-)],
+        &String.replace(&1, "#", "#user-content-")
+      )
 
   defp plugins(html, nil, _thread), do: html
   defp plugins(html, post, thread), do: FirestormWeb.Plugins.Content.transform(html, post, thread)
