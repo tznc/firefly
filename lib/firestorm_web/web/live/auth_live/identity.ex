@@ -6,6 +6,8 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
   """
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :password_login})
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok,

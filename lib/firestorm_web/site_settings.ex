@@ -76,6 +76,59 @@ defmodule FirestormWeb.SiteSettings do
           "Off: members can post without confirming their email. Email notifications still go only to confirmed addresses."
       },
       %{
+        key: "discourse_connect_overrides_email",
+        section: "Logins",
+        type: :boolean,
+        label: "Sync email from DiscourseConnect",
+        default: false,
+        help:
+          "Each DiscourseConnect login sets the member's email to the provider's (confirmed unless it asks for activation)."
+      },
+      %{
+        key: "discourse_connect_overrides_username",
+        section: "Logins",
+        type: :boolean,
+        label: "Sync username from DiscourseConnect",
+        default: false,
+        help:
+          "Each DiscourseConnect login renames the member to their username there (if it's free here)."
+      },
+      %{
+        key: "discourse_connect_overrides_name",
+        section: "Logins",
+        type: :boolean,
+        label: "Sync name from DiscourseConnect",
+        default: false,
+        help: "Each DiscourseConnect login sets the member's name to the provider's."
+      },
+      %{
+        key: "discourse_connect_overrides_avatar",
+        section: "Logins",
+        type: :boolean,
+        label: "Sync avatar from DiscourseConnect",
+        default: false,
+        help:
+          "When the provider's avatar_url changes, it's fetched and becomes the member's avatar."
+      },
+      %{
+        key: "discourse_connect_sync_staff",
+        section: "Logins",
+        type: :boolean,
+        label: "Sync admins and moderators from DiscourseConnect",
+        default: false,
+        help:
+          "The provider's admin and moderator flags add members to, or remove them from, the admin and moderator groups."
+      },
+      %{
+        key: "discourse_connect_overrides_groups",
+        section: "Logins",
+        type: :boolean,
+        label: "Sync groups from DiscourseConnect",
+        default: false,
+        help:
+          "The provider's groups, add_groups and remove_groups set the member's groups (only groups that exist here)."
+      },
+      %{
         key: "new_user_max_links",
         section: "Spam and new users",
         type: :integer,

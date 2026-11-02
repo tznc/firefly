@@ -1,7 +1,8 @@
 defmodule FirestormWeb.Web.AuthLive.Login do
   @moduledoc """
-  Choose how to log in: a social login (one button per enabled provider;
-  see `FirestormWeb.Auth`) or a username and password.
+  Choose how to log in: single sign-on or a social login (one button per
+  enabled provider; see `FirestormWeb.Auth`) or a username and password
+  (unless single sign-on is the only way in).
   """
   use FirestormWeb.Web, :live_view
 
@@ -10,7 +11,8 @@ defmodule FirestormWeb.Web.AuthLive.Login do
     {:ok,
      socket
      |> assign(:page_title, "Log in")
-     |> assign(:providers, FirestormWeb.Auth.enabled_providers())}
+     |> assign(:providers, FirestormWeb.Auth.enabled_providers())
+     |> assign(:password_login, FirestormWeb.Auth.password_login?())}
   end
 
   @impl true
@@ -31,15 +33,17 @@ defmodule FirestormWeb.Web.AuthLive.Login do
             >
               Log in with {FirestormWeb.Auth.label(provider)}
             </a>
-            <div :if={@providers != []} class="divider text-xs">or</div>
+            <div :if={@providers != [] and @password_login} class="divider text-xs">or</div>
             <.link
-              :if={FirestormWeb.Forums.registration_open?()}
+              :if={@password_login and FirestormWeb.Forums.registration_open?()}
               navigate={~p"/register"}
               class="btn btn-primary"
             >
               Create Account
             </.link>
-            <.link navigate={~p"/auth/identity"} class="link text-sm">Sign In</.link>
+            <.link :if={@password_login} navigate={~p"/auth/identity"} class="link text-sm">
+              Sign In
+            </.link>
           </div>
         </div>
         <p class="text-xs text-base-content/60">

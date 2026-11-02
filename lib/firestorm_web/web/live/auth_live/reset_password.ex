@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.AuthLive.ResetPassword do
   @moduledoc "Sets a new password from an emailed reset link."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :password_login})
+
   alias FirestormWeb.{Forums, PasswordReset}
   alias FirestormWeb.Forums.User
 

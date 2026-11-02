@@ -22,6 +22,13 @@ defmodule FirestormWeb.Auth do
 
   Logged-in users connect more providers, and disconnect them, from their
   settings; the last way to log in (with no password) can't be removed.
+
+  Single sign-on works the same way: an OpenID Connect provider
+  (`FirestormWeb.Auth.OIDC`, provider `"oidc"`) and a DiscourseConnect
+  provider (`FirestormWeb.Auth.DiscourseConnect`), each enabled by its own
+  configuration. With `FIREFLY_SSO_ONLY` set (see `sso_only?/0`), they're
+  the only ways in: social logins, passwords and the registration form are
+  off.
   """
 
   import Ecto.Query
@@ -37,10 +44,28 @@ defmodule FirestormWeb.Auth do
     apple: {"Apple", Ueberauth.Strategy.Apple.OAuth},
     x: {"X", FirestormWeb.Auth.Strategies.X},
     facebook: {"Facebook", Ueberauth.Strategy.Facebook.OAuth},
-    slack: {"Slack", FirestormWeb.Auth.Strategies.Slack}
+    slack: {"Slack", FirestormWeb.Auth.Strategies.Slack},
+    # Single sign-on: enabled and named by their own configuration.
+    oidc: {nil, FirestormWeb.Auth.OIDC},
+    discourse_connect: {nil, FirestormWeb.Auth.DiscourseConnect}
   ]
 
+  @sso [:oidc, :discourse_connect]
+
   @names Enum.map(@providers, fn {provider, _} -> to_string(provider) end)
+
+  @doc """
+  Whether single sign-on is the only way to log in (`FIREFLY_SSO_ONLY`, when
+  an SSO provider is enabled): no social logins, passwords or registration
+  form.
+  """
+  def sso_only? do
+    Application.get_env(:firestorm_web, __MODULE__, [])[:sso_only] == true and
+      Enum.any?(@sso, &enabled?/1)
+  end
+
+  @doc "Whether people may log in (and register) with a username and password."
+  def password_login?, do: not sso_only?()
 
   @doc "Every provider, in display order."
   def providers, do: Keyword.keys(@providers)
@@ -57,9 +82,14 @@ defmodule FirestormWeb.Auth do
       nil ->
         false
 
+      {_label, module} when provider in @sso ->
+        module.enabled?()
+
       {_label, config_key} ->
         config = Application.get_env(:ueberauth, config_key, [])
-        present?(config[:client_id]) and present?(config[:client_secret])
+
+        present?(config[:client_id]) and present?(config[:client_secret]) and
+          not sso_only?()
     end
   end
 
@@ -70,7 +100,13 @@ defmodule FirestormWeb.Auth do
 
   @doc "The provider's name for people, e.g. `\"GitHub\"`."
   def label(provider) when is_binary(provider), do: label(String.to_existing_atom(provider))
-  def label(provider), do: @providers |> Keyword.fetch!(provider) |> elem(0)
+
+  def label(provider) do
+    case Keyword.fetch!(@providers, provider) do
+      {nil, module} -> module.label()
+      {label, _config_key} -> label
+    end
+  end
 
   @doc """
   What we use from a successful Ueberauth login: `%{provider, uid,
@@ -100,12 +136,12 @@ defmodule FirestormWeb.Auth do
   defp raw_user(_auth), do: %{}
 
   # Whether the provider vouches for the email address: GitHub (its primary
-  # address), Apple and Facebook only give verified ones; Google, Discord
-  # and Slack say; X gives none.
+  # address), Apple and Facebook only give verified ones; Google, Discord,
+  # Slack and OpenID Connect providers say; X gives none.
   defp email_verified?(provider, _raw) when provider in [:github, :apple, :facebook], do: true
   defp email_verified?(:discord, raw), do: raw["verified"] == true
 
-  defp email_verified?(provider, raw) when provider in [:google, :slack],
+  defp email_verified?(provider, raw) when provider in [:google, :slack, :oidc],
     do: raw["email_verified"] in [true, "true"]
 
   defp email_verified?(_provider, _raw), do: false
@@ -116,7 +152,9 @@ defmodule FirestormWeb.Auth do
 
   For accounts GitHub logins created before account ids were stored, the
   GitHub account is linked to a user of the same username only if that
-  user has no password and no linked account, and the emails match.
+  user has no password and no linked account, and the emails match. A
+  DiscourseConnect account may link to the account with its email (see
+  `FirestormWeb.Auth.DiscourseConnect.account_for_email/1`).
   """
   def login(%{provider: provider, uid: uid} = info) when not is_nil(uid) do
     provider = to_string(provider)
@@ -145,6 +183,16 @@ defmodule FirestormWeb.Auth do
     case legacy_github_user(info[:nickname], email) do
       %User{} = user -> with {:ok, _} <- link(user, "github", uid, info), do: {:ok, user}
       nil -> register("github", uid, Map.put(info, :email, email))
+    end
+  end
+
+  defp link_legacy_or_register("discourse_connect", uid, info) do
+    case FirestormWeb.Auth.DiscourseConnect.account_for_email(info) do
+      %User{} = user ->
+        with {:ok, _} <- link(user, "discourse_connect", uid, info), do: {:ok, user}
+
+      nil ->
+        register("discourse_connect", uid, info)
     end
   end
 
@@ -251,7 +299,8 @@ defmodule FirestormWeb.Auth do
 
   @doc """
   Disconnects `user`'s account at `provider`, unless it's their only way
-  to log in (no password, no other account).
+  to log in (no password that works, no other account at an enabled
+  provider).
   """
   def disconnect(%User{} = user, provider) when is_binary(provider) do
     identities = identities(user)
@@ -260,13 +309,19 @@ defmodule FirestormWeb.Auth do
       not Map.has_key?(identities, provider) ->
         {:error, "That account isn't connected."}
 
-      is_nil(user.password_hash) and map_size(identities) == 1 ->
+      not other_way_in?(user, Map.delete(identities, provider)) ->
         {:error, "Connect another account first: this is your only way to log in."}
 
       true ->
         Repo.delete!(identities[provider])
         :ok
     end
+  end
+
+  # A password (while passwords work) or another account at an enabled provider.
+  defp other_way_in?(user, other_identities) do
+    (is_binary(user.password_hash) and password_login?()) or
+      Enum.any?(Map.keys(other_identities), &enabled?/1)
   end
 
   @doc "The export of `user`'s connected accounts (see `FirestormWeb.AccountExport`)."

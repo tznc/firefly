@@ -40,6 +40,9 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_DOMAIN` | Public domain (served over https on 443), default `firefly.tznc.dev` |
 | `FIREFLY_<PROVIDER>_CLIENT_ID`, `FIREFLY_<PROVIDER>_CLIENT_SECRET` | Social login, for `GITHUB`, `GOOGLE`, `DISCORD`, `FACEBOOK`, `X` and `SLACK`; each provider is offered only when both are set. Callback URL: `https://<domain>/auth/<provider>/callback` (lowercase) |
 | `FIREFLY_APPLE_CLIENT_ID`, `FIREFLY_APPLE_TEAM_ID`, `FIREFLY_APPLE_KEY_ID`, `FIREFLY_APPLE_PRIVATE_KEY` | Sign in with Apple (the Services ID, team, key id and the `.p8` key's contents) |
+| `FIREFLY_OIDC_DISCOVERY_URL`, `FIREFLY_OIDC_CLIENT_ID`, `FIREFLY_OIDC_CLIENT_SECRET` | Single sign-on with an OpenID Connect provider (its `.well-known/openid-configuration` URL; the secret is optional for public clients). Optional: `FIREFLY_OIDC_SCOPES` (default `openid email profile`), `FIREFLY_OIDC_NAME` (the button's name). Callback URL: `https://<domain>/auth/oidc/callback` |
+| `FIREFLY_DISCOURSE_CONNECT_URL`, `FIREFLY_DISCOURSE_CONNECT_SECRET` | Single sign-on through a DiscourseConnect provider (its endpoint and the shared secret); optional `FIREFLY_DISCOURSE_CONNECT_NAME`. Which fields each login syncs is set under Logins in the site settings |
+| `FIREFLY_SSO_ONLY` | `true`: single sign-on is the only way to log in (no social logins, passwords or registration form) |
 | `FIREFLY_SENDGRID_API_KEY` | Outbound email |
 | `FIREFLY_EMAIL_FROM` | Sender, default `noreply@<FIREFLY_DOMAIN>` |
 | `FIREFLY_REPLY_EMAIL_DOMAIN` | Reply-by-email domain, default `reply.<FIREFLY_DOMAIN>` (needs an MX record pointing at SendGrid Inbound Parse) |
