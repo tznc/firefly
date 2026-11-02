@@ -180,7 +180,7 @@ defmodule FirestormWeb.Web.PostLive.New do
       </.page_header>
 
       <.form for={@form} id="post-form" phx-change="validate" phx-submit="save" class="space-y-4">
-        <Editor.body_editor field={@form[:body]} uploads={@uploads} />
+        <Editor.body_editor field={@form[:body]} uploads={@uploads} user={@current_user} />
         <.poll_composer form={@poll_form} open={@poll_open?} />
         <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">

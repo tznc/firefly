@@ -9,10 +9,11 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
   import FirestormWeb.Web.StaffLive.Plugins, only: [status_badge: 1, dependency_list: 1]
+  import FirestormWeb.Web.PluginComponents
 
   alias FirestormWeb.Plugin.Host
   alias FirestormWeb.Plugins
-  alias FirestormWeb.Plugins.Health
+  alias FirestormWeb.Plugins.{Health, UI}
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -37,8 +38,23 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
   end
 
   defp load(socket, plugin) do
+    hooks = (plugin.manifest && plugin.manifest.hooks) || []
+    active = plugin.status == :enabled
+    user = socket.assigns.current_user
+
+    admin_view =
+      with true <- active and "render_admin" in hooks,
+           {:ok, view} <- UI.render(plugin.id, "render_admin", %{"user" => UI.public_user(user)}) do
+        view
+      else
+        _ -> nil
+      end
+
     socket
     |> assign(:plugin, plugin)
+    |> assign(:loaded, active && Plugins.get_active(plugin.id))
+    |> assign(:admin_view, admin_view)
+    |> assign(:secret, if("handle_request" in hooks, do: Plugins.secret(plugin.id)))
     |> assign(:errors, Health.errors(plugin.id))
     |> assign_form(form_values(plugin.settings || %{}), %{})
   end
@@ -76,12 +92,26 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
      |> load(Plugins.describe(id))}
   end
 
+  def handle_event("rotate_secret", _params, socket) do
+    id = socket.assigns.plugin.id
+    Plugins.rotate_secret(id, socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> put_flash(:info, "New endpoint secret made; the old one no longer works.")
+     |> load(Plugins.describe(id))}
+  end
+
   defp form_values(values), do: Map.new(values, fn {key, value} -> {key, to_string(value)} end)
 
   defp assign_form(socket, values, errors) do
     errors = Enum.map(errors, fn {key, message} -> {key, {message, []}} end)
     assign(socket, :form, to_form(values, as: :settings, errors: errors, action: :validate))
   end
+
+  defp endpoint_auth("secret"), do: "the plugin's secret"
+  defp endpoint_auth("user"), do: "a member's API token"
+  defp endpoint_auth("either"), do: "the plugin's secret or a member's API token"
 
   defp fail_closed?(plugin), do: (plugin.row && plugin.row.fail_closed) || false
 
@@ -190,6 +220,46 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
                 class={["btn btn-sm join-item", fail_closed?(@plugin) && "btn-active btn-primary"]}
               >
                 Refuse posts (fail closed)
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          :if={@admin_view && @loaded}
+          id="plugin-admin"
+          class="card border border-base-300 bg-base-100"
+        >
+          <div class="card-body gap-2">
+            <h2 class="card-title">{@admin_view.title}</h2>
+            <.plugin_view
+              id={"plugin-admin-#{@plugin.id}"}
+              plugin={@loaded}
+              view={@admin_view}
+              context={%{admin: true}}
+              user={@current_user}
+            />
+          </div>
+        </section>
+
+        <section :if={@secret} id="plugin-endpoints" class="card border border-base-300 bg-base-100">
+          <div class="card-body gap-2">
+            <h2 class="card-title">Endpoints</h2>
+            <p class="text-sm">
+              Requests to <code>/api/plugins/{@plugin.id}/…</code>
+              authenticate with {endpoint_auth(@plugin.manifest.endpoint_auth)}.
+            </p>
+            <p :if={@plugin.manifest.endpoint_auth != "user"} class="text-sm">
+              Secret (send it as the <code>x-plugin-secret</code> header):
+              <code id="plugin-secret" class="break-all">{@secret}</code>
+            </p>
+            <div>
+              <button
+                phx-click="rotate_secret"
+                data-confirm="Make a new secret? Callers using the old one will be refused."
+                class="btn btn-sm"
+              >
+                New secret
               </button>
             </div>
           </div>

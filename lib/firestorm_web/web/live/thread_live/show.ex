@@ -583,6 +583,13 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           </span>
         </h1>
         <.tag_chips tags={@thread.tags} />
+        <FirestormWeb.Web.PluginComponents.plugin_outlet
+          outlet="thread_header"
+          key={@thread.id}
+          context={%{thread_id: @thread.id}}
+          user={@current_user}
+          thread={@thread}
+        />
         <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/70">
           <.avatar user={@first_post.user} size="size-6" />
           <.link navigate={~p"/users/#{@first_post.user}"} class="font-medium hover:text-primary">

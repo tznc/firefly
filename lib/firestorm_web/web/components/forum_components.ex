@@ -455,6 +455,14 @@ defmodule FirestormWeb.Web.ForumComponents do
         />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
         {render_slot(@poll)}
+        <FirestormWeb.Web.PluginComponents.plugin_outlet
+          outlet="post_footer"
+          key={@post.id}
+          context={%{post_id: @post.id, thread_id: @thread.id}}
+          user={@viewer}
+          post={@post}
+          thread={@thread}
+        />
         <footer class="flex items-center justify-end gap-1">
           {render_slot(@actions)}
           <.link

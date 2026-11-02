@@ -25,13 +25,25 @@ defmodule FirestormWeb.Plugin.Sandboxed do
   alias FirestormWeb.Plugins.InstalledPlugin
 
   @impl true
-  def load(%InstalledPlugin{manifest: attrs, code: code, checksum: checksum})
+  def load(%InstalledPlugin{manifest: attrs, code: code, checksum: checksum, bundle: zip})
       when is_binary(code) do
     with {:ok, manifest} <- Manifest.parse(attrs, "upload"),
-         do: {:ok, manifest, %{code: code, checksum: checksum}}
+         {:ok, assets} <- assets(manifest, zip),
+         do: {:ok, manifest, %{code: code, checksum: checksum, assets: assets}}
   end
 
   def load(_spec), do: {:error, "The plugin's bundle is missing."}
+
+  # Assets are kept in memory with the loaded plugin: a few files, served
+  # often.
+  defp assets(%Manifest{assets: []}, _zip), do: {:ok, %{}}
+
+  defp assets(manifest, zip) do
+    case FirestormWeb.Plugin.Bundle.read(zip) do
+      {:ok, bundle} -> {:ok, Map.take(bundle.files, manifest.assets)}
+      {:error, message} -> {:error, message}
+    end
+  end
 
   @impl true
   def enabled(%Plugin{} = plugin), do: lifecycle(plugin, "enabled")
@@ -63,6 +75,23 @@ defmodule FirestormWeb.Plugin.Sandboxed do
 
   @impl true
   def flag_created(%Plugin{} = plugin, input), do: run(plugin, "flag_created", input)
+
+  @impl true
+  def handle_widget(%Plugin{} = plugin, input), do: run(plugin, "handle_widget", input)
+
+  @impl true
+  def render_page(%Plugin{} = plugin, input), do: run(plugin, "render_page", input)
+
+  @impl true
+  def render_admin(%Plugin{} = plugin, input), do: run(plugin, "render_admin", input)
+
+  @impl true
+  def handle_request(%Plugin{} = plugin, input), do: run(plugin, "handle_request", input)
+
+  @impl true
+  def asset(%Plugin{manifest: manifest, state: %{assets: assets}}, path) do
+    if path in manifest.assets, do: Map.fetch(assets, path), else: :error
+  end
 
   @doc """
   Runs the plugin's handler `hook` with `input`. The time limit is the

@@ -5,7 +5,8 @@ defmodule FirestormWeb.Plugins.InstalledPlugin do
   its SHA-256 `checksum`), parsed `manifest` and joined `code`. A plugin the
   circuit breaker turned off has `disabled_reason`. `fail_closed`: whether
   posting is refused when the plugin's moderation hook fails (see
-  `FirestormWeb.Plugins.Moderation`).
+  `FirestormWeb.Plugins.Moderation`). `secret` authenticates calls to its
+  inbound endpoints (see `FirestormWeb.Plugins.UI`).
   """
 
   use Ecto.Schema
@@ -24,6 +25,7 @@ defmodule FirestormWeb.Plugins.InstalledPlugin do
     field(:disabled_reason, :string)
     field(:settings, :map, default: %{})
     field(:fail_closed, :boolean, default: false)
+    field(:secret, :string, redact: true)
     belongs_to(:installed_by, User)
 
     timestamps(type: :naive_datetime_usec)

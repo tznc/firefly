@@ -180,6 +180,7 @@ defmodule FirestormWeb.Web.ThreadLive.New do
         <Editor.body_editor
           field={@form[:body]}
           uploads={@uploads}
+          user={@current_user}
           placeholder="Type thread content here. Use markdown syntax."
         />
         <.poll_composer form={@poll_form} open={@poll_open?} />
