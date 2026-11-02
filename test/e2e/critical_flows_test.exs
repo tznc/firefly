@@ -241,6 +241,32 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> assert_has("#post_body-emoji [data-grid] button:first-child[title=':tada:']")
   end
 
+  test "a spoiler stays hidden until clicked or activated by keyboard", %{conn: conn} do
+    alice = member_fixture("alice")
+    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+
+    {:ok, thread} =
+      Forums.create_thread(category, alice, %{
+        title: "Endings",
+        body: "It was [spoiler]the butler[/spoiler]. And [spoiler]the cook[/spoiler]."
+      })
+
+    [post] = thread.posts
+    first = "#post-#{post.id}-body .spoiler:nth-of-type(1)"
+    second = "#post-#{post.id}-body .spoiler:nth-of-type(2)"
+
+    conn
+    |> visit("/categories/#{category.id}/threads/#{thread.id}")
+    |> assert_has(
+      "#{first}[role=button][aria-label='Spoiler: activate to reveal'][data-spoiler=hidden]"
+    )
+    |> PhoenixTest.Playwright.click(first)
+    |> assert_has("#{first}[data-spoiler=revealed]:not([role])")
+    |> assert_has("#{second}[data-spoiler=hidden]")
+    |> PhoenixTest.Playwright.press(second, "Enter")
+    |> assert_has("#{second}[data-spoiler=revealed]")
+  end
+
   test "a reply draft survives leaving the page straight after typing", %{conn: conn} do
     alice = member_fixture("alice")
     category = Forums.create_category(%{title: "Elixir"}) |> elem(1)

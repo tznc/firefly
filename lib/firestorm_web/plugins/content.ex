@@ -140,6 +140,14 @@ defmodule FirestormWeb.Plugins.Content do
     )
   end
 
+  @doc "The shortcode names the active content plugins declare."
+  def shortcode_names do
+    for plugin <- Plugins.active(),
+        Plugin.implements?(plugin, "render_shortcodes"),
+        name <- plugin.manifest.shortcodes,
+        do: name
+  end
+
   # Shortcode name => the plugin that renders it: the first to declare it.
   defp owners(plugins) do
     for plugin <- Enum.reverse(plugins),

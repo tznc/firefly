@@ -1,5 +1,5 @@
 defmodule FirestormWeb.QuoteTest do
-  use ExUnit.Case, async: true
+  use FirestormWeb.DataCase, async: true
 
   alias FirestormWeb.{Markdown, Quote}
 
