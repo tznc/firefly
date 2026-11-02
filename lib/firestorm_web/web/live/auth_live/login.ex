@@ -1,9 +1,17 @@
 defmodule FirestormWeb.Web.AuthLive.Login do
-  @moduledoc "Choose how to log in: GitHub or a username and password."
+  @moduledoc """
+  Choose how to log in: a social login (one button per enabled provider;
+  see `FirestormWeb.Auth`) or a username and password.
+  """
   use FirestormWeb.Web, :live_view
 
   @impl true
-  def mount(_params, _session, socket), do: {:ok, assign(socket, :page_title, "Log in")}
+  def mount(_params, _session, socket) do
+    {:ok,
+     socket
+     |> assign(:page_title, "Log in")
+     |> assign(:providers, FirestormWeb.Auth.enabled_providers())}
+  end
 
   @impl true
   def render(assigns) do
@@ -15,10 +23,15 @@ defmodule FirestormWeb.Web.AuthLive.Login do
         </.link>
         <div class="card border border-base-300 bg-base-100">
           <div class="card-body gap-3">
-            <a href={~p"/auth/github"} class="btn btn-neutral">
-              <.icon name="hero-code-bracket" class="size-5" /> Log in with GitHub
+            <a
+              :for={provider <- @providers}
+              href={~p"/auth/#{provider}"}
+              id={"login-#{provider}"}
+              class="btn btn-neutral"
+            >
+              Log in with {FirestormWeb.Auth.label(provider)}
             </a>
-            <div class="divider text-xs">or</div>
+            <div :if={@providers != []} class="divider text-xs">or</div>
             <.link
               :if={FirestormWeb.Forums.registration_open?()}
               navigate={~p"/register"}

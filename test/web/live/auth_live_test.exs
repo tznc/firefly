@@ -169,6 +169,7 @@ defmodule FirestormWeb.Web.AuthLiveTest do
       |> FirestormWeb.Web.AuthController.callback(%{})
 
     assert redirected_to(conn) == ~p"/"
-    assert Forums.get_user!(get_session(conn, :current_user)).github_uid == "4242"
+    user = Forums.get_user!(get_session(conn, :current_user))
+    assert %{"github" => %{uid: "4242"}} = FirestormWeb.Auth.identities(user)
   end
 end

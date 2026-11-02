@@ -26,9 +26,34 @@ if config_env() != :test do
     storage: if(System.get_env("FIREFLY_UPLOAD_STORAGE") == "s3", do: :s3, else: :local),
     local_dir: System.get_env("FIREFLY_UPLOAD_DIR", "uploads")
 
-  config :ueberauth, Ueberauth.Strategy.Github.OAuth,
-    client_id: System.get_env("FIREFLY_GITHUB_CLIENT_ID"),
-    client_secret: System.get_env("FIREFLY_GITHUB_CLIENT_SECRET")
+  # Social logins: each provider is enabled when its client id and secret
+  # are set (see FirestormWeb.Auth).
+  for {provider, config_key} <- [
+        {"GITHUB", Ueberauth.Strategy.Github.OAuth},
+        {"GOOGLE", Ueberauth.Strategy.Google.OAuth},
+        {"DISCORD", Ueberauth.Strategy.Discord.OAuth},
+        {"FACEBOOK", Ueberauth.Strategy.Facebook.OAuth},
+        {"X", FirestormWeb.Auth.Strategies.X},
+        {"SLACK", FirestormWeb.Auth.Strategies.Slack}
+      ] do
+    config :ueberauth, config_key,
+      client_id: System.get_env("FIREFLY_#{provider}_CLIENT_ID"),
+      client_secret: System.get_env("FIREFLY_#{provider}_CLIENT_SECRET")
+  end
+
+  # Apple's client secret is a JWT signed with the key Apple issued
+  # (FIREFLY_APPLE_PRIVATE_KEY, the .p8 file's contents); see
+  # FirestormWeb.Auth.AppleSecret.
+  if System.get_env("FIREFLY_APPLE_PRIVATE_KEY") do
+    config :ueberauth, Ueberauth.Strategy.Apple.OAuth,
+      client_id: System.get_env("FIREFLY_APPLE_CLIENT_ID"),
+      client_secret: {FirestormWeb.Auth.AppleSecret, :client_secret}
+
+    config :firestorm_web, FirestormWeb.Auth.AppleSecret,
+      team_id: System.get_env("FIREFLY_APPLE_TEAM_ID"),
+      key_id: System.get_env("FIREFLY_APPLE_KEY_ID"),
+      private_key: System.get_env("FIREFLY_APPLE_PRIVATE_KEY")
+  end
 
   # Configuration for AWS integration
   config :firestorm_web, :aws,

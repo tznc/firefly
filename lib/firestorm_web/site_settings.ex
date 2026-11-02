@@ -64,7 +64,7 @@ defmodule FirestormWeb.SiteSettings do
         type: :boolean,
         label: "Allow new registrations",
         default: true,
-        help: "Off: nobody can create an account, with a password or GitHub."
+        help: "Off: nobody can create an account, with a password or a social login."
       },
       %{
         key: "require_email_confirmation",

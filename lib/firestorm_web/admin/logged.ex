@@ -82,7 +82,7 @@ defmodule FirestormWeb.Admin.Logged do
   # The row's own fields (no associations, secrets or contact details), to
   # show a deleted row.
   defp fields(%schema{} = entry) do
-    (schema.__schema__(:fields) -- [:id, :password_hash, :api_token, :email, :github_uid])
+    (schema.__schema__(:fields) -- [:id, :password_hash, :api_token, :email])
     |> Map.new(&{&1, StaffLog.json_safe(Map.get(entry, &1))})
   end
 end

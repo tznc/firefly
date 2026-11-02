@@ -38,7 +38,8 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 |---|---|
 | `FIREFLY_DATABASE_URL`, `FIREFLY_SECRET_KEY_BASE` | Required |
 | `FIREFLY_DOMAIN` | Public domain (served over https on 443), default `firefly.tznc.dev` |
-| `FIREFLY_GITHUB_CLIENT_ID`, `FIREFLY_GITHUB_CLIENT_SECRET` | GitHub login |
+| `FIREFLY_<PROVIDER>_CLIENT_ID`, `FIREFLY_<PROVIDER>_CLIENT_SECRET` | Social login, for `GITHUB`, `GOOGLE`, `DISCORD`, `FACEBOOK`, `X` and `SLACK`; each provider is offered only when both are set. Callback URL: `https://<domain>/auth/<provider>/callback` (lowercase) |
+| `FIREFLY_APPLE_CLIENT_ID`, `FIREFLY_APPLE_TEAM_ID`, `FIREFLY_APPLE_KEY_ID`, `FIREFLY_APPLE_PRIVATE_KEY` | Sign in with Apple (the Services ID, team, key id and the `.p8` key's contents) |
 | `FIREFLY_SENDGRID_API_KEY` | Outbound email |
 | `FIREFLY_EMAIL_FROM` | Sender, default `noreply@<FIREFLY_DOMAIN>` |
 | `FIREFLY_REPLY_EMAIL_DOMAIN` | Reply-by-email domain, default `reply.<FIREFLY_DOMAIN>` (needs an MX record pointing at SendGrid Inbound Parse) |

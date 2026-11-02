@@ -13,6 +13,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       your activity from your profile, and yourself from the users directory
     * Muted & ignored (`/settings/users`): the members you mute or ignore
       (see `FirestormWeb.Ignores`), to add or remove
+    * Logins (`/settings/logins`): connecting and disconnecting social
+      login accounts (see `FirestormWeb.Auth`)
     * Account: downloading your data and deleting your account (both handled
       by `FirestormWeb.Web.AccountController`)
   """
@@ -20,7 +22,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  alias FirestormWeb.{EmailConfirmation, Forums, Ignores, Posting, RateLimit, Uploads}
+  alias FirestormWeb.{Auth, EmailConfirmation, Forums, Ignores, Posting, RateLimit, Uploads}
   alias FirestormWeb.Forums.User
 
   @sections [
@@ -29,6 +31,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     notifications: {"Notifications", "hero-bell"},
     privacy: {"Privacy", "hero-eye-slash"},
     users: {"Muted & ignored", "hero-speaker-x-mark"},
+    logins: {"Logins", "hero-key"},
     account: {"Account", "hero-identification"}
   ]
 
@@ -114,6 +117,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     |> assign(:profile_form, to_form(User.update_changeset(user, %{})))
     |> assign(:form, to_form(User.preferences_changeset(user, %{}), as: :preferences))
     |> assign_ignores()
+    |> assign(:identities, Auth.identities(user))
   end
 
   defp assign_ignores(socket) do
@@ -203,6 +207,19 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     end
   end
 
+  def handle_event("disconnect", %{"provider" => provider}, socket) do
+    case Auth.disconnect(socket.assigns.current_user, provider) do
+      :ok ->
+        {:noreply,
+         socket
+         |> assign_forms()
+         |> put_flash(:info, "#{Auth.label(provider)} account disconnected.")}
+
+      {:error, message} ->
+        {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
   def handle_event("remove_ignore", %{"id" => id}, socket) do
     case Forums.get_user(id) do
       nil ->
@@ -222,6 +239,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   defp section_path(:notifications), do: ~p"/settings/notifications"
   defp section_path(:privacy), do: ~p"/settings/privacy"
   defp section_path(:users), do: ~p"/settings/users"
+  defp section_path(:logins), do: ~p"/settings/logins"
   defp section_path(:account), do: ~p"/settings/account"
 
   attr :image, :atom, required: true
@@ -280,6 +298,13 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       </span>
     </.form>
     """
+  end
+
+  defp identity_name(%{info: info}) do
+    case info["nickname"] || info["email"] || info["name"] do
+      nil -> ""
+      name -> " as #{name}"
+    end
   end
 
   defp image_field(:avatar), do: :avatar_upload_id
@@ -499,6 +524,47 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
           </div>
           <button class="btn btn-sm mb-2">Add</button>
         </.form>
+      </div>
+      <div :if={@live_action == :logins} class="space-y-4">
+        <p class="text-sm text-base-content/70">
+          Log in with any account connected here{if @current_user.password_hash,
+            do: ", or with your username and password",
+            else: ""}.
+        </p>
+        <ul id="logins" class="list rounded-box border border-base-300 bg-base-100">
+          <li
+            :for={provider <- Auth.providers()}
+            :if={Auth.enabled?(provider) or Map.has_key?(@identities, to_string(provider))}
+            id={"login-#{provider}"}
+            class="list-row items-center"
+          >
+            <div class="list-col-grow">
+              <p class="font-medium">{Auth.label(provider)}</p>
+              <p :if={identity = @identities[to_string(provider)]} class="text-xs text-base-content/60">
+                Connected{identity_name(identity)}
+              </p>
+            </div>
+            <button
+              :if={Map.has_key?(@identities, to_string(provider))}
+              type="button"
+              phx-click="disconnect"
+              phx-value-provider={provider}
+              data-confirm={"Disconnect your #{Auth.label(provider)} account?"}
+              class="btn btn-ghost btn-sm"
+              aria-label={"Disconnect #{Auth.label(provider)}"}
+            >
+              Disconnect
+            </button>
+            <a
+              :if={!Map.has_key?(@identities, to_string(provider))}
+              href={~p"/auth/#{provider}"}
+              class="btn btn-sm"
+              aria-label={"Connect #{Auth.label(provider)}"}
+            >
+              Connect
+            </a>
+          </li>
+        </ul>
       </div>
       <div :if={@live_action == :account} class="space-y-6">
         <section class="card border border-base-300 bg-base-100">

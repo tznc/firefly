@@ -2,10 +2,12 @@ defmodule FirestormWeb.Web.AuthController do
   @moduledoc """
   Handles the OAuth/identity callbacks from Ueberauth and logging out. The
   login pages themselves are LiveViews (`AuthLive.Login`, `AuthLive.Identity`).
+  A provider's callback logs in (or registers; see `FirestormWeb.Auth`), or,
+  for a user already logged in, connects that account to them.
   """
   use FirestormWeb.Web, :controller
 
-  alias FirestormWeb.{Forums, Penalties, RateLimit}
+  alias FirestormWeb.{Auth, Forums, Penalties, RateLimit}
   alias FirestormWeb.Forums.User
 
   # Ueberauth redirects GET /auth/:provider for OAuth providers before this
@@ -30,17 +32,34 @@ defmodule FirestormWeb.Web.AuthController do
     |> redirect(to: ~p"/")
   end
 
-  def callback(%{assigns: %{ueberauth_auth: %{provider: :github} = auth}} = conn, _params) do
-    %{name: name, nickname: nickname, email: email} = auth.info
-    info = %{uid: auth.uid, name: name, nickname: nickname, email: email}
+  def callback(%{assigns: %{ueberauth_auth: %{provider: :identity}}} = conn, params),
+    do: identity_callback(conn, params)
 
-    case Forums.login_or_register_from_github(info) do
-      {:ok, user} -> ok_login(conn, user, ~p"/login")
-      {:error, reason} -> failed_login(conn, ~p"/", reason)
+  # Logged in already: connect the account (from the settings' Logins tab).
+  def callback(%{assigns: %{ueberauth_auth: auth, current_user: %User{} = user}} = conn, _params) do
+    info = Auth.from_ueberauth(auth)
+
+    case Auth.connect(user, info) do
+      {:ok, _identity} ->
+        conn
+        |> put_flash(:info, "#{Auth.label(info.provider)} account connected.")
+        |> redirect(to: ~p"/settings/logins")
+
+      {:error, message} ->
+        conn
+        |> put_flash(:error, "That #{Auth.label(info.provider)} account #{message}.")
+        |> redirect(to: ~p"/settings/logins")
     end
   end
 
-  def callback(%{assigns: %{ueberauth_auth: %{provider: :identity}}} = conn, params) do
+  def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
+    case Auth.login(Auth.from_ueberauth(auth)) do
+      {:ok, user} -> ok_login(conn, user, ~p"/login")
+      {:error, reason} -> failed_login(conn, ~p"/login", reason)
+    end
+  end
+
+  defp identity_callback(conn, params) do
     user_params = params["user"] || %{}
 
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
