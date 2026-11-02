@@ -44,16 +44,12 @@ defmodule FirestormWeb.Web.MessageLive.New do
   end
 
   defp handle_progress(:attachment, entry, socket) do
-    if entry.done? do
-      markdown = Editor.consume_attachment(socket, entry)
-
+    Editor.attachment_progress(socket, entry, fn socket, markdown ->
       params =
         Map.update(socket.assigns.form.params, "body", markdown, &Editor.append(&1, markdown))
 
       {:noreply, assign(socket, :form, to_form(Messages.change_conversation(params)))}
-    else
-      {:noreply, socket}
-    end
+    end)
   end
 
   @impl true

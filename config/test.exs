@@ -76,6 +76,11 @@ config :firestorm_web, :aws,
   bucket: "firestorm-test",
   region: "us-east-1"
 
+# Uploads go to a scratch directory, emptied by test_helper.exs.
+config :firestorm_web, FirestormWeb.Uploads,
+  storage: :local,
+  local_dir: Path.join(System.tmp_dir!(), "firefly-test-uploads")
+
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view, enable_expensive_runtime_checks: true
 

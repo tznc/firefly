@@ -68,6 +68,7 @@ defmodule FirestormWeb.Messages do
       Repo.transact(fn ->
         conversation = changeset |> put_change(:last_message_at, now) |> Repo.insert!()
         message = Repo.insert!(new_message(conversation, sender, changeset.changes.body))
+        :ok = FirestormWeb.Uploads.attach(message.body, sender, message)
 
         for user <- [sender | recipients] do
           read = if user.id == sender.id, do: message.id
@@ -110,6 +111,7 @@ defmodule FirestormWeb.Messages do
         {:ok, message} =
           Repo.transact(fn ->
             message = Repo.insert!(changeset)
+            :ok = FirestormWeb.Uploads.attach(message.body, user, message)
 
             Conversation
             |> where([c], c.id == ^conversation.id)

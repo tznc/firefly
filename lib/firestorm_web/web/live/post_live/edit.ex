@@ -125,14 +125,11 @@ defmodule FirestormWeb.Web.PostLive.Edit do
   end
 
   defp handle_progress(:attachment, entry, socket) do
-    if entry.done? do
-      markdown = Editor.consume_attachment(socket, entry)
+    Editor.attachment_progress(socket, entry, fn socket, markdown ->
       body = Editor.append(socket.assigns.form[:body].value, markdown)
       changeset = Post.edit_changeset(socket.assigns.post, %{body: body})
       {:noreply, socket |> assign(:form, to_form(changeset)) |> autosave_edit(body)}
-    else
-      {:noreply, socket}
-    end
+    end)
   end
 
   # Only an actual change is worth keeping: back to the post's body, no draft.

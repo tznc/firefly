@@ -35,6 +35,13 @@ defmodule FirestormWeb.Web.Router do
     plug(FirestormWeb.Web.Plugs.ApiCurrentUser)
   end
 
+  # Uploads are fetched by <img> tags and downloads, so any Accept; the
+  # session says who's asking (see FirestormWeb.Web.UploadController).
+  pipeline :uploads do
+    plug(:fetch_session)
+    plug(FirestormWeb.Web.Plugs.CurrentUser)
+  end
+
   pipeline :plugin_api do
     plug(FirestormWeb.Web.Plugs.ApiCurrentUser)
   end
@@ -44,6 +51,19 @@ defmodule FirestormWeb.Web.Router do
   scope "/plugins", FirestormWeb.Web do
     get("/sdk.js", PluginController, :sdk)
     get("/:id/assets/*path", PluginController, :asset)
+  end
+
+  scope "/uploads", FirestormWeb.Web do
+    pipe_through(:uploads)
+
+    get("/:token/thumb/:name", UploadController, :thumbnail)
+    get("/:token/:name", UploadController, :show)
+  end
+
+  scope "/avatars", FirestormWeb.Web do
+    pipe_through(:uploads)
+
+    get("/:id", UploadController, :avatar)
   end
 
   # Plugins' inbound endpoints, authenticated per plugin.
@@ -90,6 +110,7 @@ defmodule FirestormWeb.Web.Router do
       live("/staff/review", StaffLive.Review, :index)
       live("/staff/tags", StaffLive.Tags, :index)
       live("/staff/plugins", StaffLive.Plugins, :index)
+      live("/staff/uploads", StaffLive.Uploads, :index)
       live("/staff/plugins/:id", StaffLive.Plugin, :show)
       live("/categories/new", CategoryLive.Form, :new)
       live("/categories/:id/edit", CategoryLive.Form, :edit)
@@ -148,7 +169,7 @@ defmodule FirestormWeb.Web.Router do
     pipe_through(:api)
 
     resources("/preview", PreviewController, only: [:create])
-    resources("/upload_signature", UploadSignatureController, only: [:create])
+    resources("/uploads", UploadController, only: [:create])
     resources("/posts", PostController, only: [:create])
     get("/search", SearchController, :index)
     post("/auth/identity", AuthController, :identity)

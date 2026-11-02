@@ -2,44 +2,68 @@ defmodule FirestormWeb.Web.Editor do
   @moduledoc """
   Shared pieces of the post editor used by the new thread and reply pages:
   a markdown textarea with a live preview, `@username` autocomplete, file
-  attachments uploaded straight from the browser to S3, and the toolbar
+  attachments (picked, dropped on the editor or pasted into it; stored by
+  `FirestormWeb.Uploads`), and the toolbar
   buttons plugins add (they insert text; see `FirestormWeb.Plugin.Manifest`).
   The preview shows plain markdown: plugins only transform published posts.
   """
   use FirestormWeb.Web, :html
 
-  import Phoenix.LiveView, only: [allow_upload: 3, attach_hook: 4, consume_uploaded_entry: 3]
+  import Phoenix.LiveView,
+    only: [
+      allow_upload: 3,
+      attach_hook: 4,
+      consume_uploaded_entry: 3,
+      push_event: 3,
+      put_flash: 3
+    ]
 
-  alias FirestormWeb.{Forums, Markdown, Plugins, Uploads}
+  alias FirestormWeb.{Forums, Markdown, Plugins, RateLimit, Uploads}
 
-  @image_types ~w(image/png image/jpeg image/jpg image/gif image/webp)
+  @max_entries 5
 
-  @doc "Allows one attachment at a time, uploaded to S3 as soon as it is picked."
+  @doc """
+  Allows a few attachments at a time, each uploaded as soon as it's picked,
+  dropped or pasted, up to the `max_upload_kb` site setting.
+  """
   def allow_attachments(socket, progress) do
     allow_upload(socket, :attachment,
-      accept: ~w(.png .jpg .jpeg .gif .webp .pdf .txt),
-      max_entries: 1,
+      accept: Uploads.accept(),
+      max_entries: @max_entries,
       max_file_size: Uploads.max_size(),
       auto_upload: true,
-      external: &presign/2,
       progress: progress
     )
   end
 
-  defp presign(entry, socket) do
-    with :ok <- FirestormWeb.RateLimit.check_upload(socket.assigns.current_user),
-         {:ok, signature} <- Uploads.sign(entry.client_name, entry.client_type) do
-      meta = %{
-        uploader: "S3",
-        key: signature.key,
-        url: signature.action,
-        fields: signature.fields
-      }
+  @doc """
+  For a composer's upload progress callback: once `entry` has arrived,
+  stores it (see `FirestormWeb.Uploads.create/4`) and calls `insert` with
+  the socket and the markdown showing it; a refused file is a flash error.
+  Returns `{:noreply, socket}`.
+  """
+  def attachment_progress(socket, entry, insert) do
+    if entry.done? do
+      result =
+        consume_uploaded_entry(socket, entry, fn %{path: path} ->
+          {:ok, Uploads.create(socket.assigns.current_user, path, entry.client_name)}
+        end)
 
-      {:ok, meta, socket}
+      case result do
+        {:ok, upload} -> inserted(insert, socket, Uploads.markdown(upload))
+        {:error, :rate_limited} -> {:noreply, put_flash(socket, :error, RateLimit.message())}
+        {:error, message} -> {:noreply, put_flash(socket, :error, message)}
+      end
     else
-      {:error, _reason} -> {:error, %{reason: :not_allowed}, socket}
+      {:noreply, socket}
     end
+  end
+
+  # LiveView leaves a focused textarea's value alone (e.g. right after a
+  # paste), so the `PasteUpload` hook appends the markdown itself then.
+  defp inserted(insert, socket, markdown) do
+    {:noreply, socket} = insert.(socket, markdown)
+    {:noreply, push_event(socket, "attachment_added", %{markdown: markdown})}
   end
 
   @doc """
@@ -67,22 +91,6 @@ defmodule FirestormWeb.Web.Editor do
 
   defp mention_matches(_prefix), do: []
 
-  @doc """
-  Consumes a finished upload and returns the markdown that links to it
-  (an image for image types, a plain link otherwise).
-  """
-  def consume_attachment(socket, entry) do
-    consume_uploaded_entry(socket, entry, fn %{url: url, key: key} ->
-      {:ok, attachment_markdown(entry.client_name, entry.client_type, "#{url}/#{key}")}
-    end)
-  end
-
-  @doc false
-  def attachment_markdown(filename, type, location) when type in @image_types,
-    do: "![#{filename}](#{location})"
-
-  def attachment_markdown(filename, _type, location), do: "[#{filename}](#{location})"
-
   @doc "Appends an attachment's markdown to a body."
   def append(body, markdown) when body in [nil, ""], do: markdown
   def append(body, markdown), do: "#{body}\n\n#{markdown}"
@@ -98,7 +106,13 @@ defmodule FirestormWeb.Web.Editor do
 
     ~H"""
     <div class="space-y-3">
-      <div class="relative">
+      <div
+        id={"#{@field.id}-dropzone"}
+        class="relative rounded-box"
+        phx-drop-target={@uploads.attachment.ref}
+        phx-hook="PasteUpload"
+        data-upload="attachment"
+      >
         <.input
           field={@field}
           type="textarea"
@@ -138,8 +152,12 @@ defmodule FirestormWeb.Web.Editor do
             {button.label}
           </button>
         </div>
-        <label class="btn btn-ghost btn-sm" for={@uploads.attachment.ref}>
-          <.icon name="hero-paper-clip" class="size-4" /> Attach a file
+        <label
+          class="btn btn-ghost btn-sm"
+          for={@uploads.attachment.ref}
+          title="Or drop files on the editor, or paste them into it"
+        >
+          <.icon name="hero-paper-clip" class="size-4" /> Attach files
         </label>
         <.live_file_input upload={@uploads.attachment} class="hidden" aria-label="add-attachment" />
         <div :for={entry <- @uploads.attachment.entries} class="flex items-center gap-2 text-sm">
@@ -182,13 +200,10 @@ defmodule FirestormWeb.Web.Editor do
     end
   end
 
-  defp upload_error(:too_large), do: "That file is too large (10 MB max)."
+  defp upload_error(:too_large),
+    do: "That file is too large (#{div(Uploads.max_size(), 1024)} KB max)."
+
   defp upload_error(:not_accepted), do: "That file type isn't allowed."
-  defp upload_error(:too_many_files), do: "Attach one file at a time."
-  defp upload_error(:external_client_failure), do: "The upload failed. Please try again."
-
-  defp upload_error(%{reason: :not_allowed}),
-    do: "Uploads are limited right now. Please try again later."
-
+  defp upload_error(:too_many_files), do: "Attach at most #{@max_entries} files at a time."
   defp upload_error(other), do: "Upload error: #{other}"
 end

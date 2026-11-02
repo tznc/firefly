@@ -16,6 +16,9 @@
 # If the VM crashes, it generates a dump, let's ignore it too.
 erl_crash.dump
 
+# Uploads stored on local disk in development (FIREFLY_UPLOAD_DIR).
+/uploads/
+
 # Also ignore archive artifacts (built via "mix archive.build").
 *.ez
 
@@ -31,3 +34,6 @@ screenshots
 /priv/static/**/*-????????????????????????????????.*
 /priv/static/**/*.gz
 /priv/plts/
+
+# ExUnit @tag :tmp_dir scratch files.
+/tmp/

@@ -196,6 +196,29 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> assert_has("#posts article a[href$='/users/#{alice.id}']", text: "@alice")
   end
 
+  test "a file pasted into the editor is uploaded and shown in the reply", %{conn: conn} do
+    alice = member_fixture("alice")
+    member_fixture("bob")
+    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, thread} = Forums.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
+
+    conn
+    |> log_in("bob")
+    |> visit("/categories/#{category.id}/threads/#{thread.id}/posts/new")
+    |> fill_in("Body", with: "My notes:")
+    |> PhoenixTest.Playwright.evaluate("""
+    (() => {
+      const files = new DataTransfer()
+      files.items.add(new File(["plain notes"], "notes.txt", {type: "text/plain"}))
+      const paste = new ClipboardEvent("paste", {clipboardData: files, bubbles: true, cancelable: true})
+      document.getElementById("post_body").dispatchEvent(paste)
+    })()
+    """)
+    |> assert_has("#post-preview a[href^='/uploads/']", text: "notes.txt")
+    |> click_button("Reply")
+    |> assert_has("#posts article a[href^='/uploads/']", text: "notes.txt")
+  end
+
   test "a reply draft survives leaving the page straight after typing", %{conn: conn} do
     alice = member_fixture("alice")
     category = Forums.create_category(%{title: "Elixir"}) |> elem(1)
