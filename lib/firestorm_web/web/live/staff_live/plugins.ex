@@ -245,7 +245,7 @@ defmodule FirestormWeb.Web.StaffLive.Plugins do
 
       <section :if={@confirm} id="plugin-confirm" class="alert alert-warning mb-6 flex-col items-start">
         <p :if={@confirm.action == "uninstall"}>
-          Uninstall <strong>{@confirm.id}</strong>? Its bundle, settings and error log are deleted.
+          Uninstall <strong>{@confirm.id}</strong>? Its bundle, settings, error log, stored data, custom fields, queued events and job schedule are deleted. Its bot's posts stay.
         </p>
         <p :if={@confirm.action != "uninstall"}>
           {String.capitalize(@confirm.action)} <strong>{@confirm.id}</strong>?

@@ -108,11 +108,23 @@ defmodule FirestormWeb.Plugin do
   """
   @callback render_shortcodes(t, input :: map) :: {:ok, [String.t()]} | {:error, failure}
 
+  @doc """
+  An event the plugin subscribed to (manifest `events`) happened: `input`
+  is `%{"event" => name, "data" => data}` (see `FirestormWeb.Plugins.Events`).
+  Delivered asynchronously, retried on failure.
+  """
+  @callback handle_event(t, input :: map) :: :ok | {:ok, term} | {:error, failure}
+
+  @doc "A scheduled job (manifest `jobs`) is due: `input` is `%{\"job\" => name}`."
+  @callback run_job(t, input :: map) :: :ok | {:ok, term} | {:error, failure}
+
   @optional_callbacks enabled: 1,
                       disabled: 1,
                       call_export: 3,
                       render_post: 2,
-                      render_shortcodes: 2
+                      render_shortcodes: 2,
+                      handle_event: 2,
+                      run_job: 2
 
   # Hook name (as in manifests) => callback.
   @hooks %{
@@ -120,7 +132,9 @@ defmodule FirestormWeb.Plugin do
     "disabled" => {:disabled, 1},
     "call_export" => {:call_export, 3},
     "render_post" => {:render_post, 2},
-    "render_shortcodes" => {:render_shortcodes, 2}
+    "render_shortcodes" => {:render_shortcodes, 2},
+    "handle_event" => {:handle_event, 2},
+    "run_job" => {:run_job, 2}
   }
 
   @doc "The hooks a plugin may implement, by manifest name, with their callbacks."

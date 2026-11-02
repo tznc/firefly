@@ -46,6 +46,13 @@ defmodule FirestormWeb.Solved do
     with {:ok, updated} <- result do
       notify_author(updated, post, actor)
       Forums.thread_changed(:thread_updated, updated)
+
+      FirestormWeb.Plugins.Events.emit("solved", %{thread_id: updated.id, post_id: post.id},
+        thread: updated,
+        post: post,
+        actor: actor
+      )
+
       {:ok, updated}
     end
   end
