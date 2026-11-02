@@ -232,6 +232,16 @@ defmodule FirestormWeb.SiteSettings do
         min: 1,
         max: 24 * 90,
         help: "How long a fetched preview is used before it's fetched again."
+      },
+      %{
+        key: "plugin_egress_days",
+        section: "Plugins",
+        type: :integer,
+        label: "Keep plugin network logs (days)",
+        default: 14,
+        min: 1,
+        max: 365,
+        help: "How long each plugin's log of outgoing requests is kept."
       }
     ]
   end

@@ -384,13 +384,13 @@ defmodule FirestormWeb.PluginEventsTest do
 
   describe "http" do
     test "only allowlisted hosts, only public addresses" do
-      assert {:error, "host evil.example isn't in the plugin's http_hosts"} =
+      assert {:error, :host_not_allowed, "host evil.example isn't in the plugin's http_hosts"} =
                HTTP.fetch(["api.example.com"], %{"url" => "https://evil.example/x"})
 
-      assert {:error, "only http and https URLs can be fetched"} =
+      assert {:error, :invalid, "only http and https URLs can be fetched"} =
                HTTP.fetch(["api.example.com"], %{"url" => "file:///etc/passwd"})
 
-      assert {:error, "localhost resolves to a private address"} =
+      assert {:error, :private_address, "localhost resolves to a private address"} =
                HTTP.fetch(["localhost"], %{"url" => "http://localhost:4002/"})
 
       assert HTTP.allowed?("a.b.example.com", ["*.example.com"])

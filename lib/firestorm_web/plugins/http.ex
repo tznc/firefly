@@ -10,12 +10,18 @@ defmodule FirestormWeb.Plugins.HTTP do
   reserved ranges, IPv4 or IPv6), and the request goes to that address, so a
   second lookup can't swap in an internal one (TLS is still verified against
   the host name). Link previews (`FirestormWeb.LinkPreviews.Fetcher`) use
-  the same guard (`resolve/1`, `target/2`). Redirects aren't followed. Requests time out after 5
-  seconds; request bodies are at most 100 KB and responses 1 MB.
+  the same guard (`resolve/1`, `target/2`); only plugins' `http.fetch`
+  calls go to the egress log. Redirects aren't followed. Requests time out
+  after 5 seconds; request bodies are at most 100 KB and responses 1 MB.
 
   `args`: `url`, optional `method` (GET, POST, PUT, PATCH, DELETE, HEAD),
   `headers` (an object) and `body` (text). The result is `{status, headers,
   body}`, the body as text.
+
+  A refusal or failure comes with its kind, for the egress log (see
+  `FirestormWeb.Plugins.Egress`): `:invalid`, `:host_not_allowed`,
+  `:unresolvable` and `:private_address` are refused before anything is
+  sent; `:too_large`, `:timeout` and `:failed` happen on the way.
   """
 
   import Bitwise
@@ -59,7 +65,11 @@ defmodule FirestormWeb.Plugins.HTTP do
   # Headers a plugin can't set: the connection's business.
   @reserved_headers ~w(host content-length connection transfer-encoding)
 
-  @doc "Makes the request for a plugin allowed `hosts`."
+  @doc """
+  Makes the request for a plugin allowed `hosts`: `{:ok, response}` or
+  `{:error, kind, message}`.
+  """
+  @spec fetch([String.t()], term) :: {:ok, map} | {:error, atom, String.t()}
   def fetch(hosts, %{"url" => url} = args) when is_binary(url) do
     uri = URI.parse(url)
 
@@ -68,15 +78,15 @@ defmodule FirestormWeb.Plugins.HTTP do
          {:ok, method} <- method(args["method"]),
          {:ok, headers} <- headers(args["headers"]),
          {:ok, body} <- body(args["body"]),
-         {:ok, ip} <- resolve(uri.host) do
+         {:ok, ip} <- lookup(uri.host) do
       request(method, uri, ip, headers, body)
     end
   end
 
-  def fetch(_hosts, _args), do: {:error, "a url is required"}
+  def fetch(_hosts, _args), do: {:error, :invalid, "a url is required"}
 
   defp check_scheme(%URI{scheme: scheme}) when scheme in ["http", "https"], do: :ok
-  defp check_scheme(_uri), do: {:error, "only http and https URLs can be fetched"}
+  defp check_scheme(_uri), do: {:error, :invalid, "only http and https URLs can be fetched"}
 
   @doc "Whether `host` is one of `patterns` (`*.example.com` matches subdomains)."
   def allowed?(host, patterns) when is_binary(host) do
@@ -93,7 +103,7 @@ defmodule FirestormWeb.Plugins.HTTP do
   defp check_host(host, patterns) do
     if allowed?(host, patterns),
       do: :ok,
-      else: {:error, "host #{host} isn't in the plugin's http_hosts"}
+      else: {:error, :host_not_allowed, "host #{host} isn't in the plugin's http_hosts"}
   end
 
   defp method(nil), do: {:ok, :get}
@@ -101,11 +111,11 @@ defmodule FirestormWeb.Plugins.HTTP do
   defp method(method) when is_binary(method) do
     case Map.fetch(@methods, String.upcase(method)) do
       {:ok, method} -> {:ok, method}
-      :error -> {:error, "unsupported method #{method}"}
+      :error -> {:error, :invalid, "unsupported method #{method}"}
     end
   end
 
-  defp method(_method), do: {:error, "invalid method"}
+  defp method(_method), do: {:error, :invalid, "invalid method"}
 
   defp headers(nil), do: {:ok, []}
 
@@ -113,14 +123,14 @@ defmodule FirestormWeb.Plugins.HTTP do
     if Enum.all?(headers, fn {key, value} -> is_binary(key) and is_binary(value) end),
       do:
         {:ok, Enum.reject(headers, fn {key, _} -> String.downcase(key) in @reserved_headers end)},
-      else: {:error, "headers must be an object of text"}
+      else: {:error, :invalid, "headers must be an object of text"}
   end
 
-  defp headers(_headers), do: {:error, "headers must be an object of text"}
+  defp headers(_headers), do: {:error, :invalid, "headers must be an object of text"}
 
   defp body(nil), do: {:ok, ""}
   defp body(body) when is_binary(body) and byte_size(body) <= @max_request, do: {:ok, body}
-  defp body(_body), do: {:error, "the body must be text of at most 100 KB"}
+  defp body(_body), do: {:error, :invalid, "the body must be text of at most 100 KB"}
 
   @doc """
   Resolves `host` to an address to connect to: `{:ok, ip}` only if every
@@ -128,6 +138,13 @@ defmodule FirestormWeb.Plugins.HTTP do
   resolves internally is refused outright.
   """
   def resolve(host) when is_binary(host) do
+    with {:error, _kind, message} <- lookup(host), do: {:error, message}
+  end
+
+  def resolve(_host), do: {:error, "the URL has no host"}
+
+  # `resolve/1`, with the kind of refusal.
+  defp lookup(host) do
     addresses =
       for family <- [:inet, :inet6],
           {:ok, ips} <- [:inet.getaddrs(String.to_charlist(host), family)],
@@ -135,13 +152,11 @@ defmodule FirestormWeb.Plugins.HTTP do
           do: ip
 
     cond do
-      addresses == [] -> {:error, "#{host} doesn't resolve"}
+      addresses == [] -> {:error, :unresolvable, "#{host} doesn't resolve"}
       Enum.all?(addresses, &public?/1) -> {:ok, hd(addresses)}
-      true -> {:error, "#{host} resolves to a private address"}
+      true -> {:error, :private_address, "#{host} resolves to a private address"}
     end
   end
-
-  def resolve(_host), do: {:error, "the URL has no host"}
 
   @doc """
   Whether `ip` is a public address plugins may reach. Tests reaching a
@@ -201,10 +216,13 @@ defmodule FirestormWeb.Plugins.HTTP do
     case :hackney.request(method, target, [{"host", host_header} | headers], body, options) do
       {:ok, status, response_headers, body} -> response(status, response_headers, body)
       {:ok, status, response_headers} -> response(status, response_headers, "")
-      {:error, :body_too_large} -> {:error, "the response is over 1 MB"}
-      {:error, reason} -> {:error, "request failed: #{inspect(reason)}"}
+      {:error, :body_too_large} -> {:error, :too_large, "the response is over 1 MB"}
+      {:error, reason} -> {:error, failure(reason), "request failed: #{inspect(reason)}"}
     end
   end
+
+  defp failure(reason) when reason in [:timeout, :connect_timeout], do: :timeout
+  defp failure(_reason), do: :failed
 
   defp response(status, headers, body) do
     if String.valid?(body),
