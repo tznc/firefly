@@ -12,7 +12,9 @@ defmodule FirestormWeb.AccountDeletion do
   views, drafts, bookmarks, conversation memberships, the avatar and
   uploads not used in any post or message (see
   `FirestormWeb.Uploads.delete_account_uploads/1`; files in posts and
-  messages stay with them). Other users' notifications that named
+  messages stay with them), and what plugins keep for the user (their
+  storage entries and custom fields on the user; fields on their posts stay
+  with the posts). Other users' notifications that named
   the user ("@ada replied in ...") and the staff log name the placeholder
   instead (see `FirestormWeb.StaffLog.scrub_user/2`).
 
@@ -24,7 +26,7 @@ defmodule FirestormWeb.AccountDeletion do
 
   import Ecto.Query
 
-  alias FirestormWeb.{Forums, Repo, StaffLog}
+  alias FirestormWeb.{Forums, Plugins, Repo, StaffLog}
   alias FirestormWeb.Web.Session
   alias FirestormWeb.Forums.{ConversationParticipant, Notification, Role, RoleMembership, User}
 
@@ -95,6 +97,8 @@ defmodule FirestormWeb.AccountDeletion do
 
         Repo.delete_all(from(n in Notification, where: n.user_id == ^id))
         Repo.delete_all(from(p in ConversationParticipant, where: p.user_id == ^id))
+        Plugins.Storage.delete_user(user)
+        Plugins.Fields.delete_user(user)
         rename_in_notifications(user.username, User.deleted_username(id))
         StaffLog.scrub_user(user, User.deleted_username(id))
 

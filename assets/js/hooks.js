@@ -406,7 +406,8 @@ const ComposerButtons = {
 // through postMessage only (see priv/plugins/sdk/widget.js). The page
 // answers its "ready" with the viewer's public profile and the widget's
 // context, resizes it on request (within bounds), and relays its calls to
-// the plugin's server-side handler as a LiveView event.
+// the plugin's server-side handler and its storage requests (the viewer's
+// own data) as LiveView events.
 const PluginWidget = {
   mounted() {
     this.frame = this.el.querySelector("iframe")
@@ -424,6 +425,10 @@ const PluginWidget = {
       } else if (message.type === "call") {
         const params = {plugin: this.el.dataset.plugin, handler: String(message.handler), args: message.args, context}
         this.pushEvent("plugin_widget_call", params, reply => this.send({...reply, type: "result", id: message.id}))
+      } else if (message.type === "storage") {
+        // Only these fields go on: whose data it is is the server's call.
+        const params = {plugin: this.el.dataset.plugin, op: String(message.op), key: message.key, value: message.value, prefix: message.prefix}
+        this.pushEvent("plugin_widget_storage", params, reply => this.send({...reply, type: "result", id: message.id}))
       }
     }
     window.addEventListener("message", this.onMessage)
