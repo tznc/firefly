@@ -1095,7 +1095,11 @@ defmodule FirestormWeb.Forums do
 
     case thread_result do
       {:ok, thread} ->
-        for post <- thread.posts, do: FirestormWeb.Uploads.attach(post.body, user, post)
+        for post <- thread.posts do
+          FirestormWeb.Uploads.attach(post.body, user, post)
+          FirestormWeb.LinkPreviews.resolve(post)
+        end
+
         {:ok, _} = mark_thread_read(user, thread)
         {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.new_thread_level)
 
@@ -1700,6 +1704,7 @@ defmodule FirestormWeb.Forums do
 
     with {:ok, post} <- Repo.insert(changeset) do
       :ok = FirestormWeb.Uploads.attach(post.body, user, post)
+      :ok = FirestormWeb.LinkPreviews.resolve(post)
       {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.reply_level)
       # Authors have read what they wrote, whichever way they posted it.
       {:ok, _} = advance_read(user.id, thread.id, post.id)
@@ -1788,6 +1793,7 @@ defmodule FirestormWeb.Forums do
       end)
 
     tap_ok(result, fn post ->
+      :ok = FirestormWeb.LinkPreviews.resolve(post)
       # A plugin may have sent the edit to the review queue.
       if Post.queued?(post), do: FirestormWeb.Review.changed()
       broadcast_post_updated(post, editor)

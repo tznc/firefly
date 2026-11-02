@@ -31,7 +31,7 @@ defmodule FirestormWeb.Uploads do
   alias FirestormWeb.Uploads.{Processor, Storage, Upload}
 
   # Uploads stored processed their own way, attached as soon as they're made.
-  @variants ~w(avatar emoji)
+  @variants ~w(avatar emoji preview)
   @token_pattern ~r"/uploads/([A-Za-z0-9_-]{22})/"
 
   @doc "The largest file accepted, in bytes (the `max_upload_kb` setting)."
@@ -47,11 +47,21 @@ defmodule FirestormWeb.Uploads do
   Returns `{:ok, upload}`, `{:error, :rate_limited}` or `{:error, message}`.
   """
   def create(%User{} = user, path, filename, opts \\ []) do
-    filename = safe_filename(filename)
-
     with :ok <- RateLimit.check_upload(user),
          {:ok, data} <- read(path),
-         {:ok, content_type} <- Processor.detect(data, filename) do
+         do: create_from_data(user, data, filename, opts)
+  end
+
+  @doc """
+  Stores `data` as the site's own upload, with no uploader (a link
+  preview's image, `variant: "preview"`): no rate limit or quota applies.
+  """
+  def create_for_site(data, filename, opts), do: create_from_data(nil, data, filename, opts)
+
+  defp create_from_data(user, data, filename, opts) do
+    filename = safe_filename(filename)
+
+    with {:ok, content_type} <- Processor.detect(data, filename) do
       sha256 = Base.encode16(:crypto.hash(:sha256, data), case: :lower)
       variant = opts[:variant]
 
@@ -82,7 +92,7 @@ defmodule FirestormWeb.Uploads do
            :ok <- check_quota(user, sha256, stored.size) do
         %Upload{
           token: token(),
-          user_id: user.id,
+          user_id: user && user.id,
           filename: filename,
           content_type: content_type,
           sha256: sha256,
@@ -164,6 +174,8 @@ defmodule FirestormWeb.Uploads do
 
   defp same_file(sha256, variant),
     do: where(Upload, [u], u.sha256 == ^sha256 and u.attached_to == ^variant)
+
+  defp check_quota(nil = _site, _sha256, _size), do: :ok
 
   defp check_quota(user, sha256, size) do
     quota = SiteSettings.get("upload_quota_mb") * 1024 * 1024

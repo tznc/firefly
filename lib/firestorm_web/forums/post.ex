@@ -35,6 +35,8 @@ defmodule FirestormWeb.Forums.Post do
     )
 
     field(:oembeds, :any, virtual: true)
+    # Set by FirestormWeb.LinkPreviews.decorate/1.
+    field(:link_previews, :any, virtual: true, default: [])
 
     timestamps(type: :naive_datetime_usec)
   end
