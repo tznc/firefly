@@ -247,6 +247,98 @@ or reserved ranges, IPv4 or IPv6, including IPv4-mapped); the request goes
 to the checked address (TLS still verified against the name), redirects
 aren't followed, 5 s timeout, 100 KB request and 1 MB response bodies.
 
+### Network access
+
+`http.fetch` only works where a slow or hostile host can't hold up members'
+pages and forum content doesn't leave the site every time it's shown. The
+host checks the hook the call runs in (the runner records it for the call's
+process), for core and sandboxed plugins alike; elsewhere it fails with
+"http.fetch is not available in synchronous hooks (<hook>); use an event or
+job", which also goes to the plugin's error log.
+
+| Hook | `http.fetch` |
+|---|---|
+| `render_shortcodes`, `render_post` | refused: they run while a page renders |
+| `moderate_post`, `flag_created` | refused: they run while a member's post or flag is saved |
+| `handle_event`, `run_job` | allowed: background work |
+| `enabled`, `disabled` | allowed: a staff action, once (e.g. registering a webhook) |
+| `handle_widget`, `handle_request` | allowed: the plugin's own widget or endpoint asked for it, and waits |
+| `render_page`, `render_admin` | allowed: the plugin's own page, which someone opened; it waits for the plugin (2 s at most), so cache what you can with `kv` |
+| exports | as the hook the call chain started in: allowed when a plugin's `handle_event` calls another's export through `plugins.call`, refused from its `render_post`; refused when Elixir code calls an export directly |
+
+A process a core plugin starts itself is outside any hook, so it gets no
+network either. To show remote data in posts, fetch it in the background and
+render from what you stored:
+
+```js
+// On post_created (needs "read" and the "post_created" event), look up
+// what the post links to and keep it; render_post only reads it.
+exports.handle_event = ({ event, data }) => {
+  const res = firefly.call("http.fetch", { url: `https://api.example.com/lookup?post=${data.post.id}` });
+  firefly.call("kv.set", { key: `card:${data.post.id}`, value: JSON.parse(res.body) });
+};
+exports.render_post = ({ html, post }) => {
+  const card = firefly.call("kv.get", { key: `card:${post.id}` });
+  return card ? html + `<p>${card.title}</p>` : html;
+};
+```
+
+To check posts with a remote service, decide what you can in
+`moderate_post` from what's in hand, queue the rest for staff review, and
+ask the service from an event once the post is public:
+
+```js
+// Synchronous: no network. Queue what needs a closer look.
+exports.moderate_post = ({ body, user }) =>
+  /https?:\/\//.test(body) && firefly.call("kv.get", { key: `trusted:${user.id}` }) !== true
+    ? { action: "queue", reason: "links from a member not yet checked" }
+    : { action: "allow" };
+
+// In the background, on post_created and post_edited: ask the service and
+// put what it flags in front of staff (needs "flag").
+exports.handle_event = ({ event, data }) => {
+  const res = firefly.call("http.fetch", {
+    url: "https://api.example.com/check",
+    method: "POST",
+    body: JSON.stringify({ text: data.post.body }),
+  });
+  if (JSON.parse(res.body).spam) {
+    firefly.call("posts.flag", { post_id: data.post.id, reason: "spam", note: "api.example.com says spam" });
+  } else {
+    firefly.call("kv.set", { key: `trusted:${data.post.user_id}`, value: true });
+  }
+};
+```
+
+Queued posts produce no events until staff approve them, and plugins can't
+approve or reject them, so the remote check runs on what's published (a
+post staff approved, or one `moderate_post` allowed) and reports through
+flags, which staff review and which `flags_to_hide` turns into hiding.
+
+### Egress log
+
+Every `http.fetch` a plugin attempts is logged, sent or refused (missing
+permission, a synchronous hook, a host not in `http_hosts`, a private
+address, a bad request): the plugin, method, host, path **without the query
+string** (where tokens travel), the status or the kind of error, bytes sent
+and received, the duration and the time. Request and response bodies and
+headers are never logged. Staff see the latest entries on
+`/staff/plugins/:id`, filtered by host and by allowed or blocked. Entries
+are kept for the `plugin_egress_days` site setting (14 days by default;
+`/staff/settings`, "Plugins") and pruned by the scheduler that runs topic
+timers; they stay after a plugin is uninstalled until then. Firefly's own
+requests (link previews) aren't plugin traffic and aren't logged here.
+
+### What staff see
+
+Staff see what a plugin may do in plain words before installing it and on
+its page: `http` reads "Can send forum content to: api.example.com,
+hooks.slack.com" (`*.example.org` as "any subdomain of example.org"), and
+each other permission says what it allows ("Can reply in public threads,
+as its bot account"). Uploading a newer version that asks for a permission
+or host the installed one didn't says so above the list and marks each one
+new.
+
 ## Events
 
 Subscribe with `events` (needs the `read` permission and the
