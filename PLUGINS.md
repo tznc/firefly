@@ -250,6 +250,7 @@ job", which also goes to the plugin's error log.
 | Hook | `http.fetch` |
 |---|---|
 | `render_shortcodes`, `render_post` | refused: they run while a page renders |
+| `moderate_post`, `flag_created` | refused: they run while a member's post or flag is saved |
 | `handle_event`, `run_job` | allowed: background work |
 | `enabled`, `disabled` | allowed: a staff action, once (e.g. registering a webhook) |
 | exports | as the hook the call chain started in: allowed when a plugin's `handle_event` calls another's export through `plugins.call`, refused from its `render_post`; refused when Elixir code calls an export directly |
@@ -270,6 +271,38 @@ exports.render_post = ({ html, post }) => {
   return card ? html + `<p>${card.title}</p>` : html;
 };
 ```
+
+To check posts with a remote service, decide what you can in
+`moderate_post` from what's in hand, queue the rest for staff review, and
+ask the service from an event once the post is public:
+
+```js
+// Synchronous: no network. Queue what needs a closer look.
+exports.moderate_post = ({ body, user }) =>
+  /https?:\/\//.test(body) && firefly.call("kv.get", { key: `trusted:${user.id}` }) !== true
+    ? { action: "queue", reason: "links from a member not yet checked" }
+    : { action: "allow" };
+
+// In the background, on post_created and post_edited: ask the service and
+// put what it flags in front of staff (needs "flag").
+exports.handle_event = ({ event, data }) => {
+  const res = firefly.call("http.fetch", {
+    url: "https://api.example.com/check",
+    method: "POST",
+    body: JSON.stringify({ text: data.post.body }),
+  });
+  if (JSON.parse(res.body).spam) {
+    firefly.call("posts.flag", { post_id: data.post.id, reason: "spam", note: "api.example.com says spam" });
+  } else {
+    firefly.call("kv.set", { key: `trusted:${data.post.user_id}`, value: true });
+  }
+};
+```
+
+Queued posts produce no events until staff approve them, and plugins can't
+approve or reject them, so the remote check runs on what's published (a
+post staff approved, or one `moderate_post` allowed) and reports through
+flags, which staff review and which `flags_to_hide` turns into hiding.
 
 ### Egress log
 
