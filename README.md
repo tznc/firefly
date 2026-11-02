@@ -22,10 +22,29 @@ The web UI is Phoenix LiveView styled with Tailwind CSS and daisyUI; the JSON
 API lives under `/api/v1`.
 
 ```sh
-npm ci --prefix assets
+npm ci --prefix apps/firefly_web/assets
 mix setup        # deps, database, seeds, assets
 mix phx.server   # http://localhost:4000
 ```
+
+### Layout
+
+Firefly is an umbrella of three apps; each declares the dependencies it uses,
+and the shared configuration is in `config/`:
+
+| App | Modules | What |
+| --- | --- | --- |
+| `apps/firefly` | `Firefly.*` | The domain: the `Firefly.Repo`, schemas and bounded contexts, jobs, email, authentication, the plugin layer and core plugins. Migrations and seeds are in `apps/firefly/priv/repo`. Depends on neither of the others |
+| `apps/firefly_plugins` | `FireflyPlugins.*` | The sandbox uploaded plugins run in: QuickJS on WebAssembly via Wasmex (`priv/plugins/quickjs.wasm`, built from `wasm/quickjs`), and bundle validation. Registers itself with the domain at start |
+| `apps/firefly_web` | `FireflyWeb.*` | The web interface: endpoint, router, LiveViews, controllers, channels, JSON API, Kaffy admin, assets and static files |
+
+The domain reaches the web interface only through `Firefly.Endpoint` (the
+configured endpoint: base URL, signing secret, broadcasts) and the sandbox
+through `Firefly.Plugin.Sandbox` (registered at runtime), so it compiles and
+its tests run on their own (`cd apps/firefly && mix test`).
+
+Run `mix` tasks from the root: `mix compile`, `mix test`, `mix ecto.migrate`,
+`mix assets.build` and the rest run in every app they apply to.
 
 Or with Docker: `docker compose up`.
 
@@ -57,7 +76,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
 
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see
-`FirestormWeb.RateLimit`.
+`Firefly.RateLimit`.
 
 Image uploads are processed with [libvips](https://www.libvips.org) (through
 [Vix](https://github.com/akash-akya/vix)), built against the system library:
@@ -100,13 +119,15 @@ on WebAssembly. See [PLUGINS.md](PLUGINS.md) for the plugin API.
 Page tests use [PhoenixTest](https://hexdocs.pm/phoenix_test); critical user
 flows (log in, post, live replies, notifications, admin) also run end to end in
 Chromium with [PhoenixTest.Playwright](https://hexdocs.pm/phoenix_test_playwright)
-(`test/e2e`).
+(`apps/firefly_web/test/e2e`). Each app's tests are in its `test/`; shared
+fixtures (`Firefly.Fixtures`, `Firefly.DataCase`) are in `apps/firefly/test/support`.
 
 ```sh
-npx --prefix assets playwright install chromium   # once, for the e2e tests
-mix test                   # everything
+npx --prefix apps/firefly_web/assets playwright install chromium   # once, for the e2e tests
+mix test                   # every app
 mix test --exclude e2e     # without the browser
-mix test --only e2e        # just the browser flows
+(cd apps/firefly && mix test)                  # one app
+(cd apps/firefly_web && mix test --only e2e)   # just the browser flows
 mix precommit              # compile --warnings-as-errors, format, credo, test
 ```
 

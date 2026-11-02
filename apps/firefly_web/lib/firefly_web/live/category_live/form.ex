@@ -1,0 +1,155 @@
+defmodule FireflyWeb.CategoryLive.Form do
+  @moduledoc """
+  Creates or edits a category, including which groups (roles) it's
+  restricted to (see `Firefly.Forums.Policy`).
+  """
+  use FireflyWeb, :live_view
+
+  on_mount({FireflyWeb.UserAuth, :require_user})
+
+  alias Firefly.{Forums, Groups, Repo}
+  alias Firefly.Forums.Category
+
+  @impl true
+  def mount(params, _session, socket) do
+    if can?(socket.assigns.current_user, :manage_category) do
+      {:ok, apply_action(socket, socket.assigns.live_action, params)}
+    else
+      {:ok,
+       socket
+       |> put_flash(:error, denied_message(socket.assigns.current_user))
+       |> push_navigate(to: ~p"/categories")}
+    end
+  end
+
+  defp apply_action(socket, :new, _params) do
+    category = %Category{roles: []}
+
+    socket
+    |> assign_roles(category)
+    |> assign(:page_title, "New Category")
+    |> assign(:category, category)
+    |> assign(:parents, Forums.parent_category_options(category))
+    |> assign(:form, to_form(Forums.change_category(category)))
+  end
+
+  defp apply_action(socket, :edit, %{"id" => id}) do
+    category = id |> Forums.get_category!() |> Repo.preload(:roles)
+
+    socket
+    |> assign_roles(category)
+    |> assign(:page_title, "Edit #{category.title}")
+    |> assign(:category, category)
+    |> assign(:parents, Forums.parent_category_options(category))
+    |> assign(:form, to_form(Forums.change_category(category)))
+  end
+
+  defp assign_roles(socket, category) do
+    socket
+    |> assign(:roles, Enum.map(Groups.list_groups(), &{&1.name, &1.id}))
+    |> assign(:role_ids, Enum.map(category.roles, &to_string(&1.id)))
+  end
+
+  @impl true
+  def handle_event("validate", %{"category" => params}, socket) do
+    changeset = Category.changeset(socket.assigns.category, params)
+
+    {:noreply,
+     socket
+     |> assign(:role_ids, Enum.reject(params["role_ids"] || [], &(&1 == "")))
+     |> assign(:form, to_form(changeset, action: :validate))}
+  end
+
+  def handle_event("save", %{"category" => params}, socket) do
+    save(socket, socket.assigns.live_action, params)
+  end
+
+  defp save(socket, :new, params) do
+    case Forums.create_category(params, socket.assigns.current_user) do
+      {:ok, category} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Category created successfully.")
+         |> push_navigate(to: ~p"/categories/#{category}")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  defp save(socket, :edit, params) do
+    case Forums.update_category(socket.assigns.category, params, socket.assigns.current_user) do
+      {:ok, category} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "Category updated successfully.")
+         |> push_navigate(to: ~p"/categories/#{category}")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app {Layouts.shell(assigns)}>
+      <.page_header title={
+        if @live_action == :new, do: "Create a new category", else: "Edit Category"
+      } />
+
+      <.form for={@form} id="category-form" phx-change="validate" phx-submit="save" class="space-y-4">
+        <.input field={@form[:title]} type="text" label="Title" placeholder="Type a title" />
+        <.input field={@form[:description]} type="textarea" label="Description" rows="3" />
+        <div class="grid gap-4 sm:grid-cols-3">
+          <.input
+            field={@form[:parent_id]}
+            type="select"
+            label="Parent category"
+            prompt="None (top level)"
+            options={Enum.map(@parents, &{&1.title, &1.id})}
+          />
+          <.input
+            field={@form[:color]}
+            type="text"
+            label="Color"
+            placeholder="#3b82f6 (blank: automatic)"
+          />
+          <.input field={@form[:position]} type="number" label="Position" min="0" />
+        </div>
+        <.input
+          field={@form[:allow_accepted_answers]}
+          type="checkbox"
+          label="Allow accepted answers (Q&A: the thread's author or staff can mark a reply as the answer)"
+        />
+        <div>
+          <%!-- The hidden blank lets a submit with nothing selected clear the restriction. --%>
+          <input type="hidden" name="category[role_ids][]" value="" />
+          <.input
+            id="category_role_ids"
+            name="category[role_ids][]"
+            type="select"
+            multiple
+            label="Restricted to groups"
+            class="select h-24 w-full"
+            value={@role_ids}
+            options={@roles}
+          />
+          <p class="-mt-1 text-xs text-base-content/60">
+            <.icon name="hero-lock-closed" class="size-3" />
+            Only members of these groups (and admins) can see the category. None: everyone.
+            A subcategory also needs its parent's groups. Manage groups at
+            <.link navigate={~p"/staff/groups"} class="link">Groups</.link>.
+          </p>
+        </div>
+        <div class="flex justify-end gap-2">
+          <.link navigate={~p"/categories"} class="btn btn-ghost">Cancel</.link>
+          <.button variant="primary" phx-disable-with="Saving...">
+            {if @live_action == :new, do: "Create Category", else: "Save Category"}
+          </.button>
+        </div>
+      </.form>
+    </Layouts.app>
+    """
+  end
+end

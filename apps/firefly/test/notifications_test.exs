@@ -1,0 +1,263 @@
+defmodule Firefly.NotificationsTest do
+  use Firefly.DataCase
+  use Bamboo.Test, shared: true
+
+  alias Firefly.{Forums, Notifications}
+  alias Firefly.Forums.Subscriptions
+
+  setup do
+    {:ok, _} = Notifications.start_link()
+
+    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    author = user("author")
+    reader = user("reader")
+    {:ok, thread} = Forums.create_thread(category, author, %{title: "OTP", body: "Cool?"})
+    flush()
+
+    %{category: category, author: author, reader: reader, thread: thread}
+  end
+
+  defp user(name) do
+    {:ok, user} = Forums.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+    user
+  end
+
+  # Casts are async; a call to the server waits for them.
+  defp flush, do: :sys.get_state(Notifications)
+
+  defp reply(thread, user, body) do
+    {:ok, post} = Forums.create_post(thread, user, %{body: body})
+    flush()
+    post
+  end
+
+  defp notifications(user), do: Forums.notifications_for(user)
+
+  test "starting a thread watches it; replying tracks it", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    assert Subscriptions.thread_level(author, thread) == "watching"
+    reply(thread, reader, "yup")
+    assert Subscriptions.thread_level(reader, thread) == "tracking"
+
+    # An explicit choice isn't overridden by replying
+    {:ok, _} = Subscriptions.set_thread_level(author, thread, "muted")
+    reply(thread, author, "me again")
+    assert Subscriptions.thread_level(author, thread) == "muted"
+  end
+
+  test "automatic levels never lower what the category or tags give", %{
+    category: category,
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "watching")
+    {:ok, reader} = Forums.update_preferences(reader, %{reply_level: "normal"})
+    reply(thread, reader, "yup")
+    assert Subscriptions.thread_level(reader, thread) == nil
+
+    reply(thread, author, "still watching?")
+
+    assert [%{kind: "new_post", body: "still watching?", emailed_at: %DateTime{}}] =
+             notifications(reader)
+
+    # Starting a thread in a watched category doesn't downgrade it either
+    {:ok, reader} = Forums.update_preferences(reader, %{new_thread_level: "tracking"})
+    {:ok, own} = Forums.create_thread(category, reader, %{title: "Mine", body: "Hi"})
+    assert Subscriptions.effective_thread_level(reader, own) == "watching"
+
+    # And Normal doesn't unmute a thread in a muted category
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "muted")
+    reply(thread, reader, "quietly")
+    assert Subscriptions.effective_thread_level(reader, thread) == "muted"
+  end
+
+  test "watchers get a typed notification and an email; the poster doesn't", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    reply(thread, reader, "yup")
+
+    assert [notification] = notifications(author)
+    assert notification.kind == "new_post"
+    assert notification.subject == ~s(@reader replied in "OTP")
+    assert notification.emailed_at
+    assert_email_delivered_with(to: [nil: "author@example.com"])
+
+    assert notifications(reader) == []
+  end
+
+  test "trackers are notified in-app only", %{author: author, reader: reader, thread: thread} do
+    reply(thread, reader, "yup")
+    reply(thread, author, "thanks")
+
+    assert [%{kind: "new_post", emailed_at: nil}] = notifications(reader)
+    refute_email_delivered_with(to: [nil: "reader@example.com"])
+  end
+
+  test "normal and muted aren't notified", %{author: author, reader: reader, thread: thread} do
+    for level <- ["normal", "muted"] do
+      {:ok, _} = Subscriptions.set_thread_level(author, thread, level)
+      reply(thread, reader, "hello #{level}")
+      assert notifications(author) == []
+    end
+  end
+
+  test "emails once per thread until the notifications are read", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    reply(thread, reader, "one")
+    reply(thread, reader, "two")
+
+    assert [second, first] = notifications(author)
+    assert first.emailed_at
+    refute second.emailed_at
+
+    Forums.mark_thread_read(author, thread)
+    reply(thread, reader, "three")
+    assert [third | _] = notifications(author)
+    assert third.emailed_at
+  end
+
+  test "no email with email notifications off or an unconfirmed address", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    {:ok, _} = Forums.update_preferences(author, %{email_notifications: false})
+    reply(thread, reader, "one")
+    assert [%{emailed_at: nil}] = notifications(author)
+    assert_no_emails_delivered()
+  end
+
+  test "category watchers hear about new threads and their posts", %{
+    category: category,
+    author: author,
+    reader: reader
+  } do
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "watching")
+
+    {:ok, thread} = Forums.create_thread(category, author, %{title: "Fresh", body: "Hi"})
+    flush()
+    assert [%{kind: "new_thread", subject: ~s(@author started "Fresh")}] = notifications(reader)
+
+    reply(thread, author, "more")
+    assert [%{kind: "new_post"} | _] = notifications(reader)
+
+    # A thread-level choice overrides the category
+    {:ok, _} = Subscriptions.set_thread_level(reader, thread, "normal")
+    count = length(notifications(reader))
+    reply(thread, author, "even more")
+    assert length(notifications(reader)) == count
+  end
+
+  test "muted threads and categories drop out of the lists", %{
+    category: category,
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    assert Enum.any?(Forums.latest_threads(reader), &(&1.id == thread.id))
+
+    {:ok, _} = Subscriptions.set_thread_level(reader, thread, "muted")
+    refute Enum.any?(Forums.latest_threads(reader), &(&1.id == thread.id))
+
+    {:ok, other} = Forums.create_thread(category, author, %{title: "Other", body: "x"})
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "muted")
+    refute Enum.any?(Forums.latest_threads(reader), &(&1.id == other.id))
+    refute Enum.any?(Forums.new_threads(reader), &(&1.id == other.id))
+
+    # Unmuting the thread itself brings it back despite the muted category
+    {:ok, _} = Subscriptions.set_thread_level(reader, thread, "tracking")
+    assert Enum.any?(Forums.latest_threads(reader), &(&1.id == thread.id))
+  end
+
+  test "reading a thread reads its notifications", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    reply(thread, reader, "yup")
+    assert Forums.unread_notification_count(author) == 1
+    Forums.mark_thread_read(author, thread)
+    assert Forums.unread_notification_count(author) == 0
+  end
+
+  test "a reply deleted before it fans out notifies no one", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    :sys.suspend(Notifications)
+    {:ok, post} = Forums.create_post(thread, reader, %{body: "never mind"})
+    {:ok, _} = Forums.delete_post(post, reader)
+    :sys.resume(Notifications)
+    flush()
+
+    assert notifications(author) == []
+    assert_no_emails_delivered()
+  end
+
+  test "new threads email watchers as a new thread, not a reply", %{
+    category: category,
+    author: author,
+    reader: reader
+  } do
+    {:ok, _} = Subscriptions.set_category_level(reader, category, "watching")
+    {:ok, _} = Forums.create_thread(category, author, %{title: "Fresh", body: "Hi"})
+    flush()
+
+    assert_email_delivered_with(
+      to: [nil: "reader@example.com"],
+      subject: "A new thread was started in a category you are watching on Firefly",
+      text_body: ~r/A new Firefly thread was started: Fresh.*because you watch its category/s
+    )
+  end
+
+  test "no notification for a post the user had already read", %{
+    author: author,
+    reader: reader,
+    thread: thread
+  } do
+    # The reader had the thread open: their read position moved past the post
+    # before the fan-out ran.
+    :ok = :sys.suspend(Notifications)
+    {:ok, post} = Forums.create_post(thread, reader, %{body: "yup"})
+    Forums.mark_thread_read(author, thread)
+    :ok = :sys.resume(Notifications)
+    flush()
+
+    assert MapSet.member?(Forums.users_who_read(thread, post), author.id)
+    assert notifications(author) == []
+    assert_no_emails_delivered()
+  end
+
+  test "a parent category's level applies to its subcategories' threads", %{
+    category: parent,
+    author: author,
+    reader: reader
+  } do
+    {:ok, child} = Forums.create_category(%{title: "Phoenix", parent_id: parent.id})
+    {:ok, _} = Subscriptions.set_category_level(reader, parent, "watching")
+
+    {:ok, thread} = Forums.create_thread(child, author, %{title: "Sub", body: "Hi"})
+    flush()
+    assert [%{kind: "new_thread"}] = notifications(reader)
+    assert Subscriptions.effective_thread_level(reader, thread) == "watching"
+
+    # The subcategory's own level wins over the parent's
+    {:ok, _} = Subscriptions.set_category_level(reader, child, "normal")
+    assert Subscriptions.effective_thread_level(reader, thread) == "normal"
+
+    {:ok, _} = Subscriptions.set_category_level(reader, parent, "muted")
+    assert Enum.any?(Forums.latest_threads(reader), &(&1.id == thread.id))
+    {:ok, _} = Subscriptions.set_category_level(reader, child, "muted")
+    refute Enum.any?(Forums.latest_threads(reader), &(&1.id == thread.id))
+  end
+end

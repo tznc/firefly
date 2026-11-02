@@ -6,7 +6,7 @@ import Config
 # which you should run after static files are built and
 # before starting your production server. The public URL is set from
 # FIREFLY_DOMAIN in config/runtime.exs.
-config :firestorm_web, FirestormWeb.Web.Endpoint,
+config :firefly_web, FireflyWeb.Endpoint,
   force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true],
   cache_static_manifest: "priv/static/cache_manifest.json"
 

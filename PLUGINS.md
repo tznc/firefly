@@ -1,7 +1,7 @@
 # Firefly plugins
 
 Plugins extend Firefly without forking it. Every plugin implements one Elixir
-behaviour, `FirestormWeb.Plugin`, and the host (loading, hook dispatch,
+behaviour, `Firefly.Plugin`, and the host (loading, hook dispatch,
 permissions, settings, the staff log, the circuit breaker) only talks to
 plugins through it. There are two kinds:
 
@@ -11,7 +11,7 @@ plugins through it. There are two kinds:
 | Runs | natively, in the BEAM | sandboxed: QuickJS compiled to WebAssembly, on wasmtime (Wasmex) |
 | Installed by | listing the module in config | staff uploading a `.zip` at `/staff/plugins` |
 | Trust | trusted; permissions granted without a prompt | staff see the requested permissions before installing |
-| Implementation | the module itself (`use FirestormWeb.Plugin`) | `FirestormWeb.Plugin.Sandboxed`, one module serving every bundle |
+| Implementation | the module itself (`use Firefly.Plugin`) | `FireflyPlugins.Sandboxed`, one module serving every bundle |
 
 Both kinds appear at `/staff/plugins`, can be enabled and disabled, have
 settings, statistics and an error log, can depend on each other, and are
@@ -24,7 +24,7 @@ There is no plugin registry yet. The manifest's `source` (`"upload"` or
 
 ```elixir
 defmodule MyApp.Greeter do
-  use FirestormWeb.Plugin,
+  use Firefly.Plugin,
     id: "greeter",
     name: "Greeter",
     version: "1.0.0",
@@ -41,7 +41,7 @@ end
 ```
 
 ```elixir
-config :firestorm_web, FirestormWeb.Plugins, core: [MyApp.Greeter]
+config :firefly, Firefly.Plugins, core: [MyApp.Greeter]
 ```
 
 The keyword list is the manifest. Which hooks the plugin implements is
@@ -49,7 +49,7 @@ worked out from the callbacks it defines. Core plugins are enabled unless
 staff disable them, and can't be uninstalled. A NIF-backed plugin is an
 ordinary Elixir module that calls its NIF from its callbacks; nothing in
 the behaviour assumes pure Elixir. Host functions are at
-`FirestormWeb.Plugin.Host.call(plugin, name, args)`, with the same
+`Firefly.Plugin.Host.call(plugin, name, args)`, with the same
 permission checks as for sandboxed plugins.
 
 ## Uploaded plugins
@@ -86,17 +86,17 @@ is the result. Inside the sandbox:
 
 Every call gets a fresh WebAssembly instance, discarded afterwards:
 
-| Limit | Default | Config (`FirestormWeb.Plugin.Sandboxed`) |
+| Limit | Default | Config (`FireflyPlugins.Sandboxed`) |
 |---|---|---|
 | Memory | 32 MB | `memory:` |
 | CPU | 400M wasmtime fuel units (about 100 ms) | `fuel:` |
-| Wall clock | the hook's time limit (2 s unless the hook sets less) | `FirestormWeb.Plugin.Runner, timeout:` |
+| Wall clock | the hook's time limit (2 s unless the hook sets less) | `Firefly.Plugin.Runner, timeout:` |
 | Result size | 1 MB | `max_output:` |
 
 Every failure is a structured error (`timeout`, `memory`, `trap`,
 `js_error`, `no_handler`, `bad_output`, `output_too_large`; `crash` for a
 core plugin that raises) recorded in the plugin's error log. Five failures
-in a row (`FirestormWeb.Plugins, breaker_threshold:`) turn the plugin off
+in a row (`Firefly.Plugins, breaker_threshold:`) turn the plugin off
 and notify admins; plugins that need it are suspended until it's enabled
 again.
 
@@ -196,7 +196,7 @@ The result goes through the markdown sanitizer's allow-list again, so
 plugins can't add scripts, event handlers, `javascript:` URLs or iframes
 (and `class` survives only where markdown allows it, e.g. `span`, `div`,
 `code`). A plugin that fails or exceeds the render time limit (500 ms,
-`FirestormWeb.Plugins.Content, timeout:`) is skipped and its step keeps its
+`Firefly.Plugins.Content, timeout:`) is skipped and its step keeps its
 input. Only posts anonymous visitors can read are transformed; posts in
 private categories, and deleted, hidden or queued posts, never reach
 plugins. Results are cached per node (10,000 entries, LRU), keyed by the
@@ -359,7 +359,7 @@ Subscribe with `events` (needs the `read` permission and the
 
 A post is `{id, thread_id, user_id, author, body, url}`, a thread
 `{id, title, category_id, url}`. Events are queued in the database in the
-same transaction as the change and delivered by `FirestormWeb.Plugins.Queue`
+same transaction as the change and delivered by `Firefly.Plugins.Queue`
 (within about a second): a failure is retried after 30 s, 2, 8 and 32
 minutes, then dropped and logged. Only content anonymous visitors can read
 produces events, and a plugin never hears about its own bot's actions.
@@ -375,14 +375,14 @@ across nodes. A failed run isn't retried before its next time.
 
 `moderate_post` (needs `read`) runs synchronously before a new thread,
 reply or edited body is saved, for every way of posting (web, API, inbound
-email all go through `FirestormWeb.Forums`), as a changeset validation:
+email all go through `Firefly.Forums`), as a changeset validation:
 
 - `reject`: the post isn't saved; the author sees the message as a form
   (or API) error. The first rejection wins.
 - `queue`: the post waits in the review queue at `/staff/review`, which
   shows "Plugin <name>: <reason>"; staff approve or reject it as usual.
 
-The time limit is strict (300 ms, `FirestormWeb.Plugins.Moderation,
+The time limit is strict (300 ms, `Firefly.Plugins.Moderation,
 timeout:`). If a plugin fails or times out, posting goes ahead by default
 (fail open); staff can switch a plugin to fail closed on its admin page, so
 posts are refused with a "try again" message instead. Admins' posts and
@@ -457,7 +457,7 @@ minute per plugin and client IP; bodies up to 100 KB.
 
 ## Example
 
-`priv/plugins/examples/hello` uses most hooks: a `[hello name="…"]`
+`apps/firefly_plugins/priv/plugins/examples/hello` uses most hooks: a `[hello name="…"]`
 shortcode and a post transform, a composer button, a widget under posts
 backed by `handle_widget` that counts each member's views in their own
 storage, a page and a frame app, a staff section, an
@@ -468,7 +468,7 @@ an export. Zip the folder and upload it at `/staff/plugins`.
 ## Storage and custom fields
 
 Each plugin has a key-value store (any JSON values; 1,000 keys and 1 MB by
-default, `FirestormWeb.Plugins.Storage, max_keys:, max_bytes:`). Custom
+default, `Firefly.Plugins.Storage, max_keys:, max_bytes:`). Custom
 fields are values a plugin keeps on posts, threads or users, namespaced by
 plugin, limited to the keys its manifest declares; `public` post fields
 appear in the JSON API as `plugin_fields: {plugin_id: {key: value}}`.
@@ -497,8 +497,8 @@ events and job schedule; its bot user stays with its posts.
 
 ## The WebAssembly runtime
 
-`priv/plugins/quickjs.wasm` is QuickJS-ng (pinned commit) plus
-`wasm/quickjs/firefly_runtime.c`, built as a WASI reactor with Debian's
-clang and wasi-libc. `wasm/quickjs/build.sh` rebuilds it in Docker,
+`apps/firefly_plugins/priv/plugins/quickjs.wasm` is QuickJS-ng (pinned commit) plus
+`apps/firefly_plugins/wasm/quickjs/firefly_runtime.c`, built as a WASI reactor with Debian's
+clang and wasi-libc. `apps/firefly_plugins/wasm/quickjs/build.sh` rebuilds it in Docker,
 reproducibly; the runtime refuses to load a `.wasm` that doesn't match the
 committed `quickjs.wasm.sha256`, and a test checks it.

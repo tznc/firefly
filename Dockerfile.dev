@@ -15,9 +15,12 @@ RUN mix local.hex --force && mix local.rebar --force
 
 WORKDIR /firestorm
 COPY mix.exs mix.lock ./
+COPY apps/firefly/mix.exs apps/firefly/
+COPY apps/firefly_plugins/mix.exs apps/firefly_plugins/
+COPY apps/firefly_web/mix.exs apps/firefly_web/
 RUN mix deps.get
 
-COPY assets/package.json assets/package-lock.json ./assets/
-RUN npm ci --prefix assets
+COPY apps/firefly_web/assets/package.json apps/firefly_web/assets/package-lock.json ./apps/firefly_web/assets/
+RUN npm ci --prefix apps/firefly_web/assets
 
 COPY . .

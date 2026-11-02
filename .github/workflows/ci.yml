@@ -49,7 +49,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: assets/package-lock.json
+          cache-dependency-path: apps/firefly_web/assets/package-lock.json
 
       - name: Cache deps and _build
         uses: actions/cache@v6
@@ -60,6 +60,9 @@ jobs:
           key: mix-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
           restore-keys: mix-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
+      - name: Check the plugin runtime against its checksum
+        run: cd apps/firefly_plugins/priv/plugins && sha256sum -c quickjs.wasm.sha256
+
       - run: mix deps.get
       - run: mix deps.unlock --check-unused
       - run: mix compile --warnings-as-errors
@@ -69,7 +72,7 @@ jobs:
 
       - name: Build assets
         run: |
-          npm ci --prefix assets
+          npm ci --prefix apps/firefly_web/assets
           mix assets.setup
           mix assets.build
 
@@ -77,12 +80,13 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('assets/package-lock.json') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('apps/firefly_web/assets/package-lock.json') }}
 
       - name: Install Playwright Chromium
-        run: npx --prefix assets playwright install chromium --with-deps
+        run: npx --prefix apps/firefly_web/assets playwright install chromium --with-deps
 
-      # Unit, LiveView (PhoenixTest) and end-to-end browser (PhoenixTest.Playwright) tests
+      # Every app's tests: unit, LiveView (PhoenixTest) and end-to-end browser
+      # (PhoenixTest.Playwright) tests
       - run: mix test
 
   dialyzer:
@@ -141,4 +145,4 @@ jobs:
           docker run --rm \
             -e FIREFLY_DATABASE_URL=ecto://user:pass@localhost/firefly \
             -e FIREFLY_SECRET_KEY_BASE="$(openssl rand -base64 48)" \
-            firefly:ci /app/bin/firestorm_web eval 'IO.puts(Application.spec(:firestorm_web, :vsn))'
+            firefly:ci /app/bin/firefly eval 'IO.puts(Application.spec(:firefly_web, :vsn))'

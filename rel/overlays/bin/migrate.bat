@@ -1,1 +1,1 @@
-call "%~dp0\firestorm_web" eval FirestormWeb.Release.migrate
+call "%~dp0\firefly" eval Firefly.Release.migrate

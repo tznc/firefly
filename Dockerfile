@@ -48,8 +48,11 @@ RUN mix local.hex --force \
 # set build ENV
 ENV MIX_ENV="prod"
 
-# install mix dependencies
+# install mix dependencies (an umbrella: each app's mix.exs declares its own)
 COPY mix.exs mix.lock ./
+COPY apps/firefly/mix.exs apps/firefly/
+COPY apps/firefly_plugins/mix.exs apps/firefly_plugins/
+COPY apps/firefly_web/mix.exs apps/firefly_web/
 RUN mix deps.get --only $MIX_ENV
 RUN mkdir config
 
@@ -62,17 +65,13 @@ RUN mix deps.compile
 RUN mix assets.setup
 
 # install JS packages (runtime dependencies only; Playwright is test-only)
-COPY assets/package.json assets/package-lock.json assets/
-RUN npm ci --prefix assets --omit=dev
+COPY apps/firefly_web/assets/package.json apps/firefly_web/assets/package-lock.json apps/firefly_web/assets/
+RUN npm ci --prefix apps/firefly_web/assets --omit=dev
 
-COPY priv priv
-
-COPY lib lib
+COPY apps apps
 
 # Compile the release
 RUN mix compile
-
-COPY assets assets
 
 # compile assets
 RUN mix assets.deploy
@@ -81,7 +80,7 @@ RUN mix assets.deploy
 COPY config/runtime.exs config/
 
 COPY rel rel
-RUN mix release
+RUN mix release firefly
 
 # start a new build stage so that the final image will only contain
 # the compiled release and other runtime necessities
@@ -107,7 +106,7 @@ RUN chown nobody /app
 ENV MIX_ENV="prod"
 
 # Only copy the final release from the build stage
-COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/firestorm_web ./
+COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/firefly ./
 
 USER nobody
 

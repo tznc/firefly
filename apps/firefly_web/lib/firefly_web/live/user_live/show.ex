@@ -1,0 +1,543 @@
+defmodule FireflyWeb.UserLive.Show do
+  @moduledoc """
+  A user's profile (bio, website, location, profile background), with three
+  tabs: the summary (`/users/:id/summary`: stats and most liked threads and
+  replies), badges (`/users/:id/badges`, see `Firefly.Badges`; a
+  title badge also shows under their name) and the activity stream (`/users/:id`, filtered by `?filter=`:
+  all posts, topics, replies, likes given, solved; see
+  `Firefly.Profiles.activity_filters/0`), paginated. What others see
+  follows the user's privacy preferences (see `Firefly.Profiles`);
+  admins see everything.
+  Admins see a member's penalties here, and silence or suspend them (see
+  `Firefly.Penalties`), and reset their two-factor authentication
+  (see `Firefly.TwoFactor.reset/2`), and set or lock their trust level
+  (see `Firefly.TrustLevels`). Members see their own progress toward
+  the next trust level here, and admins anyone's. Members mute or ignore
+  others here (see `Firefly.Ignores`).
+  """
+  use FireflyWeb, :live_view
+
+  alias Firefly.{
+    Badges,
+    Forums,
+    Ignores,
+    Mentions,
+    Penalties,
+    Profiles,
+    TrustLevels,
+    TwoFactor
+  }
+
+  alias Firefly.Forums.User
+
+  @impl true
+  def mount(%{"id" => id}, _session, socket) do
+    user = Forums.get_user!(id)
+
+    {:ok,
+     socket
+     |> assign(:page_title, "#{user.username} - Users")
+     |> assign(:user, user)
+     |> assign(:staff?, staff?(socket.assigns.current_user))
+     |> assign(:penalty_form, penalty_form())
+     |> assign_trust_level()
+     |> assign(
+       :two_factor?,
+       can?(socket.assigns.current_user, :reset_two_factor, user) and TwoFactor.enabled?(user)
+     )
+     |> assign(:visible?, Profiles.visible?(user, socket.assigns.current_user))
+     |> assign(:activity?, Profiles.activity_visible?(user, socket.assigns.current_user))
+     |> assign(:last_post, Forums.user_last_post(user, socket.assigns.current_user))
+     |> assign(:last_seen, Forums.user_last_seen(user))
+     |> assign(:title, Badges.title(user))
+     |> assign_ignore()}
+  end
+
+  # Members may mute or ignore anyone but themselves and staff.
+  defp assign_ignore(socket) do
+    %{current_user: viewer, user: user} = socket.assigns
+    ignorable? = viewer != nil and viewer.id != user.id and not Forums.admin?(user)
+
+    socket
+    |> assign(:ignorable?, ignorable?)
+    |> assign(:ignore_level, if(ignorable?, do: Ignores.level(viewer, user)))
+  end
+
+  defp assign_trust_level(socket) do
+    %{current_user: viewer, user: user} = socket.assigns
+    own? = viewer != nil and viewer.id == user.id
+
+    socket
+    |> assign(
+      :trust_form,
+      to_form(%{"level" => user.trust_level, "locked" => user.manual_locked_trust_level != nil},
+        as: :trust
+      )
+    )
+    |> assign(
+      :progress,
+      if(own? or can?(viewer, :set_trust_level, user), do: TrustLevels.progress(user))
+    )
+  end
+
+  defp staff?(nil), do: false
+  defp staff?(viewer), do: Forums.admin?(viewer)
+
+  @filters Enum.map(Profiles.activity_filters(), &elem(&1, 0))
+
+  @impl true
+  def handle_params(_params, _uri, %{assigns: %{visible?: false}} = socket),
+    do: {:noreply, assign(socket, :filter, "all")}
+
+  def handle_params(_params, _uri, %{assigns: %{live_action: :badges}} = socket) do
+    badges = Badges.user_badges(socket.assigns.user)
+    {:noreply, socket |> assign(:filter, nil) |> assign(:badges, badges)}
+  end
+
+  def handle_params(_params, _uri, %{assigns: %{live_action: :summary}} = socket) do
+    %{user: user, current_user: viewer} = socket.assigns
+    {:noreply, socket |> assign(:filter, nil) |> assign(:summary, Profiles.summary(user, viewer))}
+  end
+
+  def handle_params(_params, _uri, %{assigns: %{activity?: false}} = socket),
+    do: {:noreply, assign(socket, :filter, "all")}
+
+  def handle_params(params, _uri, socket) do
+    %{user: user, current_user: viewer} = socket.assigns
+    filter = if params["filter"] in @filters, do: params["filter"], else: "all"
+    posts_page = Forums.user_posts(user, viewer, %{page: params["page"], filter: filter})
+
+    posts_page = %{
+      posts_page
+      | entries:
+          posts_page.entries
+          |> Enum.map(&Forums.decorate_post_oembeds/1)
+          |> Firefly.LinkPreviews.decorate()
+    }
+
+    {:noreply,
+     socket
+     |> assign(:filter, filter)
+     |> assign(:posts_page, posts_page)
+     |> assign(
+       :refs,
+       Mentions.refs(Enum.map(posts_page.entries, & &1.body), socket.assigns.current_user)
+     )}
+  end
+
+  defp penalty_form(params \\ %{"kind" => "silence", "duration" => "1w"}),
+    do: to_form(params, as: :penalty)
+
+  @impl true
+  def handle_event("set_ignore", %{"ignore" => params}, %{assigns: %{ignorable?: true}} = socket) do
+    %{current_user: viewer, user: user} = socket.assigns
+
+    case Ignores.choose(viewer, user, params["level"], params["duration"]) do
+      {:ok, message} -> {:noreply, socket |> assign_ignore() |> put_flash(:info, message)}
+      {:error, message} -> {:noreply, put_flash(socket, :error, message)}
+    end
+  end
+
+  def handle_event("set_ignore", _params, socket),
+    do: {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+
+  def handle_event("set_trust_level", %{"trust" => params}, socket) do
+    %{current_user: admin, user: user} = socket.assigns
+
+    with true <- can?(admin, :set_trust_level, user),
+         {level, ""} when level in 0..4 <- Integer.parse(params["level"] || "") do
+      {:ok, user} = TrustLevels.set_level(user, level, params["locked"] == "true", admin)
+
+      {:noreply,
+       socket
+       |> assign(:user, user)
+       |> assign_trust_level()
+       |> put_flash(:info, "#{user.username} is now a #{TrustLevels.title(level)}.")}
+    else
+      false -> {:noreply, put_flash(socket, :error, denied_message(admin))}
+      _invalid -> {:noreply, put_flash(socket, :error, "Pick a trust level.")}
+    end
+  end
+
+  def handle_event("reset_two_factor", _params, socket) do
+    %{current_user: admin, user: user} = socket.assigns
+
+    if can?(admin, :reset_two_factor, user) do
+      {:ok, _} = TwoFactor.reset(user, admin)
+
+      {:noreply,
+       socket
+       |> assign(:two_factor?, false)
+       |> put_flash(:info, "#{user.username}'s two-factor authentication was reset.")}
+    else
+      {:noreply, put_flash(socket, :error, denied_message(admin))}
+    end
+  end
+
+  def handle_event(event, params, socket) when event in ["penalize", "lift"] do
+    %{current_user: admin, user: user} = socket.assigns
+    action = if event == "lift", do: :lift_penalty, else: :penalize_user
+
+    if can?(admin, action, user),
+      do: penalty_event(event, params, socket),
+      else: {:noreply, put_flash(socket, :error, denied_message(admin))}
+  end
+
+  defp penalty_event("penalize", %{"penalty" => params}, socket) do
+    %{current_user: admin, user: user} = socket.assigns
+    kind = if params["kind"] == "suspend", do: :suspend, else: :silence
+
+    case Penalties.penalize(kind, user, admin, params) do
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> assign(user: user, penalty_form: penalty_form())
+         |> put_flash(:info, "#{user.username} is #{penalty_text(kind, user)}.")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> assign(:penalty_form, penalty_form(params))
+         |> put_flash(:error, Penalties.message(reason))}
+    end
+  end
+
+  defp penalty_event("lift", %{"kind" => kind}, socket) do
+    kind = if kind == "suspend", do: :suspend, else: :silence
+    {:ok, user} = Penalties.lift(kind, socket.assigns.user, socket.assigns.current_user)
+    {:noreply, socket |> assign(:user, user) |> put_flash(:info, "Lifted.")}
+  end
+
+  defp penalty_text(:silence, user), do: "silenced #{Penalties.ends_text(user.silenced_until)}"
+  defp penalty_text(:suspend, user), do: "suspended #{Penalties.ends_text(user.suspended_until)}"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app {Layouts.shell(assigns)}>
+      <section class="card overflow-hidden border border-base-300 bg-base-100">
+        <div
+          :if={@visible? && User.background_url(@user, :profile_background)}
+          id="profile-background"
+          class="h-40 bg-cover bg-center"
+          style={"background-image: url('#{User.background_url(@user, :profile_background)}')"}
+        >
+        </div>
+        <div class="card-body flex-row flex-wrap items-center gap-6">
+          <.avatar user={@user} size="size-24" />
+          <div class="min-w-0 flex-1 space-y-1">
+            <h1 class="text-2xl font-bold">{@user.username}</h1>
+            <p :if={@visible? && @title} id="user-title" class="text-sm font-medium text-primary">
+              {@title}
+            </p>
+            <p :if={@visible? && @user.name} class="text-base-content/70">{@user.name}</p>
+            <p :if={!@visible?} id="profile-hidden" class="text-base-content/60">
+              This profile is private.
+            </p>
+            <p
+              :if={@visible? && (@user.location || @user.website)}
+              class="flex flex-wrap gap-x-4 text-sm"
+            >
+              <span :if={@user.location} id="user-location">
+                <.icon name="hero-map-pin" class="size-4 opacity-60" /> {@user.location}
+              </span>
+              <a
+                :if={@user.website}
+                id="user-website"
+                href={@user.website}
+                rel="nofollow ugc noopener"
+                class="link link-hover"
+              >
+                <.icon name="hero-link" class="size-4 opacity-60" /> {URI.parse(@user.website).host}
+              </a>
+            </p>
+            <dl :if={@visible?} class="flex flex-wrap gap-x-6 gap-y-1 pt-2 text-sm">
+              <div><dt class="inline font-semibold">Joined</dt> <dd class="inline">{short_date(@user.inserted_at)}</dd></div>
+              <div id="user-trust-level">
+                <dt class="inline font-semibold">Trust level</dt>
+                <dd class="inline">{TrustLevels.title(@user.trust_level)}</dd>
+              </div>
+              <div :if={@activity? && @last_post}>
+                <dt class="inline font-semibold">Last post</dt>
+                <dd class="inline">{short_date(@last_post.inserted_at)}</dd>
+              </div>
+              <div :if={@activity? && @last_seen}>
+                <dt class="inline font-semibold">Last seen</dt>
+                <dd class="inline">{short_date(@last_seen)}</dd>
+              </div>
+            </dl>
+          </div>
+          <.link
+            :if={@current_user && @current_user.id != @user.id && @user.allow_private_messages}
+            navigate={~p"/messages/new?#{[to: @user.username]}"}
+            class="btn btn-primary btn-sm"
+          >
+            <.icon name="hero-envelope" class="size-5" /> Message
+          </.link>
+          <.link
+            :if={@current_user && @current_user.id == @user.id}
+            navigate={~p"/settings/profile"}
+            class="btn btn-ghost btn-sm"
+            aria-label="Edit profile"
+          >
+            <.icon name="hero-cog-6-tooth" class="size-5" /> Edit
+          </.link>
+        </div>
+      </section>
+
+      <details :if={@ignorable?} id="ignore" class="collapse-arrow collapse border border-base-300 bg-base-100">
+        <summary class="collapse-title font-semibold">
+          <.icon name="hero-speaker-x-mark" class="size-4" /> Mute or ignore
+          <span :if={@ignore_level == "mute"} class="badge badge-sm ml-2">Muted</span>
+          <span :if={@ignore_level == "ignore"} class="badge badge-sm ml-2">Ignored</span>
+        </summary>
+        <div class="collapse-content space-y-2">
+          <p class="text-sm text-base-content/70">
+            Muting stops notifications and private messages from them. Ignoring also collapses their posts and hides the threads they start. They aren't told.
+          </p>
+          <.ignore_form id="ignore-form" user={@user} level={@ignore_level} />
+        </div>
+      </details>
+
+      <div :if={@staff?} id="penalties" class="space-y-2">
+        <div :if={User.silenced?(@user)} id="silenced-badge" class="flex flex-wrap items-center gap-2">
+          <span class="badge badge-warning">Silenced {Penalties.ends_text(@user.silenced_until)}</span>
+          <span class="text-sm">Reason: {@user.silence_reason}</span>
+          <button
+            :if={can?(@current_user, :lift_penalty, @user)}
+            phx-click="lift"
+            phx-value-kind="silence"
+            class="btn btn-ghost btn-xs"
+          >
+            Lift silence
+          </button>
+        </div>
+        <div :if={User.suspended?(@user)} id="suspended-badge" class="flex flex-wrap items-center gap-2">
+          <span class="badge badge-error">Suspended {Penalties.ends_text(@user.suspended_until)}</span>
+          <span class="text-sm">Reason: {@user.suspend_reason}</span>
+          <button
+            :if={can?(@current_user, :lift_penalty, @user)}
+            phx-click="lift"
+            phx-value-kind="suspend"
+            class="btn btn-ghost btn-xs"
+          >
+            Lift suspension
+          </button>
+        </div>
+        <div :if={@two_factor?} id="two-factor-reset" class="flex flex-wrap items-center gap-2">
+          <span class="badge badge-info">Two-factor on</span>
+          <button
+            phx-click="reset_two_factor"
+            data-confirm={"Turn off every second factor of #{@user.username}? They'll log in with just their first one until they set it up again."}
+            class="btn btn-ghost btn-xs"
+          >
+            Reset two-factor
+          </button>
+        </div>
+        <.form
+          :if={can?(@current_user, :set_trust_level, @user)}
+          for={@trust_form}
+          id="trust-level-form"
+          phx-submit="set_trust_level"
+          class="flex flex-wrap items-end gap-3"
+        >
+          <.input
+            field={@trust_form[:level]}
+            type="select"
+            label="Trust level"
+            options={Enum.map(TrustLevels.levels(), &{TrustLevels.title(&1), &1})}
+          />
+          <.input
+            field={@trust_form[:locked]}
+            type="checkbox"
+            label="Lock (the automatic review leaves it alone)"
+          />
+          <.button phx-disable-with="Saving...">Set trust level</.button>
+        </.form>
+        <details :if={can?(@current_user, :penalize_user, @user)} class="collapse-arrow collapse border border-base-300 bg-base-100">
+          <summary class="collapse-title font-semibold">Silence or suspend</summary>
+          <div class="collapse-content">
+            <.form for={@penalty_form} id="penalty-form" phx-submit="penalize" class="space-y-2">
+              <div class="grid gap-4 sm:grid-cols-3">
+                <.input
+                  field={@penalty_form[:kind]}
+                  type="select"
+                  label="Penalty"
+                  options={[{"Silence (can read, can't post)", "silence"}, {"Suspend (can't log in)", "suspend"}]}
+                />
+                <.input
+                  field={@penalty_form[:duration]}
+                  type="select"
+                  label="Duration"
+                  options={Penalties.durations()}
+                />
+                <.input field={@penalty_form[:until]} type="date" label="Until (for a date)" />
+              </div>
+              <.input
+                field={@penalty_form[:reason]}
+                type="textarea"
+                label="Reason (the user sees it)"
+                rows="2"
+              />
+              <.button variant="primary" phx-disable-with="Applying...">Apply penalty</.button>
+            </.form>
+          </div>
+        </details>
+      </div>
+
+      <.trust_progress :if={@progress} progress={@progress} />
+
+      <.markdown :if={@visible? && @user.bio} id="user-bio" body={@user.bio} />
+
+      <FireflyWeb.PluginComponents.plugin_outlet
+        outlet="user_profile"
+        key={@user.id}
+        context={%{user_id: @user.id}}
+        user={@current_user}
+      />
+
+      <div :if={@visible?} role="tablist" id="profile-tabs" class="tabs tabs-border">
+        <.link
+          patch={~p"/users/#{@user}/summary"}
+          role="tab"
+          class={["tab", @live_action == :summary && "tab-active"]}
+        >
+          Summary
+        </.link>
+        <.link
+          patch={~p"/users/#{@user}"}
+          role="tab"
+          class={["tab", @live_action == :show && "tab-active"]}
+        >
+          Activity
+        </.link>
+        <.link
+          patch={~p"/users/#{@user}/badges"}
+          role="tab"
+          class={["tab", @live_action == :badges && "tab-active"]}
+        >
+          Badges
+        </.link>
+      </div>
+
+      <div :if={@visible? && @live_action == :badges} id="user-badges" class="space-y-2">
+        <p :if={@badges == []} class="text-base-content/60">No badges yet.</p>
+        <ul class="grid gap-2 sm:grid-cols-2">
+          <li :for={{badge, count, at} <- @badges}>
+            <.link
+              navigate={~p"/badges/#{badge.id}"}
+              class="flex items-center gap-3 rounded-box border border-base-300 bg-base-100 p-3 hover:border-primary"
+            >
+              <.badge_icon badge={badge} />
+              <span class="flex-1">
+                <span class="font-semibold">{badge.name}</span>
+                <span :if={count > 1} class="badge badge-ghost badge-xs">×{count}</span>
+                <span class="block text-xs text-base-content/60">{short_date(at)}</span>
+              </span>
+            </.link>
+          </li>
+        </ul>
+      </div>
+
+      <div :if={@visible? && @live_action == :summary} id="user-summary" class="space-y-6">
+        <dl class="stats stats-vertical w-full border border-base-300 bg-base-100 sm:stats-horizontal">
+          <div :for={column <- Firefly.Directory.columns()} class="stat px-4 py-3">
+            <dt class="stat-title">{Firefly.Directory.label(column)}</dt>
+            <dd class={["stat-value text-2xl", "summary-#{column}"]}>
+              {Map.fetch!(@summary.stats, String.to_existing_atom(column))}
+            </dd>
+          </div>
+        </dl>
+        <div :if={@activity?} class="grid gap-6 md:grid-cols-2">
+          <.top_posts id="top-topics" title="Top topics" posts={@summary.top_topics} />
+          <.top_posts id="top-replies" title="Top replies" posts={@summary.top_replies} />
+        </div>
+      </div>
+
+      <p :if={@visible? && !@activity?} id="activity-hidden" class="text-base-content/60">
+        {@user.username} keeps their activity private.
+      </p>
+
+      <div :if={@visible? && @activity? && @live_action == :show} class="space-y-6">
+        <div role="tablist" id="activity-filters" class="tabs tabs-box tabs-sm w-fit">
+          <.link
+            :for={{filter, label} <- Profiles.activity_filters()}
+            patch={if filter == "all", do: ~p"/users/#{@user}", else: ~p"/users/#{@user}?#{[filter: filter]}"}
+            role="tab"
+            class={["tab", @filter == filter && "tab-active"]}
+          >
+            {label}
+          </.link>
+        </div>
+        <p :if={@posts_page.entries == []} class="text-base-content/60">Nothing here yet.</p>
+        <ol id="user-posts" class="space-y-4">
+          <li :for={post <- @posts_page.entries}>
+            <.post post={post} thread={post.thread} viewer={@current_user} refs={@refs} headline />
+          </li>
+        </ol>
+
+        <.pagination
+          page={@posts_page}
+          path={~p"/users/#{@user}"}
+          params={if @filter == "all", do: %{}, else: %{"filter" => @filter}}
+        />
+      </div>
+    </Layouts.app>
+    """
+  end
+
+  attr :progress, :any, required: true
+
+  defp trust_progress(assigns) do
+    {level, requirements} = assigns.progress
+    assigns = assign(assigns, level: level, requirements: requirements)
+
+    ~H"""
+    <details id="trust-progress" class="collapse-arrow collapse border border-base-300 bg-base-100">
+      <summary class="collapse-title font-semibold">
+        Toward {TrustLevels.title(@level)}
+      </summary>
+      <div class="collapse-content overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr><th>Requirement</th><th>Now</th><th>Needed</th></tr>
+          </thead>
+          <tbody>
+            <tr :for={r <- @requirements} class={if r.met?, do: "text-success", else: ""}>
+              <td>{r.label}</td>
+              <td>{r.have}</td>
+              <td>{if r.max?, do: "at most #{r.need}", else: r.need}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :posts, :list, required: true
+
+  defp top_posts(assigns) do
+    ~H"""
+    <section id={@id} class="space-y-2">
+      <h2 class="font-semibold">{@title}</h2>
+      <p :if={@posts == []} class="text-sm text-base-content/60">None liked yet.</p>
+      <ol class="list rounded-box border border-base-300 bg-base-100">
+        <li :for={{post, likes} <- @posts} class="list-row items-center">
+          <span class="badge badge-ghost gap-1" title="Likes">
+            <.icon name="hero-heart" class="size-3" />{likes}
+          </span>
+          <.link
+            navigate={~p"/categories/#{post.thread.category_id}/threads/#{post.thread}" <> "#post-#{post.id}"}
+            class="list-col-grow truncate hover:text-primary"
+          >
+            {post.thread.title}
+          </.link>
+        </li>
+      </ol>
+    </section>
+    """
+  end
+end
