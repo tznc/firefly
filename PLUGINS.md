@@ -262,6 +262,8 @@ job", which also goes to the plugin's error log.
 | `moderate_post`, `flag_created` | refused: they run while a member's post or flag is saved |
 | `handle_event`, `run_job` | allowed: background work |
 | `enabled`, `disabled` | allowed: a staff action, once (e.g. registering a webhook) |
+| `handle_widget`, `handle_request` | allowed: the plugin's own widget or endpoint asked for it, and waits |
+| `render_page`, `render_admin` | allowed: the plugin's own page, which someone opened; it waits for the plugin (2 s at most), so cache what you can with `kv` |
 | exports | as the hook the call chain started in: allowed when a plugin's `handle_event` calls another's export through `plugins.call`, refused from its `render_post`; refused when Elixir code calls an export directly |
 
 A process a core plugin starts itself is outside any hook, so it gets no

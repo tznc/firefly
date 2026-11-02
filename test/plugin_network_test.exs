@@ -156,6 +156,36 @@ defmodule FirestormWeb.PluginNetworkTest do
       assert [%{error: "sync_hook"}, %{error: "sync_hook"}] = entries()
     end
 
+    test "works on the plugin's own widgets, endpoints and pages", %{admin: admin} do
+      hooks = ["handle_widget", "handle_request", "render_page", "render_admin"]
+
+      install_plugin!(
+        admin,
+        %{
+          "id" => "surface",
+          "name" => "Surface",
+          "hooks" => hooks,
+          "permissions" => ["http"],
+          "http_hosts" => ["127.0.0.1"]
+        },
+        %{
+          "index.js" =>
+            Enum.map_join(hooks, "\n", fn hook ->
+              "exports.#{hook} = () => ({status: firefly.call('http.fetch', {url: '#{@url}'}).status});"
+            end)
+        },
+        enable: true
+      )
+
+      plugin = Plugins.get_active("surface")
+
+      for hook <- hooks,
+          do: assert({:ok, %{"status" => 200}} = Runner.invoke(plugin, hook, [%{}]), hook)
+
+      assert length(entries()) == 4
+      assert Enum.all?(entries(), &(&1.status == 200 and not &1.blocked))
+    end
+
     test "applies the same way to core plugins" do
       with_core_plugins([FirestormWeb.Test.NetCorePlugin], fn ->
         plugin = Plugins.get_active("net-core")
