@@ -4,7 +4,9 @@ defmodule FirestormWeb.AccountExport do
   (with the revisions they made to them), edits of other people's (wiki)
   posts, threads started, likes,
   notifications, private messages they sent and the conversations they're
-  in, notification levels, read positions, drafts, bookmarks, poll votes and the polls they created.
+  in, notification levels, read positions, drafts, bookmarks, poll votes and the polls they created,
+  and what plugins keep for them (their storage entries and custom fields
+  on the user, by plugin id).
 
   Other people appear only by public username: no one else's email, name,
   messages or post bodies. (Notification bodies, which quote other people's
@@ -65,7 +67,9 @@ defmodule FirestormWeb.AccountExport do
       read_positions: read_positions(user),
       drafts: FirestormWeb.Drafts.export(user),
       bookmarks: FirestormWeb.Bookmarks.export(user),
-      polls: FirestormWeb.Polls.export(user)
+      polls: FirestormWeb.Polls.export(user),
+      plugin_storage: FirestormWeb.Plugins.Storage.export(user),
+      plugin_fields: FirestormWeb.Plugins.Fields.export(user)
     }
   end
 
