@@ -44,7 +44,8 @@ defmodule FirestormWeb.Forums.Policy do
       review queue) - admins
     * `:edit_user` - the user themselves
     * `:view_conversation` (a private conversation: read and reply) - its
-      participants, until they leave. Nobody else, admins included.
+      participants, until they leave, and the members of the group it was
+      sent to. Nobody else, admins included.
     * `:add_participants` - participants who started the conversation, and
       admin participants
     * `:view_staff_log`, `:manage_site_settings`, `:manage_groups`,
@@ -81,7 +82,7 @@ defmodule FirestormWeb.Forums.Policy do
   def authorize(:edit_user, %User{id: id}, %{user: %{id: id}}), do: :ok
 
   def authorize(:view_conversation, %User{} = user, %Conversation{} = conversation),
-    do: if(Messages.participant?(conversation, user), do: :ok, else: {:error, :unauthorized})
+    do: if(Messages.reader?(conversation, user), do: :ok, else: {:error, :unauthorized})
 
   def authorize(:add_participants, %User{} = user, %Conversation{} = conversation) do
     cond do

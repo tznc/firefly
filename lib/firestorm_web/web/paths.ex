@@ -18,6 +18,11 @@ defmodule FirestormWeb.Web.Paths do
 
   def user_url(user), do: url(~p"/users/#{user.id}")
 
+  @doc "A group's page (`tab`: e.g. `\"members\"`, `\"requests\"`)."
+  def group_url(group, tab \\ nil)
+  def group_url(group, nil), do: url(~p"/groups/#{group.name}")
+  def group_url(group, tab), do: url(~p"/groups/#{group.name}/#{tab}")
+
   def category_url(category), do: url(~p"/categories/#{category.id}")
 
   def conversation_url(conversation), do: url(~p"/messages/#{conversation.id}")

@@ -1,14 +1,29 @@
 defmodule FirestormWeb.Web.StaffLive.Groups do
   @moduledoc """
-  Groups (roles), admins only: create them and add or remove members (see
-  `FirestormWeb.Groups`). Categories are restricted to groups on the
-  category's edit page.
+  Groups (roles), admins only: create them, set who sees, joins, mentions
+  and messages each, and add or remove members (see
+  `FirestormWeb.Groups`). Owners and requests are managed on each group's
+  page. Categories are restricted to groups on the category's edit page.
   """
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
   alias FirestormWeb.Groups
+  alias FirestormWeb.Forums.Role
+
+  @labels %{
+    "public" => "Everyone",
+    "members" => "Its members",
+    "staff" => "Staff",
+    "closed" => "Owners and staff add members",
+    "open" => "Anyone can join",
+    "request" => "Anyone can ask; owners approve",
+    "invite" => "Owners invite",
+    "nobody" => "Staff only",
+    "owners" => "Owners",
+    "everyone" => "Everyone"
+  }
 
   @impl true
   def mount(_params, _session, socket) do
@@ -49,6 +64,21 @@ defmodule FirestormWeb.Web.StaffLive.Groups do
     end
   end
 
+  defp group_event("update_settings", %{"role_id" => role_id, "group" => params}, socket) do
+    role = Groups.get_group!(role_id)
+
+    case Groups.update_settings(role, params, socket.assigns.current_user) do
+      {:ok, role} ->
+        {:noreply, socket |> put_flash(:info, "Saved #{role.name}'s settings.") |> load()}
+
+      {:error, changeset} ->
+        message =
+          Enum.map_join(changeset.errors, "; ", fn {field, {text, _}} -> "#{field} #{text}" end)
+
+        {:noreply, put_flash(socket, :error, "Not saved: #{message}")}
+    end
+  end
+
   defp group_event("add_member", %{"role_id" => role_id, "username" => username}, socket) do
     role = Groups.get_group!(role_id)
 
@@ -75,6 +105,8 @@ defmodule FirestormWeb.Web.StaffLive.Groups do
         {:noreply, put_flash(socket, :error, Groups.message(reason))}
     end
   end
+
+  defp options(values), do: Enum.map(values, &{@labels[&1], &1})
 
   @impl true
   def render(assigns) do
@@ -103,6 +135,23 @@ defmodule FirestormWeb.Web.StaffLive.Groups do
             {group.name}
             <span class="badge badge-ghost badge-sm">{length(group.users)}</span>
           </h2>
+          <.link navigate={~p"/groups/#{group.name}"} class="link text-sm">Group page</.link>
+          <.form
+            for={%{}}
+            as={:group}
+            id={"group-settings-#{group.id}"}
+            phx-submit="update_settings"
+            class="grid gap-2 sm:grid-cols-4"
+          >
+            <input type="hidden" name="role_id" value={group.id} />
+            <.input name="group[visibility]" type="select" label="Who sees it" value={group.visibility} options={options(Role.visibilities())} />
+            <.input name="group[membership]" type="select" label="Joining" value={group.membership} options={options(Role.memberships())} />
+            <.input name="group[mentionable]" type="select" label="Who can @mention it" value={group.mentionable} options={options(Role.levels())} />
+            <.input name="group[messageable]" type="select" label="Who can message it" value={group.messageable} options={options(Role.levels())} />
+            <div class="sm:col-span-4">
+              <button class="btn btn-sm">Save settings</button>
+            </div>
+          </.form>
           <p :if={group.categories != []} class="flex flex-wrap items-center gap-1 text-sm">
             <.icon name="hero-lock-closed" class="size-4 opacity-60" /> Can read
             <.category_badge :for={category <- group.categories} category={category} />

@@ -73,6 +73,7 @@ defmodule FirestormWeb.AccountExport do
       connected_accounts: FirestormWeb.Auth.export(user),
       two_factor: FirestormWeb.TwoFactor.export(user),
       passkeys: FirestormWeb.Passkeys.export(user),
+      groups: FirestormWeb.Groups.export(user),
       visits: visits(user),
       polls: FirestormWeb.Polls.export(user),
       uploads: FirestormWeb.Uploads.export(user),

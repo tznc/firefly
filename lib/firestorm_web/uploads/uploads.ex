@@ -286,7 +286,7 @@ defmodule FirestormWeb.Uploads do
        when is_integer(id) do
     case Repo.one(from(m in Message, where: m.id == ^id, preload: :conversation)) do
       nil -> false
-      message -> Messages.participant?(message.conversation, viewer)
+      message -> Messages.reader?(message.conversation, viewer)
     end
   end
 
