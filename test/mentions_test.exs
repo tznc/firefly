@@ -17,7 +17,12 @@ defmodule FirestormWeb.MentionsTest do
   defp count_queries(fun) do
     ref = make_ref()
     me = self()
-    handler = fn _event, _measurements, _meta, _config -> send(me, {ref, :query}) end
+    # Site settings and plugins are cached outside tests.
+    handler = fn _event, _measurements, meta, _config ->
+      if meta[:source] not in ["forums_site_settings", "plugins"],
+        do: send(me, {ref, :query})
+    end
+
     :telemetry.attach({__MODULE__, ref}, [:firestorm_web, :repo, :query], handler, nil)
 
     try do

@@ -7,10 +7,32 @@ import "prismjs/components/prism-scss"
 import "prismjs/plugins/line-numbers/prism-line-numbers"
 import "prismjs/plugins/normalize-whitespace/prism-normalize-whitespace"
 
-// Syntax-highlight code blocks inside rendered markdown.
+// Spoilers in rendered markdown (`.spoiler`, see FirestormWeb.Markdown):
+// hidden until clicked, or activated with Enter or Space. Until then
+// they're a button named "Spoiler" to assistive technology, so the hidden
+// text isn't read out either.
+const setUpSpoilers = root => {
+  root.querySelectorAll(".spoiler:not([data-spoiler])").forEach(spoiler => {
+    spoiler.dataset.spoiler = "hidden"
+    spoiler.setAttribute("role", "button")
+    spoiler.setAttribute("tabindex", "0")
+    spoiler.setAttribute("aria-label", "Spoiler: activate to reveal")
+    const reveal = e => {
+      if (spoiler.dataset.spoiler !== "hidden") { return }
+      e.preventDefault()
+      spoiler.dataset.spoiler = "revealed"
+      ;["role", "tabindex", "aria-label"].forEach(name => spoiler.removeAttribute(name))
+    }
+    spoiler.addEventListener("click", reveal)
+    spoiler.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { reveal(e) } })
+  })
+}
+
+// Syntax-highlight code blocks inside rendered markdown, and set up its
+// spoilers.
 const Highlight = {
-  mounted() { Prism.highlightAllUnder(this.el) },
-  updated() { Prism.highlightAllUnder(this.el) },
+  mounted() { Prism.highlightAllUnder(this.el); setUpSpoilers(this.el) },
+  updated() { Prism.highlightAllUnder(this.el); setUpSpoilers(this.el) },
 }
 
 // Render an ISO 8601 UTC timestamp as relative time ("3 hours ago") in the
