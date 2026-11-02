@@ -8,7 +8,7 @@ defmodule FireflyWeb.AuthLive.TwoFactor do
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.{TwoFactor, WebAuthn}
+  alias Firefly.Accounts.{TwoFactor, WebAuthn}
   alias FireflyWeb.Login
 
   @impl true

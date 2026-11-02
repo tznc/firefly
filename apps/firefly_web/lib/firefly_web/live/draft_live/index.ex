@@ -1,14 +1,13 @@
 defmodule FireflyWeb.DraftLive.Index do
   @moduledoc """
-  The user's drafts (see `Firefly.Drafts`), most recently saved first:
+  The user's drafts (see `Firefly.Discussion.Drafts`), most recently saved first:
   resume one in its composer, or delete it.
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.Drafts
-  alias Firefly.Forums.Draft
+  alias Firefly.Discussion.{Draft, Drafts}
 
   @impl true
   def mount(_params, _session, socket) do

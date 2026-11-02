@@ -9,8 +9,9 @@ defmodule FireflyWeb.PluginsTest do
   import Firefly.Fixtures,
     only: [admin_fixture: 0, user_fixture: 0, category_fixture: 1, thread_fixture: 2]
 
-  alias Firefly.{Forums, Plugin, Plugins}
-  alias Firefly.Forums.{Notification, StaffAction}
+  alias Firefly.{Discussion, Groups, Plugin, Plugins}
+  alias Firefly.Moderation.StaffAction
+  alias Firefly.Notifications.Notification
   alias Firefly.Plugin.{Host, Runner}
   alias FireflyPlugins.Bundle
   alias Firefly.Plugins.{Health, InstalledPlugin}
@@ -232,8 +233,8 @@ defmodule FireflyWeb.PluginsTest do
       assert {:ok, %{title: "OTP is cool"}} =
                Host.call(plugin, "threads.get", %{"id" => thread.id})
 
-      {:ok, role} = Forums.create_role("staff")
-      {:ok, private} = Forums.create_category(%{title: "Staff", role_ids: [role.id]})
+      {:ok, role} = Groups.create_role("staff")
+      {:ok, private} = Discussion.create_category(%{title: "Staff", role_ids: [role.id]})
       hidden = thread_fixture(private, admin)
 
       assert {:error, "not found"} = Host.call(plugin, "threads.get", %{"id" => hidden.id})

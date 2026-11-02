@@ -2,18 +2,18 @@ defmodule FireflyWeb.ThreadLive.Index do
   @moduledoc "A plain listing of a category's threads, with edit and delete links."
   use FireflyWeb, :live_view
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   @impl true
   def mount(%{"category_id" => category_id}, _session, socket) do
-    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
-    if connected?(socket), do: Forums.subscribe("forums:category:#{category.id}")
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
+    if connected?(socket), do: Discussion.subscribe("forums:category:#{category.id}")
 
     {:ok,
      socket
      |> assign(:page_title, "Threads - #{category.title}")
      |> assign(:category, category)
-     |> assign(:threads, Forums.list_threads(category, socket.assigns.current_user))}
+     |> assign(:threads, Discussion.list_threads(category, socket.assigns.current_user))}
   end
 
   @impl true
@@ -22,23 +22,23 @@ defmodule FireflyWeb.ThreadLive.Index do
      assign(
        socket,
        :threads,
-       Forums.list_threads(socket.assigns.category, socket.assigns.current_user)
+       Discussion.list_threads(socket.assigns.category, socket.assigns.current_user)
      )}
   end
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    thread = Forums.get_thread!(socket.assigns.category, id)
+    thread = Discussion.get_thread!(socket.assigns.category, id)
 
     if can?(socket.assigns.current_user, :delete_thread, thread) do
-      {:ok, _} = Forums.delete_thread(thread, socket.assigns.current_user)
+      {:ok, _} = Discussion.delete_thread(thread, socket.assigns.current_user)
 
       {:noreply,
        socket
        |> put_flash(:info, "Thread deleted successfully.")
        |> assign(
          :threads,
-         Forums.list_threads(socket.assigns.category, socket.assigns.current_user)
+         Discussion.list_threads(socket.assigns.category, socket.assigns.current_user)
        )}
     else
       {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}

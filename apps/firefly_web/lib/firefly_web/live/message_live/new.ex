@@ -4,7 +4,8 @@ defmodule FireflyWeb.MessageLive.New do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Messages, Posting}
+  alias Firefly.Messaging
+  alias Firefly.Moderation.Posting
   alias FireflyWeb.Editor
 
   @impl true
@@ -14,14 +15,14 @@ defmodule FireflyWeb.MessageLive.New do
     {:ok,
      socket
      |> assign(:page_title, "New message")
-     |> assign(:form, to_form(Messages.change_conversation(%{"recipients" => to})))
+     |> assign(:form, to_form(Messaging.change_conversation(%{"recipients" => to})))
      |> Editor.allow_attachments(&handle_progress/3)
      |> Editor.mention_search()}
   end
 
   @impl true
   def handle_event("validate", %{"conversation" => params}, socket) do
-    changeset = Messages.change_conversation(params)
+    changeset = Messaging.change_conversation(params)
     {:noreply, assign(socket, :form, to_form(changeset, action: :validate))}
   end
 
@@ -29,7 +30,7 @@ defmodule FireflyWeb.MessageLive.New do
     user = socket.assigns.current_user
 
     with :ok <- Posting.check(user, :new_conversation),
-         {:ok, conversation} <- Messages.start_conversation(user, params) do
+         {:ok, conversation} <- Messaging.start_conversation(user, params) do
       {:noreply,
        socket
        |> put_flash(:info, "Message sent.")
@@ -48,7 +49,7 @@ defmodule FireflyWeb.MessageLive.New do
       params =
         Map.update(socket.assigns.form.params, "body", markdown, &Editor.append(&1, markdown))
 
-      {:noreply, assign(socket, :form, to_form(Messages.change_conversation(params)))}
+      {:noreply, assign(socket, :form, to_form(Messaging.change_conversation(params)))}
     end)
   end
 

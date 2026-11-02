@@ -1,7 +1,7 @@
-defmodule Firefly.Forums.OembedExtractorTest do
+defmodule Firefly.Discussion.OembedExtractorTest do
   use ExUnit.Case
 
-  alias Firefly.Forums.OembedExtractor
+  alias Firefly.Rendering.OembedExtractor
 
   test "returns a list of oembed data for a given block of text, by extracting links" do
     url = "https://www.youtube.com/watch?v=H686MDn4Lo8"
@@ -36,8 +36,8 @@ defmodule Firefly.Forums.OembedExtractorTest do
 
   test "ignores links without a built-in provider, without fetching them" do
     url = "http://169.254.169.254/latest/meta-data/"
-    assert Firefly.OEmbed.provider_for(url) == nil
-    assert {:error, _} = Firefly.OEmbed.for(url)
+    assert Firefly.Rendering.OEmbed.provider_for(url) == nil
+    assert {:error, _} = Firefly.Rendering.OEmbed.for(url)
     assert [] == OembedExtractor.get_embeds("internal: #{url} and https://evil.example.com/page")
   end
 
@@ -50,7 +50,7 @@ defmodule Firefly.Forums.OembedExtractorTest do
 
   test "sanitizes provider HTML" do
     html =
-      Firefly.OEmbed.to_html(%OEmbed.Rich{
+      Firefly.Rendering.OEmbed.to_html(%OEmbed.Rich{
         html:
           ~S|<iframe src="https://www.youtube.com/embed/x" onload="alert(1)"></iframe><script>alert(1)</script><iframe src="javascript:alert(1)"></iframe>|
       })

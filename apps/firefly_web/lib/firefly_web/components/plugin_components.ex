@@ -5,8 +5,8 @@ defmodule FireflyWeb.PluginComponents do
   """
   use Phoenix.Component
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Post
+  alias Firefly.Discussion
+  alias Firefly.Discussion.Post
   alias Firefly.Plugins.UI
 
   @doc """
@@ -42,7 +42,7 @@ defmodule FireflyWeb.PluginComponents do
   end
 
   defp public?(nil, nil), do: true
-  defp public?(nil, thread), do: Bodyguard.permit?(Forums, :view_thread, nil, thread)
+  defp public?(nil, thread), do: Bodyguard.permit?(Discussion, :view_thread, nil, thread)
   defp public?(post, thread), do: Post.readable_by?(post, nil) and public?(nil, thread)
 
   @doc "One plugin asset in a sandboxed frame, wired to the widget bridge."

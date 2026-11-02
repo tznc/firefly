@@ -1,8 +1,8 @@
 defmodule FireflyWeb.TagsLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Subscriptions
+  alias Firefly.Discussion
+  alias Firefly.Notifications.Subscriptions
 
   setup %{conn: conn} do
     author = user_fixture()
@@ -58,8 +58,8 @@ defmodule FireflyWeb.TagsLiveTest do
     |> assert_has("#tag-level .level-label", text: "Muted")
     |> assert_has("#threads .thread-title", text: thread.title)
 
-    assert Subscriptions.tag_level(author, Forums.get_tag!("otp")) == "muted"
+    assert Subscriptions.tag_level(author, Discussion.get_tag!("otp")) == "muted"
     # Hidden from the cross-category lists, though
-    refute thread.id in Enum.map(Forums.latest_threads(author), & &1.id)
+    refute thread.id in Enum.map(Discussion.latest_threads(author), & &1.id)
   end
 end

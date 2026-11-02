@@ -10,8 +10,9 @@ defmodule FireflyWeb.Admin.Logged do
   edited in place.
   """
 
-  alias Firefly.{Repo, StaffLog}
-  alias Firefly.Forums.RoleMembership
+  alias Firefly.Repo
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.Groups.RoleMembership
 
   defmacro __using__(as: type) do
     quote do

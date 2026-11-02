@@ -4,7 +4,7 @@ defmodule FireflyWeb.MessageLive.Index do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.Messages
+  alias Firefly.Messaging
 
   @impl true
   def mount(_params, _session, socket), do: {:ok, assign(socket, :page_title, "Messages")}
@@ -18,7 +18,7 @@ defmodule FireflyWeb.MessageLive.Index do
   def notifications_changed(socket), do: load(socket)
 
   defp load(socket),
-    do: assign(socket, :inbox, Messages.inbox(socket.assigns.current_user, socket.assigns.page))
+    do: assign(socket, :inbox, Messaging.inbox(socket.assigns.current_user, socket.assigns.page))
 
   defp others(conversation, user),
     do: for(p <- conversation.participants, p.user_id != user.id, do: p.user)

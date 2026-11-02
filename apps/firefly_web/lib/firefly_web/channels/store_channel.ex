@@ -5,9 +5,9 @@ defmodule FireflyWeb.StoreChannel do
   categories are left out.
   """
   use FireflyWeb, :channel
-  alias Firefly.Store.{ReplenishResponse, ReplenishRequest}
+  alias Firefly.Discussion.Store.{ReplenishRequest, ReplenishResponse}
   alias FireflyWeb.Api.V1.FetchJSON
-  alias Firefly.{Repo, Forums}
+  alias Firefly.{Accounts, Discussion, Repo}
 
   def join("store:fetch", _payload, socket) do
     {:ok, socket}
@@ -15,18 +15,18 @@ defmodule FireflyWeb.StoreChannel do
 
   def handle_in("fetch_home_data", _, socket) do
     # TODO: Make this not awful
-    categories = Forums.list_categories()
+    categories = Discussion.list_categories()
 
     # TODO: Set the current user
     threads =
       categories
-      |> Enum.flat_map(&Forums.recent_threads(&1, nil))
+      |> Enum.flat_map(&Discussion.recent_threads(&1, nil))
 
     posts =
       threads
       |> Enum.map(&Repo.preload(&1, posts: [:user]))
       |> Enum.flat_map(& &1.posts)
-      |> Enum.map(&Forums.decorate_post_oembeds/1)
+      |> Enum.map(&Discussion.decorate_post_oembeds/1)
 
     users =
       posts
@@ -54,22 +54,22 @@ defmodule FireflyWeb.StoreChannel do
     # TODO: Make this not awful
     categories =
       replenish_request.categories
-      |> Enum.map(&Forums.get_category!(&1))
+      |> Enum.map(&Discussion.get_category!(&1))
       |> Enum.filter(&can?(nil, :view_category, &1))
 
     threads =
       replenish_request.threads
-      |> Enum.map(&Forums.get_thread!(&1))
+      |> Enum.map(&Discussion.get_thread!(&1))
       |> Enum.filter(&can?(nil, :view_thread, &1))
 
     posts =
       replenish_request.posts
-      |> Enum.map(&Forums.get_post!(&1))
-      |> Enum.filter(&can?(nil, :view_thread, Forums.get_thread!(&1.thread_id)))
+      |> Enum.map(&Discussion.get_post!(&1))
+      |> Enum.filter(&can?(nil, :view_thread, Discussion.get_thread!(&1.thread_id)))
 
     users =
       replenish_request.users
-      |> Enum.map(&Forums.get_user!(&1))
+      |> Enum.map(&Accounts.get_user!(&1))
 
     {:reply,
      {:ok,

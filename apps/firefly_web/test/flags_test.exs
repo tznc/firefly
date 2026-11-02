@@ -1,27 +1,33 @@
 defmodule FireflyWeb.FlagsTest do
   use Firefly.DataCase
 
-  alias Firefly.{Flags, Forums, Penalties, Repo, Search}
-  alias Firefly.Forums.{Flag, Post, SiteSetting, StaffAction}
+  alias Firefly.{Accounts, Discussion, Groups, Notifications, Repo}
+  alias Firefly.Discussion.Search
+  alias Firefly.Moderation.{Flags, Penalties}
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.{Flag, StaffAction}
+  alias Firefly.SiteSettings.SiteSetting
 
   setup do
     admin = user("admin")
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(admin, role)
+    {:ok, role} = Groups.create_role("admin")
+    {:ok, _} = Groups.add_role(admin, role)
     author = user("author")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, thread} =
-      Forums.create_thread(category, author, %{title: "Spammy", body: "buy pills now"})
+      Discussion.create_thread(category, author, %{title: "Spammy", body: "buy pills now"})
 
     [first] = Repo.preload(thread, :posts).posts
-    {:ok, reply} = Forums.create_post(thread, author, %{body: "more pills"})
+    {:ok, reply} = Discussion.create_post(thread, author, %{body: "more pills"})
 
     %{admin: admin, role: role, author: author, thread: thread, first: first, reply: reply}
   end
 
   defp user(name) do
-    {:ok, user} = Forums.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+    {:ok, user} =
+      Accounts.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+
     user
   end
 
@@ -84,8 +90,8 @@ defmodule FireflyWeb.FlagsTest do
        %{first: first, thread: thread} do
     for name <- ~w(one two three), do: {:ok, _} = flag(first, name)
 
-    refute thread.id in Enum.map(Forums.latest_threads(nil), & &1.id)
-    refute thread.id in Enum.map(Forums.top_threads("all", nil), & &1.id)
+    refute thread.id in Enum.map(Discussion.latest_threads(nil), & &1.id)
+    refute thread.id in Enum.map(Discussion.top_threads("all", nil), & &1.id)
 
     assert Search.run(Search.parse("pills"), nil).entries |> Enum.map(& &1.post.body) == [
              "more pills"
@@ -104,7 +110,7 @@ defmodule FireflyWeb.FlagsTest do
     assert notification.body =~ "@two: Something else (rude)"
     assert notification.body =~ "@one: Spam"
 
-    {:ok, _} = Forums.mark_notification_read(notification)
+    {:ok, _} = Notifications.mark_notification_read(notification)
     {:ok, _} = flag(reply, "three")
     assert length(notifications(admin, "flagged")) == 2
   end
@@ -120,7 +126,7 @@ defmodule FireflyWeb.FlagsTest do
 
   test "unconfirmed accounts can't flag", %{reply: reply} do
     {:ok, fresh} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: "fresh",
         email: "fresh@example.com",
         password: "correct horse battery"
@@ -135,14 +141,18 @@ defmodule FireflyWeb.FlagsTest do
 
   test "flags never hide an admin's post, but admins still hear of them", ctx do
     {:ok, thread} =
-      Forums.create_thread(Repo.get!(Forums.Category, ctx.thread.category_id), ctx.admin, %{
-        title: "Announcement",
-        body: "read me"
-      })
+      Discussion.create_thread(
+        Repo.get!(Firefly.Discussion.Category, ctx.thread.category_id),
+        ctx.admin,
+        %{
+          title: "Announcement",
+          body: "read me"
+        }
+      )
 
     [post] = Repo.preload(thread, :posts).posts
     other_admin = user("other_admin")
-    {:ok, _} = Forums.add_role(other_admin, ctx.role)
+    {:ok, _} = Groups.add_role(other_admin, ctx.role)
 
     for name <- ~w(one two three), do: {:ok, _} = flag(post, name)
 
@@ -181,5 +191,5 @@ defmodule FireflyWeb.FlagsTest do
   end
 
   defp notifications(user, kind),
-    do: user |> Forums.notifications_for() |> Enum.filter(&(&1.kind == kind))
+    do: user |> Notifications.notifications_for() |> Enum.filter(&(&1.kind == kind))
 end

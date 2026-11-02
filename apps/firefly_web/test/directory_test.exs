@@ -1,17 +1,19 @@
 defmodule FireflyWeb.DirectoryTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Directory, Forums, Repo, Visits}
-  alias Firefly.Forums.{DirectoryItem, User}
+  alias Firefly.{Accounts, Directory, Discussion, Repo}
+  alias Firefly.Accounts.Visits
+  alias Firefly.Accounts.User
+  alias Firefly.Directory.DirectoryItem
 
   setup do
     alice = user_fixture(%{username: "alice", name: "Alice Liddell"})
     bob = user_fixture(%{username: "bob"})
     category = category_fixture()
     thread = thread_fixture(category, alice)
-    {:ok, reply} = Forums.create_post(thread, bob, %{body: "Indeed"})
-    {:ok, _} = Forums.create_post(thread, bob, %{body: "Twice"})
-    Forums.like_post(reply, alice)
+    {:ok, reply} = Discussion.create_post(thread, bob, %{body: "Indeed"})
+    {:ok, _} = Discussion.create_post(thread, bob, %{body: "Twice"})
+    Discussion.like_post(reply, alice)
 
     %{alice: alice, bob: bob, thread: thread}
   end
@@ -22,7 +24,7 @@ defmodule FireflyWeb.DirectoryTest do
 
   test "refresh computes each period's stats", %{alice: alice, bob: bob, thread: thread} do
     :ok = Visits.seen(Repo.get!(User, bob.id))
-    {:ok, _} = Forums.mark_thread_read(alice, thread)
+    {:ok, _} = Discussion.mark_thread_read(alice, thread)
     :ok = Directory.refresh()
 
     assert %{topic_count: 1, post_count: 0, likes_given: 1, likes_received: 0} =
@@ -36,8 +38,8 @@ defmodule FireflyWeb.DirectoryTest do
 
     # Old activity drops out of the shorter periods.
     old = NaiveDateTime.add(NaiveDateTime.utc_now(), -40, :day)
-    Repo.update_all(Forums.Post, set: [inserted_at: old])
-    Repo.update_all(Forums.PostLike, set: [inserted_at: old])
+    Repo.update_all(Firefly.Discussion.Post, set: [inserted_at: old])
+    Repo.update_all(Firefly.Discussion.PostLike, set: [inserted_at: old])
     :ok = Directory.refresh()
     assert %{post_count: 0, likes_received: 0} = stats(bob, "month")
     assert %{post_count: 2, likes_received: 1} = stats(bob, "year")
@@ -65,7 +67,7 @@ defmodule FireflyWeb.DirectoryTest do
     bob: bob
   } do
     hidden = user_fixture(%{username: "hidden"})
-    {:ok, _} = Forums.update_preferences(hidden, %{hide_from_directory: true})
+    {:ok, _} = Accounts.update_preferences(hidden, %{hide_from_directory: true})
     :ok = Directory.refresh()
 
     conn

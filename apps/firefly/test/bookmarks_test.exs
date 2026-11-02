@@ -4,9 +4,13 @@ defmodule Firefly.BookmarksTest do
   import Firefly.Fixtures,
     only: [user_fixture: 0, admin_fixture: 0, category_fixture: 1, thread_fixture: 3]
 
-  alias Firefly.{AccountDeletion, AccountExport, Bookmarks, Forums, Groups, TopicTimers}
-  alias Firefly.{TopicTools}
-  alias Firefly.Forums.{Bookmark, Notification, Post}
+  alias Firefly.{Discussion, Groups, Notifications}
+  alias Firefly.Accounts.{AccountDeletion, AccountExport}
+  alias Firefly.Discussion.Bookmarks
+  alias Firefly.Moderation.TopicTimers
+  alias Firefly.Moderation.TopicTools
+  alias Firefly.Discussion.{Bookmark, Post}
+  alias Firefly.Notifications.Notification
 
   setup do
     admin = admin_fixture()
@@ -14,7 +18,7 @@ defmodule Firefly.BookmarksTest do
     bob = user_fixture()
     category = category_fixture("Elixir")
     thread = thread_fixture(category, alice, %{title: "Bookmarked", body: "op"})
-    {:ok, reply} = Forums.create_post(thread, alice, %{body: "a reply worth keeping"})
+    {:ok, reply} = Discussion.create_post(thread, alice, %{body: "a reply worth keeping"})
     %{admin: admin, alice: alice, bob: bob, category: category, thread: thread, reply: reply}
   end
 
@@ -68,17 +72,17 @@ defmodule Firefly.BookmarksTest do
 
   test "only posts the user can read", %{admin: admin, alice: alice, bob: bob, thread: thread} do
     {:ok, team} = Groups.create_group(%{name: "team"}, admin)
-    {:ok, secret} = Forums.create_category(%{title: "Secret", role_ids: [team.id]})
+    {:ok, secret} = Discussion.create_category(%{title: "Secret", role_ids: [team.id]})
     secret_thread = thread_fixture(secret, admin, %{title: "Secret", body: "classified"})
     secret_post = Repo.one(from(p in Post, where: p.thread_id == ^secret_thread.id))
     assert {:error, :not_found} = Bookmarks.bookmark(bob, secret_post)
     assert {:ok, _} = Bookmarks.bookmark(admin, secret_post)
 
-    {:ok, deleted} = Forums.create_post(thread, alice, %{body: "gone"})
-    {:ok, _} = Forums.delete_post(deleted, alice)
+    {:ok, deleted} = Discussion.create_post(thread, alice, %{body: "gone"})
+    {:ok, _} = Discussion.delete_post(deleted, alice)
     assert {:error, :not_found} = Bookmarks.bookmark(bob, Repo.reload!(deleted))
 
-    {:ok, hidden} = Forums.create_post(thread, alice, %{body: "flagged"})
+    {:ok, hidden} = Discussion.create_post(thread, alice, %{body: "flagged"})
 
     hidden =
       hidden |> Ecto.Changeset.change(hidden_at: DateTime.utc_now(:second)) |> Repo.update!()
@@ -114,7 +118,7 @@ defmodule Firefly.BookmarksTest do
 
     assert {post_id, thread_id} == {reply.id, thread.id}
     assert n.url =~ "#post-#{reply.id}"
-    assert [_] = Forums.notifications_for(bob)
+    assert [_] = Notifications.notifications_for(bob)
     # Cleared: running again does nothing, and the bookmark stays.
     assert Repo.reload!(bookmark).remind_at == nil
     assert Bookmarks.run_due(in_seconds(8 * 3600)) == 0
@@ -173,7 +177,7 @@ defmodule Firefly.BookmarksTest do
   } do
     {:ok, bookmark} = Bookmarks.bookmark(bob, reply)
     remind(bob, bookmark, in_seconds(60))
-    {:ok, _} = Forums.delete_post(reply, admin)
+    {:ok, _} = Discussion.delete_post(reply, admin)
 
     assert Bookmarks.list(bob) == []
     assert Bookmarks.get(bob, bookmark.id) == nil
@@ -182,7 +186,7 @@ defmodule Firefly.BookmarksTest do
     assert Repo.reload!(bookmark).remind_at == nil
 
     # It's back with the post.
-    {:ok, _} = Forums.restore_post(Repo.reload!(reply), admin)
+    {:ok, _} = Discussion.restore_post(Repo.reload!(reply), admin)
     assert [_] = Bookmarks.list(bob)
   end
 
@@ -195,7 +199,7 @@ defmodule Firefly.BookmarksTest do
     {:ok, bookmark} = Bookmarks.bookmark(bob, reply)
     remind(bob, bookmark, in_seconds(60))
     {:ok, team} = Groups.create_group(%{name: "team"}, admin)
-    {:ok, _} = Forums.update_category(category, %{role_ids: [team.id]}, admin)
+    {:ok, _} = Discussion.update_category(category, %{role_ids: [team.id]}, admin)
 
     assert Bookmarks.list(bob) == []
     assert Bookmarks.run_due(in_seconds(120)) == 0

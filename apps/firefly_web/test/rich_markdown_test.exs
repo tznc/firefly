@@ -5,7 +5,8 @@ defmodule FireflyWeb.RichMarkdownTest do
 
   import FireflyPlugins.PluginHelpers
 
-  alias Firefly.{Markdown, Repo, SiteSettings}
+  alias Firefly.{Repo, SiteSettings}
+  alias Firefly.Rendering.Markdown
   alias Firefly.Plugins.Health
 
   setup do

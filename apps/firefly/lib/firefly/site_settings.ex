@@ -17,10 +17,13 @@ defmodule Firefly.SiteSettings do
   where each test's settings live in its own database transaction.
   """
 
+  use Boundary, top_level?: true, check: [out: false], exports: []
+
   import Ecto.Query
 
-  alias Firefly.{RateLimit, Repo, StaffLog}
-  alias Firefly.Forums.SiteSetting
+  alias Firefly.{RateLimit, Repo}
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.SiteSettings.SiteSetting
 
   @pubsub Firefly.PubSub
   @topic "site_settings"
@@ -452,7 +455,7 @@ defmodule Firefly.SiteSettings do
         key: "default_digest_frequency",
         section: "Email",
         type: :select,
-        options: Firefly.Digests.frequency_options(),
+        options: Firefly.Notifications.Digests.frequency_options(),
         label: "Default digest frequency",
         default: "weekly",
         help: "For members who haven't chosen."

@@ -3,10 +3,12 @@ defmodule FireflyWeb.SSOTest do
 
   import Ecto.Query
 
-  alias Firefly.{Auth, Repo, SiteSettings}
+  alias Firefly.{Repo, SiteSettings}
+  alias Firefly.Accounts.Auth
   alias FireflyWeb.FakeOIDC
-  alias Firefly.Auth.DiscourseConnect
-  alias Firefly.Forums.{Role, User, UserIdentity}
+  alias Firefly.Accounts.Auth.DiscourseConnect
+  alias Firefly.Accounts.{User, UserIdentity}
+  alias Firefly.Groups.Role
 
   defp put_config(key, config) do
     original = Application.get_env(:firefly, key)
@@ -30,7 +32,7 @@ defmodule FireflyWeb.SSOTest do
     setup do
       idp = FakeOIDC.start()
 
-      put_config(Firefly.Auth.OIDC,
+      put_config(Firefly.Accounts.Auth.OIDC,
         discovery_url: idp.discovery,
         client_id: FakeOIDC.client_id(),
         client_secret: "oidc-secret",
@@ -175,7 +177,7 @@ defmodule FireflyWeb.SSOTest do
       {conn, _} = oidc_login(build_conn(), idp)
       refute logged_in_user(conn)
 
-      :persistent_term.erase({Firefly.Auth.OIDC, {:jwks, idp.issuer <> "/jwks"}})
+      :persistent_term.erase({Firefly.Accounts.Auth.OIDC, {:jwks, idp.issuer <> "/jwks"}})
       {conn, _} = oidc_login(build_conn(), idp)
       assert logged_in_user(conn)
     end
@@ -187,7 +189,7 @@ defmodule FireflyWeb.SSOTest do
     end
 
     test "an unreachable provider sends the browser back to the login page", %{conn: conn} do
-      put_config(Firefly.Auth.OIDC,
+      put_config(Firefly.Accounts.Auth.OIDC,
         discovery_url: "http://127.0.0.1:1/.well-known/openid-configuration",
         client_id: "x"
       )
@@ -204,12 +206,12 @@ defmodule FireflyWeb.SSOTest do
 
   describe "SSO only" do
     setup do
-      put_config(Firefly.Auth.DiscourseConnect,
+      put_config(Firefly.Accounts.Auth.DiscourseConnect,
         url: "https://id.example/sso",
         secret: "dc-secret-123"
       )
 
-      put_config(Firefly.Auth, sso_only: true)
+      put_config(Firefly.Accounts.Auth, sso_only: true)
     end
 
     test "hides and refuses every other way in", %{conn: conn} do
@@ -249,7 +251,7 @@ defmodule FireflyWeb.SSOTest do
     end
 
     test "is off while no SSO provider is enabled" do
-      put_config(Firefly.Auth.DiscourseConnect, [])
+      put_config(Firefly.Accounts.Auth.DiscourseConnect, [])
       refute Auth.sso_only?()
       assert Auth.password_login?()
     end
@@ -257,7 +259,7 @@ defmodule FireflyWeb.SSOTest do
 
   describe "DiscourseConnect" do
     setup do
-      put_config(Firefly.Auth.DiscourseConnect,
+      put_config(Firefly.Accounts.Auth.DiscourseConnect,
         url: "https://id.example/session/sso_provider",
         secret: "dc-secret-123",
         name: "Example ID"
@@ -445,7 +447,7 @@ defmodule FireflyWeb.SSOTest do
                user
 
       assert User.confirmed?(user)
-      assert Firefly.Forums.admin?(user)
+      assert Firefly.Accounts.admin?(user)
       assert Enum.sort(role_names(user)) == ~w(admin beta moderator)
       refute Repo.get_by(Role, name: "missing")
 
@@ -456,7 +458,7 @@ defmodule FireflyWeb.SSOTest do
         )
 
       user = logged_in_user(conn)
-      refute Firefly.Forums.admin?(user)
+      refute Firefly.Accounts.admin?(user)
       assert Enum.sort(role_names(user)) == ~w(alpha moderator)
 
       # A username taken here keeps the old one.
@@ -465,7 +467,7 @@ defmodule FireflyWeb.SSOTest do
       assert logged_in_user(conn).username == "grace"
 
       actions =
-        Repo.all(from(a in Firefly.Forums.StaffAction, select: {a.action, a.actor_id}))
+        Repo.all(from(a in Firefly.Moderation.StaffAction, select: {a.action, a.actor_id}))
 
       assert {"role.grant", nil} in actions
       assert {"role.revoke", nil} in actions
@@ -494,7 +496,7 @@ defmodule FireflyWeb.SSOTest do
     end
 
     test "is refused while not configured", %{conn: conn} do
-      put_config(Firefly.Auth.DiscourseConnect, [])
+      put_config(Firefly.Accounts.Auth.DiscourseConnect, [])
       conn = get(conn, "/auth/discourse_connect")
       assert redirected_to(conn) == ~p"/login"
 

@@ -3,20 +3,20 @@ defmodule FireflyWeb.Forums.PostEditingTest do
 
   import Firefly.Fixtures, only: [user_fixture: 0, admin_fixture: 0, category_fixture: 0]
 
-  alias Firefly.Forums
-  alias Firefly.Forums.{Diff, Policy, PostRevision}
+  alias Firefly.Discussion
+  alias Firefly.Discussion.{Diff, Policy, PostRevision}
 
   setup do
     author = user_fixture()
     thread = Firefly.Fixtures.thread_fixture(category_fixture(), author)
-    {:ok, post} = Forums.create_post(thread, author, %{body: "first draft"})
+    {:ok, post} = Discussion.create_post(thread, author, %{body: "first draft"})
     %{author: author, thread: thread, post: post}
   end
 
   test "an edit keeps the replaced body as a revision", %{author: author, post: post} do
-    Forums.subscribe("forums:thread:#{post.thread_id}")
+    Discussion.subscribe("forums:thread:#{post.thread_id}")
 
-    assert {:ok, edited} = Forums.update_post(post, author, %{body: "second draft"})
+    assert {:ok, edited} = Discussion.update_post(post, author, %{body: "second draft"})
     assert edited.body == "second draft"
     assert edited.edited_at
     assert_receive {:post_updated, %{id: id}} when id == post.id
@@ -26,13 +26,13 @@ defmodule FireflyWeb.Forums.PostEditingTest do
   end
 
   test "saving the same body records nothing", %{author: author, post: post} do
-    assert {:ok, same} = Forums.update_post(post, author, %{body: "first draft"})
+    assert {:ok, same} = Discussion.update_post(post, author, %{body: "first draft"})
     assert same.edited_at == nil
     assert Repo.all(PostRevision) == []
   end
 
   test "invalid edits are rejected", %{author: author, post: post} do
-    assert {:error, changeset} = Forums.update_post(post, author, %{body: ""})
+    assert {:error, changeset} = Discussion.update_post(post, author, %{body: ""})
     assert "can't be blank" in errors_on(changeset).body
     assert Repo.all(PostRevision) == []
   end
@@ -40,18 +40,18 @@ defmodule FireflyWeb.Forums.PostEditingTest do
   test "new users' link limit applies to edits", %{author: author, post: post} do
     author = Firefly.Repo.update!(Ecto.Changeset.change(author, trust_level: 0))
     links = "https://a.example https://b.example https://c.example"
-    assert {:error, changeset} = Forums.update_post(post, author, %{body: links})
+    assert {:error, changeset} = Discussion.update_post(post, author, %{body: links})
     assert "new users can include at most 2 links per post" in errors_on(changeset).body
 
-    assert {:ok, _} = Forums.update_post(post, admin_fixture(), %{body: links})
+    assert {:ok, _} = Discussion.update_post(post, admin_fixture(), %{body: links})
   end
 
   test "post_edits/1 lists edits newest first with their diffs", %{author: author, post: post} do
     admin = admin_fixture()
-    {:ok, post} = Forums.update_post(post, author, %{body: "second draft"})
-    {:ok, post} = Forums.update_post(post, admin, %{body: "second draft, polished"})
+    {:ok, post} = Discussion.update_post(post, author, %{body: "second draft"})
+    {:ok, post} = Discussion.update_post(post, admin, %{body: "second draft, polished"})
 
-    assert [latest, first] = Forums.post_edits(post)
+    assert [latest, first] = Discussion.post_edits(post)
     assert latest.editor.id == admin.id
     assert latest.diff == [eq: "second ", del: "draft", ins: "draft, polished"]
     assert first.editor.id == author.id
@@ -63,21 +63,21 @@ defmodule FireflyWeb.Forums.PostEditingTest do
     post: stale
   } do
     admin = admin_fixture()
-    {:ok, _} = Forums.update_post(stale, admin, %{body: "moderated"})
+    {:ok, _} = Discussion.update_post(stale, admin, %{body: "moderated"})
 
-    assert {:error, :edited_elsewhere} = Forums.update_post(stale, author, %{body: "mine"})
-    assert Repo.get!(Firefly.Forums.Post, stale.id).body == "moderated"
+    assert {:error, :edited_elsewhere} = Discussion.update_post(stale, author, %{body: "mine"})
+    assert Repo.get!(Firefly.Discussion.Post, stale.id).body == "moderated"
     assert [%PostRevision{body: "first draft"}] = Repo.all(PostRevision)
 
     # Starting from the current version works, and records what it replaced
-    current = Repo.get!(Firefly.Forums.Post, stale.id)
-    assert {:ok, _} = Forums.update_post(current, author, %{body: "mine"})
+    current = Repo.get!(Firefly.Discussion.Post, stale.id)
+    assert {:ok, _} = Discussion.update_post(current, author, %{body: "mine"})
     assert ["first draft", "moderated"] = Enum.map(Repo.all(PostRevision), & &1.body)
   end
 
   test "edits are pushed to the store channel too", %{author: author, post: post} do
     FireflyWeb.Endpoint.subscribe("threads:#{post.thread_id}")
-    {:ok, _} = Forums.update_post(post, author, %{body: "second draft"})
+    {:ok, _} = Discussion.update_post(post, author, %{body: "second draft"})
 
     assert_receive %Phoenix.Socket.Broadcast{
       event: "update",
@@ -100,7 +100,7 @@ defmodule FireflyWeb.Forums.PostEditingTest do
       assert {:error, :unauthorized} = Policy.authorize(:edit_post, user_fixture(), params)
       assert {:error, :unauthenticated} = Policy.authorize(:edit_post, nil, params)
 
-      {:ok, closed} = Forums.close_thread(thread, true, admin_fixture())
+      {:ok, closed} = Discussion.close_thread(thread, true, admin_fixture())
       closed_params = %{post: post, thread: closed}
       assert {:error, :unauthorized} = Policy.authorize(:edit_post, author, closed_params)
       assert :ok = Policy.authorize(:edit_post, admin_fixture(), closed_params)

@@ -10,11 +10,12 @@ defmodule FireflyWeb.AuthLive.Registration do
 
   on_mount({FireflyWeb.UserAuth, :password_login})
 
-  alias Firefly.{EmailConfirmation, Forums, RateLimit}
+  alias Firefly.{Accounts, RateLimit}
+  alias Firefly.Accounts.EmailConfirmation
 
   @impl true
   def mount(_params, _session, socket) do
-    if Forums.registration_open?(),
+    if Accounts.registration_open?(),
       do: mount_form(socket),
       else: {:ok, closed(socket)}
   end
@@ -31,12 +32,12 @@ defmodule FireflyWeb.AuthLive.Registration do
      |> assign(:page_title, "Create an account")
      |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
      |> assign(:trigger_submit, false)
-     |> assign_form(Forums.change_registration())}
+     |> assign_form(Accounts.change_registration())}
   end
 
   @impl true
   def handle_event("validate", %{"user" => params}, socket) do
-    changeset = Forums.change_registration(%Forums.User{}, params)
+    changeset = Accounts.change_registration(%Firefly.Accounts.User{}, params)
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
@@ -48,8 +49,8 @@ defmodule FireflyWeb.AuthLive.Registration do
 
   def handle_event("save", %{"user" => params}, socket) do
     with :ok <- RateLimit.check_register(socket.assigns.remote_ip),
-         {:ok, user} <- Forums.register_user(params) do
-      unless Forums.User.confirmed?(user), do: EmailConfirmation.deliver(user)
+         {:ok, user} <- Accounts.register_user(params) do
+      unless Firefly.Accounts.User.confirmed?(user), do: EmailConfirmation.deliver(user)
 
       # Keep the submitted values so the form can post them to the login callback.
       {:noreply,

@@ -1,14 +1,15 @@
 defmodule FireflyWeb.StaffLive.Emoji do
   @moduledoc """
   Custom emoji (admins only): add one with a name and an image (uploaded
-  through `Firefly.Uploads`), or remove one. See `Firefly.Emoji`.
+  through `Firefly.Uploads`), or remove one. See `Firefly.Rendering.Emoji`.
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Emoji, Repo, Uploads}
-  alias Firefly.Emoji.CustomEmoji
+  alias Firefly.{Repo, Uploads}
+  alias Firefly.Rendering.Emoji
+  alias Firefly.Rendering.Emoji.CustomEmoji
 
   @impl true
   def mount(_params, _session, socket) do

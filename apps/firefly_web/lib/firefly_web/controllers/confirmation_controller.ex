@@ -1,7 +1,8 @@
 defmodule FireflyWeb.ConfirmationController do
   use FireflyWeb, :controller
 
-  alias Firefly.{EmailConfirmation, Forums, RateLimit}
+  alias Firefly.{Accounts, RateLimit}
+  alias Firefly.Accounts.EmailConfirmation
 
   def confirm(conn, %{"token" => token}) do
     case EmailConfirmation.confirm(token) do
@@ -18,13 +19,13 @@ defmodule FireflyWeb.ConfirmationController do
   end
 
   def resend(conn, _params) do
-    user = conn.assigns[:current_user] || Forums.get_user(get_session(conn, :current_user) || 0)
+    user = conn.assigns[:current_user] || Accounts.get_user(get_session(conn, :current_user) || 0)
 
     cond do
       is_nil(user) ->
         conn |> put_flash(:error, "You must be logged in.") |> redirect(to: ~p"/login")
 
-      Forums.User.confirmed?(user) ->
+      Firefly.Accounts.User.confirmed?(user) ->
         conn
         |> put_flash(:info, "Your email address is already confirmed.")
         |> redirect(to: ~p"/")

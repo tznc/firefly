@@ -2,8 +2,12 @@ defmodule FireflyWeb.DigestsTest do
   use FireflyWeb.ConnCase
   use Bamboo.Test, shared: true
 
-  alias Firefly.{Digests, Forums, Ignores, JobRuns, Repo}
-  alias Firefly.Forums.{SiteSetting, Subscriptions, User}
+  alias Firefly.{Discussion, Groups, JobRuns, Notifications, Repo}
+  alias Firefly.Accounts.Ignores
+  alias Firefly.Notifications.Digests
+  alias Firefly.Accounts.User
+  alias Firefly.Notifications.Subscriptions
+  alias Firefly.SiteSettings.SiteSetting
 
   setup do
     admin = admin_fixture()
@@ -40,8 +44,8 @@ defmodule FireflyWeb.DigestsTest do
   test "an away member gets a digest of popular new threads, once", ctx do
     thread = thread_fixture(ctx.general, ctx.admin, %{title: "Big news"})
     liker = user_fixture()
-    {:ok, reply} = Forums.create_post(thread, liker, %{body: "Great reply"})
-    Forums.like_post(reply, ctx.admin)
+    {:ok, reply} = Discussion.create_post(thread, liker, %{body: "Great reply"})
+    Discussion.like_post(reply, ctx.admin)
 
     assert Digests.send_due() == 1
     email = digest_to(ctx.reader)
@@ -92,8 +96,8 @@ defmodule FireflyWeb.DigestsTest do
   end
 
   test "leaves out private categories, muted threads and ignored people", ctx do
-    {:ok, role} = Forums.create_role("insiders")
-    {:ok, secret} = Forums.create_category(%{title: "Secret"})
+    {:ok, role} = Groups.create_role("insiders")
+    {:ok, secret} = Discussion.create_category(%{title: "Secret"})
     Repo.insert_all("forums_category_roles", [%{category_id: secret.id, role_id: role.id}])
     thread_fixture(secret, ctx.admin, %{title: "Hidden plans"})
 
@@ -111,7 +115,7 @@ defmodule FireflyWeb.DigestsTest do
 
   test "unread notifications alone make a digest", ctx do
     {:ok, _} =
-      Forums.notify(ctx.reader, %{
+      Notifications.notify(ctx.reader, %{
         kind: "promoted",
         subject: "You're now a member",
         body: "b",

@@ -2,11 +2,12 @@ defmodule FireflyWeb.PasswordResetTest do
   use FireflyWeb.ConnCase, async: false
   use Bamboo.Test, shared: true
 
-  alias Firefly.{Forums, PasswordReset}
+  alias Firefly.Accounts
+  alias Firefly.Accounts.PasswordReset
 
   setup do
     {:ok, user} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: "newbie",
         email: "Newbie@Example.com",
         password: "old-password"
@@ -47,7 +48,7 @@ defmodule FireflyWeb.PasswordResetTest do
 
   test "accounts without a password (GitHub) get no reset email", %{conn: conn} do
     {:ok, _} =
-      Firefly.Auth.login(%{
+      Firefly.Accounts.Auth.login(%{
         provider: :github,
         uid: 1,
         nickname: "octo",
@@ -74,9 +75,9 @@ defmodule FireflyWeb.PasswordResetTest do
     |> assert_path(~p"/auth/identity")
     |> assert_has("#flash-info", text: "Password reset.")
 
-    assert {:ok, user} = Forums.authenticate_by_password("newbie", "new-password")
-    assert {:error, _} = Forums.authenticate_by_password("newbie", "old-password")
-    assert Forums.User.confirmed?(user)
+    assert {:ok, user} = Accounts.authenticate_by_password("newbie", "new-password")
+    assert {:error, _} = Accounts.authenticate_by_password("newbie", "old-password")
+    assert Firefly.Accounts.User.confirmed?(user)
 
     # Single use: the old link stops working once the password changed
     assert {:error, :invalid} = PasswordReset.verify(token)
@@ -96,7 +97,7 @@ defmodule FireflyWeb.PasswordResetTest do
     |> assert_has("p", text: "should be at least 8 character(s)")
     |> assert_has("p", text: "does not match password")
 
-    assert {:ok, _} = Forums.authenticate_by_password("newbie", "old-password")
+    assert {:ok, _} = Accounts.authenticate_by_password("newbie", "old-password")
   end
 
   test "tampered tokens are refused" do

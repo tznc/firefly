@@ -8,5 +8,5 @@ defmodule FireflyWeb.ThreadLive.NewThreads do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  defp load(user), do: Forums.new_threads(user)
+  defp load(user), do: Discussion.new_threads(user)
 end

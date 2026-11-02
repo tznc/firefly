@@ -1,7 +1,7 @@
 defmodule FireflyWeb.SearchLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   setup do
     alice = user_fixture(%{username: "alice"})
@@ -14,7 +14,7 @@ defmodule FireflyWeb.SearchLiveTest do
   end
 
   test "searching from the top bar links results to the post", %{conn: conn, thread: thread} do
-    [post] = Forums.get_thread!(thread.id) |> Firefly.Repo.preload(:posts) |> Map.get(:posts)
+    [post] = Discussion.get_thread!(thread.id) |> Firefly.Repo.preload(:posts) |> Map.get(:posts)
 
     conn
     |> visit(~p"/")

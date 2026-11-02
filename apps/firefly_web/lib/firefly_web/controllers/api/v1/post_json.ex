@@ -1,12 +1,12 @@
 defmodule FireflyWeb.Api.V1.PostJSON do
   @moduledoc "JSON representation of posts."
-  alias Firefly.{Markdown, OEmbed}
+  alias Firefly.Rendering.{Markdown, OEmbed}
   alias Firefly.Plugins.Fields
-  alias Firefly.Forums.Post
+  alias Firefly.Discussion.Post
 
   def show(%{post: %Post{} = post}), do: data(post)
 
-  @doc "`refs`: see `Firefly.Markdown.render/2`."
+  @doc "`refs`: see `Firefly.Rendering.Markdown.render/2`."
   def data(%Post{} = post, refs \\ nil) do
     # The API and channels serve anyone: a post's content (link previews
     # included) only once it's public, not while deleted, hidden or queued.

@@ -1,6 +1,6 @@
 defmodule FireflyWeb.StaffLive.Review do
   @moduledoc """
-  The staff review queue (admins only; see `Firefly.Review`): flagged
+  The staff review queue (admins only; see `Firefly.Moderation.Review`): flagged
   posts and posts awaiting approval. Updates live as flags come in and as
   other staff decide.
   """
@@ -8,8 +8,10 @@ defmodule FireflyWeb.StaffLive.Review do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Penalties, Repo, Review}
-  alias Firefly.Forums.{Flag, Post}
+  alias Firefly.Repo
+  alias Firefly.Moderation.{Penalties, Review}
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.Flag
 
   @impl true
   def mount(_params, _session, socket) do

@@ -1,22 +1,25 @@
 defmodule Firefly.TagsTest do
   use Firefly.DataCase
 
-  alias Firefly.{Forums, Notifications, Repo}
-  alias Firefly.Forums.{Subscriptions, Tag}
+  alias Firefly.{Accounts, Discussion, Groups, Notifications, Repo}
+  alias Firefly.Discussion.Tag
+  alias Firefly.Notifications.Subscriptions
 
   setup do
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
     %{category: category, author: user("author"), reader: user("reader")}
   end
 
   defp user(name) do
-    {:ok, user} = Forums.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+    {:ok, user} =
+      Accounts.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+
     user
   end
 
   defp thread(category, author, tags, title \\ "OTP") do
     {:ok, thread} =
-      Forums.create_thread(category, author, %{title: title, body: "Hi", tags: tags})
+      Discussion.create_thread(category, author, %{title: title, body: "Hi", tags: tags})
 
     thread
   end
@@ -38,29 +41,33 @@ defmodule Firefly.TagsTest do
     thread = thread(category, author, "otp, Beam")
     assert tag_names(thread) == ["beam", "otp"]
 
-    {:ok, thread} = Forums.update_thread(thread, %{"tags" => "otp genserver"}, author)
+    {:ok, thread} = Discussion.update_thread(thread, %{"tags" => "otp genserver"}, author)
     assert tag_names(thread) == ["genserver", "otp"]
 
     # Editing other fields leaves the tags alone
-    {:ok, thread} = Forums.update_thread(thread, %{"title" => "Renamed"}, author)
+    {:ok, thread} = Discussion.update_thread(thread, %{"title" => "Renamed"}, author)
     assert tag_names(thread) == ["genserver", "otp"]
   end
 
   test "ensure_tags/1 takes tags created concurrently as they are" do
-    [existing] = Forums.ensure_tags(["otp"])
-    assert [^existing, %Tag{name: "beam"}] = Forums.ensure_tags(["otp", "beam"])
+    [existing] = Discussion.ensure_tags(["otp"])
+    assert [^existing, %Tag{name: "beam"}] = Discussion.ensure_tags(["otp", "beam"])
     assert Repo.aggregate(Tag, :count) == 2
   end
 
   test "at most 5 valid tags", %{category: category, author: author} do
     assert {:error, changeset} =
-             Forums.create_thread(category, author, %{title: "T", body: "B", tags: "a b c d e f"})
+             Discussion.create_thread(category, author, %{
+               title: "T",
+               body: "B",
+               tags: "a b c d e f"
+             })
 
     assert "can have at most 5 tags" in errors_on(changeset).tags
 
     for bad <- ["no_underscores", "-dash", String.duplicate("x", 31)] do
       assert {:error, changeset} =
-               Forums.create_thread(category, author, %{title: "T", body: "B", tags: bad})
+               Discussion.create_thread(category, author, %{title: "T", body: "B", tags: bad})
 
       assert [message] = errors_on(changeset).tags
       assert message =~ "use lowercase letters, digits and dashes"
@@ -75,13 +82,17 @@ defmodule Firefly.TagsTest do
     on_exit(fn -> Application.delete_env(:firefly, :tags_admin_only) end)
 
     assert {:error, changeset} =
-             Forums.create_thread(category, author, %{title: "T", body: "B", tags: "brand-new"})
+             Discussion.create_thread(category, author, %{
+               title: "T",
+               body: "B",
+               tags: "brand-new"
+             })
 
     assert ["brand-new: no such tag"] = errors_on(changeset).tags
 
     admin = user("admin")
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(admin, role)
+    {:ok, role} = Groups.create_role("admin")
+    {:ok, _} = Groups.add_role(admin, role)
     thread(category, admin, "brand-new", "By admin")
     assert tag_names(thread(category, author, "brand-new", "Reused")) == ["brand-new"]
   end
@@ -90,12 +101,12 @@ defmodule Firefly.TagsTest do
     one = thread(category, author, "otp", "One")
     two = thread(category, author, "otp beam", "Two")
     archived = thread(category, author, "otp", "Old")
-    {:ok, _} = Forums.archive_thread(archived, true, author)
+    {:ok, _} = Discussion.archive_thread(archived, true, author)
 
     assert [%{name: "otp", threads_count: 2}, %{name: "beam", threads_count: 1}] =
-             Forums.list_tags()
+             Discussion.list_tags()
 
-    threads = Forums.tag_threads(Forums.get_tag!("OTP"), nil)
+    threads = Discussion.tag_threads(Discussion.get_tag!("OTP"), nil)
     assert Enum.map(threads, & &1.id) |> Enum.sort() == Enum.sort([one.id, two.id])
     assert [%Tag{} | _] = hd(threads).tags
   end
@@ -108,23 +119,25 @@ defmodule Firefly.TagsTest do
     test "watching a tag notifies of its new threads and posts in any category", ctx do
       %{category: category, author: author, reader: reader, thread: thread} = ctx
       {:ok, _} = Notifications.start_link()
-      {:ok, _} = Subscriptions.set_tag_level(reader, Forums.get_tag!("otp"), "watching")
+      {:ok, _} = Subscriptions.set_tag_level(reader, Discussion.get_tag!("otp"), "watching")
 
       thread(category, author, "otp", "Another")
-      {:ok, _} = Forums.create_post(thread, author, %{body: "more"})
+      {:ok, _} = Discussion.create_post(thread, author, %{body: "more"})
       :sys.get_state(Notifications)
 
-      assert [%{kind: "new_post"}, %{kind: "new_thread"}] = Forums.notifications_for(reader)
+      assert [%{kind: "new_post"}, %{kind: "new_thread"}] =
+               Notifications.notifications_for(reader)
+
       assert Subscriptions.effective_thread_level(reader, thread) == "watching"
     end
 
     test "a muted tag hides its threads, even in a watched category", ctx do
       %{category: category, reader: reader, thread: thread} = ctx
       {:ok, _} = Subscriptions.set_category_level(reader, category, "watching")
-      {:ok, _} = Subscriptions.set_tag_level(reader, Forums.get_tag!("otp"), "muted")
+      {:ok, _} = Subscriptions.set_tag_level(reader, Discussion.get_tag!("otp"), "muted")
 
       assert Subscriptions.effective_thread_level(reader, thread) == "muted"
-      refute listed?(Forums.latest_threads(reader), thread)
+      refute listed?(Discussion.latest_threads(reader), thread)
 
       refute Enum.any?(Subscriptions.subscribers(thread), fn {user, _} -> user.id == reader.id end)
 
@@ -132,13 +145,13 @@ defmodule Firefly.TagsTest do
       {:ok, _} = Subscriptions.set_thread_level(reader, thread, "tracking")
       assert Subscriptions.effective_thread_level(reader, thread) == "tracking"
       assert Subscriptions.inherited_level(reader, thread) == "muted"
-      assert listed?(Forums.latest_threads(reader), thread)
+      assert listed?(Discussion.latest_threads(reader), thread)
     end
 
     test "the most attentive of category and tag levels applies", ctx do
       %{category: category, reader: reader, thread: thread} = ctx
       {:ok, _} = Subscriptions.set_category_level(reader, category, "normal")
-      {:ok, _} = Subscriptions.set_tag_level(reader, Forums.get_tag!("otp"), "tracking")
+      {:ok, _} = Subscriptions.set_tag_level(reader, Discussion.get_tag!("otp"), "tracking")
 
       assert Subscriptions.effective_thread_level(reader, thread) == "tracking"
 

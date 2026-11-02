@@ -1,6 +1,6 @@
 defmodule FireflyWeb.StaffLive.Tags do
   @moduledoc """
-  Tag groups and synonyms (admins only; see `Firefly.Tags`): create,
+  Tag groups and synonyms (admins only; see `Firefly.Discussion.Tags`): create,
   edit and delete groups and the tags in them, and make tags synonyms of
   others.
   """
@@ -8,8 +8,8 @@ defmodule FireflyWeb.StaffLive.Tags do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Repo, Tags}
-  alias Firefly.Forums.Tag
+  alias Firefly.Repo
+  alias Firefly.Discussion.{Tag, Tags}
 
   @impl true
   def mount(_params, _session, socket) do

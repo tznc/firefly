@@ -9,30 +9,30 @@
 #
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
-alias Firefly.Forums
+alias Firefly.{Discussion, Groups}
 
 IO.puts("~~~~~ INITIALIZING FIREFLY SEEDS ~~~~~")
 IO.puts("-- CREATING ROLES --")
 
 {:ok, admin_role} =
-  Forums.create_role("admin")
+  Groups.create_role("admin")
 
 IO.puts("-- CREATING USERS --")
 
 IO.puts("---- Admin von Hornclaw ----")
 
 {:ok, admin} =
-  Forums.login_or_register_from_identity(%{
+  Discussion.login_or_register_from_identity(%{
     username: "admin",
     password: "password"
   })
 
-{:ok, _} = Forums.add_role(admin, admin_role)
+{:ok, _} = Groups.add_role(admin, admin_role)
 
 IO.puts("---- Bob Vladbob ----")
 
 {:ok, bob} =
-  Forums.login_or_register_from_identity(%{
+  Discussion.login_or_register_from_identity(%{
     username: "bob",
     password: "password"
   })
@@ -40,7 +40,7 @@ IO.puts("---- Bob Vladbob ----")
 IO.puts("---- Alice McStinkerton ----")
 
 {:ok, alice} =
-  Forums.login_or_register_from_identity(%{
+  Discussion.login_or_register_from_identity(%{
     username: "alice",
     password: "password"
   })
@@ -49,24 +49,24 @@ IO.puts("-- CREATING CATEGORIES --")
 IO.puts("---- Elixir ----")
 
 {:ok, elixir} =
-  Forums.create_category(%{title: "Elixir"})
+  Discussion.create_category(%{title: "Elixir"})
 
 IO.puts("---- Elm ----")
 
 {:ok, elm} =
-  Forums.create_category(%{title: "Elm"})
+  Discussion.create_category(%{title: "Elm"})
 
 IO.puts("-- CREATING THREADS --")
 IO.puts("---- OTP is cool ----")
 
 {:ok, otp_is_cool} =
-  Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
+  Discussion.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
 
 {:ok, _elm_mdl} =
-  Forums.create_thread(elm, alice, %{
+  Discussion.create_thread(elm, alice, %{
     title: "elm-mdl",
     body: "What's the story on this library these days?"
   })
 
 IO.puts("-- CREATING POSTS --")
-{:ok, _otp_post} = Forums.create_post(otp_is_cool, alice, %{body: "I really do"})
+{:ok, _otp_post} = Discussion.create_post(otp_is_cool, alice, %{body: "I really do"})

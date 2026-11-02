@@ -5,7 +5,7 @@ defmodule Firefly.Badges do
 
   System badges (`system_badges/0`) are defined here, each by a query of
   who earned it (and with which post, and when). `run_due/0` (run by
-  `Firefly.TopicTimers.Scheduler`, every 15 minutes across nodes; see
+  `Firefly.Moderation.TopicTimers.Scheduler`, every 15 minutes across nodes; see
   `Firefly.JobRuns`) creates any missing system badge and grants each
   enabled one to everyone its query finds; a trust level change grants
   the trust level badges at once (`grant_earned/1` for that member). A
@@ -23,10 +23,15 @@ defmodule Firefly.Badges do
   viewers who may read it.
   """
 
+  use Boundary, top_level?: true, check: [out: false], exports: [Badge]
+
   import Ecto.Query
 
-  alias Firefly.{Forums, JobRuns, Repo, StaffLog}
-  alias Firefly.Forums.{Badge, Policy, Post, User, UserBadge}
+  alias Firefly.{JobRuns, Notifications, Repo}
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.Accounts.User
+  alias Firefly.Badges.{Badge, UserBadge}
+  alias Firefly.Discussion.{Policy, Post}
 
   @run_seconds 900
 
@@ -283,7 +288,7 @@ defmodule Firefly.Badges do
       UserBadge |> Repo.get!(user_badge_id) |> Repo.preload([:badge, :user])
 
     {:ok, _} =
-      Forums.notify(user, %{
+      Notifications.notify(user, %{
         kind: "badge_granted",
         subject: "You earned the \"#{badge.name}\" badge",
         body: if(badge.description == "", do: "See who else has it.", else: badge.description),
@@ -552,7 +557,7 @@ defmodule Firefly.Badges do
 
   ## Account data
 
-  @doc "The export of `user`'s badges (see `Firefly.AccountExport`)."
+  @doc "The export of `user`'s badges (see `Firefly.Accounts.AccountExport`)."
   def export(%User{id: user_id}) do
     Repo.all(
       from(ub in UserBadge,

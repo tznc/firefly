@@ -3,10 +3,13 @@ defmodule Firefly.SoftAuthenticator do
   A software WebAuthn authenticator for tests: an ES256 key pair that
   answers registration and authentication challenges the way a browser and
   security key would (`none` attestation), as the base64url params
-  `Firefly.WebAuthn` reads.
+  `Firefly.Accounts.WebAuthn` reads.
   """
 
-  alias Firefly.WebAuthn
+  # Test support, for any app's tests: unchecked.
+  use Boundary, top_level?: true, check: [in: false, out: false]
+
+  alias Firefly.Accounts.WebAuthn
 
   defstruct [:id, :public, :private, :user_handle, count: 0]
 

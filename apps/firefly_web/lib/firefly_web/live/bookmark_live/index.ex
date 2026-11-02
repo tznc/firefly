@@ -1,6 +1,6 @@
 defmodule FireflyWeb.BookmarkLive.Index do
   @moduledoc """
-  The user's bookmarks (see `Firefly.Bookmarks`), pending reminders
+  The user's bookmarks (see `Firefly.Discussion.Bookmarks`), pending reminders
   first: open the post, edit the note and reminder, clear the reminder or
   delete the bookmark. Reloads when a reminder fires (it's a new
   notification).
@@ -11,7 +11,7 @@ defmodule FireflyWeb.BookmarkLive.Index do
 
   import FireflyWeb.BookmarkComponents
 
-  alias Firefly.Bookmarks
+  alias Firefly.Discussion.Bookmarks
 
   @impl true
   def mount(_params, _session, socket) do

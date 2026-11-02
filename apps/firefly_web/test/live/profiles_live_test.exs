@@ -1,22 +1,24 @@
 defmodule FireflyWeb.ProfilesLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Directory, Forums, Ignores, Solved}
+  alias Firefly.{Accounts, Directory, Discussion}
+  alias Firefly.Accounts.Ignores
+  alias Firefly.Discussion.Solved
 
   setup do
     bob = user_fixture(%{username: "bob", bio: nil})
-    {:ok, bob} = Forums.update_user(bob, %{bio: "I like **OTP** and long walks."})
+    {:ok, bob} = Accounts.update_user(bob, %{bio: "I like **OTP** and long walks."})
     alice = user_fixture(%{username: "alice"})
     category = category_fixture()
-    {:ok, category} = Forums.update_category(category, %{allow_accepted_answers: true})
+    {:ok, category} = Discussion.update_category(category, %{allow_accepted_answers: true})
     thread = thread_fixture(category, bob, %{title: "Bob's thread"})
     other = thread_fixture(category, alice, %{title: "Alice's question"})
-    {:ok, reply} = Forums.create_post(other, bob, %{body: "Here's the answer"})
-    {:ok, _} = Forums.create_post(thread, alice, %{body: "Nice thread"})
+    {:ok, reply} = Discussion.create_post(other, bob, %{body: "Here's the answer"})
+    {:ok, _} = Discussion.create_post(thread, alice, %{body: "Nice thread"})
     [first] = Firefly.Repo.preload(thread, :posts).posts
-    Forums.like_post(first, alice)
-    Forums.like_post(reply, alice)
-    {:ok, _} = Solved.accept(Forums.get_thread!(other.id), reply, alice)
+    Discussion.like_post(first, alice)
+    Discussion.like_post(reply, alice)
+    {:ok, _} = Solved.accept(Discussion.get_thread!(other.id), reply, alice)
     :ok = Directory.refresh()
 
     %{bob: bob, alice: alice, thread: thread, category: category}
@@ -56,7 +58,7 @@ defmodule FireflyWeb.ProfilesLiveTest do
   end
 
   test "a hidden profile shows only the name and avatar", %{conn: conn, bob: bob} do
-    {:ok, bob} = Forums.update_preferences(bob, %{hide_profile: true})
+    {:ok, bob} = Accounts.update_preferences(bob, %{hide_profile: true})
 
     conn
     |> visit(~p"/users/#{bob}")
@@ -108,6 +110,6 @@ defmodule FireflyWeb.ProfilesLiveTest do
     |> click_button("Save")
     |> assert_has("#flash-info", text: "Privacy settings saved.")
 
-    assert Forums.get_user!(bob.id).hide_profile
+    assert Accounts.get_user!(bob.id).hide_profile
   end
 end

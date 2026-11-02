@@ -5,7 +5,7 @@ defmodule FireflyWeb.MessagesLiveTest do
 
   require Ecto.Query
 
-  alias Firefly.{Forums, Messages, Notifications}
+  alias Firefly.{Accounts, Messaging, Notifications}
 
   setup do
     {:ok, _} = Notifications.start_link()
@@ -16,7 +16,7 @@ defmodule FireflyWeb.MessagesLiveTest do
 
   defp start(sender, recipients, body \\ "Secret plans") do
     {:ok, conversation} =
-      Messages.start_conversation(sender, %{
+      Messaging.start_conversation(sender, %{
         "recipients" => recipients,
         "title" => "Hush",
         "body" => body
@@ -57,7 +57,7 @@ defmodule FireflyWeb.MessagesLiveTest do
     |> assert_has("#messages", text: "Sounds good")
 
     flush()
-    assert [%{kind: "message"}] = Forums.notifications_for(alice)
+    assert [%{kind: "message"}] = Notifications.notifications_for(alice)
   end
 
   test "form errors are shown", %{conn: conn, alice: alice} do
@@ -73,7 +73,7 @@ defmodule FireflyWeb.MessagesLiveTest do
 
   test "users who turned messages off have no Message button", %{conn: conn, alice: alice} do
     {:ok, hermit} =
-      Forums.update_preferences(user_fixture(%{username: "hermit"}), %{
+      Accounts.update_preferences(user_fixture(%{username: "hermit"}), %{
         allow_private_messages: false
       })
 
@@ -91,7 +91,7 @@ defmodule FireflyWeb.MessagesLiveTest do
     |> click_button("Save")
     |> assert_has("#flash-info", text: "Notification settings saved.")
 
-    refute Forums.get_user!(bob.id).allow_private_messages
+    refute Accounts.get_user!(bob.id).allow_private_messages
   end
 
   test "only participants can open a conversation", %{conn: conn, alice: alice} do
@@ -129,7 +129,7 @@ defmodule FireflyWeb.MessagesLiveTest do
     |> assert_has("#participants", text: "@carol")
 
     flush()
-    assert [%{subject: ~s(@alice added you to "Hush")}] = Forums.notifications_for(carol)
+    assert [%{subject: ~s(@alice added you to "Hush")}] = Notifications.notifications_for(carol)
   end
 
   test "leaving a conversation", %{conn: conn, alice: alice, bob: bob} do
@@ -143,7 +143,7 @@ defmodule FireflyWeb.MessagesLiveTest do
     |> assert_has("#flash-info", text: "You left the conversation.")
     |> refute_has("#conversations", text: "Hush")
 
-    refute Messages.participant?(conversation, bob)
+    refute Messaging.participant?(conversation, bob)
   end
 
   test "a deleted author's messages show as from a deleted user", %{
@@ -152,10 +152,13 @@ defmodule FireflyWeb.MessagesLiveTest do
     bob: bob
   } do
     conversation = start(alice, "bob")
-    {:ok, _} = Messages.reply(conversation, bob, %{body: "Bye now"})
+    {:ok, _} = Messaging.reply(conversation, bob, %{body: "Bye now"})
     # As Kaffy's user delete would, once nothing else references bob.
-    Firefly.Repo.delete_all(Ecto.Query.where(Forums.Notification, user_id: ^bob.id))
-    {:ok, _} = Forums.delete_user(bob)
+    Firefly.Repo.delete_all(
+      Ecto.Query.where(Firefly.Notifications.Notification, user_id: ^bob.id)
+    )
+
+    {:ok, _} = Accounts.delete_user(bob)
 
     conn
     |> log_in_as(alice)

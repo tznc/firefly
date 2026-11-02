@@ -1,7 +1,7 @@
 defmodule FireflyWeb.RateLimitTest do
   use FireflyWeb.ConnCase, async: false
 
-  alias Firefly.{Forums, RateLimit}
+  alias Firefly.{Accounts, Discussion, RateLimit}
 
   setup do
     config = Application.get_env(:firefly, RateLimit)
@@ -35,7 +35,7 @@ defmodule FireflyWeb.RateLimitTest do
     username = "victim#{System.unique_integer([:positive])}"
 
     {:ok, _} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: username,
         email: "#{username}@example.com",
         password: "right-password"
@@ -82,7 +82,7 @@ defmodule FireflyWeb.RateLimitTest do
     |> register.("second")
     |> assert_has("#flash-error", text: "too often")
 
-    refute Forums.get_user_by_username("second")
+    refute Accounts.get_user_by_username("second")
   end
 
   test "limits how fast a user can post", %{conn: conn} do
@@ -139,6 +139,6 @@ defmodule FireflyWeb.RateLimitTest do
     |> click_button("Like post #{post.id}")
     |> assert_has("#flash-error", text: RateLimit.message())
 
-    refute Forums.likers([post])[post.id]
+    refute Discussion.likers([post])[post.id]
   end
 end

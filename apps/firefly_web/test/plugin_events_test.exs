@@ -6,10 +6,14 @@ defmodule FireflyWeb.PluginEventsTest do
   import Ecto.Query
   import FireflyPlugins.PluginHelpers
 
-  alias Firefly.{Flags, Forums, Plugins, Polls, Repo, Solved}
-  alias Firefly.Forums.{Notification, Poll, Post, Thread, User}
+  alias Firefly.{Accounts, Discussion, Groups, Plugins, Repo}
+  alias Firefly.Discussion.{Polls, Solved}
+  alias Firefly.Moderation.Flags
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Poll, Post, Thread}
+  alias Firefly.Notifications.Notification
   alias Firefly.Plugin.Runner
-  alias Firefly.Plugins.{Events, Fields, Health, HTTP, Jobs, QueuedEvent, Storage}
+  alias Firefly.Plugins.{Events, Fields, HTTP, Health, Jobs, QueuedEvent, Storage}
 
   setup do
     admin = admin_fixture()
@@ -69,7 +73,7 @@ defmodule FireflyWeb.PluginEventsTest do
       member: member
     } do
       listener(admin, ["post_created"])
-      {:ok, post} = Forums.create_post(thread, member, %{body: "a reply"})
+      {:ok, post} = Discussion.create_post(thread, member, %{body: "a reply"})
 
       assert ["post_created"] = queued_events()
       assert Events.deliver_due() == 1
@@ -100,26 +104,26 @@ defmodule FireflyWeb.PluginEventsTest do
       other = user_fixture()
 
       thread_fixture(category, member, %{title: "Another"})
-      {:ok, reply} = Forums.create_post(thread, other, %{body: "reply"})
-      {:ok, reply} = Forums.update_post(reply, other, %{body: "edited"})
-      :ok = Forums.like_post(reply, member)
+      {:ok, reply} = Discussion.create_post(thread, other, %{body: "reply"})
+      {:ok, reply} = Discussion.update_post(reply, other, %{body: "edited"})
+      :ok = Discussion.like_post(reply, member)
       {:ok, _flag} = Flags.flag_post(reply, member, %{reason: "spam"})
-      {:ok, _} = Forums.delete_post(reply, other)
+      {:ok, _} = Discussion.delete_post(reply, other)
 
       {:ok, _} =
-        Forums.register_user(%{
+        Accounts.register_user(%{
           username: "newbie",
           email: "newbie@example.com",
           password: "password1"
         })
 
-      {:ok, qa} = Forums.create_category(%{title: "Q&A", allow_accepted_answers: true})
+      {:ok, qa} = Discussion.create_category(%{title: "Q&A", allow_accepted_answers: true})
       question = thread_fixture(qa, member, %{title: "How?"})
-      {:ok, answer} = Forums.create_post(question, other, %{body: "Like so"})
+      {:ok, answer} = Discussion.create_post(question, other, %{body: "Like so"})
       {:ok, _} = Solved.accept(question, answer, member)
 
       poll_attrs = Polls.attrs(%{"options_text" => "Yes\nNo"}, 0)
-      {:ok, poll_post} = Forums.create_post(thread, member, %{body: "vote", poll: poll_attrs})
+      {:ok, poll_post} = Discussion.create_post(thread, member, %{body: "vote", poll: poll_attrs})
       {:ok, _} = Polls.close(Repo.get_by!(Poll, post_id: poll_post.id), member)
 
       assert Enum.sort(Enum.uniq(queued_events())) == Enum.sort(Events.names())
@@ -127,10 +131,10 @@ defmodule FireflyWeb.PluginEventsTest do
 
     test "nothing from private categories", %{admin: admin} do
       listener(admin, ["thread_created", "post_created"])
-      {:ok, role} = Forums.create_role("staff")
-      {:ok, private} = Forums.create_category(%{title: "Staff", role_ids: [role.id]})
+      {:ok, role} = Groups.create_role("staff")
+      {:ok, private} = Discussion.create_category(%{title: "Staff", role_ids: [role.id]})
       secret = thread_fixture(private, admin, %{title: "Secret"})
-      {:ok, _} = Forums.create_post(secret, admin, %{body: "psst"})
+      {:ok, _} = Discussion.create_post(secret, admin, %{body: "psst"})
 
       assert queued() == []
     end
@@ -171,7 +175,7 @@ defmodule FireflyWeb.PluginEventsTest do
         enable: true
       )
 
-      {:ok, _} = Forums.create_post(thread, member, %{body: "x"})
+      {:ok, _} = Discussion.create_post(thread, member, %{body: "x"})
       now = DateTime.utc_now()
 
       assert Events.deliver_due(now) == 0
@@ -210,7 +214,7 @@ defmodule FireflyWeb.PluginEventsTest do
         enable: true
       )
 
-      {:ok, _} = Forums.create_post(thread, member, %{body: "hi"})
+      {:ok, _} = Discussion.create_post(thread, member, %{body: "hi"})
       assert Events.deliver_due() == 1
       assert queued() == []
 
@@ -224,7 +228,7 @@ defmodule FireflyWeb.PluginEventsTest do
       member: member
     } do
       listener(admin, ["post_created"])
-      {:ok, _} = Forums.create_post(thread, member, %{body: "x"})
+      {:ok, _} = Discussion.create_post(thread, member, %{body: "x"})
       {:ok, _} = Plugins.disable("listener", admin)
 
       assert Events.deliver_due() == 0
@@ -250,7 +254,7 @@ defmodule FireflyWeb.PluginEventsTest do
       assert %Post{user_id: user_id, body: "Bot here"} = Repo.get!(Post, id)
       assert user_id == bot.id
 
-      {:ok, _} = Forums.close_thread(thread, true, admin)
+      {:ok, _} = Discussion.close_thread(thread, true, admin)
       assert {:error, {:js_error, "This thread is closed to new replies." <> _}} = call(thread.id)
     end
 
@@ -261,8 +265,8 @@ defmodule FireflyWeb.PluginEventsTest do
     end
 
     test "private threads are out of reach", %{admin: admin} do
-      {:ok, role} = Forums.create_role("staff")
-      {:ok, private} = Forums.create_category(%{title: "Staff", role_ids: [role.id]})
+      {:ok, role} = Groups.create_role("staff")
+      {:ok, private} = Discussion.create_category(%{title: "Staff", role_ids: [role.id]})
       secret = thread_fixture(private, admin)
 
       actor(admin, %{"permissions" => ["post", "moderate", "tags"]}, """
@@ -296,7 +300,7 @@ defmodule FireflyWeb.PluginEventsTest do
       # Tag changes on someone else's thread are logged as edits.
       assert ["thread.edit", "thread.edit", "thread.edit", "thread.close", "thread.pin"] =
                Repo.all(
-                 from(a in Firefly.Forums.StaffAction,
+                 from(a in Firefly.Moderation.StaffAction,
                    where: a.actor_id == ^bot.id,
                    order_by: a.id,
                    select: a.action
@@ -582,7 +586,7 @@ defmodule FireflyWeb.PluginEventsTest do
     :ok = Storage.put("keeper", "k", 1)
     :ok = Storage.put({"keeper", member.id}, "k", 1)
     :ok = Fields.put(Plugins.get_active("keeper"), "thread", thread.id, "x", 1)
-    {:ok, _} = Forums.create_post(thread, member, %{body: "x"})
+    {:ok, _} = Discussion.create_post(thread, member, %{body: "x"})
 
     :ok = Plugins.uninstall("keeper", admin)
 
@@ -619,7 +623,7 @@ defmodule FireflyWeb.PluginEventsTest do
       :ok = Fields.put(plugin, "user", member.id, "badge", "gold")
       :ok = Fields.put(plugin, "user", other.id, "badge", "tin")
 
-      export = Firefly.AccountExport.build(member)
+      export = Firefly.Accounts.AccountExport.build(member)
 
       assert export.plugin_storage == %{
                "keeper" => %{"seen" => [1, 2]},
@@ -643,7 +647,7 @@ defmodule FireflyWeb.PluginEventsTest do
       :ok = Fields.put(plugin, "user", other.id, "badge", "tin")
       :ok = Fields.put(plugin, "post", post.id, "x", 1)
 
-      {:ok, _} = Firefly.AccountDeletion.delete_account(member, member.username)
+      {:ok, _} = Firefly.Accounts.AccountDeletion.delete_account(member, member.username)
 
       assert Storage.usage({"keeper", member.id}) == %{keys: 0, bytes: 0}
       assert Storage.get({"keeper", other.id}, "seen") == 1

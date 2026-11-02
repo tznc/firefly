@@ -1,12 +1,12 @@
-defmodule Firefly.Forums.LikesTest do
+defmodule Firefly.Discussion.LikesTest do
   use Firefly.DataCase
   use Bamboo.Test
 
   import Firefly.Fixtures,
     only: [user_fixture: 1, admin_fixture: 0, category_fixture: 0, thread_fixture: 3]
 
-  alias Firefly.Forums
-  alias Firefly.Forums.{Policy, PostLike}
+  alias Firefly.{Discussion, Notifications}
+  alias Firefly.Discussion.{Policy, PostLike}
 
   setup do
     author = user_fixture(%{username: "author"})
@@ -17,20 +17,20 @@ defmodule Firefly.Forums.LikesTest do
 
   test "one like per user per post; unliking removes it", %{post: post} do
     bob = user_fixture(%{username: "bob"})
-    Forums.subscribe("forums:thread:#{post.thread_id}")
+    Discussion.subscribe("forums:thread:#{post.thread_id}")
 
-    assert :ok = Forums.like_post(post, bob)
+    assert :ok = Discussion.like_post(post, bob)
     assert_receive {:post_likes_changed, _}
-    assert :ok = Forums.like_post(post, bob)
+    assert :ok = Discussion.like_post(post, bob)
     refute_receive {:post_likes_changed, _}
 
-    assert Forums.liked?(post, bob)
-    assert %{} = likers = Forums.likers([post])
+    assert Discussion.liked?(post, bob)
+    assert %{} = likers = Discussion.likers([post])
     assert [%{username: "bob"}] = likers[post.id]
 
-    assert :ok = Forums.unlike_post(post, bob)
+    assert :ok = Discussion.unlike_post(post, bob)
     assert_receive {:post_likes_changed, _}
-    refute Forums.liked?(post, bob)
+    refute Discussion.liked?(post, bob)
     assert Repo.all(PostLike) == []
   end
 
@@ -47,32 +47,32 @@ defmodule Firefly.Forums.LikesTest do
     %{author: author, post: post} = ctx
     [bob, carol, dave] = for name <- ~w(bob carol dave), do: user_fixture(%{username: name})
 
-    Forums.like_post(post, bob)
-    assert [notification] = Forums.notifications_for(author)
+    Discussion.like_post(post, bob)
+    assert [notification] = Notifications.notifications_for(author)
     assert notification.kind == "liked"
     assert notification.subject == ~s(@bob liked your post in "Likeable")
 
-    Forums.like_post(post, carol)
+    Discussion.like_post(post, carol)
 
     assert [%{subject: ~s(@carol and 1 other liked your post in "Likeable")}] =
-             Forums.notifications_for(author)
+             Notifications.notifications_for(author)
 
-    Forums.like_post(post, dave)
+    Discussion.like_post(post, dave)
 
     assert [%{subject: ~s(@dave and 2 others liked your post in "Likeable")} = notification] =
-             Forums.notifications_for(author)
+             Notifications.notifications_for(author)
 
     # Once read, toggling an old like isn't news; a new liker is.
-    {:ok, _} = Forums.mark_notification_read(notification)
-    Forums.unlike_post(post, bob)
-    Forums.like_post(post, bob)
-    assert [%{read_at: read_at}] = Forums.notifications_for(author)
+    {:ok, _} = Notifications.mark_notification_read(notification)
+    Discussion.unlike_post(post, bob)
+    Discussion.like_post(post, bob)
+    assert [%{read_at: read_at}] = Notifications.notifications_for(author)
     assert read_at
 
-    Forums.like_post(post, user_fixture(%{username: "eve"}))
+    Discussion.like_post(post, user_fixture(%{username: "eve"}))
 
     assert [%{read_at: nil, subject: ~s(@eve and 3 others liked your post in "Likeable")}, %{}] =
-             Forums.notifications_for(author)
+             Notifications.notifications_for(author)
 
     assert_no_emails_delivered()
   end
@@ -81,18 +81,20 @@ defmodule Firefly.Forums.LikesTest do
     %{author: author, post: post} = ctx
     [bob, carol] = for name <- ~w(bob carol), do: user_fixture(%{username: name})
 
-    Forums.like_post(post, bob)
-    Forums.like_post(post, carol)
-    Forums.unlike_post(post, carol)
-    assert [%{subject: ~s(@bob liked your post in "Likeable")}] = Forums.notifications_for(author)
+    Discussion.like_post(post, bob)
+    Discussion.like_post(post, carol)
+    Discussion.unlike_post(post, carol)
 
-    Forums.unlike_post(post, bob)
-    assert Forums.notifications_for(author) == []
-    assert Forums.unread_notification_count(author) == 0
+    assert [%{subject: ~s(@bob liked your post in "Likeable")}] =
+             Notifications.notifications_for(author)
+
+    Discussion.unlike_post(post, bob)
+    assert Notifications.notifications_for(author) == []
+    assert Notifications.unread_notification_count(author) == 0
 
     # Liking again doesn't renotify
-    Forums.like_post(post, bob)
-    assert Forums.notifications_for(author) == []
+    Discussion.like_post(post, bob)
+    assert Notifications.notifications_for(author) == []
   end
 
   test "likes break ties in Top", %{author: author, thread: thread} do
@@ -100,17 +102,17 @@ defmodule Firefly.Forums.LikesTest do
     fan = user_fixture(%{username: "fan"})
 
     # Both have one post; the newer one leads until the older gets a like.
-    assert [%{id: first} | _] = Forums.top_threads("week", nil)
+    assert [%{id: first} | _] = Discussion.top_threads("week", nil)
     assert first == other.id
 
     [post] = Repo.preload(thread, :posts).posts
-    Forums.like_post(post, fan)
-    assert [%{id: first} | _] = Forums.top_threads("week", nil)
+    Discussion.like_post(post, fan)
+    assert [%{id: first} | _] = Discussion.top_threads("week", nil)
     assert first == thread.id
 
     # More posts still beat more likes.
-    {:ok, _} = Forums.create_post(other, fan, %{body: "busier"})
-    assert [%{id: first} | _] = Forums.top_threads("week", nil)
+    {:ok, _} = Discussion.create_post(other, fan, %{body: "busier"})
+    assert [%{id: first} | _] = Discussion.top_threads("week", nil)
     assert first == other.id
   end
 
@@ -123,13 +125,13 @@ defmodule Firefly.Forums.LikesTest do
     assert {:error, :unauthorized} = Policy.authorize(:like_post, author, params)
     assert {:error, :unauthenticated} = Policy.authorize(:like_post, nil, params)
 
-    {:ok, reply} = Forums.create_post(thread, author, %{body: "reply"})
-    {:ok, archived} = Forums.archive_thread(thread, true, author)
+    {:ok, reply} = Discussion.create_post(thread, author, %{body: "reply"})
+    {:ok, archived} = Discussion.archive_thread(thread, true, author)
 
     assert {:error, :unauthorized} =
              Policy.authorize(:like_post, bob, %{params | thread: archived})
 
-    {:ok, deleted} = Forums.delete_post(reply, admin_fixture())
+    {:ok, deleted} = Discussion.delete_post(reply, admin_fixture())
 
     assert {:error, :unauthorized} =
              Policy.authorize(:like_post, bob, %{post: deleted, thread: thread})

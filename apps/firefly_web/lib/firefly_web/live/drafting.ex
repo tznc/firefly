@@ -1,6 +1,6 @@
 defmodule FireflyWeb.Drafting do
   @moduledoc """
-  Draft autosave for the composer LiveViews (see `Firefly.Drafts`):
+  Draft autosave for the composer LiveViews (see `Firefly.Discussion.Drafts`):
   `assign_draft/2` on mount loads the draft to restore, `autosave/2` on
   each form change saves it, `discard_draft/1` drops it, and
   `draft_status/1` shows that it's saved with a "Discard draft" button
@@ -8,7 +8,7 @@ defmodule FireflyWeb.Drafting do
   """
   use FireflyWeb, :html
 
-  alias Firefly.Drafts
+  alias Firefly.Discussion.Drafts
 
   @doc "Assigns the user's `:draft` for `context` (nil if none) for the composer to restore."
   def assign_draft(socket, context) do

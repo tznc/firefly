@@ -40,12 +40,31 @@ defmodule Firefly.Plugins do
   cache is off in tests (`config :firefly, :plugins_cache`).
   """
 
+  use Boundary,
+    top_level?: true,
+    check: [out: false],
+    exports: [
+      Events,
+      Fields,
+      Storage,
+      Egress,
+      HTTP,
+      ModerationHooks,
+      Content,
+      UI,
+      Health,
+      Bots,
+      Registry,
+      InstalledPlugin
+    ]
+
   import Ecto.Query
 
   require Logger
 
-  alias Firefly.{Forums, Plugin, Repo, StaffLog}
-  alias Firefly.Forums.User
+  alias Firefly.{Notifications, Plugin, Repo}
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.Accounts.User
   alias Firefly.Plugin.{Graph, Manifest, Runner, Sandbox, Settings}
   alias Firefly.Plugins.{Bots, Events, Fields, Health, InstalledPlugin, Jobs, Storage}
 
@@ -707,7 +726,7 @@ defmodule Firefly.Plugins do
         else: "#{reason}\n\nSuspended until it's enabled again: #{Enum.join(suspended, ", ")}."
 
     for admin <- admins() do
-      Forums.notify(admin, %{
+      Notifications.notify(admin, %{
         kind: "plugin_disabled",
         subject: "Plugin #{id} was turned off after failing repeatedly",
         body: body,

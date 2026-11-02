@@ -2,7 +2,7 @@ defmodule FireflyWeb.Plugs.RequireAdmin do
   @moduledoc """
   A `Plug` that redirects to the home page unless the current user is an
   admin, and to their security settings if they must set up two-factor
-  authentication first (see `Firefly.TwoFactor.must_enroll?/1`).
+  authentication first (see `Firefly.Accounts.TwoFactor.must_enroll?/1`).
   """
 
   import Plug.Conn
@@ -16,7 +16,7 @@ defmodule FireflyWeb.Plugs.RequireAdmin do
       not admin?(conn) ->
         refuse(conn, "You must be an administrator to access this page.", "/")
 
-      Firefly.TwoFactor.must_enroll?(conn.assigns.current_user) ->
+      Firefly.Accounts.TwoFactor.must_enroll?(conn.assigns.current_user) ->
         refuse(conn, "Set up two-factor authentication to go on.", "/settings/security")
 
       true ->

@@ -12,8 +12,8 @@ defmodule FireflyWeb.GroupLive.Show do
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.{Forums, Groups, Messages}
-  alias Firefly.Forums.RoleMembership
+  alias Firefly.{Accounts, Groups, Messaging}
+  alias Firefly.Groups.RoleMembership
 
   @level_labels %{
     "watching" => "Watching: every message, by email too",
@@ -40,7 +40,7 @@ defmodule FireflyWeb.GroupLive.Show do
       group: group,
       member?: Groups.member?(group, user),
       manager?: Groups.manager?(group, user),
-      admin?: user != nil and Forums.admin?(user),
+      admin?: user != nil and Accounts.admin?(user),
       pending: Groups.pending_for(group, user),
       level: Groups.notification_level(group, user),
       members: Groups.members(group),
@@ -73,7 +73,7 @@ defmodule FireflyWeb.GroupLive.Show do
     do: assign(socket, :posts, Groups.activity(socket.assigns.group, socket.assigns.current_user))
 
   defp load_tab(socket, "messages", params),
-    do: assign(socket, :inbox, Messages.group_inbox(socket.assigns.group, params["page"]))
+    do: assign(socket, :inbox, Messaging.group_inbox(socket.assigns.group, params["page"]))
 
   defp load_tab(socket, _tab, _params), do: socket
 
@@ -133,7 +133,7 @@ defmodule FireflyWeb.GroupLive.Show do
   end
 
   def handle_event("remove_member", %{"user_id" => user_id}, socket) do
-    member = Forums.get_user!(user_id)
+    member = Accounts.get_user!(user_id)
 
     case Groups.remove_member(socket.assigns.group, member, socket.assigns.current_user) do
       {:ok, _} -> done(socket, "Removed @#{member.username}.")
@@ -142,7 +142,7 @@ defmodule FireflyWeb.GroupLive.Show do
   end
 
   def handle_event("set_owner", %{"user_id" => user_id, "owner" => owner}, socket) do
-    member = Forums.get_user!(user_id)
+    member = Accounts.get_user!(user_id)
     %{group: group, current_user: admin} = socket.assigns
 
     case Groups.set_owner(group, member, owner == "true", admin) do

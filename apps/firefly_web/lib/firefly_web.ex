@@ -12,6 +12,30 @@ defmodule FireflyWeb do
   Do NOT define functions inside the quoted expressions.
   """
 
+  # The web interface uses the domain only through the contexts' public
+  # APIs (each context's root module and exports).
+  use Boundary,
+    top_level?: true,
+    deps: [
+      Firefly,
+      Firefly.Accounts,
+      Firefly.Badges,
+      Firefly.Directory,
+      Firefly.Discussion,
+      Firefly.Groups,
+      Firefly.Messaging,
+      Firefly.Moderation,
+      Firefly.Notifications,
+      Firefly.Plugin,
+      Firefly.Plugins,
+      Firefly.Rendering,
+      Firefly.SiteSettings,
+      Firefly.TrustLevels,
+      Firefly.Uploads,
+      FireflyPlugins
+    ],
+    exports: []
+
   def static_paths,
     do: ~w(assets fonts images vendor favicon.ico robots.txt manifest.json service-worker.js)
 

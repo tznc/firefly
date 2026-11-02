@@ -46,7 +46,7 @@ defmodule FireflyWeb.Endpoint do
     only: FireflyWeb.static_paths()
   )
 
-  # The standard emoji list, which the domain owns too (see Firefly.Emoji).
+  # The standard emoji list, which the domain owns too (see Firefly.Rendering.Emoji).
   plug(Plug.Static, at: "/", from: :firefly, gzip: false, only: ~w(vendor))
 
   # Code reloading can be explicitly enabled under the

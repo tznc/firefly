@@ -375,14 +375,14 @@ across nodes. A failed run isn't retried before its next time.
 
 `moderate_post` (needs `read`) runs synchronously before a new thread,
 reply or edited body is saved, for every way of posting (web, API, inbound
-email all go through `Firefly.Forums`), as a changeset validation:
+email all go through `Firefly.Discussion`), as a changeset validation:
 
 - `reject`: the post isn't saved; the author sees the message as a form
   (or API) error. The first rejection wins.
 - `queue`: the post waits in the review queue at `/staff/review`, which
   shows "Plugin <name>: <reason>"; staff approve or reject it as usual.
 
-The time limit is strict (300 ms, `Firefly.Plugins.Moderation,
+The time limit is strict (300 ms, `Firefly.Plugins.ModerationHooks,
 timeout:`). If a plugin fails or times out, posting goes ahead by default
 (fail open); staff can switch a plugin to fail closed on its admin page, so
 posts are refused with a "try again" message instead. Admins' posts and

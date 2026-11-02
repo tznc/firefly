@@ -1,7 +1,7 @@
 defmodule FireflyWeb.AuthLive.Login do
   @moduledoc """
   Choose how to log in: single sign-on or a social login (one button per
-  enabled provider; see `Firefly.Auth`) or a username and password
+  enabled provider; see `Firefly.Accounts.Auth`) or a username and password
   (unless single sign-on is the only way in), a passkey or an emailed
   link.
   """
@@ -12,16 +12,16 @@ defmodule FireflyWeb.AuthLive.Login do
     {:ok,
      socket
      |> assign(:page_title, "Log in")
-     |> assign(:providers, Firefly.Auth.enabled_providers())
-     |> assign(:password_login, Firefly.Auth.password_login?())
-     |> assign(:passkeys, Firefly.Passkeys.enabled?())
-     |> assign(:magic_links, Firefly.MagicLinks.enabled?())}
+     |> assign(:providers, Firefly.Accounts.Auth.enabled_providers())
+     |> assign(:password_login, Firefly.Accounts.Auth.password_login?())
+     |> assign(:passkeys, Firefly.Accounts.Passkeys.enabled?())
+     |> assign(:magic_links, Firefly.Accounts.MagicLinks.enabled?())}
   end
 
   attr :conditional, :boolean, default: false
 
   @doc """
-  The passkey login (see `Firefly.Passkeys`): a button, and with
+  The passkey login (see `Firefly.Accounts.Passkeys`): a button, and with
   `conditional` the browser's passkey autofill on the page's username
   field (`autocomplete="username webauthn"`). The `PasskeyLogin` hook
   fills the hidden fields with the browser's answer and posts the form.
@@ -65,11 +65,11 @@ defmodule FireflyWeb.AuthLive.Login do
               id={"login-#{provider}"}
               class="btn btn-neutral"
             >
-              Log in with {Firefly.Auth.label(provider)}
+              Log in with {Firefly.Accounts.Auth.label(provider)}
             </a>
             <div :if={@providers != [] and @password_login} class="divider text-xs">or</div>
             <.link
-              :if={@password_login and Firefly.Forums.registration_open?()}
+              :if={@password_login and Firefly.Accounts.registration_open?()}
               navigate={~p"/register"}
               class="btn btn-primary"
             >

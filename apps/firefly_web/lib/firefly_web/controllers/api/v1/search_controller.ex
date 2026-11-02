@@ -8,7 +8,8 @@ defmodule FireflyWeb.Api.V1.SearchController do
   """
   use FireflyWeb, :controller
 
-  alias Firefly.{RateLimit, Search}
+  alias Firefly.RateLimit
+  alias Firefly.Discussion.Search
 
   def index(conn, params) do
     user = conn.assigns[:current_user]

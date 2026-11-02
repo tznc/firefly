@@ -6,7 +6,7 @@ defmodule FireflyWeb.DigestController do
   """
   use FireflyWeb, :controller
 
-  alias Firefly.Digests
+  alias Firefly.Notifications.Digests
 
   def unsubscribe(conn, %{"token" => token}) do
     case Digests.unsubscribe(token) do

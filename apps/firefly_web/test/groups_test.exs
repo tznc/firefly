@@ -6,8 +6,12 @@ defmodule FireflyWeb.GroupsTest do
   import Phoenix.LiveViewTest, only: [live: 2, render_click: 3]
   require Phoenix.LiveViewTest
 
-  alias Firefly.{Forums, Groups, Markdown, Mentions, Messages, Notifications, Repo}
-  alias Firefly.Forums.{Conversation, Role, StaffAction}
+  alias Firefly.{Discussion, Groups, Messaging, Notifications, Repo}
+  alias Firefly.Discussion.Mentions
+  alias Firefly.Rendering.Markdown
+  alias Firefly.Groups.Role
+  alias Firefly.Messaging.Conversation
+  alias Firefly.Moderation.StaffAction
 
   setup do
     admin = admin_fixture(%{username: "boss"})
@@ -26,7 +30,8 @@ defmodule FireflyWeb.GroupsTest do
     group
   end
 
-  defp kinds(user, kind), do: Enum.filter(Forums.notifications_for(user), &(&1.kind == kind))
+  defp kinds(user, kind),
+    do: Enum.filter(Notifications.notifications_for(user), &(&1.kind == kind))
 
   defp flush, do: :sys.get_state(Notifications)
 
@@ -232,7 +237,7 @@ defmodule FireflyWeb.GroupsTest do
     end
 
     defp mention(thread, author, body \\ "Ping @team!") do
-      {:ok, post} = Forums.create_post(thread, author, %{body: body})
+      {:ok, post} = Discussion.create_post(thread, author, %{body: body})
       flush()
       post
     end
@@ -258,7 +263,7 @@ defmodule FireflyWeb.GroupsTest do
       post = mention(thread, member, "Hey @Team and @olivia")
       # Olivia was mentioned by name: one notification, not two.
       assert [%{post_id: id}] =
-               Forums.notifications_for(owner)
+               Notifications.notifications_for(owner)
                |> Enum.filter(&(&1.kind in ~w(mentioned group_mentioned)))
 
       assert id == post.id
@@ -269,7 +274,7 @@ defmodule FireflyWeb.GroupsTest do
       assert subject =~ "mentioned @team"
 
       # An edit doesn't notify again.
-      {:ok, _} = Forums.update_post(post, admin, %{body: "@team again, edited"})
+      {:ok, _} = Discussion.update_post(post, admin, %{body: "@team again, edited"})
       flush()
       assert length(kinds(member, "group_mentioned")) == 1
     end
@@ -279,7 +284,7 @@ defmodule FireflyWeb.GroupsTest do
       settings(team, %{"mentionable" => "everyone"}, admin)
       {:ok, leads} = Groups.create_group(%{name: "leads"}, admin)
       secret = category_fixture("Secret")
-      {:ok, _} = Forums.update_category(secret, %{role_ids: [leads.id]})
+      {:ok, _} = Discussion.update_category(secret, %{role_ids: [leads.id]})
       {:ok, _} = Groups.add_member(leads, "boss", admin)
       thread = thread_fixture(secret, admin)
       flush()
@@ -305,7 +310,7 @@ defmodule FireflyWeb.GroupsTest do
 
     defp message_group(sender, recipients \\ "@team") do
       result =
-        Messages.start_conversation(sender, %{
+        Messaging.start_conversation(sender, %{
           "recipients" => recipients,
           "title" => "Help",
           "body" => "Please"
@@ -333,7 +338,7 @@ defmodule FireflyWeb.GroupsTest do
       {:ok, conversation} = message_group(member)
       assert %Conversation{role_id: role_id} = conversation
       assert role_id == team.id
-      refute Messages.participant?(conversation, owner)
+      refute Messaging.participant?(conversation, owner)
 
       assert [%{subject: subject}] = kinds(owner, "group_message")
       assert subject =~ "@mia messaged @team"
@@ -348,11 +353,11 @@ defmodule FireflyWeb.GroupsTest do
       |> click_link("Help")
       |> assert_has("#messages", text: "Please")
 
-      {:ok, _} = Messages.reply(conversation, owner, %{"body" => "On it"})
+      {:ok, _} = Messaging.reply(conversation, owner, %{"body" => "On it"})
       flush()
-      assert Messages.participant?(conversation, owner)
+      assert Messaging.participant?(conversation, owner)
       # Mia's a participant: a plain message notification.
-      assert Enum.any?(Forums.notifications_for(member), &(&1.kind == "message"))
+      assert Enum.any?(Notifications.notifications_for(member), &(&1.kind == "message"))
 
       # Outsiders and former members can't read it.
       conn
@@ -361,7 +366,7 @@ defmodule FireflyWeb.GroupsTest do
       |> refute_has("#messages", text: "Please")
 
       {:ok, _} = Groups.remove_member(team, tracker, tracker)
-      refute Messages.reader?(conversation, tracker)
+      refute Messaging.reader?(conversation, tracker)
     end
 
     test "members choose their level", %{conn: conn, team: team, member: member} do
@@ -400,7 +405,7 @@ defmodule FireflyWeb.GroupsTest do
     assert %{memberships: memberships} = Groups.export(owner)
     assert Enum.any?(memberships, &match?(%{group: "team", owner: true}, &1))
 
-    {:ok, _} = Firefly.AccountDeletion.delete_account(outsider, outsider.username)
+    {:ok, _} = Firefly.Accounts.AccountDeletion.delete_account(outsider, outsider.username)
     assert Repo.all(from(r in "group_requests", select: r.id)) == []
   end
 end

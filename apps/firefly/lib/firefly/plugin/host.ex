@@ -12,7 +12,7 @@ defmodule Firefly.Plugin.Host do
 
   Whatever a function reads or writes goes through the same contexts and
   policies as people: reads see only what an anonymous visitor may (see
-  `Firefly.Forums.Post.readable_by?/2` and the `:view_thread` policy),
+  `Firefly.Discussion.Post.readable_by?/2` and the `:view_thread` policy),
   so private categories stay private.
 
   ## Functions
@@ -51,7 +51,7 @@ defmodule Firefly.Plugin.Host do
 
   Writes act as the plugin's bot user (see `Firefly.Plugins.Bots`)
   through the same contexts, policies and checks as a member's
-  (`Firefly.Posting`, rate limits, tag groups, the review queue), and
+  (`Firefly.Moderation.Posting`, rate limits, tag groups, the review queue), and
   only on threads and posts anyone can read.
 
   ## Network access
@@ -73,8 +73,21 @@ defmodule Firefly.Plugin.Host do
 
   require Logger
 
-  alias Firefly.{Flags, Forums, Plugin, Plugins, Posting, RateLimit, Repo, SiteSettings, URLs}
-  alias Firefly.Forums.{Post, Thread, User}
+  alias Firefly.{
+    Accounts,
+    Discussion,
+    Notifications,
+    Plugin,
+    Plugins,
+    RateLimit,
+    Repo,
+    SiteSettings,
+    URLs
+  }
+
+  alias Firefly.Moderation.{Flags, Posting}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Plugin.{Manifest, Runner}
   alias Firefly.Plugins.{Bots, Egress, Fields, HTTP, Storage}
 
@@ -311,8 +324,8 @@ defmodule Firefly.Plugin.Host do
   defp run("users.get", _plugin, args) do
     user =
       case args do
-        %{"id" => id} when is_integer(id) -> Forums.get_user(id)
-        %{"username" => name} when is_binary(name) -> Forums.get_user_by_username(name)
+        %{"id" => id} when is_integer(id) -> Accounts.get_user(id)
+        %{"username" => name} when is_binary(name) -> Accounts.get_user_by_username(name)
         _ -> nil
       end
 
@@ -340,7 +353,7 @@ defmodule Firefly.Plugin.Host do
       names = Enum.map(thread.tags, & &1.name)
       names = if name == "tags.add", do: names ++ [tag], else: names -- [tag]
 
-      case Forums.update_thread(thread, %{tags: Enum.join(names, ",")}, bot) do
+      case Discussion.update_thread(thread, %{tags: Enum.join(names, ",")}, bot) do
         {:ok, updated} ->
           {:ok, Enum.map(Repo.preload(updated, :tags, force: true).tags, & &1.name)}
 
@@ -355,7 +368,7 @@ defmodule Firefly.Plugin.Host do
 
     with {:ok, thread} <- public_thread(id),
          :ok <- bot |> Posting.check(thread) |> message() do
-      case Forums.create_post(thread, bot, %{body: body}) do
+      case Discussion.create_post(thread, bot, %{body: body}) do
         {:ok, post} -> {:ok, %{id: post.id}}
         {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset_message(changeset)}
         {:error, reason} -> {:error, Posting.message(reason)}
@@ -383,7 +396,7 @@ defmodule Firefly.Plugin.Host do
          true <- String.starts_with?(path, "/") and not String.starts_with?(path, "//"),
          :ok <- RateLimit.check(:plugin_notify, plugin.id) do
       {:ok, _} =
-        Forums.notify(user, %{
+        Notifications.notify(user, %{
           kind: "plugin",
           subject: String.slice("#{plugin.manifest.name}: #{subject}", 0, 200),
           body: String.slice(body, 0, 2_000),
@@ -408,8 +421,8 @@ defmodule Firefly.Plugin.Host do
          :ok <- permit(:moderate_thread, bot, thread) do
       result =
         if name == "threads.close",
-          do: Forums.close_thread(thread, on, bot),
-          else: Forums.pin_thread(thread, on, bot)
+          do: Discussion.close_thread(thread, on, bot),
+          else: Discussion.pin_thread(thread, on, bot)
 
       case result do
         {:ok, _thread} -> {:ok, nil}
@@ -434,7 +447,7 @@ defmodule Firefly.Plugin.Host do
   defp kv_scope(plugin, %{"user_id" => nil}), do: {:ok, plugin.id}
 
   defp kv_scope(plugin, %{"user_id" => id}) when is_integer(id) do
-    case Forums.get_user(id) do
+    case Accounts.get_user(id) do
       %User{deleted_at: nil} -> {:ok, {plugin.id, id}}
       _ -> {:error, "user not found"}
     end
@@ -459,7 +472,7 @@ defmodule Firefly.Plugin.Host do
   defp message({:error, reason}), do: {:error, Posting.message(reason)}
 
   defp permit(action, user, thread) do
-    case Bodyguard.permit(Forums, action, user, thread) do
+    case Bodyguard.permit(Discussion, action, user, thread) do
       :ok -> :ok
       {:error, _} -> {:error, "not allowed"}
     end
@@ -492,17 +505,17 @@ defmodule Firefly.Plugin.Host do
       case type do
         "post" -> match?({:ok, _}, public_post(id))
         "thread" -> match?({:ok, _}, public_thread(id))
-        "user" -> match?(%User{deleted_at: nil}, Forums.get_user(id))
+        "user" -> match?(%User{deleted_at: nil}, Accounts.get_user(id))
         _ -> false
       end
 
     if found, do: :ok, else: {:error, "not found"}
   end
 
-  defp recipient(%{"user_id" => id}) when is_integer(id), do: Forums.get_user(id)
+  defp recipient(%{"user_id" => id}) when is_integer(id), do: Accounts.get_user(id)
 
   defp recipient(%{"username" => name}) when is_binary(name),
-    do: Forums.get_user_by_username(name)
+    do: Accounts.get_user_by_username(name)
 
   defp recipient(_args), do: nil
 
@@ -522,5 +535,5 @@ defmodule Firefly.Plugin.Host do
   defp text(message) when is_binary(message), do: message
   defp text(other), do: inspect(other)
 
-  defp public_thread?(thread), do: Bodyguard.permit?(Forums, :view_thread, nil, thread)
+  defp public_thread?(thread), do: Bodyguard.permit?(Discussion, :view_thread, nil, thread)
 end

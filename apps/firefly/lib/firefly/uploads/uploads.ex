@@ -23,11 +23,16 @@ defmodule Firefly.Uploads do
   links them.
   """
 
+  use Boundary, top_level?: true, check: [out: false], exports: [Upload, Processor, Storage]
+
   import Ecto.Query
   require Logger
 
-  alias Firefly.{Forums, Messages, RateLimit, Repo, SiteSettings, StaffLog}
-  alias Firefly.Forums.{Draft, Message, Post, User}
+  alias Firefly.{Accounts, Discussion, Messaging, RateLimit, Repo, SiteSettings}
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Draft, Post}
+  alias Firefly.Messaging.Message
   alias Firefly.Uploads.{Processor, Storage, Upload}
 
   # Uploads stored processed their own way, attached as soon as they're made.
@@ -43,7 +48,7 @@ defmodule Firefly.Uploads do
   @doc """
   Stores the file at `path` (named `filename` by its uploader) as `user`'s.
   `variant: "avatar"` makes it the square avatar variant, attached to the
-  user; `variant: "emoji"` a custom emoji (see `Firefly.Emoji`).
+  user; `variant: "emoji"` a custom emoji (see `Firefly.Rendering.Emoji`).
   Returns `{:ok, upload}`, `{:error, :rate_limited}` or `{:error, message}`.
   """
   def create(%User{} = user, path, filename, opts \\ []) do
@@ -265,7 +270,7 @@ defmodule Firefly.Uploads do
   def readable?(%Upload{} = upload, viewer) do
     cond do
       upload.attached_to in @variants -> true
-      viewer && Forums.admin?(viewer) -> true
+      viewer && Accounts.admin?(viewer) -> true
       true -> attachment_readable?(upload, viewer)
     end
   end
@@ -278,7 +283,7 @@ defmodule Firefly.Uploads do
 
       post ->
         Post.readable_by?(post, viewer) and
-          Bodyguard.permit?(Forums, :view_thread, viewer, post.thread)
+          Bodyguard.permit?(Discussion, :view_thread, viewer, post.thread)
     end
   end
 
@@ -286,7 +291,7 @@ defmodule Firefly.Uploads do
        when is_integer(id) do
     case Repo.one(from(m in Message, where: m.id == ^id, preload: :conversation)) do
       nil -> false
-      message -> Messages.reader?(message.conversation, viewer)
+      message -> Messaging.reader?(message.conversation, viewer)
     end
   end
 
@@ -473,7 +478,7 @@ defmodule Firefly.Uploads do
 
     remove(upload)
     # Its emoji went with it (the foreign key cascades).
-    if upload.attached_to == "emoji", do: Firefly.Emoji.image_deleted()
+    if upload.attached_to == "emoji", do: Firefly.Rendering.Emoji.image_deleted()
     :ok
   end
 

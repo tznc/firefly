@@ -8,5 +8,5 @@ defmodule FireflyWeb.ThreadLive.Unread do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  defp load(user), do: Forums.unread_threads(user)
+  defp load(user), do: Discussion.unread_threads(user)
 end

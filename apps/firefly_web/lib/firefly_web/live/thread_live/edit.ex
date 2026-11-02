@@ -4,13 +4,15 @@ defmodule FireflyWeb.ThreadLive.Edit do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Forums, Posting, Repo, Tags}
-  alias Firefly.Forums.{Tag, Thread}
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Discussion.Tags
+  alias Firefly.Moderation.Posting
+  alias Firefly.Discussion.{Tag, Thread}
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
-    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
-    thread = Forums.get_visible_thread!(category, id, socket.assigns.current_user)
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Discussion.get_visible_thread!(category, id, socket.assigns.current_user)
 
     if can?(socket.assigns.current_user, :update_thread, thread),
       do: mount_form(socket, category, thread),
@@ -31,7 +33,7 @@ defmodule FireflyWeb.ThreadLive.Edit do
        :tags,
        thread |> Repo.preload(:tags) |> Map.get(:tags) |> Enum.map_join(", ", & &1.name)
      )
-     |> assign(:form, to_form(Forums.change_thread(thread)))
+     |> assign(:form, to_form(Discussion.change_thread(thread)))
      |> assign(:tag_groups, Tags.picker(socket.assigns.current_user))}
   end
 
@@ -52,7 +54,8 @@ defmodule FireflyWeb.ThreadLive.Edit do
     %{thread: thread, current_user: user} = socket.assigns
 
     with :ok <- Posting.check(user, :like),
-         {:ok, thread} <- Forums.update_thread(thread, Map.take(params, ["title", "tags"]), user) do
+         {:ok, thread} <-
+           Discussion.update_thread(thread, Map.take(params, ["title", "tags"]), user) do
       {:noreply,
        socket
        |> put_flash(:info, "Thread updated successfully.")

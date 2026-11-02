@@ -1,7 +1,7 @@
 defmodule FireflyWeb.ThreadLive.New do
   @moduledoc """
   Starts a new thread (title, tags and first post, optionally with a poll;
-  see `Firefly.Polls`) in a category. What's typed is kept as a draft
+  see `Firefly.Discussion.Polls`) in a category. What's typed is kept as a draft
   for that category (see `FireflyWeb.Drafting`, the poll excepted)
   until the thread is created.
   """
@@ -9,9 +9,10 @@ defmodule FireflyWeb.ThreadLive.New do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Forums, Polls, Tags}
+  alias Firefly.Discussion
+  alias Firefly.Discussion.{Polls, Tags}
   alias FireflyWeb.LocalTime
-  alias Firefly.Forums.{Tag, Thread}
+  alias Firefly.Discussion.{Tag, Thread}
   alias FireflyWeb.{Editor, PollComponents}
 
   import FireflyWeb.Drafting
@@ -19,7 +20,7 @@ defmodule FireflyWeb.ThreadLive.New do
 
   @impl true
   def mount(%{"category_id" => category_id}, _session, socket) do
-    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
 
     socket = assign_draft(socket, {:new_thread, category})
     draft = socket.assigns.draft || %{title: "", tags: "", body: ""}
@@ -62,19 +63,19 @@ defmodule FireflyWeb.ThreadLive.New do
   def handle_event("save", %{"thread" => params} = all, socket) do
     socket = keep_poll_params(socket, all["poll"])
 
-    case Firefly.Posting.check(socket.assigns.current_user) do
+    case Firefly.Moderation.Posting.check(socket.assigns.current_user) do
       :ok ->
         create_thread(socket, params)
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, Firefly.Posting.message(reason))}
+        {:noreply, put_flash(socket, :error, Firefly.Moderation.Posting.message(reason))}
     end
   end
 
   defp create_thread(socket, params) do
     attrs = %{title: params["title"], tags: params["tags"], body: params["body"]}
 
-    case Forums.create_thread(
+    case Discussion.create_thread(
            socket.assigns.category,
            socket.assigns.current_user,
            with_poll(socket, attrs)
@@ -85,7 +86,7 @@ defmodule FireflyWeb.ThreadLive.New do
          |> discard_draft()
          |> put_flash(
            :info,
-           if(Firefly.Forums.Post.queued?(thread.first_post),
+           if(Firefly.Discussion.Post.queued?(thread.first_post),
              do: "Thanks! Your thread is awaiting approval by staff.",
              else: "Thread created successfully."
            )

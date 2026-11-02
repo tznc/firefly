@@ -15,8 +15,8 @@ defmodule FireflyWeb.AuthLive.Identity do
      socket
      |> assign(:page_title, "Log In")
      |> assign(:trigger_submit, false)
-     |> assign(:passkeys, Firefly.Passkeys.enabled?())
-     |> assign(:magic_links, Firefly.MagicLinks.enabled?())
+     |> assign(:passkeys, Firefly.Accounts.Passkeys.enabled?())
+     |> assign(:magic_links, Firefly.Accounts.MagicLinks.enabled?())
      |> assign(:form, to_form(%{"username" => "", "password" => ""}, as: :user))}
   end
 
@@ -47,7 +47,7 @@ defmodule FireflyWeb.AuthLive.Identity do
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
         <.page_header title="Log In">
-          <:subtitle :if={Firefly.Forums.registration_open?()}>
+          <:subtitle :if={Firefly.Accounts.registration_open?()}>
             New here? <.link navigate={~p"/register"} class="link">Create an account</.link>
           </:subtitle>
         </.page_header>

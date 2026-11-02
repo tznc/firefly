@@ -1,16 +1,15 @@
 defmodule FireflyWeb.DiscourseConnectController do
   @moduledoc """
   Logging in through a DiscourseConnect provider (see
-  `Firefly.Auth.DiscourseConnect`): `request` sends the browser there
+  `Firefly.Accounts.Auth.DiscourseConnect`): `request` sends the browser there
   with a fresh nonce (also kept in this session), `callback` checks what
   comes back and logs in, or, for a user already logged in, connects the
   provider's account to them (from the settings' Logins tab).
   """
   use FireflyWeb, :controller
 
-  alias Firefly.Auth
-  alias Firefly.Auth.DiscourseConnect
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.{Auth, User}
+  alias Firefly.Accounts.Auth.DiscourseConnect
   alias FireflyWeb.Login
 
   def request(conn, _params) do

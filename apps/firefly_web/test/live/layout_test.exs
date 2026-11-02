@@ -1,7 +1,7 @@
 defmodule FireflyWeb.LayoutTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.Groups
 
   test "pages load the app's CSS and JS", %{conn: conn} do
     html = conn |> get(~p"/categories") |> html_response(200)
@@ -49,8 +49,8 @@ defmodule FireflyWeb.LayoutTest do
     |> assert_has(~s(nav a[href="/users/#{user.id}"]), text: "Your profile")
     |> refute_has(~s(nav a[href="/admin"]))
 
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(user, role)
+    {:ok, role} = Groups.create_role("admin")
+    {:ok, _} = Groups.add_role(user, role)
 
     conn
     |> log_in_as(user)

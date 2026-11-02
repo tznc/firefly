@@ -1,12 +1,13 @@
 defmodule Firefly.EmailsTest do
   use Firefly.DataCase
 
-  alias Firefly.{Emails, Forums, ReplyAddress}
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Notifications.{Emails, ReplyAddress}
 
   test "notification emails come from Firefly with a signed per-user reply address" do
-    {:ok, user} = Forums.create_user(%{username: "u", name: "U", email: "u@example.com"})
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
-    {:ok, thread} = Forums.create_thread(category, user, %{title: "T", body: "B"})
+    {:ok, user} = Accounts.create_user(%{username: "u", name: "U", email: "u@example.com"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+    {:ok, thread} = Discussion.create_thread(category, user, %{title: "T", body: "B"})
     [post] = Repo.preload(thread, :posts).posts
 
     email = Emails.thread_new_post_notification(user, thread, post)

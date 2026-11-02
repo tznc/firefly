@@ -4,7 +4,6 @@ defmodule FireflyWeb.Admin do
   users with the "admin" role (see `FireflyWeb.Plugs.RequireAdmin`).
   """
 
-  alias Firefly.Forums
   alias FireflyWeb.Admin
 
   def resources(_conn) do
@@ -12,18 +11,24 @@ defmodule FireflyWeb.Admin do
       forums: [
         name: "Forums",
         resources: [
-          category: [schema: Forums.Category, admin: Admin.CategoryAdmin],
-          thread: [schema: Forums.Thread, admin: Admin.ThreadAdmin],
-          post: [schema: Forums.Post, admin: Admin.PostAdmin]
+          category: [schema: Firefly.Discussion.Category, admin: Admin.CategoryAdmin],
+          thread: [schema: Firefly.Discussion.Thread, admin: Admin.ThreadAdmin],
+          post: [schema: Firefly.Discussion.Post, admin: Admin.PostAdmin]
         ]
       ],
       accounts: [
         name: "Accounts",
         resources: [
-          user: [schema: Forums.User, admin: Admin.UserAdmin],
-          role: [schema: Forums.Role, admin: Admin.RoleAdmin],
-          role_membership: [schema: Forums.RoleMembership, admin: Admin.RoleMembershipAdmin],
-          notification: [schema: Forums.Notification, admin: Admin.NotificationAdmin]
+          user: [schema: Firefly.Accounts.User, admin: Admin.UserAdmin],
+          role: [schema: Firefly.Groups.Role, admin: Admin.RoleAdmin],
+          role_membership: [
+            schema: Firefly.Groups.RoleMembership,
+            admin: Admin.RoleMembershipAdmin
+          ],
+          notification: [
+            schema: Firefly.Notifications.Notification,
+            admin: Admin.NotificationAdmin
+          ]
         ]
       ]
     ]

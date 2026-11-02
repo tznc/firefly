@@ -4,17 +4,21 @@ defmodule Firefly.SolvedTest do
   import Firefly.Fixtures,
     only: [user_fixture: 0, admin_fixture: 0, category_fixture: 1, thread_fixture: 3]
 
-  alias Firefly.{Flags, Forums, Penalties, Review, Search, Solved, TopicTools}
-  alias Firefly.Forums.{Notification, Post, StaffAction, Thread}
+  alias Firefly.Discussion
+  alias Firefly.Discussion.{Search, Solved}
+  alias Firefly.Moderation.{Flags, Penalties, Review, TopicTools}
+  alias Firefly.Discussion.{Post, Thread}
+  alias Firefly.Moderation.StaffAction
+  alias Firefly.Notifications.Notification
 
   setup do
     admin = admin_fixture()
     asker = user_fixture()
     helper = user_fixture()
-    {:ok, qa} = Forums.create_category(%{title: "Q&A", allow_accepted_answers: true})
+    {:ok, qa} = Discussion.create_category(%{title: "Q&A", allow_accepted_answers: true})
     thread = thread_fixture(qa, asker, %{title: "How do I?", body: "the question"})
-    {:ok, answer} = Forums.create_post(thread, helper, %{body: "like this"})
-    {:ok, other} = Forums.create_post(thread, admin, %{body: "or like that"})
+    {:ok, answer} = Discussion.create_post(thread, helper, %{body: "like this"})
+    {:ok, other} = Discussion.create_post(thread, admin, %{body: "or like that"})
 
     %{
       admin: admin,
@@ -72,7 +76,7 @@ defmodule Firefly.SolvedTest do
     assert {:error, :first_post} = Solved.accept(thread, first_post(thread), asker)
 
     elsewhere = thread_fixture(category_fixture("Chat"), asker, %{title: "Chat", body: "hi"})
-    {:ok, reply} = Forums.create_post(elsewhere, helper, %{body: "hello"})
+    {:ok, reply} = Discussion.create_post(elsewhere, helper, %{body: "hello"})
     assert {:error, :unauthorized} = Solved.accept(elsewhere, reply, asker)
     assert {:error, :unauthorized} = Solved.accept(elsewhere, reply, admin)
 
@@ -80,7 +84,7 @@ defmodule Firefly.SolvedTest do
     assert {:error, :not_acceptable} = Solved.accept(thread, reply, asker)
 
     # Archived: staff only.
-    {:ok, archived} = Forums.archive_thread(thread, true, admin)
+    {:ok, archived} = Discussion.archive_thread(thread, true, admin)
     assert {:error, :unauthorized} = Solved.accept(archived, answer, asker)
     assert {:ok, _} = Solved.accept(archived, answer, admin)
   end
@@ -117,13 +121,13 @@ defmodule Firefly.SolvedTest do
     other: other
   } do
     {:ok, _} = Solved.accept(thread, answer, asker)
-    {:ok, _} = Forums.delete_post(answer, helper)
+    {:ok, _} = Discussion.delete_post(answer, helper)
     assert accepted_id(thread) == nil
     assert {:error, :not_acceptable} = Solved.accept(thread, Repo.reload!(answer), asker)
 
     # Hidden after flags.
     {:ok, _} = Solved.accept(thread, other, asker)
-    {:ok, flagged} = Forums.create_post(thread, helper, %{body: "spam"})
+    {:ok, flagged} = Discussion.create_post(thread, helper, %{body: "spam"})
     {:ok, _} = Solved.accept(thread, flagged, asker)
 
     for _ <- 1..3,
@@ -180,7 +184,7 @@ defmodule Firefly.SolvedTest do
   } do
     {:ok, _} = Solved.accept(thread, answer, asker)
     target = thread_fixture(qa, helper, %{title: "Same question", body: "q"})
-    {:ok, target_answer} = Forums.create_post(target, asker, %{body: "answer"})
+    {:ok, target_answer} = Discussion.create_post(target, asker, %{body: "answer"})
     {:ok, _} = Solved.accept(target, target_answer, helper)
 
     {:ok, _} = TopicTools.merge(thread, target, admin)

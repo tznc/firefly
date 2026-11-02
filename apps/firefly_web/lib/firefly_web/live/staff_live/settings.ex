@@ -84,18 +84,18 @@ defmodule FireflyWeb.StaffLive.Settings do
             <div :if={section == "Logins"} id="login-methods" class="text-sm">
               <p class="text-base-content/70">
                 Login providers are configured in the server's environment (<code>FIREFLY_*</code>
-                variables).{if Firefly.Auth.sso_only?(),
+                variables).{if Firefly.Accounts.Auth.sso_only?(),
                   do: " Single sign-on is the only way to log in."}
               </p>
               <ul class="mt-1 flex flex-wrap gap-1">
                 <li
-                  :for={provider <- Firefly.Auth.providers()}
+                  :for={provider <- Firefly.Accounts.Auth.providers()}
                   class={[
                     "badge badge-sm",
-                    Firefly.Auth.enabled?(provider) && "badge-success"
+                    Firefly.Accounts.Auth.enabled?(provider) && "badge-success"
                   ]}
                 >
-                  {Firefly.Auth.label(provider)}: {if Firefly.Auth.enabled?(provider),
+                  {Firefly.Accounts.Auth.label(provider)}: {if Firefly.Accounts.Auth.enabled?(provider),
                     do: "on",
                     else: "off"}
                 </li>

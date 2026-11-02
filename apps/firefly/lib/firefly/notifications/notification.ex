@@ -1,0 +1,157 @@
+defmodule Firefly.Notifications.Notification do
+  @moduledoc """
+  An in-app notification. `kind` is `"new_thread"` (a thread started in a
+  category you watch or track), `"new_post"` (a reply in a thread you watch
+  or track), `"mentioned"` (someone @mentioned you in a post) `"liked"`
+  (someone liked your post; never emailed), `"message"` (a private message,
+  or being added to a conversation; with `conversation_id`) or `"silenced"`/
+  `"suspended"` (a staff penalty; the body is the reason), `"post_hidden"`
+  (your post was hidden after flags) or `"flagged"` (for admins: a post was
+  flagged; one per post while unread) or `"post_rejected"` (staff rejected
+  your post awaiting approval; the body is the reason) or `"moved"` (staff
+  split your post off into another thread; see `Firefly.Moderation.TopicTools`) or
+  `"bookmark_reminder"` (a reminder you set on a bookmark; the body is its
+  note, or the post; see `Firefly.Discussion.Bookmarks`) or `"answer_accepted"` (your
+  reply was accepted as a thread's answer; see `Firefly.Discussion.Solved`) or
+  `"plugin_disabled"` (for admins: a failing plugin was turned off; see
+  `Firefly.Plugins`) or `"plugin"` (sent by a plugin; see
+  `Firefly.Plugin.Host`) or, for groups (see `Firefly.Groups`),
+  `"group_mentioned"` (a post @mentioned a group you're in),
+  `"group_message"` (a message to a group's inbox; with `conversation_id`),
+  `"group_request"` (someone asked to join a group you own, or your request
+  was decided) or `"group_invite"` (an owner invited you to a group), or
+  `"promoted"` (you reached a higher trust level; see
+  `Firefly.TrustLevels`) or `"badge_granted"` (you earned a badge;
+  see `Firefly.Badges`).
+  `read_at` is set when you open it
+  or read the thread; `emailed_at` when it was also sent by email.
+  """
+
+  use Ecto.Schema
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Post, Thread}
+  alias Firefly.Messaging.{Conversation, Message}
+  import Ecto.Changeset
+
+  @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved
+             bookmark_reminder answer_accepted plugin_disabled plugin
+             group_mentioned group_message group_request group_invite promoted badge_granted)
+
+  # Kinds that may have no thread_id: penalties are about the user, and a
+  # rejected thread is gone. Any other notification without a thread_id or
+  # conversation_id predates thread_id and can't be checked against thread
+  # visibility.
+  @threadless_kinds ~w(silenced suspended post_rejected plugin_disabled plugin group_request
+                       group_invite promoted badge_granted)
+
+  @doc "Kinds that are about the user rather than a thread or conversation."
+  def threadless_kinds, do: @threadless_kinds
+
+  schema "forums_notifications" do
+    field(:kind, :string, default: "new_post")
+    field(:body, :string)
+    field(:subject, :string)
+    field(:url, :string)
+    field(:read_at, :utc_datetime)
+    field(:emailed_at, :utc_datetime)
+    belongs_to(:user, User)
+    belongs_to(:thread, Thread)
+    belongs_to(:post, Post)
+    belongs_to(:conversation, Conversation)
+
+    timestamps(type: :naive_datetime_usec)
+  end
+
+  @doc "Notification attributes for a new thread, a reply or a mention in a post."
+  def for_post(kind, %Thread{} = thread, %Post{} = post, %User{} = author)
+      when kind in ~w(new_thread new_post mentioned) do
+    subject =
+      case kind do
+        "new_thread" -> "@#{author.username} started \"#{thread.title}\""
+        "new_post" -> "@#{author.username} replied in \"#{thread.title}\""
+        "mentioned" -> "@#{author.username} mentioned you in \"#{thread.title}\""
+      end
+
+    %{
+      kind: kind,
+      subject: subject,
+      body: post.body,
+      url: "#{Firefly.URLs.thread_url(thread)}#post-#{post.id}",
+      thread_id: thread.id,
+      post_id: post.id
+    }
+  end
+
+  @doc """
+  Notification attributes for likes on `post`: `likers` are the users who
+  liked it, most recent first (one notification covers them all).
+  """
+  def for_likes(%Thread{} = thread, %Post{} = post, [latest | others]) do
+    who =
+      case length(others) do
+        0 -> "@#{latest.username}"
+        1 -> "@#{latest.username} and 1 other"
+        n -> "@#{latest.username} and #{n} others"
+      end
+
+    %{
+      kind: "liked",
+      subject: "#{who} liked your post in \"#{thread.title}\"",
+      body: post.body,
+      url: "#{Firefly.URLs.thread_url(thread)}#post-#{post.id}",
+      thread_id: thread.id,
+      post_id: post.id
+    }
+  end
+
+  @doc """
+  Notification attributes for a private `message` (`subject` says what
+  happened: a new conversation, a reply, being added). The message itself is
+  left out: notifications are stored where admins can see them (the admin
+  pages), and private messages are for their participants only.
+  """
+  def for_message(%Conversation{} = conversation, %Message{} = message, subject) do
+    %{
+      kind: "message",
+      subject: subject,
+      body: "Open the conversation to read it.",
+      url: "#{Firefly.URLs.conversation_url(conversation)}#message-#{message.id}",
+      conversation_id: conversation.id
+    }
+  end
+
+  # Kept for callers that predate typed notifications.
+  def thread_new_post_notification(%Thread{} = thread, %Post{} = post) do
+    %{
+      subject: "There was a new post in thread: #{thread.title}",
+      body: post.body,
+      url: "#{Firefly.URLs.thread_url(thread)}#post-#{post.id}",
+      thread_id: thread.id,
+      post_id: post.id
+    }
+  end
+
+  def read?(%__MODULE__{read_at: read_at}), do: not is_nil(read_at)
+
+  @doc "The in-app path to open (the url's path and fragment)."
+  def path(%__MODULE__{url: url}) do
+    uri = URI.parse(url || "/")
+    (uri.path || "/") <> if(uri.fragment, do: "#" <> uri.fragment, else: "")
+  end
+
+  def changeset(%__MODULE__{} = notification, attrs) do
+    notification
+    |> cast(attrs, [
+      :user_id,
+      :kind,
+      :body,
+      :subject,
+      :url,
+      :thread_id,
+      :post_id,
+      :conversation_id
+    ])
+    |> validate_required([:user_id, :body, :subject, :url])
+    |> validate_inclusion(:kind, @kinds)
+  end
+end

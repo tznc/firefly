@@ -145,7 +145,7 @@ defmodule FireflyWeb.Layouts do
             <.nav_item path={~p"/settings/profile"} current_path={@current_path} icon="hero-cog-6-tooth">
               Settings
             </.nav_item>
-            <%= if Firefly.Forums.admin?(@current_user) do %>
+            <%= if Firefly.Accounts.admin?(@current_user) do %>
               <.nav_item path={~p"/staff/review"} current_path={@current_path} icon="hero-inbox-stack">
                 Review
                 <span
@@ -242,7 +242,7 @@ defmodule FireflyWeb.Layouts do
   def confirm_email_notice(assigns) do
     ~H"""
     <div
-      :if={@current_user && @current_user.email && !Firefly.Posting.confirmed_enough?(@current_user)}
+      :if={@current_user && @current_user.email && !Firefly.Moderation.Posting.confirmed_enough?(@current_user)}
       id="confirm-email-notice"
       role="alert"
       class="alert alert-warning"
@@ -264,14 +264,14 @@ defmodule FireflyWeb.Layouts do
   def silenced_notice(assigns) do
     ~H"""
     <div
-      :if={@current_user && Firefly.Forums.User.silenced?(@current_user)}
+      :if={@current_user && Firefly.Accounts.User.silenced?(@current_user)}
       id="silenced-notice"
       role="alert"
       class="alert alert-warning"
     >
       <.icon name="hero-no-symbol" class="size-5" />
       <span>
-        {Firefly.Posting.message({:silenced, @current_user.silenced_until})}
+        {Firefly.Moderation.Posting.message({:silenced, @current_user.silenced_until})}
         Reason: {@current_user.silence_reason}
       </span>
     </div>

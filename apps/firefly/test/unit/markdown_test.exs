@@ -1,6 +1,6 @@
 defmodule Firefly.MarkdownTest do
   use Firefly.DataCase, async: true
-  alias Firefly.Markdown
+  alias Firefly.Rendering.Markdown
 
   test "renders basic things" do
     assert "<p>foo</p>" == Markdown.render("foo")

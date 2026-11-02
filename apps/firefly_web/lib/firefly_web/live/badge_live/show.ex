@@ -7,7 +7,7 @@ defmodule FireflyWeb.BadgeLive.Show do
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.{Badges, Forums}
+  alias Firefly.{Accounts, Badges}
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -34,7 +34,8 @@ defmodule FireflyWeb.BadgeLive.Show do
     %{badge: badge, current_user: admin} = socket.assigns
     username = params |> Map.get("username", "") |> String.trim() |> String.trim_leading("@")
 
-    with %{} = user <- Forums.users_by_username([username])[String.downcase(username)] || :no_user,
+    with %{} = user <-
+           Accounts.users_by_username([username])[String.downcase(username)] || :no_user,
          {:ok, _} <- Badges.grant(badge, user, admin, params["reason"]) do
       {:noreply,
        socket

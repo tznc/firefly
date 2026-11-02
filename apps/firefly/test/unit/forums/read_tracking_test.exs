@@ -1,26 +1,26 @@
-defmodule Firefly.Forums.ReadTrackingTest do
+defmodule Firefly.Discussion.ReadTrackingTest do
   use Firefly.DataCase, async: true
 
-  alias Firefly.{Forums, Repo}
-  alias Firefly.Forums.{Post, Thread}
+  alias Firefly.{Accounts, Discussion, Repo}
+  alias Firefly.Discussion.{Post, Thread}
 
   defp user(name) do
     {:ok, user} =
-      Forums.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+      Accounts.create_user(%{username: name, name: name, email: "#{name}@example.com"})
 
     user
   end
 
   setup do
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
     author = user("author")
     reader = user("reader")
-    {:ok, thread} = Forums.create_thread(category, author, %{title: "T", body: "first"})
+    {:ok, thread} = Discussion.create_thread(category, author, %{title: "T", body: "first"})
     %{category: category, author: author, reader: reader, thread: thread}
   end
 
   defp reply(thread, user, body) do
-    {:ok, post} = Forums.create_post(thread, user, %{body: body})
+    {:ok, post} = Discussion.create_post(thread, user, %{body: body})
     post
   end
 
@@ -32,13 +32,13 @@ defmodule Firefly.Forums.ReadTrackingTest do
     thread: thread
   } do
     reply(thread, author, "second")
-    listed = find(Forums.latest_threads(reader), thread)
+    listed = find(Discussion.latest_threads(reader), thread)
 
     assert listed.new?
     assert listed.posts_count == 2
     assert listed.unread_count == 2
     refute listed.completely_read?
-    assert find(Forums.new_threads(reader), thread)
+    assert find(Discussion.new_threads(reader), thread)
   end
 
   test "reading moves the position; later posts count as unread", %{
@@ -46,39 +46,39 @@ defmodule Firefly.Forums.ReadTrackingTest do
     reader: reader,
     thread: thread
   } do
-    {:ok, _} = Forums.mark_thread_read(reader, thread)
-    listed = find(Forums.latest_threads(reader), thread)
+    {:ok, _} = Discussion.mark_thread_read(reader, thread)
+    listed = find(Discussion.latest_threads(reader), thread)
     assert listed.completely_read?
     refute listed.new?
     assert listed.unread_count == 0
-    refute find(Forums.new_threads(reader), thread)
-    assert Forums.unread_threads(reader) == []
+    refute find(Discussion.new_threads(reader), thread)
+    assert Discussion.unread_threads(reader) == []
 
     post = reply(thread, author, "news")
     reply(thread, author, "more news")
 
-    listed = find(Forums.unread_threads(reader), thread)
+    listed = find(Discussion.unread_threads(reader), thread)
     assert listed.unread_count == 2
     assert listed.first_unread_post_id == post.id
     refute listed.completely_read?
   end
 
   test "the read position never moves backwards", %{reader: reader, thread: thread} do
-    {:ok, _} = Forums.mark_thread_read(reader, thread)
+    {:ok, _} = Discussion.mark_thread_read(reader, thread)
     last = Repo.one(from(p in Post, where: p.thread_id == ^thread.id, select: max(p.id)))
 
     # Simulate a stale write with an older position
     Repo.update_all(
-      from(r in Forums.ThreadRead, where: r.thread_id == ^thread.id),
+      from(r in Firefly.Discussion.ThreadRead, where: r.thread_id == ^thread.id),
       set: [last_read_post_id: last + 100]
     )
 
-    {:ok, _} = Forums.mark_thread_read(reader, thread)
-    assert Forums.thread_read(reader, thread).last_read_post_id == last + 100
+    {:ok, _} = Discussion.mark_thread_read(reader, thread)
+    assert Discussion.thread_read(reader, thread).last_read_post_id == last + 100
   end
 
   test "anonymous lists have no read state", %{thread: thread} do
-    listed = find(Forums.latest_threads(nil), thread)
+    listed = find(Discussion.latest_threads(nil), thread)
     refute listed.new?
     assert listed.unread_count == 0
     # Nothing is "read" for anonymous visitors
@@ -90,16 +90,16 @@ defmodule Firefly.Forums.ReadTrackingTest do
     reader: reader,
     thread: thread
   } do
-    listed = find(Forums.latest_threads(author), thread)
+    listed = find(Discussion.latest_threads(author), thread)
     refute listed.new?
     assert listed.completely_read?
 
-    {:ok, _} = Forums.mark_thread_read(reader, thread)
+    {:ok, _} = Discussion.mark_thread_read(reader, thread)
     reply(thread, author, "a reply sent by email or the API")
     reply(thread, reader, "my own reply")
 
-    assert Forums.unread_threads(reader) == []
-    assert find(Forums.unread_threads(author), thread).unread_count == 1
+    assert Discussion.unread_threads(reader) == []
+    assert find(Discussion.unread_threads(author), thread).unread_count == 1
   end
 
   test "threads older than the New window aren't flagged new", %{reader: reader, thread: thread} do
@@ -107,7 +107,7 @@ defmodule Firefly.Forums.ReadTrackingTest do
       set: [inserted_at: ~N[2020-01-01 00:00:00]]
     )
 
-    listed = find(Forums.latest_threads(reader), thread)
+    listed = find(Discussion.latest_threads(reader), thread)
     refute listed.new?
     assert listed.unread_count == 1
   end
@@ -117,11 +117,11 @@ defmodule Firefly.Forums.ReadTrackingTest do
     author: author,
     thread: older
   } do
-    {:ok, newer} = Forums.create_thread(category, author, %{title: "Newer", body: "1"})
-    assert Enum.map(Forums.recent_threads(category), & &1.id) == [newer.id, older.id]
+    {:ok, newer} = Discussion.create_thread(category, author, %{title: "Newer", body: "1"})
+    assert Enum.map(Discussion.recent_threads(category), & &1.id) == [newer.id, older.id]
 
     reply(older, author, "bump")
-    assert Enum.map(Forums.recent_threads(category), & &1.id) == [older.id, newer.id]
+    assert Enum.map(Discussion.recent_threads(category), & &1.id) == [older.id, newer.id]
   end
 
   test "top ranks threads by posts in the period", %{
@@ -129,7 +129,7 @@ defmodule Firefly.Forums.ReadTrackingTest do
     author: author,
     thread: quiet
   } do
-    {:ok, busy} = Forums.create_thread(category, author, %{title: "Busy", body: "1"})
+    {:ok, busy} = Discussion.create_thread(category, author, %{title: "Busy", body: "1"})
     for n <- 2..4, do: reply(busy, author, "#{n}")
 
     # Old activity on the quiet thread doesn't count for the week
@@ -139,9 +139,9 @@ defmodule Firefly.Forums.ReadTrackingTest do
       set: [inserted_at: ~N[2020-01-01 00:00:00.000000]]
     )
 
-    assert [%{id: busy_id}] = Forums.top_threads("week", nil)
+    assert [%{id: busy_id}] = Discussion.top_threads("week", nil)
     assert busy_id == busy.id
-    assert [first, second] = Forums.top_threads("all", nil)
+    assert [first, second] = Discussion.top_threads("all", nil)
     assert {first.id, second.id} == {quiet.id, busy.id}
   end
 end

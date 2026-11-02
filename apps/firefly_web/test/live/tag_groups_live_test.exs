@@ -1,8 +1,9 @@
 defmodule FireflyWeb.TagGroupsLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Repo, Tags}
-  alias Firefly.Forums.{Tag, TagGroup}
+  alias Firefly.Repo
+  alias Firefly.Discussion.Tags
+  alias Firefly.Discussion.{Tag, TagGroup}
 
   setup do
     %{admin: admin_fixture(), member: user_fixture(), category: category_fixture()}

@@ -1,7 +1,7 @@
 defmodule FireflyWeb.ThreadListsTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   setup do
     author = user_fixture()
@@ -50,7 +50,7 @@ defmodule FireflyWeb.ThreadListsTest do
 
     conn |> visit(~p"/new") |> refute_has("#thread-#{thread.id}")
     conn |> visit(~p"/unread") |> refute_has("#thread-#{thread.id}")
-    assert Forums.thread_read(reader, thread)
+    assert Discussion.thread_read(reader, thread)
   end
 
   test "Unread links to the first unread post, which the thread marks", %{
@@ -61,8 +61,8 @@ defmodule FireflyWeb.ThreadListsTest do
   } do
     # Read earlier (not open in this test, so new posts stay unread)
     other = thread_fixture(category, author, %{title: "Read earlier"})
-    {:ok, _} = Forums.mark_thread_read(reader, other)
-    {:ok, reply} = Forums.create_post(other, author, %{body: "Something new"})
+    {:ok, _} = Discussion.mark_thread_read(reader, other)
+    {:ok, reply} = Discussion.create_post(other, author, %{body: "Something new"})
 
     conn = log_in_as(conn, reader)
 

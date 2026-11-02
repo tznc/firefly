@@ -4,8 +4,9 @@ defmodule FireflyWeb.SettingsLiveTest do
   import Firefly.DataCase, only: [errors_on: 1]
   require Phoenix.LiveViewTest
 
-  alias Firefly.Forums
-  alias Firefly.Forums.{Subscriptions, User}
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Accounts.User
+  alias Firefly.Notifications.Subscriptions
 
   setup do
     %{user: user_fixture(%{username: "ada"})}
@@ -50,7 +51,9 @@ defmodule FireflyWeb.SettingsLiveTest do
       |> assert_has("#profile-form", text: "must be a web address starting with http")
 
       too_long = String.duplicate("a", 1_001)
-      assert {:error, changeset} = Forums.update_user(user, %{bio: too_long, location: too_long})
+
+      assert {:error, changeset} =
+               Accounts.update_user(user, %{bio: too_long, location: too_long})
 
       assert %{bio: ["should be at most 1000 character(s)"], location: [_]} =
                errors_on(changeset)
@@ -67,7 +70,7 @@ defmodule FireflyWeb.SettingsLiveTest do
       |> click_button("Save")
       |> assert_has("#flash-info", text: "Interface settings saved.")
 
-      assert Forums.get_user!(user.id).theme == "dark"
+      assert Accounts.get_user!(user.id).theme == "dark"
 
       assert conn |> log_in_as(user) |> get(~p"/") |> html_response(200) =~
                ~s{data-user-theme="dark"}
@@ -78,10 +81,10 @@ defmodule FireflyWeb.SettingsLiveTest do
     test "the top bar toggle saves the theme for users", %{conn: conn, user: user} do
       {:ok, view, _html} = conn |> log_in_as(user) |> Phoenix.LiveViewTest.live(~p"/")
       Phoenix.LiveViewTest.render_click(view, "set_theme", %{"theme" => "light"})
-      assert Forums.get_user!(user.id).theme == "light"
+      assert Accounts.get_user!(user.id).theme == "light"
 
       Phoenix.LiveViewTest.render_click(view, "set_theme", %{"theme" => "neon"})
-      assert Forums.get_user!(user.id).theme == "light"
+      assert Accounts.get_user!(user.id).theme == "light"
     end
   end
 
@@ -94,11 +97,11 @@ defmodule FireflyWeb.SettingsLiveTest do
     |> click_button("Save")
     |> assert_has("#flash-info", text: "Notification settings saved.")
 
-    user = Forums.get_user!(user.id)
+    user = Accounts.get_user!(user.id)
     category = category_fixture()
     mine = thread_fixture(category, user)
     theirs = thread_fixture(category, user_fixture())
-    {:ok, _} = Forums.create_post(theirs, user, %{body: "Reply"})
+    {:ok, _} = Discussion.create_post(theirs, user, %{body: "Reply"})
 
     assert Subscriptions.thread_level(user, mine) == "tracking"
     # Normal sets nothing: the thread keeps what it inherits.
@@ -107,14 +110,14 @@ defmodule FireflyWeb.SettingsLiveTest do
 
     # The defaults: watch what you start, track what you reply to.
     other = user_fixture()
-    {:ok, _} = Forums.create_post(mine, other, %{body: "Reply"})
+    {:ok, _} = Discussion.create_post(mine, other, %{body: "Reply"})
     assert Subscriptions.thread_level(other, mine) == "tracking"
     assert Subscriptions.thread_level(other, thread_fixture(category, other)) == "watching"
   end
 
   test "preferences are validated", %{user: user} do
     assert {:error, changeset} =
-             Forums.update_preferences(user, %{
+             Accounts.update_preferences(user, %{
                theme: "neon",
                reply_level: "watching",
                new_thread_level: "muted"
@@ -161,7 +164,7 @@ defmodule FireflyWeb.SettingsLiveTest do
 
     test "hiding from the directory", %{conn: conn, user: user} do
       conn |> visit(~p"/users") |> assert_has("#user-#{user.id}")
-      {:ok, _} = Forums.update_preferences(user, %{hide_from_directory: true})
+      {:ok, _} = Accounts.update_preferences(user, %{hide_from_directory: true})
       conn |> visit(~p"/users") |> refute_has("#user-#{user.id}")
       conn |> visit(~p"/users/#{user}") |> assert_has("h1", text: "ada")
     end

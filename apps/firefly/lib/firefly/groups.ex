@@ -1,8 +1,8 @@
 defmodule Firefly.Groups do
   @moduledoc """
-  Groups are roles (`Firefly.Forums.Role`): admins create them and set
+  Groups are roles (`Firefly.Groups.Role`): admins create them and set
   them up at `/staff/groups` (or in the Kaffy admin), and can restrict
-  categories to them (see `Firefly.Forums.Policy`).
+  categories to them (see `Firefly.Discussion.Policy`).
 
   Each group has a page (`/groups/:name`: about, members, its members'
   recent posts, and for members its inbox), shown to whom its `visibility`
@@ -17,8 +17,8 @@ defmodule Firefly.Groups do
   in the same transaction, as the acting owner's or admin's (or the
   system's, for DiscourseConnect sync).
 
-  A group is @mentioned (`@name`, see `Firefly.Mentions`) and messaged
-  (its inbox, see `Firefly.Messages`) by whom its `mentionable` and
+  A group is @mentioned (`@name`, see `Firefly.Discussion.Mentions`) and messaged
+  (its inbox, see `Firefly.Messaging`) by whom its `mentionable` and
   `messageable` levels allow: `owners`, `members`, `everyone`, or `nobody`
   but staff. The "admin" group is staff: it stays closed, staff-only, and
   only admins change its members. Trust level groups' members follow
@@ -26,10 +26,16 @@ defmodule Firefly.Groups do
   removes, invites or makes owners there (`{:error, :automatic}`).
   """
 
+  use Boundary, top_level?: true, check: [out: false], exports: [Role, RoleMembership]
+
   import Ecto.Query
 
-  alias Firefly.{Forums, Repo, StaffLog}
-  alias Firefly.Forums.{GroupRequest, Notification, Post, Role, RoleMembership, User}
+  alias Firefly.{Accounts, Groups, Notifications, Repo}
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.Post
+  alias Firefly.Groups.{GroupRequest, Role, RoleMembership}
+  alias Firefly.Notifications.Notification
 
   ## Listing and finding
 
@@ -46,7 +52,7 @@ defmodule Firefly.Groups do
 
   defp categories(%Role{id: role_id}) do
     Repo.all(
-      from(c in Forums.Category,
+      from(c in Firefly.Discussion.Category,
         join: cr in "forums_category_roles",
         on: cr.category_id == c.id,
         where: cr.role_id == ^role_id,
@@ -107,7 +113,7 @@ defmodule Firefly.Groups do
   ## Who may do what
 
   defp admin?(nil), do: false
-  defp admin?(user), do: Forums.admin?(user)
+  defp admin?(user), do: Accounts.admin?(user)
 
   defp membership(%Role{id: role_id}, %User{id: user_id}),
     do: Repo.get_by(RoleMembership, role_id: role_id, user_id: user_id)
@@ -230,7 +236,7 @@ defmodule Firefly.Groups do
   defp find_user(username) do
     name = username |> to_string() |> String.trim() |> String.trim_leading("@")
 
-    case [String.downcase(name)] |> Forums.users_by_username() |> Map.values() do
+    case [String.downcase(name)] |> Accounts.users_by_username() |> Map.values() do
       [] -> {:error, :no_such_user}
       [user] -> {:ok, user}
     end
@@ -238,7 +244,7 @@ defmodule Firefly.Groups do
 
   defp grant(role, user, actor) do
     Repo.transact(fn ->
-      {:ok, _} = Forums.add_role(user, role)
+      {:ok, _} = Groups.add_role(user, role)
 
       Repo.delete_all(
         from(r in GroupRequest, where: r.role_id == ^role.id and r.user_id == ^user.id)
@@ -356,7 +362,7 @@ defmodule Firefly.Groups do
   end
 
   defp join_open(role, user) do
-    case Forums.add_role(user, role) do
+    case Groups.add_role(user, role) do
       {:ok, _} -> {:ok, :joined}
       {:error, _} -> {:error, :already_member}
     end
@@ -371,7 +377,7 @@ defmodule Firefly.Groups do
 
       {:ok, _request} ->
         for manager <- managers(role) do
-          Forums.notify(manager, %{
+          Notifications.notify(manager, %{
             kind: "group_request",
             subject: "@#{user.username} asked to join #{role.name}",
             body: trim(message) || "Approve or deny it on the group's page.",
@@ -441,7 +447,7 @@ defmodule Firefly.Groups do
            Repo.get_by(GroupRequest, id: request_id, role_id: role.id) || {:error, :not_found},
          user = Repo.get!(User, request.user_id),
          {:ok, user} <- if(approve?, do: grant(role, user, actor), else: deny(request, user)) do
-      Forums.notify(user, %{
+      Notifications.notify(user, %{
         kind: "group_request",
         subject:
           if(approve?,
@@ -471,7 +477,7 @@ defmodule Firefly.Groups do
         conflict_target: [:role_id, :user_id]
       )
 
-      Forums.notify(user, %{
+      Notifications.notify(user, %{
         kind: "group_invite",
         subject: "@#{actor.username} invited you to join #{role.name}",
         body: "Accept or decline on the group's page.",
@@ -497,7 +503,7 @@ defmodule Firefly.Groups do
     Repo.delete!(invite)
 
     if accept? do
-      {:ok, _} = Forums.add_role(user, role)
+      {:ok, _} = Groups.add_role(user, role)
       {:ok, :joined}
     else
       {:ok, :declined}
@@ -514,7 +520,7 @@ defmodule Firefly.Groups do
     |> Post.visible()
     |> where([p], p.user_id in subquery(members) and is_nil(p.hidden_at))
     |> join(:inner, [p], t in assoc(p, :thread), as: :thread)
-    |> Firefly.Forums.Policy.readable_threads(viewer)
+    |> Firefly.Discussion.Policy.readable_threads(viewer)
     |> order_by([p], desc: p.inserted_at, desc: p.id)
     |> limit(^limit)
     |> preload([p], thread: [:category], user: [])
@@ -531,8 +537,8 @@ defmodule Firefly.Groups do
   to the ids of those who may). Returns the ids notified.
   """
   def notify_mentions(thread, post, author, skip_ids, readers) do
-    names = Firefly.Mentions.usernames(post.body)
-    users = Forums.users_by_username(names)
+    names = Firefly.Discussion.Mentions.usernames(post.body)
+    users = Accounts.users_by_username(names)
 
     groups =
       names
@@ -559,7 +565,7 @@ defmodule Firefly.Groups do
 
       notified ++
         for user <- members, MapSet.member?(allowed, user.id) do
-          {:ok, _} = Forums.notify(user, group_mention(thread, post, author, group))
+          {:ok, _} = Notifications.notify(user, group_mention(thread, post, author, group))
           user.id
         end
     end)
@@ -575,7 +581,7 @@ defmodule Firefly.Groups do
 
   ## Account data
 
-  @doc "The export of `user`'s groups and pending requests (see `Firefly.AccountExport`)."
+  @doc "The export of `user`'s groups and pending requests (see `Firefly.Accounts.AccountExport`)."
   def export(%User{id: user_id}) do
     memberships =
       Repo.all(
@@ -609,4 +615,16 @@ defmodule Firefly.Groups do
   def message(:not_member), do: "They're not in that group."
   def message(:invalid_level), do: "Pick a notification level."
   def message(:automatic), do: "Trust level groups' members follow their trust level."
+
+  def create_role(name) do
+    %Role{}
+    |> Role.changeset(%{name: name})
+    |> Repo.insert()
+  end
+
+  def add_role(%User{} = user, %Role{} = role) do
+    %RoleMembership{}
+    |> RoleMembership.changeset(%{user_id: user.id, role_id: role.id})
+    |> Repo.insert()
+  end
 end

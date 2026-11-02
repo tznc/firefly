@@ -1,7 +1,8 @@
 defmodule Firefly.BBCodeTest do
   use Firefly.DataCase, async: true
 
-  alias Firefly.{BBCode, Markdown, SiteSettings}
+  alias Firefly.SiteSettings
+  alias Firefly.Rendering.{BBCode, Markdown}
 
   defp render(text), do: Markdown.render(text)
 
@@ -119,14 +120,14 @@ defmodule Firefly.BBCodeTest do
 
   defp admin do
     {:ok, user} =
-      Firefly.Forums.register_user(%{
+      Firefly.Accounts.register_user(%{
         username: "admin#{System.unique_integer([:positive])}",
         email: "admin#{System.unique_integer([:positive])}@example.com",
         password: "password123"
       })
 
-    {:ok, role} = Firefly.Forums.create_role("admin")
-    {:ok, _} = Firefly.Forums.add_role(user, role)
+    {:ok, role} = Firefly.Groups.create_role("admin")
+    {:ok, _} = Firefly.Groups.add_role(user, role)
     user
   end
 end

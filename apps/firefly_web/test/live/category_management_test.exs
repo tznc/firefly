@@ -3,7 +3,7 @@ defmodule FireflyWeb.CategoryManagementTest do
 
   import Firefly.DataCase, only: [errors_on: 1]
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   test "categories have descriptions, colors, positions and subcategories", %{conn: conn} do
     admin = admin_fixture()
@@ -22,7 +22,7 @@ defmodule FireflyWeb.CategoryManagementTest do
     |> assert_has("#category-description", text: "Web framework talk")
     |> assert_has("#parent-category", text: "Elixir")
 
-    phoenix = Forums.list_categories() |> Enum.find(&(&1.title == "Phoenix"))
+    phoenix = Discussion.list_categories() |> Enum.find(&(&1.title == "Phoenix"))
     assert phoenix.parent_id == elixir.id
     assert phoenix.color == "#3b82f6"
 
@@ -42,28 +42,28 @@ defmodule FireflyWeb.CategoryManagementTest do
   end
 
   test "positions order the categories", %{conn: conn} do
-    {:ok, _} = Forums.create_category(%{title: "Zed", position: 0})
-    {:ok, _} = Forums.create_category(%{title: "Alpha", position: 5})
+    {:ok, _} = Discussion.create_category(%{title: "Zed", position: 0})
+    {:ok, _} = Discussion.create_category(%{title: "Alpha", position: 5})
 
-    assert ["Zed", "Alpha"] = Enum.map(Forums.list_category_tree(), & &1.title)
+    assert ["Zed", "Alpha"] = Enum.map(Discussion.list_category_tree(), & &1.title)
     conn |> visit(~p"/categories") |> assert_has("#categories li:first-child", text: "Zed")
   end
 
   test "invalid colors and nesting are rejected" do
-    {:ok, parent} = Forums.create_category(%{title: "Parent"})
-    {:ok, child} = Forums.create_category(%{title: "Child", parent_id: parent.id})
+    {:ok, parent} = Discussion.create_category(%{title: "Parent"})
+    {:ok, child} = Discussion.create_category(%{title: "Child", parent_id: parent.id})
 
-    assert {:error, changeset} = Forums.create_category(%{title: "Bad", color: "blue"})
+    assert {:error, changeset} = Discussion.create_category(%{title: "Bad", color: "blue"})
     assert "must be a hex color like #3b82f6" in errors_on(changeset).color
 
-    assert {:error, changeset} = Forums.create_category(%{title: "Deep", parent_id: child.id})
+    assert {:error, changeset} = Discussion.create_category(%{title: "Deep", parent_id: child.id})
     assert "must be a top-level category" in errors_on(changeset).parent_id
 
-    assert {:error, changeset} = Forums.update_category(parent, %{parent_id: parent.id})
+    assert {:error, changeset} = Discussion.update_category(parent, %{parent_id: parent.id})
     assert "can't be the category itself" in errors_on(changeset).parent_id
 
-    {:ok, other} = Forums.create_category(%{title: "Other"})
-    assert {:error, changeset} = Forums.update_category(parent, %{parent_id: other.id})
+    {:ok, other} = Discussion.create_category(%{title: "Other"})
+    assert {:error, changeset} = Discussion.update_category(parent, %{parent_id: other.id})
 
     assert errors_on(changeset).parent_id == [
              "a category with subcategories can't be a subcategory"
@@ -72,8 +72,8 @@ defmodule FireflyWeb.CategoryManagementTest do
 
   test "a parent's page updates live for subcategory threads", %{conn: conn} do
     require Phoenix.LiveViewTest
-    {:ok, parent} = Forums.create_category(%{title: "Parent"})
-    {:ok, child} = Forums.create_category(%{title: "Child", parent_id: parent.id})
+    {:ok, parent} = Discussion.create_category(%{title: "Parent"})
+    {:ok, child} = Discussion.create_category(%{title: "Child", parent_id: parent.id})
     {:ok, view, _} = Phoenix.LiveViewTest.live(conn, ~p"/categories/#{parent}")
 
     thread_fixture(child, user_fixture(), %{title: "Live in child"})

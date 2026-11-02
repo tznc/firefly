@@ -12,6 +12,9 @@ defmodule Firefly.DataCase do
   of the test unless the test case is marked as async.
   """
 
+  # Test support, for any app's tests: unchecked.
+  use Boundary, top_level?: true, check: [in: false, out: false]
+
   use ExUnit.CaseTemplate
 
   using do

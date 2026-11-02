@@ -1,16 +1,18 @@
 defmodule FireflyWeb.ThreadLive.Tools do
   @moduledoc """
   A thread's admin tools (the `:moderate_thread` policy): merge it into
-  another thread, split replies off (see `Firefly.TopicTools`), set or
-  cancel its timer (see `Firefly.TopicTimers`) and its slow mode.
+  another thread, split replies off (see `Firefly.Moderation.TopicTools`), set or
+  cancel its timer (see `Firefly.Moderation.TopicTimers`) and its slow mode.
   Other threads are picked by their URL or id.
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Forums, Posting, Repo, TopicTimers, TopicTools}
-  alias Firefly.Forums.{Post, Thread, ThreadTimer}
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Moderation.{Posting, TopicTimers, TopicTools}
+  alias Firefly.Discussion.{Post, Thread}
+  alias Firefly.Moderation.ThreadTimer
 
   @units %{"minutes" => 60, "hours" => 3600, "days" => 86_400}
 
@@ -20,8 +22,8 @@ defmodule FireflyWeb.ThreadLive.Tools do
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
     user = socket.assigns.current_user
-    category = Forums.get_visible_category!(category_id, user)
-    thread = Forums.get_visible_thread!(category, id, user)
+    category = Discussion.get_visible_category!(category_id, user)
+    thread = Discussion.get_visible_thread!(category, id, user)
 
     cond do
       not can?(user, :moderate_thread) ->
@@ -38,7 +40,7 @@ defmodule FireflyWeb.ThreadLive.Tools do
          socket
          |> assign(:page_title, "Thread tools - #{thread.title}")
          |> assign(:category, category)
-         |> assign(:categories, Forums.list_categories(user))
+         |> assign(:categories, Discussion.list_categories(user))
          |> assign(:split_form, to_form(%{"category_id" => category.id}, as: :split))
          |> assign(
            :timer_form,
@@ -153,7 +155,7 @@ defmodule FireflyWeb.ThreadLive.Tools do
   # A thread from its URL (".../threads/42", any suffix) or id.
   defp find_thread(input) do
     case Regex.run(~r{(?:threads/|^\s*)(\d+)}, input || "") do
-      [_, id] -> Forums.get_thread(String.to_integer(id))
+      [_, id] -> Discussion.get_thread(String.to_integer(id))
       nil -> nil
     end
   end

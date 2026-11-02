@@ -1,12 +1,13 @@
 defmodule Firefly.EmailConfirmationTest do
   use Firefly.DataCase, async: true
 
-  alias Firefly.{EmailConfirmation, Forums}
-  alias Firefly.Forums.User
+  alias Firefly.Accounts
+  alias Firefly.Accounts.EmailConfirmation
+  alias Firefly.Accounts.User
 
   defp register do
     {:ok, user} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: "newbie",
         email: "newbie@example.com",
         password: "s3cret-password"
@@ -18,7 +19,7 @@ defmodule Firefly.EmailConfirmationTest do
   test "registered users start unconfirmed; directly created users are confirmed" do
     refute User.confirmed?(register())
 
-    {:ok, admin_made} = Forums.create_user(%{username: "x", name: "X", email: "x@example.com"})
+    {:ok, admin_made} = Accounts.create_user(%{username: "x", name: "X", email: "x@example.com"})
     assert User.confirmed?(admin_made)
   end
 
@@ -34,17 +35,17 @@ defmodule Firefly.EmailConfirmationTest do
 
     assert {:error, :invalid} = EmailConfirmation.confirm(token <> "x")
 
-    {:ok, _} = Forums.update_user(user, %{email: "new@example.com"})
+    {:ok, _} = Accounts.update_user(user, %{email: "new@example.com"})
     assert {:error, :invalid} = EmailConfirmation.confirm(token)
   end
 
   test "changing the email address requires confirming it again" do
-    {:ok, user} = Forums.confirm_user(register())
+    {:ok, user} = Accounts.confirm_user(register())
 
-    {:ok, user} = Forums.update_user(user, %{name: "Newbie"})
+    {:ok, user} = Accounts.update_user(user, %{name: "Newbie"})
     assert User.confirmed?(user)
 
-    {:ok, user} = Forums.update_user(user, %{email: "new@example.com"})
+    {:ok, user} = Accounts.update_user(user, %{email: "new@example.com"})
     refute User.confirmed?(user)
   end
 end

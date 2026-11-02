@@ -5,18 +5,13 @@ defmodule FireflyWeb.SiteSettingsTest do
   import Ecto.Query, only: [from: 2]
   import Firefly.DataCase, only: [errors_on: 1]
 
-  alias Firefly.{
-    Emails,
-    Forums,
-    Mentions,
-    Notifications,
-    Posting,
-    RateLimit,
-    Repo,
-    SiteSettings
-  }
+  alias Firefly.{Accounts, Discussion, Notifications, RateLimit, Repo, SiteSettings}
+  alias Firefly.Discussion.Mentions
+  alias Firefly.Moderation.Posting
+  alias Firefly.Notifications.Emails
 
-  alias Firefly.Forums.{Policy, StaffAction, Tag}
+  alias Firefly.Discussion.{Policy, Tag}
+  alias Firefly.Moderation.StaffAction
 
   setup do
     %{admin: admin_fixture(%{username: "boss"})}
@@ -25,7 +20,7 @@ defmodule FireflyWeb.SiteSettingsTest do
   defp set(admin, settings), do: {:ok, _} = SiteSettings.update(settings, admin)
 
   defp register(username) do
-    Forums.register_user(%{
+    Accounts.register_user(%{
       username: username,
       email: "#{username}@example.com",
       password: "password1"
@@ -162,7 +157,7 @@ defmodule FireflyWeb.SiteSettingsTest do
       assert {:error, :registration_closed} = register("newbie")
 
       assert {:error, "New registrations are closed."} =
-               Firefly.Auth.login(%{
+               Firefly.Accounts.Auth.login(%{
                  provider: :github,
                  uid: 42,
                  nickname: "octo",
@@ -173,12 +168,12 @@ defmodule FireflyWeb.SiteSettingsTest do
       set(admin, %{"allow_registrations" => "true"})
 
       {:ok, octo} =
-        Firefly.Auth.login(%{provider: :github, uid: 42, nickname: "octo", name: "Octo"})
+        Firefly.Accounts.Auth.login(%{provider: :github, uid: 42, nickname: "octo", name: "Octo"})
 
       set(admin, %{"allow_registrations" => "false"})
 
       assert {:ok, ^octo} =
-               Firefly.Auth.login(%{provider: :github, uid: 42, nickname: "octo"})
+               Firefly.Accounts.Auth.login(%{provider: :github, uid: 42, nickname: "octo"})
     end
 
     test "without required confirmation, new accounts can post at once", %{admin: admin} do
@@ -196,7 +191,7 @@ defmodule FireflyWeb.SiteSettingsTest do
       {:ok, _} = Notifications.start_link()
       set(admin, %{"require_email_confirmation" => "false"})
       {:ok, trusted} = register("trusted")
-      refute Forums.User.confirmed?(trusted)
+      refute Firefly.Accounts.User.confirmed?(trusted)
 
       conn
       |> log_in_as(trusted)
@@ -205,10 +200,10 @@ defmodule FireflyWeb.SiteSettingsTest do
 
       # Notification email still goes only to proven addresses.
       thread = thread_fixture(category_fixture("Mail"), admin, %{title: "Relay"})
-      {:ok, _} = Forums.create_post(thread, admin, %{body: "hello @trusted"})
+      {:ok, _} = Discussion.create_post(thread, admin, %{body: "hello @trusted"})
       :sys.get_state(Notifications)
 
-      assert [%{kind: "mentioned"}] = Forums.notifications_for(trusted)
+      assert [%{kind: "mentioned"}] = Notifications.notifications_for(trusted)
       assert_no_emails_delivered()
 
       set(admin, %{"require_email_confirmation" => "true"})
@@ -231,10 +226,10 @@ defmodule FireflyWeb.SiteSettingsTest do
     test "new-user link limit", %{admin: admin, thread: thread} do
       member = user_fixture(%{trust_level: 0})
       links = "https://a.example https://b.example"
-      assert {:ok, _} = Forums.create_post(thread, member, %{body: links})
+      assert {:ok, _} = Discussion.create_post(thread, member, %{body: links})
 
       set(admin, %{"new_user_max_links" => "1"})
-      assert {:error, changeset} = Forums.create_post(thread, member, %{body: links})
+      assert {:error, changeset} = Discussion.create_post(thread, member, %{body: links})
       assert "new users can include at most 1 links per post" in errors_on(changeset).body
       assert Firefly.TrustLevels.new_user?(member)
     end
@@ -244,7 +239,7 @@ defmodule FireflyWeb.SiteSettingsTest do
       assert Mentions.max_mentions() == 1
       [a, b] = [user_fixture(), user_fixture()]
       body = "@#{a.username} and @#{b.username}"
-      assert {:error, changeset} = Forums.create_post(thread, member, %{body: body})
+      assert {:error, changeset} = Discussion.create_post(thread, member, %{body: body})
       assert "can mention at most 1 users" in errors_on(changeset).body
     end
 
@@ -268,10 +263,10 @@ defmodule FireflyWeb.SiteSettingsTest do
     end
 
     test "tags admin-only", %{admin: admin, member: member} do
-      assert Forums.may_create_tags?(member)
+      assert Discussion.may_create_tags?(member)
       set(admin, %{"tags_admin_only" => "true"})
-      refute Forums.may_create_tags?(member)
-      assert Forums.may_create_tags?(admin)
+      refute Discussion.may_create_tags?(member)
+      assert Discussion.may_create_tags?(admin)
     end
   end
 
@@ -282,7 +277,7 @@ defmodule FireflyWeb.SiteSettingsTest do
       assert Tag.max_per_thread() == 1
 
       assert {:error, changeset} =
-               Forums.create_thread(category, admin, %{
+               Discussion.create_thread(category, admin, %{
                  title: "Tagged",
                  body: "x",
                  tags: "otp beam"
@@ -317,7 +312,7 @@ defmodule FireflyWeb.SiteSettingsTest do
     end)
 
     assert SiteSettings.get("title") == "Firefly"
-    Repo.insert!(%Firefly.Forums.SiteSetting{key: "title", value: "Behind the cache"})
+    Repo.insert!(%Firefly.SiteSettings.SiteSetting{key: "title", value: "Behind the cache"})
     assert SiteSettings.get("title") == "Firefly"
 
     # Another node's change arrives over PubSub.

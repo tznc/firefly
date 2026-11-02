@@ -2,12 +2,13 @@ defmodule FireflyWeb.EmailConfirmationTest do
   use FireflyWeb.ConnCase, async: false
   use Bamboo.Test, shared: true
 
-  alias Firefly.{EmailConfirmation, Forums}
-  alias Firefly.Forums.User
+  alias Firefly.Accounts
+  alias Firefly.Accounts.EmailConfirmation
+  alias Firefly.Accounts.User
 
   defp register(username \\ "newbie") do
     {:ok, user} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: username,
         email: "#{username}@example.com",
         password: "s3cret-password"
@@ -32,7 +33,7 @@ defmodule FireflyWeb.EmailConfirmationTest do
     |> click_button("Create account")
     |> assert_has("#confirm-email-notice", text: "newbie@example.com")
 
-    user = Forums.get_user_by_username("newbie")
+    user = Accounts.get_user_by_username("newbie")
     assert_confirmation_sent(user)
   end
 
@@ -45,7 +46,7 @@ defmodule FireflyWeb.EmailConfirmationTest do
     |> assert_has("#flash-info", text: "your email address is confirmed")
     |> refute_has("#confirm-email-notice")
 
-    assert User.confirmed?(Forums.get_user!(user.id))
+    assert User.confirmed?(Accounts.get_user!(user.id))
   end
 
   test "an invalid link is refused", %{conn: conn} do
@@ -95,7 +96,7 @@ defmodule FireflyWeb.EmailConfirmationTest do
     |> click_button("Save")
     |> assert_has("#flash-info", text: "confirm the new address")
 
-    user = Forums.get_user!(user.id)
+    user = Accounts.get_user!(user.id)
     refute User.confirmed?(user)
     assert_confirmation_sent(user)
   end

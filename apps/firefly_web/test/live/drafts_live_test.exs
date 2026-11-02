@@ -1,7 +1,8 @@
 defmodule FireflyWeb.DraftsLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Drafts, Forums}
+  alias Firefly.Discussion
+  alias Firefly.Discussion.Drafts
 
   setup do
     user = user_fixture()
@@ -49,7 +50,7 @@ defmodule FireflyWeb.DraftsLiveTest do
 
   test "a quote opened over a draft is added to it", %{conn: conn, user: user, thread: thread} do
     {:ok, _} = Drafts.save(user, {:reply, thread}, %{body: "my draft"})
-    [op] = Forums.get_thread!(thread.id) |> Firefly.Repo.preload(:posts) |> Map.get(:posts)
+    [op] = Discussion.get_thread!(thread.id) |> Firefly.Repo.preload(:posts) |> Map.get(:posts)
 
     conn
     |> log_in_as(user)
@@ -95,7 +96,7 @@ defmodule FireflyWeb.DraftsLiveTest do
     user: user,
     thread: thread
   } do
-    {:ok, reply} = Forums.create_post(thread, user, %{body: "original"})
+    {:ok, reply} = Discussion.create_post(thread, user, %{body: "original"})
     path = ~p"/categories/#{thread.category_id}/threads/#{thread}/posts/#{reply}/edit"
 
     conn
@@ -122,7 +123,7 @@ defmodule FireflyWeb.DraftsLiveTest do
     |> assert_has("#flash-info", text: "Post updated")
 
     refute Drafts.get(user, {:edit, reply})
-    assert Forums.get_post!(reply.id).body == "revised again"
+    assert Discussion.get_post!(reply.id).body == "revised again"
   end
 
   test "the drafts page lists, resumes and deletes", %{

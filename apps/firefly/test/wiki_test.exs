@@ -4,8 +4,11 @@ defmodule Firefly.WikiTest do
   import Firefly.Fixtures,
     only: [user_fixture: 0, admin_fixture: 0, category_fixture: 1, thread_fixture: 3]
 
-  alias Firefly.{AccountExport, Forums, Groups, SiteSettings, TopicTools}
-  alias Firefly.Forums.{Post, StaffAction}
+  alias Firefly.{Discussion, Groups, SiteSettings}
+  alias Firefly.Accounts.AccountExport
+  alias Firefly.Moderation.TopicTools
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.StaffAction
 
   setup do
     admin = admin_fixture()
@@ -13,7 +16,7 @@ defmodule Firefly.WikiTest do
     member = user_fixture()
     category = category_fixture("Docs")
     thread = thread_fixture(category, author, %{title: "Guide", body: "op"})
-    {:ok, post} = Forums.create_post(thread, author, %{body: "How to install"})
+    {:ok, post} = Discussion.create_post(thread, author, %{body: "How to install"})
 
     %{
       admin: admin,
@@ -27,7 +30,7 @@ defmodule Firefly.WikiTest do
 
   defp can_edit?(user, post, thread),
     do:
-      Bodyguard.permit?(Forums, :edit_post, user, %{
+      Bodyguard.permit?(Discussion, :edit_post, user, %{
         post: Repo.reload!(post),
         thread: Repo.reload!(thread)
       })
@@ -35,10 +38,10 @@ defmodule Firefly.WikiTest do
   defp log_entries(action), do: Repo.all(from(a in StaffAction, where: a.action == ^action))
 
   test "staff toggle wikis, logged", %{admin: admin, member: member, post: post} do
-    refute Bodyguard.permit?(Forums, :toggle_wiki, member, post)
-    assert Bodyguard.permit?(Forums, :toggle_wiki, admin, post)
+    refute Bodyguard.permit?(Discussion, :toggle_wiki, member, post)
+    assert Bodyguard.permit?(Discussion, :toggle_wiki, admin, post)
 
-    {:ok, wiki} = Forums.set_wiki(post, true, admin)
+    {:ok, wiki} = Discussion.set_wiki(post, true, admin)
     assert Post.wiki?(wiki)
 
     assert [%{target_id: id, details: %{"excerpt" => "How to install"}}] =
@@ -46,10 +49,10 @@ defmodule Firefly.WikiTest do
 
     assert id == post.id
     # Already a wiki: nothing to log.
-    {:ok, _} = Forums.set_wiki(wiki, true, admin)
+    {:ok, _} = Discussion.set_wiki(wiki, true, admin)
     assert [_] = log_entries("post.wiki")
 
-    {:ok, normal} = Forums.set_wiki(wiki, false, admin)
+    {:ok, normal} = Discussion.set_wiki(wiki, false, admin)
     refute Post.wiki?(normal)
     assert [_] = log_entries("post.unwiki")
   end
@@ -62,16 +65,16 @@ defmodule Firefly.WikiTest do
     thread: thread
   } do
     refute can_edit?(member, post, thread)
-    {:ok, post} = Forums.set_wiki(post, true, admin)
+    {:ok, post} = Discussion.set_wiki(post, true, admin)
     assert can_edit?(member, post, thread)
     # Editing isn't deleting.
-    refute Bodyguard.permit?(Forums, :delete_post, member, %{post: post, thread: thread})
+    refute Bodyguard.permit?(Discussion, :delete_post, member, %{post: post, thread: thread})
 
-    {:ok, post} = Forums.update_post(post, member, %{body: "How to install, step by step"})
-    {:ok, _post} = Forums.update_post(post, author, %{body: "How to install, steps 1-3"})
+    {:ok, post} = Discussion.update_post(post, member, %{body: "How to install, step by step"})
+    {:ok, _post} = Discussion.update_post(post, author, %{body: "How to install, steps 1-3"})
 
     assert [%{editor: %{id: second}}, %{editor: %{id: first}}] =
-             Forums.post_edits(Repo.reload!(post))
+             Discussion.post_edits(Repo.reload!(post))
 
     assert {first, second} == {member.id, author.id}
     # A member's wiki edit isn't staff action.
@@ -87,7 +90,7 @@ defmodule Firefly.WikiTest do
     {:ok, _} = SiteSettings.update(%{"edit_grace_minutes" => "5"}, admin)
     old = NaiveDateTime.add(NaiveDateTime.utc_now(), -3600)
     Repo.update_all(where(Post, id: ^post.id), set: [inserted_at: old])
-    {:ok, _} = Forums.set_wiki(Repo.reload!(post), true, admin)
+    {:ok, _} = Discussion.set_wiki(Repo.reload!(post), true, admin)
     assert can_edit?(member, post, thread)
   end
 
@@ -99,11 +102,11 @@ defmodule Firefly.WikiTest do
     post: post,
     thread: thread
   } do
-    {:ok, post} = Forums.set_wiki(post, true, admin)
+    {:ok, post} = Discussion.set_wiki(post, true, admin)
 
-    {:ok, _} = Forums.close_thread(thread, true, admin)
+    {:ok, _} = Discussion.close_thread(thread, true, admin)
     refute can_edit?(member, post, thread)
-    {:ok, _} = Forums.close_thread(Repo.reload!(thread), false, admin)
+    {:ok, _} = Discussion.close_thread(Repo.reload!(thread), false, admin)
     assert can_edit?(member, post, thread)
 
     Repo.update_all(where(Post, id: ^post.id), set: [hidden_at: DateTime.utc_now(:second)])
@@ -111,14 +114,14 @@ defmodule Firefly.WikiTest do
     Repo.update_all(where(Post, id: ^post.id), set: [hidden_at: nil])
 
     {:ok, team} = Groups.create_group(%{name: "team"}, admin)
-    {:ok, _} = Forums.update_category(category, %{role_ids: [team.id]}, admin)
+    {:ok, _} = Discussion.update_category(category, %{role_ids: [team.id]}, admin)
     refute can_edit?(member, post, thread)
-    {:ok, _} = Forums.update_category(Repo.reload!(category), %{"role_ids" => [""]}, admin)
+    {:ok, _} = Discussion.update_category(Repo.reload!(category), %{"role_ids" => [""]}, admin)
     assert can_edit?(member, post, thread)
 
-    {:ok, _} = Forums.delete_post(post, author)
+    {:ok, _} = Discussion.delete_post(post, author)
     refute can_edit?(member, post, thread)
-    assert {:error, :deleted} = Forums.update_post(post, member, %{body: "too late"})
+    assert {:error, :deleted} = Discussion.update_post(post, member, %{body: "too late"})
   end
 
   test "a wiki stays a wiki through a split and a merge", %{
@@ -128,7 +131,7 @@ defmodule Firefly.WikiTest do
     post: post,
     thread: thread
   } do
-    {:ok, post} = Forums.set_wiki(post, true, admin)
+    {:ok, post} = Discussion.set_wiki(post, true, admin)
 
     {:ok, split} =
       TopicTools.split(
@@ -145,7 +148,7 @@ defmodule Firefly.WikiTest do
     {:ok, target} = TopicTools.merge(split, target, admin)
     assert can_edit?(member, post, target)
     # The merged stub takes no edits.
-    refute Bodyguard.permit?(Forums, :edit_post, member, %{
+    refute Bodyguard.permit?(Discussion, :edit_post, member, %{
              post: post,
              thread: Repo.reload!(split)
            })
@@ -156,8 +159,8 @@ defmodule Firefly.WikiTest do
     member: member,
     post: post
   } do
-    {:ok, post} = Forums.set_wiki(post, true, admin)
-    {:ok, _} = Forums.update_post(post, member, %{body: "Edited by a member"})
+    {:ok, post} = Discussion.set_wiki(post, true, admin)
+    {:ok, _} = Discussion.update_post(post, member, %{body: "Edited by a member"})
 
     assert [%{post_id: post_id, edited_at: _}] = AccountExport.build(member).wiki_edits
     assert post_id == post.id

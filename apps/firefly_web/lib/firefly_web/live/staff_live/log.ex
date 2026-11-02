@@ -8,7 +8,7 @@ defmodule FireflyWeb.StaffLive.Log do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.StaffLog
+  alias Firefly.Moderation.StaffLog
 
   @labels %{
     "thread.pin" => "Pinned thread",

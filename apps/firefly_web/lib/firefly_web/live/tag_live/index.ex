@@ -2,14 +2,14 @@ defmodule FireflyWeb.TagLive.Index do
   @moduledoc "Every tag in use, with how many threads have it."
   use FireflyWeb, :live_view
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(:page_title, "Tags")
-     |> assign(:tags, Forums.list_tags(socket.assigns.current_user))}
+     |> assign(:tags, Discussion.list_tags(socket.assigns.current_user))}
   end
 
   @impl true

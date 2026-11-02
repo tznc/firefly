@@ -1,7 +1,8 @@
 defmodule Firefly.QuoteTest do
   use Firefly.DataCase, async: true
 
-  alias Firefly.{Markdown, Quote}
+  alias Firefly.Discussion.Quote
+  alias Firefly.Rendering.Markdown
 
   @body "Supervisors **restart** children.\n\nThat's the *whole* trick & more."
   @url "/categories/1/threads/2#post-3"

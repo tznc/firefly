@@ -6,7 +6,7 @@ defmodule FireflyWeb.UserAuth do
       the unread notification and conversation counts, for admins the review
       queue's count (kept live; views can export `review_changed/1` to react
       too) and the current path. It records the user's visit (see
-      `Firefly.Visits`) once the page connects.
+      `Firefly.Accounts.Visits`) once the page connects.
       For a user, it also handles the theme toggle's `"set_theme"` event on
       every page, saving their theme.
     * `:require_user` - redirects to the categories page when nobody is
@@ -15,7 +15,7 @@ defmodule FireflyWeb.UserAuth do
       Staff who must set up two-factor authentication first are sent to
       their security settings from any other page.
     * `:password_login` - redirects to the login page when passwords are off
-      (single sign-on only, see `Firefly.Auth.sso_only?/0`). Used by
+      (single sign-on only, see `Firefly.Accounts.Auth.sso_only?/0`). Used by
       the password login, registration and reset pages.
   """
 
@@ -24,16 +24,18 @@ defmodule FireflyWeb.UserAuth do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
   import Phoenix.LiveView
 
-  alias Firefly.{Forums, Messages, Review, Visits}
+  alias Firefly.{Accounts, Messaging, Notifications}
+  alias Firefly.Accounts.Visits
+  alias Firefly.Moderation.Review
   alias FireflyWeb.Session
 
   def on_mount(:mount_current_user, _params, session, socket) do
     socket = mount_current_user(socket, session)
 
-    # Staff who must set up two-factor (see Firefly.TwoFactor.must_enroll?/1)
+    # Staff who must set up two-factor (see Firefly.Accounts.TwoFactor.must_enroll?/1)
     # can only use their settings until they have.
     if socket.view != FireflyWeb.SettingsLive.Index and
-         Firefly.TwoFactor.must_enroll?(socket.assigns.current_user) do
+         Firefly.Accounts.TwoFactor.must_enroll?(socket.assigns.current_user) do
       {:halt,
        socket
        |> put_flash(:error, "Set up two-factor authentication to go on.")
@@ -62,7 +64,7 @@ defmodule FireflyWeb.UserAuth do
   end
 
   def on_mount(:password_login, _params, _session, socket) do
-    if Firefly.Auth.password_login?() do
+    if Firefly.Accounts.Auth.password_login?() do
       {:cont, socket}
     else
       socket =
@@ -98,10 +100,10 @@ defmodule FireflyWeb.UserAuth do
 
     socket
     |> assign(:notification_count, notification_count(user))
-    |> assign(:message_count, Messages.unread_conversation_count(user))
+    |> assign(:message_count, Messaging.unread_conversation_count(user))
   end
 
-  defp staff?(%{assigns: %{current_user: %{} = user}}), do: Forums.admin?(user)
+  defp staff?(%{assigns: %{current_user: %{} = user}}), do: Accounts.admin?(user)
   defp staff?(_socket), do: false
 
   defp subscribe_to_review(socket) do
@@ -130,7 +132,7 @@ defmodule FireflyWeb.UserAuth do
   defp handle_review(_other, socket), do: {:cont, socket}
 
   defp notification_count(nil), do: 0
-  defp notification_count(user), do: Forums.unread_notification_count(user)
+  defp notification_count(user), do: Notifications.unread_notification_count(user)
 
   # Keeps the notification and message badges live: notify/read broadcasts
   # :notifications_changed on the user's topic (and :account_changed when the
@@ -138,7 +140,7 @@ defmodule FireflyWeb.UserAuth do
   # `notifications_changed/1` to react as well (e.g. the notifications page).
   defp subscribe_to_notifications(%{assigns: %{current_user: %{id: user_id}}} = socket) do
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(Firefly.PubSub, Forums.notifications_topic(user_id))
+      Phoenix.PubSub.subscribe(Firefly.PubSub, Notifications.notifications_topic(user_id))
 
       attach_hook(socket, :notifications, :handle_info, &handle_notifications/2)
     else
@@ -151,7 +153,7 @@ defmodule FireflyWeb.UserAuth do
   defp handle_set_theme(%{assigns: %{current_user: %{}}} = socket) do
     attach_hook(socket, :set_theme, :handle_event, fn
       "set_theme", %{"theme" => theme}, socket ->
-        case Forums.update_preferences(socket.assigns.current_user, %{theme: theme}) do
+        case Accounts.update_preferences(socket.assigns.current_user, %{theme: theme}) do
           {:ok, user} -> {:halt, assign(socket, :current_user, user)}
           {:error, _changeset} -> {:halt, socket}
         end

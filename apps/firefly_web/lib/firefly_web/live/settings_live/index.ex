@@ -10,18 +10,18 @@ defmodule FireflyWeb.SettingsLive.Index do
     * Interface: the theme
     * Notifications (`/settings/notifications`): email, private messages,
       the levels threads get when you reply or start one, and how often
-      digest emails come (see `Firefly.Digests`), and browser push
+      digest emails come (see `Firefly.Notifications.Digests`), and browser push
       notifications for this browser, through the `PushNotifications` hook
-      (see `Firefly.WebPush`)
-    * Privacy: hiding your profile and presence (see `Firefly.Profiles`),
+      (see `Firefly.Notifications.WebPush`)
+    * Privacy: hiding your profile and presence (see `Firefly.Accounts.Profiles`),
       your activity from your profile, and yourself from the users directory
     * Muted & ignored (`/settings/users`): the members you mute or ignore
-      (see `Firefly.Ignores`), to add or remove
+      (see `Firefly.Accounts.Ignores`), to add or remove
     * Logins (`/settings/logins`): connecting and disconnecting social
-      login accounts (see `Firefly.Auth`)
-    * Security (`/settings/security`): passkeys (see `Firefly.Passkeys`),
+      login accounts (see `Firefly.Accounts.Auth`)
+    * Security (`/settings/security`): passkeys (see `Firefly.Accounts.Passkeys`),
       and two-factor authentication (see
-      `Firefly.TwoFactor`): an authenticator app, security keys
+      `Firefly.Accounts.TwoFactor`): an authenticator app, security keys
       (registered through the `SecurityKeyRegister` hook) and backup codes
     * Account: downloading your data and deleting your account (both handled
       by `FireflyWeb.AccountController`)
@@ -30,24 +30,12 @@ defmodule FireflyWeb.SettingsLive.Index do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{
-    Auth,
-    Badges,
-    Digests,
-    EmailConfirmation,
-    Forums,
-    Ignores,
-    Passkeys,
-    Posting,
-    RateLimit,
-    SiteSettings,
-    TwoFactor,
-    Uploads,
-    WebAuthn,
-    WebPush
-  }
+  alias Firefly.{Accounts, Badges, RateLimit, SiteSettings, Uploads}
+  alias Firefly.Accounts.{Auth, EmailConfirmation, Ignores, Passkeys, TwoFactor, WebAuthn}
+  alias Firefly.Moderation.Posting
+  alias Firefly.Notifications.{Digests, WebPush}
 
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.User
 
   @sections [
     profile: {"Profile", "hero-user-circle"},
@@ -189,7 +177,7 @@ defmodule FireflyWeb.SettingsLive.Index do
     # The profile is public (a markdown bio, a website link): silenced users
     # can't change it.
     with :ok <- Posting.check(old, :like),
-         {:ok, user} <- Forums.update_user(old, profile_params(params)) do
+         {:ok, user} <- Accounts.update_user(old, profile_params(params)) do
       message =
         if user.email != old.email and not User.confirmed?(user) do
           EmailConfirmation.deliver(user)
@@ -268,7 +256,7 @@ defmodule FireflyWeb.SettingsLive.Index do
       when is_map_key(@preference_fields, section) do
     params = Map.take(params, @preference_fields[section])
 
-    case Forums.update_preferences(socket.assigns.current_user, params) do
+    case Accounts.update_preferences(socket.assigns.current_user, params) do
       {:ok, user} ->
         {:noreply,
          socket
@@ -285,7 +273,7 @@ defmodule FireflyWeb.SettingsLive.Index do
     user = socket.assigns.current_user
     username = params |> Map.get("username", "") |> String.trim() |> String.trim_leading("@")
 
-    case Forums.users_by_username([username]) do
+    case Accounts.users_by_username([username]) do
       %{^username => target} ->
         case Ignores.choose(user, target, params["level"], params["duration"]) do
           {:ok, message} -> {:noreply, socket |> assign_ignores() |> put_flash(:info, message)}
@@ -453,7 +441,7 @@ defmodule FireflyWeb.SettingsLive.Index do
   end
 
   def handle_event("remove_ignore", %{"id" => id}, socket) do
-    case Forums.get_user(id) do
+    case Accounts.get_user(id) do
       nil ->
         {:noreply, assign_ignores(socket)}
 

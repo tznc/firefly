@@ -6,7 +6,7 @@ defmodule FireflyWeb.ThreadLive.Top do
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   @impl true
   def mount(_params, _session, socket) do
@@ -15,7 +15,7 @@ defmodule FireflyWeb.ThreadLive.Top do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    period = if params["period"] in Forums.top_periods(), do: params["period"], else: "week"
+    period = if params["period"] in Discussion.top_periods(), do: params["period"], else: "week"
     {:noreply, socket |> assign(:period, period) |> load()}
   end
 
@@ -23,7 +23,7 @@ defmodule FireflyWeb.ThreadLive.Top do
     assign(
       socket,
       :threads,
-      Forums.top_threads(socket.assigns.period, socket.assigns.current_user)
+      Discussion.top_threads(socket.assigns.period, socket.assigns.current_user)
     )
   end
 
@@ -34,7 +34,7 @@ defmodule FireflyWeb.ThreadLive.Top do
       <.list_tabs current_path="/top" current_user={@current_user} />
       <div id="top-periods" class="join">
         <.link
-          :for={period <- Forums.top_periods()}
+          :for={period <- Discussion.top_periods()}
           patch={~p"/top?#{[period: period]}"}
           class={["btn btn-sm join-item", @period == period && "btn-active"]}
         >

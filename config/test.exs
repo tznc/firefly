@@ -54,7 +54,7 @@ config :phoenix, :plug_init_mode, :runtime
 config :firefly, notifications_enabled: false
 
 # Tests run due thread timers and reminders themselves, inside their sandbox transaction.
-config :firefly, Firefly.TopicTimers, enabled: false
+config :firefly, Firefly.Moderation.TopicTimers, enabled: false
 
 # Each test reads its own (transactional) site settings: no shared cache.
 config :firefly, site_settings_cache: false
@@ -112,11 +112,11 @@ config :firefly, Firefly.RateLimit,
 config :firefly, :plugins_cache, false
 
 # Link previews aren't fetched, except by the tests of them.
-config :firefly, Firefly.LinkPreviews, enabled: false
+config :firefly, Firefly.Rendering.LinkPreviews, enabled: false
 
 # Pushes are sent in the test's process (VAPID keys are set by the tests
 # that need them).
-config :firefly, Firefly.WebPush, async: false
+config :firefly, Firefly.Notifications.WebPush, async: false
 
 # Tests deliver plugin events and run plugin jobs themselves.
 config :firefly, Firefly.Plugins.Queue, enabled: false
@@ -129,8 +129,8 @@ for config_key <- [
       Ueberauth.Strategy.Discord.OAuth,
       Ueberauth.Strategy.Apple.OAuth,
       Ueberauth.Strategy.Facebook.OAuth,
-      Firefly.Auth.Strategies.X,
-      Firefly.Auth.Strategies.Slack
+      Firefly.Accounts.Auth.Strategies.X,
+      Firefly.Accounts.Auth.Strategies.Slack
     ] do
   config :ueberauth, config_key, client_id: "test-client", client_secret: "test-secret"
 end

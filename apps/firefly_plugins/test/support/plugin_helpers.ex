@@ -1,6 +1,9 @@
 defmodule FireflyPlugins.PluginHelpers do
   @moduledoc "Builds plugin bundles and installs plugins for tests."
 
+  # Test support, for any app's tests: unchecked.
+  use Boundary, top_level?: true, check: [in: false, out: false]
+
   alias FireflyPlugins.Bundle
   alias Firefly.Plugins
 
@@ -77,6 +80,10 @@ defmodule FireflyPlugins.Test.GreeterPlugin do
   A tiny core plugin for tests: exports `greet`, using an uploaded plugin's
   `shout` when the "loud" plugin is installed (an optional dependency).
   """
+
+  # Test support, for any app's tests: unchecked.
+  use Boundary, top_level?: true, check: [in: false, out: false]
+
   use Firefly.Plugin,
     id: "greeter",
     name: "Greeter",
@@ -109,6 +116,10 @@ end
 
 defmodule FireflyPlugins.Test.CrashingPlugin do
   @moduledoc "A core plugin for tests whose export raises, needing the uploaded \"base\"."
+
+  # Test support, for any app's tests: unchecked.
+  use Boundary, top_level?: true, check: [in: false, out: false]
+
   use Firefly.Plugin,
     id: "crashing",
     name: "Crashing",

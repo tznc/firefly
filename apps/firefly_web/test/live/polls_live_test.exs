@@ -1,8 +1,9 @@
 defmodule FireflyWeb.PollsLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Forums, Polls, Repo}
-  alias Firefly.Forums.Poll
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Discussion.Polls
+  alias Firefly.Discussion.Poll
 
   setup do
     author = user_fixture(%{username: "pollster"})
@@ -16,7 +17,10 @@ defmodule FireflyWeb.PollsLiveTest do
 
   defp poll_post(thread, user, attrs) do
     attrs = Map.merge(%{"options_text" => "Red\nGreen"}, attrs)
-    {:ok, post} = Forums.create_post(thread, user, %{body: "vote!", poll: Polls.attrs(attrs, 0)})
+
+    {:ok, post} =
+      Discussion.create_post(thread, user, %{body: "vote!", poll: Polls.attrs(attrs, 0)})
+
     {post, Poll |> Repo.get_by!(post_id: post.id) |> Repo.preload(:options)}
   end
 

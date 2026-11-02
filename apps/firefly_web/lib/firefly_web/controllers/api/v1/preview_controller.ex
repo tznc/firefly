@@ -1,6 +1,6 @@
 defmodule FireflyWeb.Api.V1.PreviewController do
   use FireflyWeb, :controller
-  alias Firefly.Markdown
+  alias Firefly.Rendering.Markdown
 
   def create(conn, %{"post" => post_params}) do
     conn

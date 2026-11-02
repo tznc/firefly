@@ -5,14 +5,16 @@ defmodule FireflyWeb.InboundController do
   Configure SendGrid to POST to `/inbound/sendgrid?token=<FIREFLY_INBOUND_EMAIL_TOKEN>`.
   Requests without the shared token are rejected (and the endpoint is
   disabled when no token is configured). A reply is only posted when its
-  reply-to address verifies (see `Firefly.ReplyAddress`) and the sender
+  reply-to address verifies (see `Firefly.Notifications.ReplyAddress`) and the sender
   matches the user the address was issued to.
   """
   use FireflyWeb, :controller
 
   require Logger
 
-  alias Firefly.{Forums, Posting, ReplyAddress}
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Moderation.Posting
+  alias Firefly.Notifications.ReplyAddress
 
   # Get the email part out of something like "Jane Doe <jane@example.com>"
   @email_regex ~r/<?([^<>\s]+@[^<>\s]+)>?\s*$/
@@ -21,12 +23,12 @@ defmodule FireflyWeb.InboundController do
 
   def sendgrid(conn, params) do
     with {:ok, thread_id, user_id} <- ReplyAddress.verify(params["to"]),
-         %{} = user <- Forums.get_user(user_id),
+         %{} = user <- Accounts.get_user(user_id),
          true <- sender_matches?(params["from"], user) || {:error, :sender_mismatch},
          # A merged thread's replies go where its posts went.
-         %{} = thread <- Forums.get_thread_after_merges(thread_id),
+         %{} = thread <- Discussion.get_thread_after_merges(thread_id),
          :ok <- Posting.check(user, thread),
-         {:ok, _post} <- Forums.create_post(thread, user, %{body: params["text"]}) do
+         {:ok, _post} <- Discussion.create_post(thread, user, %{body: params["text"]}) do
       :ok
     else
       reason -> Logger.info("Ignored inbound email: #{inspect(reason)}")

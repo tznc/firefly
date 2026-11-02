@@ -4,7 +4,8 @@ defmodule FireflyWeb.AuthLive.ForgotPassword do
 
   on_mount({FireflyWeb.UserAuth, :password_login})
 
-  alias Firefly.{PasswordReset, RateLimit}
+  alias Firefly.RateLimit
+  alias Firefly.Accounts.PasswordReset
 
   @sent "If an account with a password uses that email, we've sent it a link to reset the password."
 

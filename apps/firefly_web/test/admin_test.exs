@@ -60,14 +60,14 @@ defmodule FireflyWeb.AdminTest do
     bob = user_fixture()
 
     {:ok, _} =
-      Firefly.Messages.start_conversation(alice, %{
+      Firefly.Messaging.start_conversation(alice, %{
         "recipients" => bob.username,
         "title" => "Hush",
         "body" => "xylophone confidential"
       })
 
     :sys.get_state(Firefly.Notifications)
-    [notification] = Firefly.Forums.notifications_for(bob)
+    [notification] = Firefly.Notifications.notifications_for(bob)
     conn = log_in_as(conn, admin_fixture())
 
     for path <- [

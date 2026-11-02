@@ -1,8 +1,9 @@
 defmodule FireflyWeb.AuthTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Auth, Forums, Repo}
-  alias Firefly.Forums.{User, UserIdentity}
+  alias Firefly.{Accounts, Repo}
+  alias Firefly.Accounts.Auth
+  alias Firefly.Accounts.{User, UserIdentity}
 
   @github %{
     provider: :github,
@@ -46,7 +47,7 @@ defmodule FireflyWeb.AuthTest do
 
     test "never logs into a password account with the same username" do
       {:ok, victim} =
-        Forums.register_user(%{
+        Accounts.register_user(%{
           username: "knewter",
           email: "someone@example.com",
           password: "s3cret-password"
@@ -65,13 +66,13 @@ defmodule FireflyWeb.AuthTest do
 
     test "links a pre-existing GitHub-created account only when the email matches" do
       {:ok, legacy} =
-        Forums.create_user(%{username: "knewter", name: "Josh", email: "josh@example.com"})
+        Accounts.create_user(%{username: "knewter", name: "Josh", email: "josh@example.com"})
 
       assert {:ok, %{id: id}} = Auth.login(@github)
       assert id == legacy.id
 
       {:ok, other_legacy} =
-        Forums.create_user(%{username: "octo", name: "Octo", email: "octo@example.com"})
+        Accounts.create_user(%{username: "octo", name: "Octo", email: "octo@example.com"})
 
       assert {:ok, impostor} =
                Auth.login(%{@github | uid: 3003, nickname: "octo", email: "x@example.com"})
@@ -161,7 +162,7 @@ defmodule FireflyWeb.AuthTest do
     end
 
     test "the last way to log in can't be disconnected", %{conn: conn} do
-      # Email login links would be another way in (see Firefly.MagicLinks).
+      # Email login links would be another way in (see Firefly.Accounts.MagicLinks).
       {:ok, _} = Firefly.SiteSettings.update(%{"magic_links" => "false"}, admin_fixture())
       {:ok, user} = Auth.login(@github)
 

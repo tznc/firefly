@@ -6,15 +6,18 @@ defmodule FireflyWeb.ReviewLiveTest do
 
   @endpoint FireflyWeb.Endpoint
 
-  alias Firefly.{Flags, Forums, Repo}
-  alias Firefly.Forums.{Post, SiteSetting, StaffAction}
+  alias Firefly.{Accounts, Discussion, Repo}
+  alias Firefly.Moderation.Flags
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.StaffAction
+  alias Firefly.SiteSettings.SiteSetting
 
   setup do
     admin = admin_fixture(%{username: "boss"})
     author = user_fixture(%{username: "author"})
     category = category_fixture()
     thread = thread_fixture(category, author, %{title: "Pills", body: "first"})
-    {:ok, reply} = Forums.create_post(thread, author, %{body: "buy pills"})
+    {:ok, reply} = Discussion.create_post(thread, author, %{body: "buy pills"})
     %{admin: admin, author: author, category: category, thread: thread, reply: reply}
   end
 
@@ -64,7 +67,7 @@ defmodule FireflyWeb.ReviewLiveTest do
     end)
     |> assert_has("#flash-info", text: "the author is silenced")
 
-    assert %{silence_reason: "Spam, again"} = Forums.get_user!(ctx.author.id)
+    assert %{silence_reason: "Spam, again"} = Accounts.get_user!(ctx.author.id)
   end
 
   test "disagree and restore shows the post again", ctx do
@@ -92,7 +95,7 @@ defmodule FireflyWeb.ReviewLiveTest do
     assert Phoenix.LiveViewTest.has_element?(view, "#review-count", "1")
 
     other = admin_fixture()
-    {:ok, _} = Firefly.Review.defer(Repo.get!(Post, ctx.reply.id), other)
+    {:ok, _} = Firefly.Moderation.Review.defer(Repo.get!(Post, ctx.reply.id), other)
     refute Phoenix.LiveViewTest.has_element?(view, "#flagged-#{ctx.reply.id}")
     refute Phoenix.LiveViewTest.has_element?(view, "#review-count")
   end
@@ -116,7 +119,7 @@ defmodule FireflyWeb.ReviewLiveTest do
       |> assert_has("#flash-info", text: "awaiting approval")
       |> assert_has(".awaiting-approval", text: "Awaiting approval")
 
-      thread = Repo.get_by!(Forums.Thread, title: "Hello all")
+      thread = Repo.get_by!(Firefly.Discussion.Thread, title: "Hello all")
       path = ~p"/categories/#{ctx.category}/threads/#{thread}"
 
       assert_error_sent(404, fn -> get(log_in_as(build_conn(), member), path) end)
@@ -134,7 +137,7 @@ defmodule FireflyWeb.ReviewLiveTest do
 
     test "a queued reply can't be read by id: history, quotes, the store channel", ctx do
       newbie = user_fixture(%{username: "newbie"})
-      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "queued reply"})
+      {:ok, reply} = Discussion.create_post(ctx.thread, newbie, %{body: "queued reply"})
       thread_path = ~p"/categories/#{ctx.category}/threads/#{ctx.thread}"
 
       for user <- [ctx.author, nil] do
@@ -168,7 +171,7 @@ defmodule FireflyWeb.ReviewLiveTest do
 
     test "a queued thread's title stays off the category's thread index", ctx do
       newbie = user_fixture(%{username: "newbie"})
-      {:ok, _} = Forums.create_thread(ctx.category, newbie, %{title: "Buy now", body: "spam"})
+      {:ok, _} = Discussion.create_thread(ctx.category, newbie, %{title: "Buy now", body: "spam"})
 
       for user <- [user_fixture(), ctx.admin] do
         ctx.conn
@@ -181,7 +184,7 @@ defmodule FireflyWeb.ReviewLiveTest do
 
     test "staff reject a reply with a reason, and the author is told", ctx do
       newbie = user_fixture(%{username: "newbie"})
-      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "queued reply"})
+      {:ok, reply} = Discussion.create_post(ctx.thread, newbie, %{body: "queued reply"})
 
       ctx.conn
       |> log_in_as(ctx.author)

@@ -3,8 +3,10 @@ defmodule FireflyWeb.FlaggingLiveTest do
 
   require Phoenix.LiveViewTest
 
-  alias Firefly.{Flags, Forums, Repo}
-  alias Firefly.Forums.{Flag, Post}
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Moderation.Flags
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.Flag
 
   setup do
     admin = admin_fixture(%{username: "boss"})
@@ -12,7 +14,7 @@ defmodule FireflyWeb.FlaggingLiveTest do
     member = user_fixture(%{username: "member"})
     category = category_fixture()
     thread = thread_fixture(category, author, %{title: "Pills", body: "first post"})
-    {:ok, reply} = Forums.create_post(thread, author, %{body: "buy pills"})
+    {:ok, reply} = Discussion.create_post(thread, author, %{body: "buy pills"})
 
     %{admin: admin, author: author, member: member, thread: thread, reply: reply}
   end

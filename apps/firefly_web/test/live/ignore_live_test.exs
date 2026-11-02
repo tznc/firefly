@@ -1,7 +1,7 @@
 defmodule FireflyWeb.IgnoreLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Ignores
+  alias Firefly.Accounts.Ignores
 
   setup do
     %{me: user_fixture(%{username: "me"}), troll: user_fixture(%{username: "troll"})}
@@ -14,7 +14,7 @@ defmodule FireflyWeb.IgnoreLiveTest do
   } do
     category = category_fixture()
     thread = thread_fixture(category, me, %{title: "Mine"})
-    {:ok, post} = Firefly.Forums.create_post(thread, troll, %{body: "Something rude"})
+    {:ok, post} = Firefly.Discussion.create_post(thread, troll, %{body: "Something rude"})
 
     conn = log_in_as(conn, me)
 

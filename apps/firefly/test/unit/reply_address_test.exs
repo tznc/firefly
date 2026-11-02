@@ -1,7 +1,7 @@
 defmodule Firefly.ReplyAddressTest do
   use ExUnit.Case, async: true
 
-  alias Firefly.ReplyAddress
+  alias Firefly.Notifications.ReplyAddress
 
   test "round-trips a thread and user" do
     address = ReplyAddress.address(%{id: 12}, %{id: 34})

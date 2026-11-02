@@ -2,22 +2,22 @@ defmodule FireflyWeb.CategoryLive.Index do
   @moduledoc "Lists every category; updates live as categories change."
   use FireflyWeb, :live_view
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket), do: Forums.subscribe("forums:categories")
+    if connected?(socket), do: Discussion.subscribe("forums:categories")
 
     {:ok,
      socket
      |> assign(:page_title, "Categories")
-     |> assign(:categories, Forums.list_category_tree(socket.assigns.current_user))}
+     |> assign(:categories, Discussion.list_category_tree(socket.assigns.current_user))}
   end
 
   @impl true
   def handle_info({_event, _category}, socket) do
     {:noreply,
-     assign(socket, :categories, Forums.list_category_tree(socket.assigns.current_user))}
+     assign(socket, :categories, Discussion.list_category_tree(socket.assigns.current_user))}
   end
 
   @impl true

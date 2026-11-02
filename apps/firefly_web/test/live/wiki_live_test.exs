@@ -1,8 +1,9 @@
 defmodule FireflyWeb.WikiLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Forums, Penalties, Repo, TopicTools}
-  alias Firefly.Forums.Post
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Moderation.{Penalties, TopicTools}
+  alias Firefly.Discussion.Post
 
   setup do
     admin = admin_fixture(%{username: "boss"})
@@ -10,7 +11,7 @@ defmodule FireflyWeb.WikiLiveTest do
     member = user_fixture(%{username: "member"})
     category = category_fixture()
     thread = thread_fixture(category, author, %{title: "FAQ", body: "first post"})
-    {:ok, post} = Forums.create_post(thread, author, %{body: "Shared notes"})
+    {:ok, post} = Discussion.create_post(thread, author, %{body: "Shared notes"})
     %{admin: admin, author: author, member: member, thread: thread, post: post}
   end
 
@@ -63,9 +64,9 @@ defmodule FireflyWeb.WikiLiveTest do
     thread: thread,
     post: post
   } do
-    {:ok, post} = Forums.set_wiki(post, true, admin)
+    {:ok, post} = Discussion.set_wiki(post, true, admin)
     {:ok, thread} = TopicTools.set_slow_mode(thread, 3600, admin)
-    {:ok, _} = Forums.create_post(thread, member, %{body: "my reply"})
+    {:ok, _} = Discussion.create_post(thread, member, %{body: "my reply"})
 
     conn
     |> log_in_as(member)
@@ -97,7 +98,7 @@ defmodule FireflyWeb.WikiLiveTest do
     thread: thread,
     post: post
   } do
-    {:ok, post} = Forums.set_wiki(post, true, admin)
+    {:ok, post} = Discussion.set_wiki(post, true, admin)
 
     session =
       conn
@@ -105,7 +106,7 @@ defmodule FireflyWeb.WikiLiveTest do
       |> visit(edit_path(thread, post))
       |> fill_in("Body", with: "member's version")
 
-    {:ok, _} = Forums.update_post(post, author, %{body: "author's version"})
+    {:ok, _} = Discussion.update_post(post, author, %{body: "author's version"})
 
     session
     |> click_button("Save edit")
@@ -121,7 +122,7 @@ defmodule FireflyWeb.WikiLiveTest do
     thread: thread,
     post: post
   } do
-    {:ok, post} = Forums.set_wiki(post, true, admin)
+    {:ok, post} = Discussion.set_wiki(post, true, admin)
 
     session =
       conn
@@ -129,7 +130,7 @@ defmodule FireflyWeb.WikiLiveTest do
       |> visit(edit_path(thread, post))
       |> fill_in("Body", with: "late edit")
 
-    {:ok, _} = Forums.set_wiki(post, false, admin)
+    {:ok, _} = Discussion.set_wiki(post, false, admin)
 
     session
     |> click_button("Save edit")

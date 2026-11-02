@@ -7,5 +7,5 @@ defmodule FireflyWeb.ThreadLive.Watching do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  defp load(user), do: Forums.watched_threads(user)
+  defp load(user), do: Discussion.watched_threads(user)
 end

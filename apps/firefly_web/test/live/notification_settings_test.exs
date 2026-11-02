@@ -1,8 +1,8 @@
 defmodule FireflyWeb.NotificationSettingsTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Subscriptions
+  alias Firefly.Accounts
+  alias Firefly.Notifications.Subscriptions
 
   test "turning email notifications off", %{conn: conn} do
     user = user_fixture()
@@ -18,7 +18,7 @@ defmodule FireflyWeb.NotificationSettingsTest do
     |> click_button("Save")
     |> assert_has("#flash-info", text: "Notification settings saved.")
 
-    refute Forums.get_user!(user.id).email_notifications
+    refute Accounts.get_user!(user.id).email_notifications
   end
 
   test "setting a category's notification level", %{conn: conn} do

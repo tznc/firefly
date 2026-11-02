@@ -1,7 +1,7 @@
 defmodule FireflyWeb.ThreadLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.{Discussion, Notifications}
 
   setup do
     category = category_fixture("Elixir")
@@ -25,7 +25,7 @@ defmodule FireflyWeb.ThreadLiveTest do
       thread = thread_fixture(category, user, %{title: "Fresh"})
       assert_has(session, ".thread-title", text: "Fresh")
 
-      {:ok, _} = Forums.create_post(thread, user, %{body: "bump"})
+      {:ok, _} = Discussion.create_post(thread, user, %{body: "bump"})
       assert_has(session, "#thread-#{thread.id} .posts-count", text: "2")
     end
   end
@@ -51,7 +51,7 @@ defmodule FireflyWeb.ThreadLiveTest do
       |> click_button("Create Thread")
       |> assert_has("p", text: "can't be blank", count: 2)
 
-      assert Forums.list_threads(category) == []
+      assert Discussion.list_threads(category) == []
     end
 
     test "previews the markdown as you type", %{conn: conn, category: category, user: user} do
@@ -79,7 +79,9 @@ defmodule FireflyWeb.ThreadLiveTest do
       user: user
     } do
       thread = thread_fixture(category, user)
-      {:ok, _} = Forums.create_post(thread, user_fixture(%{username: "bob"}), %{body: "I agree!"})
+
+      {:ok, _} =
+        Discussion.create_post(thread, user_fixture(%{username: "bob"}), %{body: "I agree!"})
 
       conn
       |> visit(~p"/categories/#{category}/threads/#{thread}")
@@ -94,7 +96,7 @@ defmodule FireflyWeb.ThreadLiveTest do
       thread = thread_fixture(category, user)
       session = visit(conn, ~p"/categories/#{category}/threads/#{thread}")
 
-      {:ok, post} = Forums.create_post(thread, user, %{body: "Live reply"})
+      {:ok, post} = Discussion.create_post(thread, user, %{body: "Live reply"})
 
       assert_has(session, "#post-#{post.id}", text: "Live reply")
     end
@@ -111,13 +113,13 @@ defmodule FireflyWeb.ThreadLiveTest do
         |> click_button("#thread-level button", "Watching")
         |> assert_has("#thread-level .level-label", text: "Watching")
 
-      assert Forums.watched_by?(thread, reader)
+      assert Notifications.watched_by?(thread, reader)
 
       session
       |> click_button("#thread-level button", "Muted")
       |> assert_has("#thread-level .level-label", text: "Muted")
 
-      refute Forums.watched_by?(thread, reader)
+      refute Notifications.watched_by?(thread, reader)
     end
 
     test "an unknown level or an anonymous viewer is ignored, not a crash", %{
@@ -171,7 +173,7 @@ defmodule FireflyWeb.ThreadLiveTest do
       |> assert_path(~p"/categories/#{category}")
       |> assert_has("#flash-info", text: "Thread deleted successfully.")
 
-      assert Forums.get_thread(thread.id) == nil
+      assert Discussion.get_thread(thread.id) == nil
     end
   end
 
@@ -190,7 +192,7 @@ defmodule FireflyWeb.ThreadLiveTest do
       |> refute_has("a", text: "Edit")
       |> unwrap(&Phoenix.LiveViewTest.render_click(&1, "delete", %{}))
 
-      assert Forums.get_thread(thread.id)
+      assert Discussion.get_thread(thread.id)
 
       other
       |> visit(~p"/categories/#{category}/threads/#{thread}/edit")
@@ -290,14 +292,14 @@ defmodule FireflyWeb.ThreadLiveTest do
       |> visit(~p"/categories/#{category}/threads")
       |> unwrap(&Phoenix.LiveViewTest.render_click(&1, "delete", %{"id" => thread.id}))
 
-      assert Forums.get_thread(thread.id)
+      assert Discussion.get_thread(thread.id)
     end
   end
 
   describe "watching and participating" do
     test "list the user's threads", %{conn: conn, category: category, user: user} do
       watched = thread_fixture(category, user_fixture(), %{title: "Watched one"})
-      {:ok, _} = Forums.watch(user, watched)
+      {:ok, _} = Notifications.watch(user, watched)
       thread_fixture(category, user, %{title: "My own"})
       conn = log_in_as(conn, user)
 

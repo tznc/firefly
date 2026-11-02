@@ -4,17 +4,17 @@ defmodule FireflyWeb.NotificationLive.Show do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.Forums
+  alias Firefly.Notifications
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     user = socket.assigns.current_user
 
-    case Forums.get_notification(user, id) do
+    case Notifications.get_notification(user, id) do
       %{} = notification ->
         {:ok, notification} =
           if connected?(socket),
-            do: Forums.mark_notification_read(notification),
+            do: Notifications.mark_notification_read(notification),
             else: {:ok, notification}
 
         {:ok,

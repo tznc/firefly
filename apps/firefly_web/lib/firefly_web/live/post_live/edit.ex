@@ -11,8 +11,9 @@ defmodule FireflyWeb.PostLive.Edit do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Forums, Posting}
-  alias Firefly.Forums.Post
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Moderation.Posting
+  alias Firefly.Discussion.Post
   alias FireflyWeb.Editor
 
   import FireflyWeb.Drafting
@@ -23,9 +24,9 @@ defmodule FireflyWeb.PostLive.Edit do
         _session,
         socket
       ) do
-    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
-    thread = Forums.get_visible_thread!(category, thread_id, socket.assigns.current_user)
-    post = Forums.get_post!(thread, id)
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Discussion.get_visible_thread!(category, thread_id, socket.assigns.current_user)
+    post = Discussion.get_post!(thread, id)
     socket = assign(socket, category: category, thread: thread, post: post)
 
     if can_edit?(socket),
@@ -65,9 +66,9 @@ defmodule FireflyWeb.PostLive.Edit do
     # The thread may have closed, or moved out of the user's reach, and the
     # post stopped being a wiki, since the page opened. (The post as it was
     # stays assigned: it's what the edit started from.)
-    thread = Forums.get_thread!(socket.assigns.thread.id)
+    thread = Discussion.get_thread!(socket.assigns.thread.id)
     socket = assign(socket, :thread, thread)
-    current = Forums.get_post!(thread, socket.assigns.post.id)
+    current = Discussion.get_post!(thread, socket.assigns.post.id)
 
     with {:can_view, true} <- {:can_view, can?(user, :view_thread, thread)},
          # A deleted post goes on to `save/3`, which says so.
@@ -84,7 +85,7 @@ defmodule FireflyWeb.PostLive.Edit do
   end
 
   defp save(socket, user, params) do
-    case Forums.update_post(socket.assigns.post, user, %{body: params["body"]}) do
+    case Discussion.update_post(socket.assigns.post, user, %{body: params["body"]}) do
       {:ok, post} ->
         {:noreply,
          socket
@@ -100,7 +101,7 @@ defmodule FireflyWeb.PostLive.Edit do
 
       {:error, :edited_elsewhere} ->
         # Keep what they typed; saving again replaces the other edit knowingly.
-        post = Forums.get_post!(socket.assigns.thread, socket.assigns.post.id)
+        post = Discussion.get_post!(socket.assigns.thread, socket.assigns.post.id)
 
         {:noreply,
          socket
@@ -119,7 +120,7 @@ defmodule FireflyWeb.PostLive.Edit do
 
   # Someone else's wiki post: as if replying in the thread (slow mode too).
   defp posting_check(user, post, thread) do
-    if Post.wiki?(post) and post.user_id != user.id and not Forums.admin?(user),
+    if Post.wiki?(post) and post.user_id != user.id and not Accounts.admin?(user),
       do: Posting.check(user, thread),
       else: Posting.check(user)
   end

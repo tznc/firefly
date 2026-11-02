@@ -2,25 +2,32 @@ defmodule FireflyWeb.ReviewTest do
   use Firefly.DataCase
   use Bamboo.Test, shared: true
 
-  alias Firefly.{Flags, Forums, Notifications, Penalties, Repo, Review}
-  alias Firefly.Forums.{Flag, Post, SiteSetting, StaffAction, Subscriptions, Thread, User}
+  alias Firefly.{Accounts, Discussion, Groups, Notifications, Repo}
+  alias Firefly.Moderation.{Flags, Penalties, Review}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Post, Thread}
+  alias Firefly.Moderation.{Flag, StaffAction}
+  alias Firefly.Notifications.Subscriptions
+  alias Firefly.SiteSettings.SiteSetting
 
   setup do
     {:ok, _} = Notifications.start_link()
     admin = user("admin")
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(admin, role)
+    {:ok, role} = Groups.create_role("admin")
+    {:ok, _} = Groups.add_role(admin, role)
     author = user("author")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
-    {:ok, thread} = Forums.create_thread(category, author, %{title: "Pills", body: "first"})
-    {:ok, reply} = Forums.create_post(thread, author, %{body: "buy pills"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+    {:ok, thread} = Discussion.create_thread(category, author, %{title: "Pills", body: "first"})
+    {:ok, reply} = Discussion.create_post(thread, author, %{body: "buy pills"})
     flush()
 
     %{admin: admin, author: author, category: category, thread: thread, reply: reply}
   end
 
   defp user(name) do
-    {:ok, user} = Forums.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+    {:ok, user} =
+      Accounts.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+
     user
   end
 
@@ -86,25 +93,25 @@ defmodule FireflyWeb.ReviewTest do
 
     test "what a decision does outside the database waits for its commit", ctx do
       %{reply: reply, admin: admin, author: author} = ctx
-      Forums.subscribe("forums:thread:#{reply.thread_id}")
+      Discussion.subscribe("forums:thread:#{reply.thread_id}")
       params = %{"duration" => "1w", "reason" => "spamming"}
 
       assert {:error, :rolled_back} =
                Repo.transact(fn ->
                  {:ok, _, _} = Penalties.penalize_unannounced(:silence, author, admin, params)
-                 {:ok, _, _} = Forums.delete_post_unannounced(reply, admin)
+                 {:ok, _, _} = Discussion.delete_post_unannounced(reply, admin)
                  {:error, :rolled_back}
                end)
 
       refute_received {:post_deleted, _}
-      assert Forums.notifications_for(author) == []
+      assert Notifications.notifications_for(author) == []
       assert_no_emails_delivered()
       refute Repo.get!(User, author.id).silenced_until
       refute Repo.get!(Post, reply.id).deleted_at
 
       # Committed, the decision announces itself.
       {:ok, _} = Review.agree(flag_until_hidden(reply), admin, {:silence, params})
-      assert "silenced" in Enum.map(Forums.notifications_for(author), & &1.kind)
+      assert "silenced" in Enum.map(Notifications.notifications_for(author), & &1.kind)
     end
 
     test "a failed decision changes nothing", %{reply: reply, admin: admin} do
@@ -123,7 +130,7 @@ defmodule FireflyWeb.ReviewTest do
       assert logged?("flag.disagree")
 
       for flag <- Repo.all(from(f in Flag, where: f.post_id == ^reply.id, preload: :user)),
-          do: assert(Forums.notifications_for(flag.user) == [])
+          do: assert(Notifications.notifications_for(flag.user) == [])
     end
 
     test "defer: the flags are set aside, the post stays as it is", %{reply: reply, admin: admin} do
@@ -146,48 +153,50 @@ defmodule FireflyWeb.ReviewTest do
 
     test "a new user's first thread waits, unseen and unannounced, until approved", ctx do
       newbie = user("newbie")
-      assert Forums.approval_required?(newbie)
-      refute Forums.approval_required?(ctx.admin)
+      assert Discussion.approval_required?(newbie)
+      refute Discussion.approval_required?(ctx.admin)
 
       {:ok, thread} =
-        Forums.create_thread(ctx.category, newbie, %{title: "Hello", body: "hi @watcher"})
+        Discussion.create_thread(ctx.category, newbie, %{title: "Hello", body: "hi @watcher"})
 
       flush()
       [post] = thread.posts
       assert Post.queued?(post)
 
-      refute thread.id in Enum.map(Forums.latest_threads(ctx.watcher), & &1.id)
-      refute Bodyguard.permit?(Forums, :view_thread, ctx.watcher, thread)
-      assert Bodyguard.permit?(Forums, :view_thread, newbie, thread)
-      assert Bodyguard.permit?(Forums, :view_thread, ctx.admin, thread)
-      assert Forums.notifications_for(ctx.watcher) == []
+      refute thread.id in Enum.map(Discussion.latest_threads(ctx.watcher), & &1.id)
+      refute Bodyguard.permit?(Discussion, :view_thread, ctx.watcher, thread)
+      assert Bodyguard.permit?(Discussion, :view_thread, newbie, thread)
+      assert Bodyguard.permit?(Discussion, :view_thread, ctx.admin, thread)
+      assert Notifications.notifications_for(ctx.watcher) == []
       assert [%{first?: true}] = Review.queued_posts()
 
       {:ok, _} = Review.approve(post, ctx.admin)
       flush()
 
-      assert thread.id in Enum.map(Forums.latest_threads(ctx.watcher), & &1.id)
+      assert thread.id in Enum.map(Discussion.latest_threads(ctx.watcher), & &1.id)
       # Announced now: the mention wins over the new-thread notification.
-      assert [%{kind: "mentioned"}] = Forums.notifications_for(ctx.watcher)
+      assert [%{kind: "mentioned"}] = Notifications.notifications_for(ctx.watcher)
       assert logged?("post.approve")
       assert {:error, :not_queued} = Review.approve(post, ctx.admin)
 
       # Approved once, they post freely.
-      refute Forums.approval_required?(newbie)
+      refute Discussion.approval_required?(newbie)
     end
 
     test "a queued reply is rejected with a reason", ctx do
       newbie = user("newbie")
-      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "spam reply"})
+      {:ok, reply} = Discussion.create_post(ctx.thread, newbie, %{body: "spam reply"})
       flush()
       assert Post.queued?(reply)
-      assert Forums.notifications_for(ctx.author) == []
+      assert Notifications.notifications_for(ctx.author) == []
 
       assert {:error, :reason_required} = Review.reject(reply, ctx.admin, " ")
       {:ok, _} = Review.reject(reply, ctx.admin, "Off-topic")
 
       assert Repo.get!(Post, reply.id).deleted_at
-      assert [%{kind: "post_rejected", body: "Off-topic"}] = Forums.notifications_for(newbie)
+
+      assert [%{kind: "post_rejected", body: "Off-topic"}] =
+               Notifications.notifications_for(newbie)
 
       assert %{details: %{"reason" => "Off-topic"}} =
                Repo.get_by!(StaffAction, action: "post.reject")
@@ -196,7 +205,7 @@ defmodule FireflyWeb.ReviewTest do
     end
 
     test "a queued reply's content stays out of the API and channels", ctx do
-      {:ok, reply} = Forums.create_post(ctx.thread, user("newbie"), %{body: "spam reply"})
+      {:ok, reply} = Discussion.create_post(ctx.thread, user("newbie"), %{body: "spam reply"})
       queued = %{reply | oembeds: [{"https://spam.example", %{}}]}
 
       assert %{body: "", body_html: "", oembeds: [], queued: true} =
@@ -210,47 +219,49 @@ defmodule FireflyWeb.ReviewTest do
 
     test "approved replies are unread for those who opened the thread meanwhile", ctx do
       %{watcher: watcher, thread: thread} = ctx
-      {:ok, _} = Forums.mark_thread_read(watcher, thread)
-      {:ok, reply} = Forums.create_post(thread, user("newbie"), %{body: "a reply"})
+      {:ok, _} = Discussion.mark_thread_read(watcher, thread)
+      {:ok, reply} = Discussion.create_post(thread, user("newbie"), %{body: "a reply"})
 
       # Queued: not unread, and not on the Unread list.
-      refute thread.id in Enum.map(Forums.unread_threads(watcher), & &1.id)
-      {:ok, _} = Forums.mark_thread_read(watcher, thread)
+      refute thread.id in Enum.map(Discussion.unread_threads(watcher), & &1.id)
+      {:ok, _} = Discussion.mark_thread_read(watcher, thread)
 
       {:ok, _} = Review.approve(reply, ctx.admin)
-      assert [%{id: id, unread_count: 1}] = Forums.unread_threads(watcher)
+      assert [%{id: id, unread_count: 1}] = Discussion.unread_threads(watcher)
       assert id == thread.id
     end
 
     test "authors can't edit a post while it's queued", ctx do
       newbie = user("newbie")
-      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "benign"})
+      {:ok, reply} = Discussion.create_post(ctx.thread, newbie, %{body: "benign"})
       params = %{post: reply, thread: ctx.thread}
 
-      refute Bodyguard.permit?(Forums, :edit_post, newbie, params)
-      assert Bodyguard.permit?(Forums, :edit_post, ctx.admin, params)
+      refute Bodyguard.permit?(Discussion, :edit_post, newbie, params)
+      assert Bodyguard.permit?(Discussion, :edit_post, ctx.admin, params)
       # Deleting it is still theirs to do.
-      assert Bodyguard.permit?(Forums, :delete_post, newbie, params)
+      assert Bodyguard.permit?(Discussion, :delete_post, newbie, params)
 
       {:ok, _} = Review.approve(reply, ctx.admin)
       approved = Repo.get!(Post, reply.id)
-      assert Bodyguard.permit?(Forums, :edit_post, newbie, %{params | post: approved})
+      assert Bodyguard.permit?(Discussion, :edit_post, newbie, %{params | post: approved})
     end
 
     test "only the author and admins of a queued thread are notified readers", ctx do
       newbie = user("newbie")
-      {:ok, thread} = Forums.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
+      {:ok, thread} = Discussion.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
       users = [ctx.watcher, newbie, ctx.admin]
 
-      assert Forums.Policy.thread_readers(thread, users) == [newbie, ctx.admin]
+      assert Firefly.Discussion.Policy.thread_readers(thread, users) == [newbie, ctx.admin]
 
-      assert Forums.Policy.thread_readers(thread, users) ==
-               Enum.filter(users, &Bodyguard.permit?(Forums, :view_thread, &1, thread))
+      assert Firefly.Discussion.Policy.thread_readers(thread, users) ==
+               Enum.filter(users, &Bodyguard.permit?(Discussion, :view_thread, &1, thread))
     end
 
     test "queued posts know which are first posts", ctx do
-      {:ok, thread} = Forums.create_thread(ctx.category, user("one"), %{title: "T", body: "t"})
-      {:ok, reply} = Forums.create_post(ctx.thread, user("two"), %{body: "reply"})
+      {:ok, thread} =
+        Discussion.create_thread(ctx.category, user("one"), %{title: "T", body: "t"})
+
+      {:ok, reply} = Discussion.create_post(ctx.thread, user("two"), %{body: "reply"})
       [first] = thread.posts
 
       assert Review.queued_posts() |> Enum.map(&{&1.id, &1.first?}) |> Enum.sort() ==
@@ -259,7 +270,7 @@ defmodule FireflyWeb.ReviewTest do
 
     test "approve then a stale reject: the reject has nothing to do", ctx do
       newbie = user("newbie")
-      {:ok, thread} = Forums.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
+      {:ok, thread} = Discussion.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
       [post] = thread.posts
       stale = Repo.preload(post, [:thread, :user])
 
@@ -271,9 +282,9 @@ defmodule FireflyWeb.ReviewTest do
 
     test "rejecting twice: once only, without crashing", ctx do
       newbie = user("newbie")
-      {:ok, thread} = Forums.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
-      {:ok, reply} = Forums.create_post(ctx.thread, newbie, %{body: "spam reply"})
-      Forums.subscribe("forums:category:#{ctx.category.id}")
+      {:ok, thread} = Discussion.create_thread(ctx.category, newbie, %{title: "Hi", body: "hi"})
+      {:ok, reply} = Discussion.create_post(ctx.thread, newbie, %{body: "spam reply"})
+      Discussion.subscribe("forums:category:#{ctx.category.id}")
 
       for post <- [hd(thread.posts), reply] do
         assert {:ok, _} = Review.reject(post, ctx.admin, "Spam")
@@ -283,17 +294,22 @@ defmodule FireflyWeb.ReviewTest do
       # A rejected thread is deleted like any other: pages hear of it.
       assert_receive {:thread_deleted, %Thread{id: thread_id}}
       assert thread_id == thread.id
-      assert length(Forums.notifications_for(newbie)) == 2
+      assert length(Notifications.notifications_for(newbie)) == 2
       assert Repo.aggregate(where(StaffAction, action: "post.reject"), :count) == 2
     end
 
     test "a rejected thread is deleted", ctx do
       newbie = user("newbie")
-      {:ok, thread} = Forums.create_thread(ctx.category, newbie, %{title: "Nope", body: "spam"})
+
+      {:ok, thread} =
+        Discussion.create_thread(ctx.category, newbie, %{title: "Nope", body: "spam"})
 
       {:ok, _} = Review.reject(hd(thread.posts), ctx.admin, "Spam")
       refute Repo.get(Thread, thread.id)
-      assert [%{kind: "post_rejected", subject: subject}] = Forums.notifications_for(newbie)
+
+      assert [%{kind: "post_rejected", subject: subject}] =
+               Notifications.notifications_for(newbie)
+
       assert subject =~ ~s(thread "Nope")
     end
   end

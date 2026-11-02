@@ -7,8 +7,11 @@ defmodule FireflyWeb.PluginModerationTest do
   import Firefly.DataCase, only: [errors_on: 1]
   import FireflyPlugins.PluginHelpers
 
-  alias Firefly.{Flags, Forums, Plugins, Repo, ReplyAddress, Review}
-  alias Firefly.Forums.{Post, StaffAction}
+  alias Firefly.{Discussion, Groups, Plugins, Repo}
+  alias Firefly.Moderation.{Flags, Review}
+  alias Firefly.Notifications.ReplyAddress
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.StaffAction
 
   # Rejects posts saying "casino", queues those saying "crypto", allows the rest.
   @moderator """
@@ -43,17 +46,17 @@ defmodule FireflyWeb.PluginModerationTest do
       moderator(admin)
 
       assert {:error, changeset} =
-               Forums.create_post(thread, member, %{body: "Best casino in town"})
+               Discussion.create_post(thread, member, %{body: "Best casino in town"})
 
       assert %{body: ["No gambling ads, please."]} = errors_on(changeset)
 
       assert {:error, changeset} =
-               Forums.create_thread(category, member, %{title: "Casino night", body: "come"})
+               Discussion.create_thread(category, member, %{title: "Casino night", body: "come"})
 
       assert %{posts: [%{body: ["No gambling ads, please."]}]} = errors_on(changeset)
 
-      {:ok, post} = Forums.create_post(thread, member, %{body: "Fine words"})
-      assert {:error, changeset} = Forums.update_post(post, member, %{body: "casino!"})
+      {:ok, post} = Discussion.create_post(thread, member, %{body: "Fine words"})
+      assert {:error, changeset} = Discussion.update_post(post, member, %{body: "casino!"})
       assert %{body: ["No gambling ads, please."]} = errors_on(changeset)
     end
 
@@ -65,7 +68,7 @@ defmodule FireflyWeb.PluginModerationTest do
     } do
       moderator(admin)
 
-      assert {:ok, post} = Forums.create_post(thread, member, %{body: "Buy crypto"})
+      assert {:ok, post} = Discussion.create_post(thread, member, %{body: "Buy crypto"})
 
       assert %Post{queued_at: %DateTime{}, queued_reason: "Plugin Guard: mentions crypto (post)"} =
                post
@@ -129,10 +132,10 @@ defmodule FireflyWeb.PluginModerationTest do
          %{admin: admin, member: member, thread: thread} do
       moderator(admin, "exports.moderate_post = () => { for (;;) {} }")
 
-      assert {:ok, %Post{queued_at: nil}} = Forums.create_post(thread, member, %{body: "one"})
+      assert {:ok, %Post{queued_at: nil}} = Discussion.create_post(thread, member, %{body: "one"})
 
       :ok = Plugins.set_fail_closed("guard", true, admin)
-      assert {:error, changeset} = Forums.create_post(thread, member, %{body: "two"})
+      assert {:error, changeset} = Discussion.create_post(thread, member, %{body: "two"})
       assert %{body: ["Your post couldn't be checked right now." <> _]} = errors_on(changeset)
 
       assert [%StaffAction{details: %{"fail_closed" => %{"before" => false, "after" => true}}}] =
@@ -141,16 +144,16 @@ defmodule FireflyWeb.PluginModerationTest do
 
     test "admins and private categories aren't checked", %{admin: admin} do
       moderator(admin)
-      {:ok, role} = Forums.create_role("staff")
-      {:ok, private} = Forums.create_category(%{title: "Staff", role_ids: [role.id]})
+      {:ok, role} = Groups.create_role("staff")
+      {:ok, private} = Discussion.create_category(%{title: "Staff", role_ids: [role.id]})
       insider = user_fixture()
-      {:ok, _} = Forums.add_role(insider, role)
+      {:ok, _} = Groups.add_role(insider, role)
 
       assert {:ok, _} =
-               Forums.create_thread(private, insider, %{title: "Casino plans", body: "shh"})
+               Discussion.create_thread(private, insider, %{title: "Casino plans", body: "shh"})
 
       assert {:ok, _} =
-               Forums.create_thread(category_fixture("Open"), admin, %{
+               Discussion.create_thread(category_fixture("Open"), admin, %{
                  title: "Casino",
                  body: "ok"
                })
@@ -177,11 +180,13 @@ defmodule FireflyWeb.PluginModerationTest do
       moderator(admin)
 
       with_core_plugins([Strict], fn ->
-        assert {:error, changeset} = Forums.create_post(thread, member, %{body: "crypto shout"})
+        assert {:error, changeset} =
+                 Discussion.create_post(thread, member, %{body: "crypto shout"})
+
         assert %{body: ["No shouting."]} = errors_on(changeset)
 
         assert {:ok, %Post{queued_at: %DateTime{}}} =
-                 Forums.create_post(thread, member, %{body: "crypto"})
+                 Discussion.create_post(thread, member, %{body: "crypto"})
       end)
     end
   end
@@ -203,8 +208,8 @@ defmodule FireflyWeb.PluginModerationTest do
         enable: true
       )
 
-      {:ok, spam} = Forums.create_post(thread, member, %{body: "spam"})
-      {:ok, rude} = Forums.create_post(thread, member, %{body: "rude"})
+      {:ok, spam} = Discussion.create_post(thread, member, %{body: "spam"})
+      {:ok, rude} = Discussion.create_post(thread, member, %{body: "rude"})
       flagger = user_fixture()
 
       {:ok, _} = Flags.flag_post(rude, flagger, %{reason: "inappropriate"})

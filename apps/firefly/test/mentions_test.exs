@@ -2,12 +2,16 @@ defmodule Firefly.MentionsTest do
   use Firefly.DataCase
   use Bamboo.Test, shared: true
 
-  alias Firefly.{Forums, Markdown, Mentions, Notifications}
-  alias Firefly.Forums.Subscriptions
+  alias Firefly.{Accounts, Discussion, Notifications}
+  alias Firefly.Discussion.Mentions
+  alias Firefly.Rendering.Markdown
+  alias Firefly.Notifications.Subscriptions
   alias Firefly.URLs
 
   defp user(name) do
-    {:ok, user} = Forums.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+    {:ok, user} =
+      Accounts.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+
     user
   end
 
@@ -44,7 +48,8 @@ defmodule Firefly.MentionsTest do
   # Casts are async; a call to the server waits for them.
   defp flush, do: :sys.get_state(Notifications)
 
-  defp mentions(user), do: Enum.filter(Forums.notifications_for(user), &(&1.kind == "mentioned"))
+  defp mentions(user),
+    do: Enum.filter(Notifications.notifications_for(user), &(&1.kind == "mentioned"))
 
   describe "rendering" do
     test "a page's posts resolve their names once, together", %{alice: alice} do
@@ -59,7 +64,7 @@ defmodule Firefly.MentionsTest do
     end
 
     setup do
-      {:ok, category} = Forums.create_category(%{title: "Elixir Talk"})
+      {:ok, category} = Discussion.create_category(%{title: "Elixir Talk"})
       %{alice: user("Alice"), category: category}
     end
 
@@ -107,7 +112,7 @@ defmodule Firefly.MentionsTest do
       upper = user("Alice")
       lower = user("alice")
 
-      assert Forums.users_by_username(["alice", "Alice", "ALICE"]) == %{
+      assert Accounts.users_by_username(["alice", "Alice", "ALICE"]) == %{
                "alice" => lower,
                "Alice" => upper,
                "ALICE" => upper
@@ -116,42 +121,42 @@ defmodule Firefly.MentionsTest do
 
     test "only existing users count towards the cap" do
       author = user("author")
-      {:ok, category} = Forums.create_category(%{title: "Elixir"})
-      {:ok, thread} = Forums.create_thread(category, author, %{title: "OTP", body: "Hi"})
+      {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+      {:ok, thread} = Discussion.create_thread(category, author, %{title: "OTP", body: "Hi"})
       prose = Enum.map_join(1..(Mentions.max_mentions() + 5), " ", &"@Annotation#{&1}")
 
-      assert {:ok, post} = Forums.create_post(thread, author, %{body: prose})
-      assert {:ok, _} = Forums.update_post(post, author, %{body: prose <> " typo fixed"})
+      assert {:ok, post} = Discussion.create_post(thread, author, %{body: prose})
+      assert {:ok, _} = Discussion.update_post(post, author, %{body: prose <> " typo fixed"})
     end
 
     test "a post may mention at most max_mentions users" do
       author = user("author")
-      {:ok, category} = Forums.create_category(%{title: "Elixir"})
-      {:ok, thread} = Forums.create_thread(category, author, %{title: "OTP", body: "Hi"})
+      {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+      {:ok, thread} = Discussion.create_thread(category, author, %{title: "OTP", body: "Hi"})
 
       many =
         Enum.map_join(1..(Mentions.max_mentions() + 1), " ", &"@#{user("user#{&1}").username}")
 
-      assert {:error, changeset} = Forums.create_post(thread, author, %{body: many})
+      assert {:error, changeset} = Discussion.create_post(thread, author, %{body: many})
       assert "can mention at most 10 users" in errors_on(changeset).body
 
       assert {:error, _} =
-               Forums.create_thread(category, author, %{title: "Spam", body: many})
+               Discussion.create_thread(category, author, %{title: "Spam", body: many})
     end
   end
 
   describe "notifications" do
     setup do
       {:ok, _} = Notifications.start_link()
-      {:ok, category} = Forums.create_category(%{title: "Elixir"})
+      {:ok, category} = Discussion.create_category(%{title: "Elixir"})
       author = user("author")
-      {:ok, thread} = Forums.create_thread(category, author, %{title: "OTP", body: "Cool?"})
+      {:ok, thread} = Discussion.create_thread(category, author, %{title: "OTP", body: "Cool?"})
       flush()
       %{author: author, bob: user("bob"), carol: user("carol"), thread: thread}
     end
 
     defp reply(thread, user, body) do
-      {:ok, post} = Forums.create_post(thread, user, %{body: body})
+      {:ok, post} = Discussion.create_post(thread, user, %{body: body})
       flush()
       post
     end
@@ -184,18 +189,18 @@ defmodule Firefly.MentionsTest do
       {:ok, _} = Subscriptions.set_thread_level(bob, thread, "watching")
       reply(thread, author, "@bob agreed")
 
-      assert [%{kind: "mentioned"}] = Forums.notifications_for(bob)
+      assert [%{kind: "mentioned"}] = Notifications.notifications_for(bob)
     end
 
     test "users who muted the thread aren't notified", %{author: author, bob: bob, thread: thread} do
       {:ok, _} = Subscriptions.set_thread_level(bob, thread, "muted")
       reply(thread, author, "@bob ?")
-      assert Forums.notifications_for(bob) == []
+      assert Notifications.notifications_for(bob) == []
     end
 
     test "mentions in a new thread notify", %{author: author, bob: bob, thread: thread} do
       {:ok, _} =
-        Forums.create_thread(%Forums.Category{id: thread.category_id}, author, %{
+        Discussion.create_thread(%Firefly.Discussion.Category{id: thread.category_id}, author, %{
           title: "Ping",
           body: "cc @bob"
         })
@@ -211,9 +216,9 @@ defmodule Firefly.MentionsTest do
       thread: thread
     } do
       post = reply(thread, author, "@bob look")
-      {:ok, post} = Forums.update_post(post, author, %{body: "@bob look, @carol too"})
+      {:ok, post} = Discussion.update_post(post, author, %{body: "@bob look, @carol too"})
       flush()
-      {:ok, _} = Forums.update_post(post, author, %{body: "@BOB @carol, again"})
+      {:ok, _} = Discussion.update_post(post, author, %{body: "@BOB @carol, again"})
       flush()
 
       assert length(mentions(bob)) == 1
@@ -226,7 +231,7 @@ defmodule Firefly.MentionsTest do
       thread: thread
     } do
       post = reply(thread, author, "look")
-      {:ok, _} = Forums.update_post(post, admin_user(), %{body: "look @bob"})
+      {:ok, _} = Discussion.update_post(post, admin_user(), %{body: "look @bob"})
       flush()
 
       assert mentions(bob) == []

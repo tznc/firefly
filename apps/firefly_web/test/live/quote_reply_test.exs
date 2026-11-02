@@ -1,7 +1,7 @@
 defmodule FireflyWeb.QuoteReplyTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   setup do
     alice = user_fixture(%{username: "alice"})
@@ -9,7 +9,7 @@ defmodule FireflyWeb.QuoteReplyTest do
     thread =
       thread_fixture(category_fixture(), alice, %{title: "Quotable", body: "Let it crash."})
 
-    {:ok, reply} = Forums.create_post(thread, alice, %{body: "Supervisors restart children."})
+    {:ok, reply} = Discussion.create_post(thread, alice, %{body: "Supervisors restart children."})
     path = ~p"/categories/#{thread.category_id}/threads/#{thread}"
     %{thread: thread, reply: reply, path: path}
   end
@@ -55,7 +55,7 @@ defmodule FireflyWeb.QuoteReplyTest do
     |> visit(path <> "/posts/new?quote=#{other_post.id}")
     |> refute_has("textarea", text: "Elsewhere")
 
-    {:ok, _} = Forums.delete_post(reply, admin_fixture())
+    {:ok, _} = Discussion.delete_post(reply, admin_fixture())
 
     conn
     |> visit(path)
@@ -63,7 +63,7 @@ defmodule FireflyWeb.QuoteReplyTest do
     |> visit(path <> "/posts/new?quote=#{reply.id}")
     |> refute_has("textarea", text: "Supervisors")
 
-    {:ok, _} = Forums.close_thread(thread, true, admin_fixture())
+    {:ok, _} = Discussion.close_thread(thread, true, admin_fixture())
     conn |> visit(path) |> refute_has(".quote-link")
   end
 end

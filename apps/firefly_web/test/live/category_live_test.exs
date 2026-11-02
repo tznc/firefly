@@ -1,7 +1,7 @@
 defmodule FireflyWeb.CategoryLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   describe "index" do
     test "lists categories", %{conn: conn} do
@@ -79,7 +79,7 @@ defmodule FireflyWeb.CategoryLiveTest do
       |> assert_has("#flash-info", text: "Category updated successfully.")
       |> assert_has("h1", text: "Elixir & OTP")
 
-      assert Forums.get_category!(category.id).title == "Elixir & OTP"
+      assert Discussion.get_category!(category.id).title == "Elixir & OTP"
     end
   end
 
@@ -89,7 +89,7 @@ defmodule FireflyWeb.CategoryLiveTest do
       author = user_fixture()
       user = user_fixture()
       thread = thread_fixture(category, author)
-      {:ok, _} = Forums.create_post(thread, author, %{body: "Yup"})
+      {:ok, _} = Discussion.create_post(thread, author, %{body: "Yup"})
       conn = log_in_as(conn, user)
 
       conn
@@ -123,7 +123,7 @@ defmodule FireflyWeb.CategoryLiveTest do
       |> assert_path(~p"/categories")
       |> assert_has("#flash-info", text: "Category deleted successfully.")
 
-      assert_raise Ecto.NoResultsError, fn -> Forums.get_category!(category.id) end
+      assert_raise Ecto.NoResultsError, fn -> Discussion.get_category!(category.id) end
     end
 
     test "hides edit and delete from visitors and members", %{conn: conn} do
@@ -149,7 +149,7 @@ defmodule FireflyWeb.CategoryLiveTest do
       |> visit(~p"/categories/#{category}")
       |> unwrap(&Phoenix.LiveViewTest.render_click(&1, "delete", %{}))
 
-      assert Forums.get_category!(category.id)
+      assert Discussion.get_category!(category.id)
     end
 
     test "members can't open the edit page", %{conn: conn} do

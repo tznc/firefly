@@ -5,13 +5,13 @@ defmodule Firefly.Plugins.InstalledPlugin do
   its SHA-256 `checksum`), parsed `manifest` and joined `code`. A plugin the
   circuit breaker turned off has `disabled_reason`. `fail_closed`: whether
   posting is refused when the plugin's moderation hook fails (see
-  `Firefly.Plugins.Moderation`). `secret` authenticates calls to its
+  `Firefly.Plugins.ModerationHooks`). `secret` authenticates calls to its
   inbound endpoints (see `Firefly.Plugins.UI`).
   """
 
   use Ecto.Schema
 
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.User
 
   schema "plugins" do
     field(:plugin_id, :string)

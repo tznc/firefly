@@ -1,6 +1,9 @@
 defmodule Firefly.Notifications do
   @moduledoc """
-  Fans out activity to subscribers (see `Firefly.Forums.Subscriptions`):
+  The Notifications context: in-app notifications, notification levels,
+  emails, digests and browser push.
+
+  Fans out activity to subscribers (see `Firefly.Notifications.Subscriptions`):
 
     * a new thread notifies users watching or tracking its category
     * a new post notifies users watching or tracking the thread (or its
@@ -9,7 +12,7 @@ defmodule Firefly.Notifications do
       notified of anything in it: watching a tag or category, or a thread
       that has since moved, gives no access to restricted categories
     * a new or edited post notifies the users it @mentions (see
-      `Firefly.Mentions`), once per post: an edit only notifies users it
+      `Firefly.Discussion.Mentions`), once per post: an edit only notifies users it
       newly mentions. Not the author, users who can't see the thread (the
       `:view_thread` policy) or users who muted it. A mentioned user gets the
       mention instead of the new thread/post notification.
@@ -19,263 +22,201 @@ defmodule Firefly.Notifications do
       user mentions
     * a private message notifies the conversation's other participants, and
       adding people to a conversation notifies them (see
-      `Firefly.Messages`). A message to a group's inbox also notifies
+      `Firefly.Messaging`). A message to a group's inbox also notifies
       the group's other members by their group notification level:
       `watching` (every message, emailed), `tracking` (every message),
       `normal` (new conversations) or `muted` (nothing)
 
   Nobody is notified of what a user they mute or ignore did (see
-  `Firefly.Ignores`).
+  `Firefly.Accounts.Ignores`).
 
   Everyone notified gets an in-app notification; users at `watching`,
   mentioned users and message recipients also get an email, if they have
   email notifications on and a confirmed address. To avoid floods, a thread
   (or conversation) emails a user once until they read its notifications.
+
+  Its public modules besides this one: `Firefly.Notifications.Notification`
+  (the schema), `Subscriptions` (watching, tracking and muting threads,
+  categories and tags), `Emails`, `Digests`, `WebPush` and `ReplyAddress`.
   """
 
-  use GenServer
+  use Boundary,
+    top_level?: true,
+    check: [out: false],
+    exports: [
+      Notification,
+      Subscriptions,
+      Watch,
+      CategoryWatch,
+      TagWatch,
+      Emails,
+      Digests,
+      WebPush,
+      ReplyAddress
+    ]
 
-  import Ecto.Query, only: [where: 2, order_by: 2, first: 1, select: 3]
+  import Ecto.Query, warn: false
+  import Ecto.Changeset, only: [change: 2]
 
-  alias Firefly.{Emails, Forums, Groups, Ignores, Mailer, Mentions, Messages, Repo}
+  alias Firefly.Repo
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Policy, Thread}
+  alias Firefly.Notifications.{Dispatcher, Notification, Subscriptions}
 
-  alias Firefly.Forums.{
-    Conversation,
-    Message,
-    Notification,
-    Policy,
-    Post,
-    Subscriptions,
-    Thread,
-    User
-  }
+  ## Fan-out (asynchronous, see `Firefly.Notifications.Dispatcher`)
 
-  ### Client API
+  @doc false
+  defdelegate child_spec(opts), to: Dispatcher
 
-  def start_link(_opts \\ []) do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
-  end
+  @doc "Starts the fan-out process (the app does; tests start their own)."
+  defdelegate start_link(opts \\ []), to: Dispatcher
 
   @doc "Notify subscribers about a new reply."
-  def post_created(%Post{} = post), do: GenServer.cast(__MODULE__, {:post_created, post})
+  defdelegate post_created(post), to: Dispatcher
 
   @doc "Notify users newly mentioned by an edit."
-  def post_edited(%Post{} = post), do: GenServer.cast(__MODULE__, {:post_edited, post})
+  defdelegate post_edited(post), to: Dispatcher
 
   @doc "Notify category subscribers about a new thread."
-  def thread_created(%Thread{} = thread),
-    do: GenServer.cast(__MODULE__, {:thread_created, thread})
+  defdelegate thread_created(thread), to: Dispatcher
 
   @doc "Notify a conversation's other participants about a new message."
-  def message_created(%Message{} = message),
-    do: GenServer.cast(__MODULE__, {:message_created, message})
+  defdelegate message_created(message), to: Dispatcher
 
   @doc "Notify `users` that `actor` added them to a conversation."
-  def participants_added(%Conversation{} = conversation, %User{} = actor, users),
-    do: GenServer.cast(__MODULE__, {:participants_added, conversation, actor, users})
+  defdelegate participants_added(conversation, actor, users), to: Dispatcher
 
-  ### Server API
+  ## In-app notifications
 
-  @impl true
-  def init(_), do: {:ok, :nostate}
+  @doc "Have a user watch a thread (notification level `watching`)."
+  def watch(%User{} = user, %Thread{} = thread),
+    do: Subscriptions.set_thread_level(user, thread, "watching")
 
-  @impl true
-  def handle_cast({:post_created, %Post{} = post}, state) do
-    with {:ok, thread, post} <- reload(post) do
-      fan_out("new_post", thread, post, notify_mentions(thread, post))
-    end
-
-    {:noreply, state}
-  end
-
-  def handle_cast({:post_edited, %Post{} = post}, state) do
-    with {:ok, thread, post} <- reload(post), do: notify_mentions(thread, post)
-    {:noreply, state}
-  end
-
-  def handle_cast({:thread_created, %Thread{} = thread}, state) do
-    first_post =
-      Post
-      |> where(thread_id: ^thread.id)
-      |> order_by(asc: :inserted_at, asc: :id)
-      |> first()
-      |> Repo.one()
-
-    if first_post do
-      post = Repo.preload(first_post, :user)
-      fan_out("new_thread", thread, post, notify_mentions(thread, post))
-    end
-
-    {:noreply, state}
-  end
-
-  def handle_cast({:message_created, %Message{} = message}, state) do
-    message = Repo.preload(message, [:user, :conversation])
-    conversation = message.conversation
-    # The author's account may be gone by now (their messages stay).
-    {author_id, author} =
-      if message.user, do: {message.user.id, "@#{message.user.username}"}, else: {nil, "Someone"}
-
-    first? = Messages.first_message(conversation).id == message.id
-
-    subject =
-      if first?,
-        do: "#{author} sent you a message: \"#{conversation.title}\"",
-        else: "#{author} replied to \"#{conversation.title}\""
-
-    recipients = Enum.reject(Messages.participants(conversation), &(&1.id == author_id))
-    muters = Ignores.muters(author_id, Enum.map(recipients, & &1.id))
-
-    for user <- recipients, not MapSet.member?(muters, user.id) do
-      notify_message(user, conversation, message, subject)
-    end
-
-    if conversation.role_id do
-      skip = [author_id | Enum.map(recipients, & &1.id)]
-      notify_group(conversation, message, author, first?, skip)
-    end
-
-    {:noreply, state}
-  end
-
-  def handle_cast({:participants_added, conversation, actor, users}, state) do
-    message = Messages.latest_message(conversation)
-    subject = "@#{actor.username} added you to \"#{conversation.title}\""
-
-    for user <- users, do: notify_message(user, conversation, message, subject)
-    {:noreply, state}
-  end
-
-  # The group's members who aren't in the conversation, by their level.
-  defp notify_group(conversation, message, author, first?, skip) do
-    group = Repo.get!(Forums.Role, conversation.role_id)
-    memberships = Enum.reject(Groups.memberships(group), &(&1.user_id in skip))
-    muters = Ignores.muters(message.user_id, Enum.map(memberships, & &1.user_id))
-
-    subject =
-      if first?,
-        do: "#{author} messaged @#{group.name}: \"#{conversation.title}\"",
-        else: "#{author} replied to \"#{conversation.title}\" (@#{group.name})"
-
-    for %{user: user, notification_level: level} <- memberships,
-        not MapSet.member?(muters, user.id),
-        level in ["watching", "tracking"] or (level == "normal" and first?) do
-      notify_message(user, conversation, message, subject, "group_message", level == "watching")
-    end
-  end
-
-  defp notify_message(user, conversation, message, subject, kind \\ "message", email \\ true) do
-    attrs = %{Notification.for_message(conversation, message, subject) | kind: kind}
-    {:ok, notification} = Forums.notify(user, attrs)
-
-    if email and email?(user, notification) do
-      Mailer.deliver_now(Emails.message_notification(user, conversation, message, subject))
-      Forums.notification_emailed(notification)
-    end
-  end
-
-  # Reloaded: a post deleted (or not yet approved) before we get to it
-  # notifies no one.
-  defp reload(%Post{id: id}) do
-    with %Post{deleted_at: nil, queued_at: nil} = post <- Repo.get(Post, id),
-         %Post{thread: %Thread{} = thread} = post <- Repo.preload(post, [:user, :thread]) do
-      {:ok, thread, post}
-    end
-  end
-
-  # `mentioned_ids` already got a mention for this post instead. Anyone who
-  # has already read the post (e.g. had the thread open) is skipped too.
-  defp fan_out(kind, thread, post, mentioned_ids) do
-    already_read = Forums.users_who_read(thread, post)
-
-    subscribers = Subscriptions.subscribers(thread)
-    readers = readers(thread, Enum.map(subscribers, &elem(&1, 0)))
-    muters = Ignores.muters(post.user_id, Enum.map(subscribers, fn {user, _level} -> user.id end))
-
-    for {user, level} <- subscribers,
-        user.id != post.user_id and user.id not in mentioned_ids and
-          not MapSet.member?(already_read, user.id) and not MapSet.member?(muters, user.id),
-        MapSet.member?(readers, user.id) do
-      {:ok, notification} =
-        Forums.notify(user, Notification.for_post(kind, thread, post, post.user))
-
-      if level == "watching", do: maybe_email(user, notification, thread, post)
-    end
-
+  @doc "Stop watching a thread (notification level `normal`)."
+  def unwatch(%User{} = user, %Thread{} = thread) do
+    {:ok, _} = Subscriptions.set_thread_level(user, thread, "normal")
     :ok
   end
 
-  # Notifies the users the post mentions who haven't been notified of a
-  # mention in it yet. Returns the ids of every user mentioned in it so far.
-  defp notify_mentions(thread, post) do
-    already =
-      Notification
-      |> where(post_id: ^post.id, kind: "mentioned")
-      |> select([n], n.user_id)
-      |> Repo.all()
+  @doc "Whether the user watches the thread (by their own choice on the thread)."
+  def watched_by?(%Thread{} = thread, %User{} = user),
+    do: Subscriptions.thread_level(user, thread) == "watching"
 
-    mentioned = Mentions.users(post.body)
-    readers = readers(thread, mentioned)
-    muters = Ignores.muters(post.user_id, Enum.map(mentioned, & &1.id))
-
-    new =
-      for user <- mentioned,
-          user.id != post.user_id and user.id not in already,
-          not MapSet.member?(muters, user.id),
-          MapSet.member?(readers, user.id),
-          Subscriptions.effective_thread_level(user, thread) != "muted" do
-        {:ok, notification} =
-          Forums.notify(user, Notification.for_post("mentioned", thread, post, post.user))
-
-        maybe_email(user, notification, thread, post)
-        user.id
-      end
-
-    users = already ++ new
-
-    users ++
-      Groups.notify_mentions(thread, post, post.user, users, &group_readers(thread, post, &1))
+  @doc """
+  The user's notifications, newest first. Like everything else, they leave
+  out threads the user may no longer read (say, moved into a restricted
+  category).
+  """
+  def notifications_for(%User{} = user) do
+    user
+    |> visible_notifications()
+    |> order_by(desc: :inserted_at, desc: :id)
+    |> limit(100)
+    |> Repo.all()
   end
 
-  # Those of a mentioned group's `members` to notify: who may read the
-  # thread, doesn't mute the author and hasn't muted the thread.
-  defp group_readers(thread, post, members) do
-    readers = readers(thread, members)
-    muters = Ignores.muters(post.user_id, Enum.map(members, & &1.id))
-
-    for user <- members,
-        MapSet.member?(readers, user.id) and not MapSet.member?(muters, user.id),
-        Subscriptions.effective_thread_level(user, thread) != "muted",
-        into: MapSet.new(),
-        do: user.id
+  def unread_notification_count(%User{} = user) do
+    user
+    |> visible_notifications()
+    |> where([n], is_nil(n.read_at))
+    |> Repo.aggregate(:count)
   end
 
-  # The ids of those of `users` who may read the thread, decided for all of
-  # them at once rather than a :view_thread check (a few queries) each.
-  defp readers(thread, users),
-    do: thread |> Policy.thread_readers(users) |> MapSet.new(& &1.id)
+  @doc """
+  Sends a notification to a user, tells their open pages so the badge
+  updates live, and pushes it to their browsers (see `Firefly.Notifications.WebPush`).
+  """
+  def notify(%User{} = user, attrs) do
+    result =
+      %Notification{}
+      |> Notification.changeset(Map.put(attrs, :user_id, user.id))
+      |> Repo.insert()
 
-  defp maybe_email(%User{} = user, notification, thread, post) do
-    if email?(user, notification) do
-      user
-      |> email_for(notification.kind, thread, post)
-      |> Mailer.deliver_now()
+    with {:ok, notification} <- result do
+      notifications_changed(user.id)
+      Firefly.Notifications.WebPush.notification_created(user, notification)
+    end
 
-      Forums.notification_emailed(notification)
+    result
+  end
+
+  def mark_notification_read(%Notification{read_at: nil} = notification) do
+    {:ok, notification} =
+      notification |> change(read_at: DateTime.utc_now(:second)) |> Repo.update()
+
+    notifications_changed(notification.user_id)
+    {:ok, notification}
+  end
+
+  def mark_notification_read(%Notification{} = notification), do: {:ok, notification}
+
+  def mark_all_notifications_read(%User{} = user) do
+    Notification
+    |> where([n], n.user_id == ^user.id and is_nil(n.read_at))
+    |> Repo.update_all(set: [read_at: DateTime.utc_now(:second)])
+    |> case do
+      {0, _} -> :ok
+      _ -> notifications_changed(user.id)
     end
   end
 
-  defp email?(%User{} = user, notification) do
-    user.email_notifications and User.confirmed?(user) and
-      not Forums.unread_emailed_notification?(user, notification)
+  @doc "Marks the notification as emailed."
+  def notification_emailed(%Notification{} = notification) do
+    notification |> change(emailed_at: DateTime.utc_now(:second)) |> Repo.update()
   end
 
-  defp email_for(user, "mentioned", thread, post),
-    do: Emails.mention_notification(user, thread, post)
+  @doc """
+  Whether the user already has an unread, emailed notification about the
+  same thread or conversation as `notification`. Used to send one email per
+  thread (or conversation) until the user comes back.
+  """
+  def unread_emailed_notification?(%User{} = user, %Notification{} = notification) do
+    about =
+      if notification.conversation_id,
+        do: dynamic([n], n.conversation_id == ^notification.conversation_id),
+        else: dynamic([n], n.thread_id == ^notification.thread_id)
 
-  defp email_for(user, "new_thread", thread, post),
-    do: Emails.thread_created_notification(user, thread, post)
+    Notification
+    |> where([n], n.user_id == ^user.id and n.id != ^notification.id)
+    |> where(^about)
+    |> where([n], is_nil(n.read_at) and not is_nil(n.emailed_at))
+    |> Repo.exists?()
+  end
 
-  defp email_for(user, _kind, thread, post),
-    do: Emails.thread_new_post_notification(user, thread, post)
+  # Threads, bound as `:thread` (see `Policy.readable_threads/2`).
+  defp threads_query, do: from(t in Thread, as: :thread)
+
+  defp visible_notifications(user) do
+    readable = threads_query() |> Policy.readable_threads(user) |> select([t], t.id)
+
+    Notification
+    |> where([n], n.user_id == ^user.id)
+    |> where(
+      [n],
+      not is_nil(n.conversation_id) or
+        (is_nil(n.thread_id) and n.kind in ^Notification.threadless_kinds()) or
+        n.thread_id in subquery(readable)
+    )
+  end
+
+  def notifications_topic(user_id), do: "user:#{user_id}:notifications"
+
+  @doc """
+  Tells the user's open pages their notifications (or unread messages)
+  changed, so the badges update.
+  """
+  def notifications_changed(user_id) do
+    Phoenix.PubSub.broadcast(
+      Firefly.PubSub,
+      notifications_topic(user_id),
+      :notifications_changed
+    )
+  end
+
+  @doc "One of `user`'s notifications (see `notifications_for/1`), or nil."
+  def get_notification(%User{} = user, id) do
+    user
+    |> visible_notifications()
+    |> Repo.get(id)
+  end
 end

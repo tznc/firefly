@@ -3,18 +3,18 @@ defmodule FireflyWeb.NotificationLiveTest do
 
   require Phoenix.LiveViewTest
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Notification
+  alias Firefly.{Discussion, Notifications}
+  alias Firefly.Notifications.Notification
 
   setup do
     bob = user_fixture(%{username: "bob"})
     fred = user_fixture(%{username: "fred"})
     category = category_fixture()
     thread = thread_fixture(category, bob, %{title: "GenStage", body: "Kinda streamy no?"})
-    {:ok, post} = Forums.create_post(thread, fred, %{body: "Herp Derp"})
+    {:ok, post} = Discussion.create_post(thread, fred, %{body: "Herp Derp"})
 
     {:ok, notification} =
-      Forums.notify(bob, Notification.thread_new_post_notification(thread, post))
+      Notifications.notify(bob, Notification.thread_new_post_notification(thread, post))
 
     {:ok, bob: bob, fred: fred, notification: notification}
   end
@@ -40,7 +40,7 @@ defmodule FireflyWeb.NotificationLiveTest do
     |> assert_has("h1", text: "GenStage")
     |> assert_has(~s{a[aria-label="Notifications (0)"]})
 
-    assert Forums.get_notification(bob, notification.id).read_at
+    assert Notifications.get_notification(bob, notification.id).read_at
   end
 
   test "the notification page still shows one, and marks it read", %{
@@ -54,7 +54,7 @@ defmodule FireflyWeb.NotificationLiveTest do
     |> assert_has("p", text: "Herp Derp")
     |> assert_has(~s(a[href="#{notification.url}"]), text: "Visit")
 
-    assert Forums.get_notification(bob, notification.id).read_at
+    assert Notifications.get_notification(bob, notification.id).read_at
   end
 
   test "mark all as read", %{conn: conn, bob: bob} do
@@ -71,8 +71,8 @@ defmodule FireflyWeb.NotificationLiveTest do
     assert Phoenix.LiveViewTest.render(view) =~ ~s{aria-label="Notifications (1)"}
 
     thread = thread_fixture(category_fixture("Other"), fred, %{title: "Live"})
-    {:ok, post} = Forums.create_post(thread, fred, %{body: "ping"})
-    {:ok, _} = Forums.notify(bob, Notification.for_post("new_post", thread, post, fred))
+    {:ok, post} = Discussion.create_post(thread, fred, %{body: "ping"})
+    {:ok, _} = Notifications.notify(bob, Notification.for_post("new_post", thread, post, fred))
 
     assert Phoenix.LiveViewTest.render(view) =~ ~s{aria-label="Notifications (2)"}
   end

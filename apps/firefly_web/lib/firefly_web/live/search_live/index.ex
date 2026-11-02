@@ -1,6 +1,6 @@
 defmodule FireflyWeb.SearchLive.Index do
   @moduledoc """
-  Full-text search (see `Firefly.Search`). The query and filters live in
+  Full-text search (see `Firefly.Discussion.Search`). The query and filters live in
   the URL (`/search?q=...&category=...`), so results can be linked and paged.
 
   Searches are rate limited (the `:search` bucket, per user or per client IP
@@ -11,14 +11,15 @@ defmodule FireflyWeb.SearchLive.Index do
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.{Forums, RateLimit, Search}
+  alias Firefly.{Discussion, RateLimit}
+  alias Firefly.Discussion.Search
 
   @controls ~w(category tag user in order muted)
 
   @impl true
   def mount(_params, _session, socket) do
     categories =
-      Enum.map(Forums.list_categories(socket.assigns.current_user), &{&1.title, &1.slug})
+      Enum.map(Discussion.list_categories(socket.assigns.current_user), &{&1.title, &1.slug})
 
     {:ok,
      assign(socket,

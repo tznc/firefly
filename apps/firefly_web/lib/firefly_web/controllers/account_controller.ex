@@ -1,13 +1,14 @@
 defmodule FireflyWeb.AccountController do
   @moduledoc """
   Downloads the current user's data, and deletes their account (see
-  `Firefly.AccountExport` and `Firefly.AccountDeletion`). Plain
+  `Firefly.Accounts.AccountExport` and `Firefly.Accounts.AccountDeletion`). Plain
   requests rather than LiveView events, so the download streams as a file
   and deletion can clear the session cookie.
   """
   use FireflyWeb, :controller
 
-  alias Firefly.{AccountDeletion, AccountExport, RateLimit}
+  alias Firefly.RateLimit
+  alias Firefly.Accounts.{AccountDeletion, AccountExport}
 
   plug(:require_user)
 

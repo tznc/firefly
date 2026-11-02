@@ -1,7 +1,7 @@
 defmodule FireflyWeb.UserLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.Accounts
 
   test "lists users", %{conn: conn} do
     user = user_fixture(%{username: "bob"})
@@ -84,7 +84,7 @@ defmodule FireflyWeb.UserLiveTest do
         })
       end)
 
-      assert Forums.get_user!(user.id).api_token == user.api_token
+      assert Accounts.get_user!(user.id).api_token == user.api_token
     end
 
     test "can't edit someone else", %{conn: conn} do

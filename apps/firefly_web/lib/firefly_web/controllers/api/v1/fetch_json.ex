@@ -1,10 +1,10 @@
 defmodule FireflyWeb.Api.V1.FetchJSON do
   @moduledoc """
-  JSON for a `Firefly.Store.ReplenishResponse`, as pushed to channel
+  JSON for a `Firefly.Discussion.Store.ReplenishResponse`, as pushed to channel
   clients.
   """
-  alias Firefly.Mentions
-  alias Firefly.Store.ReplenishResponse
+  alias Firefly.Discussion.Mentions
+  alias Firefly.Discussion.Store.ReplenishResponse
   alias FireflyWeb.Api.V1.{CategoryJSON, PostJSON, ThreadJSON, UserJSON}
 
   def index(%ReplenishResponse{} = response) do

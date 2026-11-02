@@ -4,6 +4,9 @@ defmodule Firefly.TestEndpoint do
   web app: the test endpoint's URL and secret, and broadcasts on
   `Firefly.PubSub` as `{:broadcast, topic, event, payload}`.
   """
+
+  # Test support, for any app's tests: unchecked.
+  use Boundary, top_level?: true, check: [in: false, out: false]
   @behaviour Firefly.Endpoint
 
   @impl true

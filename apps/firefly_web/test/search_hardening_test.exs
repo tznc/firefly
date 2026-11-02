@@ -1,8 +1,9 @@
 defmodule FireflyWeb.SearchHardeningTest do
   use FireflyWeb.ConnCase, async: false
 
-  alias Firefly.{Forums, RateLimit, Search}
-  alias Firefly.Forums.Subscriptions
+  alias Firefly.{Discussion, RateLimit}
+  alias Firefly.Discussion.Search
+  alias Firefly.Notifications.Subscriptions
 
   setup do
     alice = user_fixture(%{username: "alice"})
@@ -17,7 +18,7 @@ defmodule FireflyWeb.SearchHardeningTest do
     reader = user_fixture(%{username: "reader"})
     {:ok, _} = Subscriptions.set_thread_level(reader, muted_thread, "muted")
     {:ok, _} = Subscriptions.set_category_level(reader, noise, "muted")
-    {:ok, _} = Subscriptions.set_tag_level(reader, Forums.get_tag!("rant"), "muted")
+    {:ok, _} = Subscriptions.set_tag_level(reader, Discussion.get_tag!("rant"), "muted")
 
     %{reader: reader}
   end

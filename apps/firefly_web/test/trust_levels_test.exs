@@ -4,8 +4,13 @@ defmodule FireflyWeb.TrustLevelsTest do
   import Ecto.Query, only: [where: 2]
   import Firefly.DataCase, only: [errors_on: 1]
 
-  alias Firefly.{Flags, Forums, Groups, JobRuns, Posting, Repo, TrustLevels}
-  alias Firefly.Forums.{Notification, Policy, Post, SiteSetting, StaffAction, User}
+  alias Firefly.{Accounts, Discussion, Groups, JobRuns, Repo, TrustLevels}
+  alias Firefly.Moderation.{Flags, Posting}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Policy, Post}
+  alias Firefly.Moderation.StaffAction
+  alias Firefly.Notifications.Notification
+  alias Firefly.SiteSettings.SiteSetting
 
   setup do
     admin = admin_fixture()
@@ -36,7 +41,7 @@ defmodule FireflyWeb.TrustLevelsTest do
     |> Enum.sort()
   end
 
-  # Days visited and posts read, as Firefly.Visits records them.
+  # Days visited and posts read, as Firefly.Accounts.Visits records them.
   defp visit(user, days, posts_read) do
     for n <- 1..days do
       Repo.insert_all("user_visits", [
@@ -48,14 +53,18 @@ defmodule FireflyWeb.TrustLevelsTest do
   defp enter_threads(user, category, admin, count) do
     for _ <- 1..count do
       thread = thread_fixture(category, admin)
-      {:ok, _} = Forums.mark_thread_read(user, thread)
+      {:ok, _} = Discussion.mark_thread_read(user, thread)
     end
   end
 
   describe "the review" do
     test "registration starts at trust level 0, in its group" do
       {:ok, user} =
-        Forums.register_user(%{username: "newbie", email: "n@example.com", password: "password1"})
+        Accounts.register_user(%{
+          username: "newbie",
+          email: "n@example.com",
+          password: "password1"
+        })
 
       assert user.trust_level == 0
       assert group_names(user) == ["trust_level_0"]
@@ -90,11 +99,11 @@ defmodule FireflyWeb.TrustLevelsTest do
 
       for _ <- 1..3 do
         thread = thread_fixture(ctx.category, ctx.admin)
-        {:ok, post} = Forums.create_post(thread, user, %{body: "a reply"})
-        Forums.like_post(post, liker)
+        {:ok, post} = Discussion.create_post(thread, user, %{body: "a reply"})
+        Discussion.like_post(post, liker)
       end
 
-      Forums.like_post(first_post(ctx.thread), user)
+      Discussion.like_post(first_post(ctx.thread), user)
       TrustLevels.review()
 
       assert reload(user).trust_level == 2
@@ -141,7 +150,11 @@ defmodule FireflyWeb.TrustLevelsTest do
       leader = at_level(4)
 
       {:ok, unconfirmed} =
-        Forums.register_user(%{username: "unconf", email: "u@example.com", password: "password1"})
+        Accounts.register_user(%{
+          username: "unconf",
+          email: "u@example.com",
+          password: "password1"
+        })
 
       for user <- [locked, unconfirmed] do
         visit(user, 1, 30)
@@ -231,8 +244,8 @@ defmodule FireflyWeb.TrustLevelsTest do
 
     test "posts below approve_unless_trust_level wait for approval" do
       setting("approve_unless_trust_level", 2)
-      assert Forums.approval_required?(at_level(1))
-      refute Forums.approval_required?(at_level(2))
+      assert Discussion.approval_required?(at_level(1))
+      refute Discussion.approval_required?(at_level(2))
     end
 
     test "regulars rename and move others' threads; leaders also edit, pin and close", ctx do
@@ -267,13 +280,13 @@ defmodule FireflyWeb.TrustLevelsTest do
     end
 
     test "a regular's spam flag hides a new user's post at once", %{thread: thread} do
-      {:ok, spam} = Forums.create_post(thread, at_level(0), %{body: "buy now"})
+      {:ok, spam} = Discussion.create_post(thread, at_level(0), %{body: "buy now"})
       {:ok, _} = Flags.flag_post(spam, at_level(3), %{"reason" => "spam"})
-      assert Forums.get_post!(spam.id).hidden_at
+      assert Discussion.get_post!(spam.id).hidden_at
 
-      {:ok, reply} = Forums.create_post(thread, at_level(1), %{body: "fine"})
+      {:ok, reply} = Discussion.create_post(thread, at_level(1), %{body: "fine"})
       {:ok, _} = Flags.flag_post(reply, at_level(3), %{"reason" => "spam"})
-      refute Forums.get_post!(reply.id).hidden_at
+      refute Discussion.get_post!(reply.id).hidden_at
     end
   end
 

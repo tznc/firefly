@@ -1,6 +1,6 @@
 defmodule FireflyWeb.Api.V1.PreviewControllerTest do
   use FireflyWeb.ConnCase
-  alias Firefly.Markdown
+  alias Firefly.Rendering.Markdown
 
   test "POST /", %{conn: conn} do
     post = %{

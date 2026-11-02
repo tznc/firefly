@@ -1,7 +1,8 @@
 defmodule FireflyWeb.InboundControllerTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Forums, Repo, ReplyAddress}
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Notifications.ReplyAddress
 
   setup do
     user = user_fixture(%{username: "knewter", email: "josh@example.com"})
@@ -100,7 +101,7 @@ defmodule FireflyWeb.InboundControllerTest do
 
   test "ignores replies to deleted threads", %{conn: conn, user: user, thread: thread} do
     to = ReplyAddress.address(thread, user)
-    {:ok, _} = Forums.delete_thread(thread, user)
+    {:ok, _} = Discussion.delete_thread(thread, user)
 
     assert conn |> inbound(email(to, "josh@example.com")) |> response(200)
   end

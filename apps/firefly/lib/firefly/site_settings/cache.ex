@@ -2,7 +2,7 @@ defmodule Firefly.SiteSettings.Cache do
   @moduledoc """
   Clears this node's cached site settings when another node changes them,
   and reloads custom emoji (loaded here at start too) when another node
-  changes those: `Firefly.SiteSettings` and `Firefly.Emoji`
+  changes those: `Firefly.SiteSettings` and `Firefly.Rendering.Emoji`
   broadcast on the site settings PubSub topic.
   """
   use GenServer
@@ -33,7 +33,7 @@ defmodule Firefly.SiteSettings.Cache do
 
   # Without the database (yet), the first render loads them instead.
   defp load_emoji do
-    Firefly.Emoji.reload()
+    Firefly.Rendering.Emoji.reload()
   rescue
     error in [DBConnection.ConnectionError, Postgrex.Error] ->
       Logger.warning("Custom emoji not loaded: " <> Exception.message(error))

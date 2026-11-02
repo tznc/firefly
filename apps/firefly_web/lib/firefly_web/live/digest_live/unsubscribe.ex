@@ -2,12 +2,12 @@ defmodule FireflyWeb.DigestLive.Unsubscribe do
   @moduledoc """
   Where a digest email's unsubscribe link leads: one button turns digests
   off for the account the link was made for, logged in or not (see
-  `Firefly.Digests`). A GET alone changes nothing, so link scanners
+  `Firefly.Notifications.Digests`). A GET alone changes nothing, so link scanners
   can't unsubscribe anyone.
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.Digests
+  alias Firefly.Notifications.Digests
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do

@@ -4,8 +4,8 @@ defmodule FireflyWeb.NotificationLive.Index do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Notification
+  alias Firefly.Notifications
+  alias Firefly.Notifications.Notification
 
   @impl true
   def mount(_params, _session, socket) do
@@ -16,7 +16,8 @@ defmodule FireflyWeb.NotificationLive.Index do
   def notifications_changed(socket), do: load(socket)
 
   defp load(socket),
-    do: assign(socket, :notifications, Forums.notifications_for(socket.assigns.current_user))
+    do:
+      assign(socket, :notifications, Notifications.notifications_for(socket.assigns.current_user))
 
   @impl true
   def handle_event("open", %{"id" => id}, socket) do
@@ -25,13 +26,13 @@ defmodule FireflyWeb.NotificationLive.Index do
         {:noreply, socket}
 
       notification ->
-        {:ok, notification} = Forums.mark_notification_read(notification)
+        {:ok, notification} = Notifications.mark_notification_read(notification)
         {:noreply, push_navigate(socket, to: Notification.path(notification))}
     end
   end
 
   def handle_event("read_all", _params, socket) do
-    Forums.mark_all_notifications_read(socket.assigns.current_user)
+    Notifications.mark_all_notifications_read(socket.assigns.current_user)
     {:noreply, load(socket)}
   end
 

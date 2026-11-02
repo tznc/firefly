@@ -1,8 +1,9 @@
 defmodule Firefly.ForumsTest do
   use Firefly.DataCase, async: false
 
-  alias Firefly.Forums
-  alias Firefly.Forums.{User, Category, Thread}
+  alias Firefly.{Accounts, Discussion, Groups, Notifications}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Category, Thread}
 
   @create_user_attrs %{email: "some email", name: "some name", username: "some username"}
   @update_user_attrs %{
@@ -23,49 +24,49 @@ defmodule Firefly.ForumsTest do
   def fixture(type, attrs \\ %{})
 
   def fixture(:user, attrs) do
-    {:ok, user} = Forums.create_user(attrs)
+    {:ok, user} = Accounts.create_user(attrs)
     user
   end
 
   def fixture(:category, attrs) do
-    {:ok, category} = Forums.create_category(attrs)
+    {:ok, category} = Discussion.create_category(attrs)
     category
   end
 
   def fixture(:thread, category, user, attrs) do
-    {:ok, thread} = Forums.create_thread(category, user, attrs)
+    {:ok, thread} = Discussion.create_thread(category, user, attrs)
     thread
   end
 
   def fixture(:post, thread, user, attrs) do
-    {:ok, post} = Forums.create_post(thread, user, attrs)
+    {:ok, post} = Discussion.create_post(thread, user, attrs)
     post
   end
 
   test "list_users/1 returns all users" do
     user = fixture(:user, @create_user_attrs)
-    assert Forums.list_users() == [user]
+    assert Accounts.list_users() == [user]
   end
 
   test "get_user! returns the user with given id" do
     user = fixture(:user, @create_user_attrs)
-    assert Forums.get_user!(user.id) == user
+    assert Accounts.get_user!(user.id) == user
   end
 
   test "create_user/1 with valid data creates a user" do
-    assert {:ok, %User{} = user} = Forums.create_user(@create_user_attrs)
+    assert {:ok, %User{} = user} = Accounts.create_user(@create_user_attrs)
     assert user.email == "some email"
     assert user.name == "some name"
     assert user.username == "some username"
   end
 
   test "create_user/1 with invalid data returns error changeset" do
-    assert {:error, %Ecto.Changeset{}} = Forums.create_user(@invalid_user_attrs)
+    assert {:error, %Ecto.Changeset{}} = Accounts.create_user(@invalid_user_attrs)
   end
 
   test "update_user/2 with valid data updates the user" do
     user = fixture(:user, @create_user_attrs)
-    assert {:ok, user} = Forums.update_user(user, @update_user_attrs)
+    assert {:ok, user} = Accounts.update_user(user, @update_user_attrs)
     assert %User{} = user
     assert user.email == "some updated email"
     assert user.name == "some updated name"
@@ -74,84 +75,87 @@ defmodule Firefly.ForumsTest do
 
   test "update_user/2 with invalid data returns error changeset" do
     user = fixture(:user, @create_user_attrs)
-    assert {:error, %Ecto.Changeset{}} = Forums.update_user(user, @invalid_user_attrs)
-    assert user == Forums.get_user!(user.id)
+    assert {:error, %Ecto.Changeset{}} = Accounts.update_user(user, @invalid_user_attrs)
+    assert user == Accounts.get_user!(user.id)
   end
 
   test "delete_user/1 deletes the user" do
     user = fixture(:user, @create_user_attrs)
-    assert {:ok, %User{}} = Forums.delete_user(user)
-    assert_raise Ecto.NoResultsError, fn -> Forums.get_user!(user.id) end
+    assert {:ok, %User{}} = Accounts.delete_user(user)
+    assert_raise Ecto.NoResultsError, fn -> Accounts.get_user!(user.id) end
   end
 
   test "change_user/1 returns a user changeset" do
     user = fixture(:user, @create_user_attrs)
-    assert %Ecto.Changeset{} = Forums.change_user(user)
+    assert %Ecto.Changeset{} = Accounts.change_user(user)
   end
 
   describe "admin?" do
     test "returns true for users with an 'admin' role" do
-      {:ok, admin} = Forums.create_role("admin")
-      {:ok, user} = Forums.create_user(@create_user_attrs)
-      {:ok, _} = Forums.add_role(user, admin)
-      assert Forums.admin?(user)
+      {:ok, admin} = Groups.create_role("admin")
+      {:ok, user} = Accounts.create_user(@create_user_attrs)
+      {:ok, _} = Groups.add_role(user, admin)
+      assert Accounts.admin?(user)
     end
 
     test "returns false for users without an 'admin' role" do
-      {:ok, _admin} = Forums.create_role("admin")
-      {:ok, user} = Forums.create_user(@create_user_attrs)
-      refute Forums.admin?(user)
+      {:ok, _admin} = Groups.create_role("admin")
+      {:ok, user} = Accounts.create_user(@create_user_attrs)
+      refute Accounts.admin?(user)
     end
   end
 
   test "list_categories/1 returns all categories" do
     category = fixture(:category, @create_category_attrs)
-    assert Forums.list_categories() == [category]
+    assert Discussion.list_categories() == [category]
   end
 
   test "get_category! returns the category with given id" do
     category = fixture(:category, @create_category_attrs)
-    assert Forums.get_category!(category.id) == category
+    assert Discussion.get_category!(category.id) == category
   end
 
   test "create_category/1 with valid data creates a category" do
-    assert {:ok, %Category{} = category} = Forums.create_category(@create_category_attrs)
+    assert {:ok, %Category{} = category} = Discussion.create_category(@create_category_attrs)
     assert category.title == "some title"
   end
 
   test "create_category/1 automatically generates a slug" do
-    assert {:ok, %Category{} = category} = Forums.create_category(@create_category_attrs)
+    assert {:ok, %Category{} = category} = Discussion.create_category(@create_category_attrs)
     assert category.slug == "some-title"
-    assert {:ok, %Category{} = category} = Forums.create_category(@create_category_attrs)
+    assert {:ok, %Category{} = category} = Discussion.create_category(@create_category_attrs)
     assert category.slug == "some-title-1"
   end
 
   test "create_category/1 with invalid data returns error changeset" do
-    assert {:error, %Ecto.Changeset{}} = Forums.create_category(@invalid_category_attrs)
+    assert {:error, %Ecto.Changeset{}} = Discussion.create_category(@invalid_category_attrs)
   end
 
   test "update_category/2 with valid data updates the category" do
     category = fixture(:category, @create_category_attrs)
-    assert {:ok, category} = Forums.update_category(category, @update_category_attrs)
+    assert {:ok, category} = Discussion.update_category(category, @update_category_attrs)
     assert %Category{} = category
     assert category.title == "some updated title"
   end
 
   test "update_category/2 with invalid data returns error changeset" do
     category = fixture(:category, @create_category_attrs)
-    assert {:error, %Ecto.Changeset{}} = Forums.update_category(category, @invalid_category_attrs)
-    assert category == Forums.get_category!(category.id)
+
+    assert {:error, %Ecto.Changeset{}} =
+             Discussion.update_category(category, @invalid_category_attrs)
+
+    assert category == Discussion.get_category!(category.id)
   end
 
   test "delete_category/1 deletes the category" do
     category = fixture(:category, @create_category_attrs)
-    assert {:ok, %Category{}} = Forums.delete_category(category)
-    assert_raise Ecto.NoResultsError, fn -> Forums.get_category!(category.id) end
+    assert {:ok, %Category{}} = Discussion.delete_category(category)
+    assert_raise Ecto.NoResultsError, fn -> Discussion.get_category!(category.id) end
   end
 
   test "change_category/1 returns a category changeset" do
     category = fixture(:category, @create_category_attrs)
-    assert %Ecto.Changeset{} = Forums.change_category(category)
+    assert %Ecto.Changeset{} = Discussion.change_category(category)
   end
 
   describe "threads" do
@@ -163,7 +167,7 @@ defmodule Firefly.ForumsTest do
 
       result =
         category
-        |> Forums.list_threads()
+        |> Discussion.list_threads()
         |> Enum.map(& &1.title)
 
       assert expected == result
@@ -198,7 +202,7 @@ defmodule Firefly.ForumsTest do
 
       recent_threads =
         category
-        |> Forums.recent_threads()
+        |> Discussion.recent_threads()
 
       thread_ids =
         recent_threads
@@ -210,7 +214,7 @@ defmodule Firefly.ForumsTest do
 
     test "get_thread! returns the thread with given id", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
-      assert Forums.get_thread!(category, thread.id).title == thread.title
+      assert Discussion.get_thread!(category, thread.id).title == thread.title
     end
 
     test "create_thread/2 with valid data creates a thread and its first post", %{
@@ -218,7 +222,7 @@ defmodule Firefly.ForumsTest do
       user: user
     } do
       assert {:ok, %Thread{} = thread} =
-               Forums.create_thread(category, user, @create_thread_attrs)
+               Discussion.create_thread(category, user, @create_thread_attrs)
 
       assert thread.title == "some title"
       first_post = hd(thread.posts)
@@ -231,24 +235,24 @@ defmodule Firefly.ForumsTest do
       user: user
     } do
       assert {:error, %Ecto.Changeset{}} =
-               Forums.create_thread(category, user, @invalid_thread_attrs)
+               Discussion.create_thread(category, user, @invalid_thread_attrs)
     end
 
     test "create_thread/2 automatically generates a slug", %{category: category, user: user} do
       assert {:ok, %Thread{} = thread} =
-               Forums.create_thread(category, user, @create_thread_attrs)
+               Discussion.create_thread(category, user, @create_thread_attrs)
 
       assert thread.slug == "some-title"
 
       assert {:ok, %Thread{} = thread} =
-               Forums.create_thread(category, user, @create_thread_attrs)
+               Discussion.create_thread(category, user, @create_thread_attrs)
 
       assert thread.slug == "some-title-1"
     end
 
     test "update_thread/2 with valid data updates the thread", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
-      assert {:ok, thread} = Forums.update_thread(thread, @update_thread_attrs)
+      assert {:ok, thread} = Discussion.update_thread(thread, @update_thread_attrs)
       assert %Thread{} = thread
       assert thread.title == "some updated title"
     end
@@ -258,8 +262,8 @@ defmodule Firefly.ForumsTest do
       user: user
     } do
       thread = fixture(:thread, category, user, @create_thread_attrs)
-      assert {:error, %Ecto.Changeset{}} = Forums.update_thread(thread, @invalid_thread_attrs)
-      assert thread.title == Forums.get_thread!(category, thread.id).title
+      assert {:error, %Ecto.Changeset{}} = Discussion.update_thread(thread, @invalid_thread_attrs)
+      assert thread.title == Discussion.get_thread!(category, thread.id).title
     end
 
     test "delete_thread/2 deletes a thread that has been viewed and watched", %{
@@ -268,11 +272,11 @@ defmodule Firefly.ForumsTest do
     } do
       thread = fixture(:thread, category, user, @create_thread_attrs)
       [post] = Repo.preload(thread, :posts).posts
-      {:ok, _} = Forums.view(user, post)
-      {:ok, _} = Forums.watch(user, thread)
+      {:ok, _} = Discussion.view(user, post)
+      {:ok, _} = Notifications.watch(user, thread)
 
-      assert {:ok, %Thread{}} = Forums.delete_thread(thread, user)
-      assert Forums.get_thread(thread.id) == nil
+      assert {:ok, %Thread{}} = Discussion.delete_thread(thread, user)
+      assert Discussion.get_thread(thread.id) == nil
     end
 
     test "delete_category/1 deletes the category's threads too", %{
@@ -281,32 +285,32 @@ defmodule Firefly.ForumsTest do
     } do
       thread = fixture(:thread, category, user, @create_thread_attrs)
 
-      assert {:ok, %Category{}} = Forums.delete_category(category)
-      assert Forums.get_thread(thread.id) == nil
+      assert {:ok, %Category{}} = Discussion.delete_category(category)
+      assert Discussion.get_thread(thread.id) == nil
     end
 
     test "delete_thread/2 deletes the thread", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
-      assert {:ok, %Thread{}} = Forums.delete_thread(thread, user)
-      assert_raise Ecto.NoResultsError, fn -> Forums.get_thread!(category, thread.id) end
+      assert {:ok, %Thread{}} = Discussion.delete_thread(thread, user)
+      assert_raise Ecto.NoResultsError, fn -> Discussion.get_thread!(category, thread.id) end
     end
 
     test "change_thread/1 returns a thread changeset", %{category: category, user: user} do
       thread = fixture(:thread, category, user, @create_thread_attrs)
-      assert %Ecto.Changeset{} = Forums.change_thread(thread)
+      assert %Ecto.Changeset{} = Discussion.change_thread(thread)
     end
   end
 
   test "get_user_by_username/1 returns an existing user" do
     user = fixture(:user, @create_user_attrs)
-    assert user == Forums.get_user_by_username(user.username)
+    assert user == Accounts.get_user_by_username(user.username)
   end
 
   describe "posting in a thread" do
     setup [:create_user, :create_category, :create_thread]
 
     test "creating a post in a thread", %{thread: thread, user: user} do
-      {:ok, post} = Forums.create_post(thread, user, %{body: "Some body"})
+      {:ok, post} = Discussion.create_post(thread, user, %{body: "Some body"})
       assert post.thread_id == thread.id
       assert post.user_id == user.id
       assert post.body == "Some body"
@@ -314,7 +318,7 @@ defmodule Firefly.ForumsTest do
 
     test "creating an invalid post returns an error changeset", %{thread: thread, user: user} do
       assert {:error, %Ecto.Changeset{} = changeset} =
-               Forums.create_post(thread, user, %{body: ""})
+               Discussion.create_post(thread, user, %{body: ""})
 
       assert %{body: ["can't be blank"]} = errors_on(changeset)
     end
@@ -323,7 +327,7 @@ defmodule Firefly.ForumsTest do
   describe "User.avatar_url/2" do
     test "uses Gravatar with an identicon fallback" do
       url =
-        Firefly.Forums.User.avatar_url(
+        Firefly.Accounts.User.avatar_url(
           %User{email: "josh@example.com", username: "knewter"},
           64
         )
@@ -335,12 +339,12 @@ defmodule Firefly.ForumsTest do
 
     test "gives users without an email a stable identicon" do
       user = %User{email: nil, username: "knewter"}
-      assert Firefly.Forums.User.avatar_url(user) =~ "d=identicon"
+      assert Firefly.Accounts.User.avatar_url(user) =~ "d=identicon"
 
-      assert Firefly.Forums.User.avatar_url(user) ==
-               Firefly.Forums.User.avatar_url(user)
+      assert Firefly.Accounts.User.avatar_url(user) ==
+               Firefly.Accounts.User.avatar_url(user)
 
-      refute Firefly.Forums.User.avatar_url(user) =~ "adorable"
+      refute Firefly.Accounts.User.avatar_url(user) =~ "adorable"
     end
   end
 
@@ -348,7 +352,7 @@ defmodule Firefly.ForumsTest do
     @registration %{username: "newbie", email: "newbie@example.com", password: "s3cret-password"}
 
     test "registers a user with a hashed password" do
-      assert {:ok, user} = Forums.register_user(@registration)
+      assert {:ok, user} = Accounts.register_user(@registration)
       assert user.username == "newbie"
       assert user.name == "newbie"
       assert user.email == "newbie@example.com"
@@ -359,7 +363,7 @@ defmodule Firefly.ForumsTest do
 
     test "requires a valid username, email and password" do
       assert {:error, changeset} =
-               Forums.register_user(%{username: "a b", email: "nope", password: "short"})
+               Accounts.register_user(%{username: "a b", email: "nope", password: "short"})
 
       errors = errors_on(changeset)
       assert errors.username
@@ -368,10 +372,10 @@ defmodule Firefly.ForumsTest do
     end
 
     test "rejects a taken username" do
-      {:ok, _} = Forums.register_user(@registration)
+      {:ok, _} = Accounts.register_user(@registration)
 
       assert {:error, changeset} =
-               Forums.register_user(%{@registration | email: "other@example.com"})
+               Accounts.register_user(%{@registration | email: "other@example.com"})
 
       assert "has already been taken" in errors_on(changeset).username
     end
@@ -380,7 +384,7 @@ defmodule Firefly.ForumsTest do
   describe "authenticate_by_password/2" do
     setup do
       {:ok, user} =
-        Forums.register_user(%{
+        Accounts.register_user(%{
           username: "newbie",
           email: "newbie@example.com",
           password: "s3cret-password"
@@ -390,21 +394,21 @@ defmodule Firefly.ForumsTest do
     end
 
     test "logs in with the right password", %{user: %{id: id}} do
-      assert {:ok, %{id: ^id}} = Forums.authenticate_by_password("newbie", "s3cret-password")
+      assert {:ok, %{id: ^id}} = Accounts.authenticate_by_password("newbie", "s3cret-password")
     end
 
     test "rejects a wrong password" do
-      assert {:error, _} = Forums.authenticate_by_password("newbie", "wrong")
+      assert {:error, _} = Accounts.authenticate_by_password("newbie", "wrong")
     end
 
     test "never registers an unknown username" do
-      assert {:error, _} = Forums.authenticate_by_password("stranger", "s3cret-password")
-      refute Forums.get_user_by_username("stranger")
+      assert {:error, _} = Accounts.authenticate_by_password("stranger", "s3cret-password")
+      refute Accounts.get_user_by_username("stranger")
     end
 
     test "rejects a password login for a user without a password (e.g. GitHub users)" do
       _ = fixture(:user, %{username: "octocat", email: "octo@example.com", name: "Octo"})
-      assert {:error, _} = Forums.authenticate_by_password("octocat", "anything")
+      assert {:error, _} = Accounts.authenticate_by_password("octocat", "anything")
     end
   end
 
@@ -412,8 +416,8 @@ defmodule Firefly.ForumsTest do
     setup [:create_user, :create_category, :create_thread]
 
     test "watching a thread", %{thread: thread, user: user} do
-      {:ok, _watch} = user |> Forums.watch(thread)
-      assert thread |> Forums.watched_by?(user)
+      {:ok, _watch} = user |> Notifications.watch(thread)
+      assert thread |> Notifications.watched_by?(user)
     end
   end
 
@@ -427,8 +431,8 @@ defmodule Firefly.ForumsTest do
 
       [first_post] = thread.posts
 
-      {:ok, _view} = user |> Forums.view(first_post)
-      assert first_post |> Forums.viewed_by?(user)
+      {:ok, _view} = user |> Discussion.view(first_post)
+      assert first_post |> Discussion.viewed_by?(user)
     end
   end
 
@@ -436,21 +440,21 @@ defmodule Firefly.ForumsTest do
     setup [:create_user, :create_category, :create_thread]
 
     test "getting a user's notifications when there aren't any", %{user: user} do
-      assert [] = Forums.notifications_for(user)
+      assert [] = Notifications.notifications_for(user)
     end
 
     test "getting a user's notifications", %{user: user} do
       body = "You are looking dapper today!"
 
       {:ok, _} =
-        Forums.notify(user, %{
+        Notifications.notify(user, %{
           kind: "silenced",
           subject: "Some subject",
           body: body,
           url: "http://www.slashdot.org"
         })
 
-      [first_notification | _] = Forums.notifications_for(user)
+      [first_notification | _] = Notifications.notifications_for(user)
       assert body == first_notification.body
     end
   end

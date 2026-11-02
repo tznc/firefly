@@ -56,6 +56,8 @@ defmodule Firefly.Plugin do
   same permission checks.
   """
 
+  use Boundary, top_level?: true, check: [out: false], exports: [Host, Manifest, Runner, Sandbox]
+
   alias Firefly.Plugin.Manifest
 
   @enforce_keys [:id, :module, :manifest]
@@ -125,7 +127,7 @@ defmodule Firefly.Plugin do
   "edit", "title", "body", "user", "thread", "category_id"}`. The result is
   `%{"action" => "allow"}`, `%{"action" => "queue", "reason" => text}`
   (staff review it first) or `%{"action" => "reject", "message" => text}`
-  (shown to the author). See `Firefly.Plugins.Moderation`.
+  (shown to the author). See `Firefly.Plugins.ModerationHooks`.
   """
   @callback moderate_post(t, input :: map) :: {:ok, map} | {:error, failure}
 

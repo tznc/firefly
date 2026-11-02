@@ -31,8 +31,8 @@ defmodule Firefly.Application do
       # Loads plugins and reloads them when another node changes them
       Firefly.Plugins.Registry,
       # Fetches link previews in the background
-      {Task.Supervisor, name: Firefly.LinkPreviews.supervisor()},
-      {Task.Supervisor, name: Firefly.WebPush.TaskSupervisor},
+      {Task.Supervisor, name: Firefly.Rendering.LinkPreviews.supervisor()},
+      {Task.Supervisor, name: Firefly.Notifications.WebPush.TaskSupervisor},
       # Posts as plugins transformed them
       Firefly.Plugins.Content.cache_spec()
     ] ++ topic_timers() ++ plugin_queue()
@@ -50,9 +50,9 @@ defmodule Firefly.Application do
   # bookmark reminders and poll closings. Off in tests, which run them inside their own
   # database transaction.
   defp topic_timers do
-    if Application.get_env(:firefly, Firefly.TopicTimers, [])[:enabled] == false,
+    if Application.get_env(:firefly, Firefly.Moderation.TopicTimers, [])[:enabled] == false,
       do: [],
-      else: [Firefly.TopicTimers.Scheduler]
+      else: [Firefly.Moderation.TopicTimers.Scheduler]
   end
 
   defp children(false), do: default_children()

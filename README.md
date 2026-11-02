@@ -38,6 +38,16 @@ and the shared configuration is in `config/`:
 | `apps/firefly_plugins` | `FireflyPlugins.*` | The sandbox uploaded plugins run in: QuickJS on WebAssembly via Wasmex (`priv/plugins/quickjs.wasm`, built from `wasm/quickjs`), and bundle validation. Registers itself with the domain at start |
 | `apps/firefly_web` | `FireflyWeb.*` | The web interface: endpoint, router, LiveViews, controllers, channels, JSON API, Kaffy admin, assets and static files |
 
+Inside `apps/firefly`, the domain is split into bounded contexts
+(`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
+`Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
+`Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`,
+`Firefly.Plugins`): each one's root module and the modules it exports are
+its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
+compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
+contexts (see the `Firefly` module).
+
 The domain reaches the web interface only through `Firefly.Endpoint` (the
 configured endpoint: base URL, signing secret, broadcasts) and the sandbox
 through `Firefly.Plugin.Sandbox` (registered at runtime), so it compiles and

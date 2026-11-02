@@ -1,16 +1,17 @@
 defmodule FireflyWeb.TagLive.Show do
   @moduledoc """
   A tag's threads, most recently active first; updates live. A synonym's
-  page redirects to its canonical tag's (see `Firefly.Tags`).
+  page redirects to its canonical tag's (see `Firefly.Discussion.Tags`).
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.Forums
-  alias Firefly.Forums.{Subscriptions, Tag}
+  alias Firefly.Discussion
+  alias Firefly.Discussion.Tag
+  alias Firefly.Notifications.Subscriptions
 
   @impl true
   def mount(%{"name" => name}, _session, socket) do
-    case Forums.get_tag!(name) do
+    case Discussion.get_tag!(name) do
       %{synonym_of: %Tag{name: canonical}} ->
         {:ok, push_navigate(socket, to: ~p"/tags/#{canonical}")}
 
@@ -20,7 +21,7 @@ defmodule FireflyWeb.TagLive.Show do
   end
 
   defp mount_tag(tag, socket) do
-    if connected?(socket), do: Forums.subscribe("forums:threads")
+    if connected?(socket), do: Discussion.subscribe("forums:threads")
 
     {:ok,
      socket
@@ -45,7 +46,11 @@ defmodule FireflyWeb.TagLive.Show do
   end
 
   defp load_threads(socket) do
-    assign(socket, :threads, Forums.tag_threads(socket.assigns.tag, socket.assigns.current_user))
+    assign(
+      socket,
+      :threads,
+      Discussion.tag_threads(socket.assigns.tag, socket.assigns.current_user)
+    )
   end
 
   @impl true

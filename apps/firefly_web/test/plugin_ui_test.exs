@@ -8,8 +8,9 @@ defmodule FireflyWeb.PluginUITest do
   import FireflyPlugins.PluginHelpers
   import Phoenix.LiveViewTest, only: [live: 2, render_hook: 3, assert_reply: 2]
 
-  alias Firefly.{Forums, Plugins, RateLimit, Repo}
-  alias Firefly.Forums.{Post, StaffAction}
+  alias Firefly.{Discussion, Groups, Plugins, RateLimit, Repo}
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.StaffAction
   alias Firefly.Plugins.{Events, Fields, Jobs, Storage, UI}
 
   setup do
@@ -33,7 +34,7 @@ defmodule FireflyWeb.PluginUITest do
       thread: thread
     } do
       [post] = Repo.preload(thread, :posts).posts
-      html = Firefly.Markdown.render(post.body, nil, post: post, thread: thread)
+      html = Firefly.Rendering.Markdown.render(post.body, nil, post: post, thread: thread)
       assert html =~ ~s(<span class="hello">Hello, World!</span>)
       assert html =~ "This post says hello."
 
@@ -52,7 +53,7 @@ defmodule FireflyWeb.PluginUITest do
           admin
         )
 
-      assert {:error, changeset} = Forums.create_post(thread, member, %{body: "darn it"})
+      assert {:error, changeset} = Discussion.create_post(thread, member, %{body: "darn it"})
       assert errors_on(changeset).body == [~s(Please don't say "darn".)]
     end
   end
@@ -94,8 +95,8 @@ defmodule FireflyWeb.PluginUITest do
         "[phx-hook='PluginWidget'][data-plugin='hello'] iframe[sandbox='allow-scripts'][src='/plugins/hello/assets/widget.html']"
       )
 
-      {:ok, role} = Forums.create_role("staff")
-      {:ok, private} = Forums.create_category(%{title: "Staff", role_ids: [role.id]})
+      {:ok, role} = Groups.create_role("staff")
+      {:ok, private} = Discussion.create_category(%{title: "Staff", role_ids: [role.id]})
       secret = thread_fixture(private, admin)
 
       conn
@@ -283,7 +284,7 @@ defmodule FireflyWeb.PluginUITest do
   end
 
   test "a hidden post's widget isn't shown", %{conn: conn, thread: thread, member: member} do
-    {:ok, reply} = Forums.create_post(thread, member, %{body: "reply"})
+    {:ok, reply} = Discussion.create_post(thread, member, %{body: "reply"})
     Repo.update!(Ecto.Changeset.change(reply, hidden_at: DateTime.utc_now(:second)))
 
     conn

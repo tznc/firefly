@@ -5,7 +5,7 @@ defmodule Firefly.TrustLevels do
 
     * 0, new user: posts may hold only a few links, images, attachments and
       mentions (the `new_user_max_*` site settings; see
-      `Firefly.Forums.SpamGuard`), and they can't start private
+      `Firefly.Moderation.SpamGuard`), and they can't start private
       conversations (`min_trust_to_send_messages`), flag
       (`min_trust_to_flag`) or edit wikis (`min_trust_to_edit_wiki`)
     * 1, basic user: those limits are lifted
@@ -13,16 +13,16 @@ defmodule Firefly.TrustLevels do
       have no counterpart here)
     * 3, regular: renames, retags and recategorizes threads; a spam flag
       from a regular hides a new user's post at once (see
-      `Firefly.Flags`)
+      `Firefly.Moderation.Flags`)
     * 4, leader (set by admins only): edits any post, makes posts wikis,
       pins and closes threads
 
   Admins pass every gate whatever their level. Posts by members below
   `approve_unless_trust_level` wait for approval (see
-  `Firefly.Forums.approval_required?/1`).
+  `Firefly.Discussion.approval_required?/1`).
 
   Levels 1 to 3 are earned: `run_due/0` (run by
-  `Firefly.TopicTimers.Scheduler`, once an hour across nodes; see
+  `Firefly.Moderation.TopicTimers.Scheduler`, once an hour across nodes; see
   `Firefly.JobRuns`) promotes confirmed members who meet the next
   level's requirements (site settings with Discourse's defaults: topics
   entered, posts read, days visited, likes given and received, topics
@@ -41,10 +41,13 @@ defmodule Firefly.TrustLevels do
   restricted to them and they can be made mentionable like any group.
   """
 
+  use Boundary, top_level?: true, check: [out: false], exports: []
+
   import Ecto.Query
 
-  alias Firefly.{Forums, JobRuns, Repo, SiteSettings, StaffLog}
-  alias Firefly.Forums.User
+  alias Firefly.{Accounts, JobRuns, Notifications, Repo, SiteSettings}
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.Accounts.User
   alias Firefly.URLs
 
   @names %{0 => "new user", 1 => "basic user", 2 => "member", 3 => "regular", 4 => "leader"}
@@ -89,7 +92,7 @@ defmodule Firefly.TrustLevels do
   def at_least?(nil, _level), do: false
 
   def at_least?(%User{trust_level: trust_level} = user, level),
-    do: trust_level >= level or Forums.admin?(user)
+    do: trust_level >= level or Accounts.admin?(user)
 
   @doc "Whether `user` reaches the trust level a site setting (`key`) asks for."
   def allowed?(user, key), do: at_least?(user, SiteSettings.get(key))
@@ -142,7 +145,7 @@ defmodule Firefly.TrustLevels do
 
   defp notify_promotion(user) do
     {:ok, _} =
-      Forums.notify(user, %{
+      Notifications.notify(user, %{
         kind: "promoted",
         subject: "You're now a #{title(user.trust_level)}",
         body: @unlocks[user.trust_level],
@@ -318,11 +321,12 @@ defmodule Firefly.TrustLevels do
     since = period_start()
 
     %{
-      topics: Repo.aggregate(where(Forums.Thread, [t], t.inserted_at > ^since), :count),
+      topics:
+        Repo.aggregate(where(Firefly.Discussion.Thread, [t], t.inserted_at > ^since), :count),
       posts:
         Repo.aggregate(
           where(
-            Forums.Post,
+            Firefly.Discussion.Post,
             [p],
             p.inserted_at > ^since and is_nil(p.deleted_at) and is_nil(p.queued_at)
           ),

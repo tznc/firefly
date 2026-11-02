@@ -2,13 +2,13 @@ defmodule FireflyWeb.AuthController do
   @moduledoc """
   Handles the OAuth/identity callbacks from Ueberauth and logging out. The
   login pages themselves are LiveViews (`AuthLive.Login`, `AuthLive.Identity`).
-  A provider's callback logs in (or registers; see `Firefly.Auth`), or,
+  A provider's callback logs in (or registers; see `Firefly.Accounts.Auth`), or,
   for a user already logged in, connects that account to them.
   """
   use FireflyWeb, :controller
 
-  alias Firefly.{Auth, Forums, RateLimit}
-  alias Firefly.Forums.User
+  alias Firefly.{Accounts, RateLimit}
+  alias Firefly.Accounts.{Auth, User}
   alias FireflyWeb.Login
 
   # Ueberauth redirects GET /auth/:provider for OAuth providers before this
@@ -72,7 +72,7 @@ defmodule FireflyWeb.AuthController do
 
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-
-           Forums.authenticate_by_password(user_params["username"], user_params["password"]) do
+           Accounts.authenticate_by_password(user_params["username"], user_params["password"]) do
       Login.complete(conn, user, ~p"/auth/identity", :password)
     else
       {:error, :rate_limited} -> Login.fail(conn, ~p"/auth/identity", RateLimit.message())

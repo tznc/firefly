@@ -3,7 +3,7 @@ defmodule FireflyWeb.Login do
   Finishing a login in a controller, however the user proved who they are
   (a password, a social login, OpenID Connect, DiscourseConnect): suspended
   users are told why (only once they've proven who they are); users with
-  two-factor authentication (see `Firefly.TwoFactor.required?/2`) go
+  two-factor authentication (see `Firefly.Accounts.TwoFactor.required?/2`) go
   on to give their second factor (`FireflyWeb.TwoFactorController`),
   with the login waiting in the session for 10 minutes; anyone else gets a
   fresh session.
@@ -14,8 +14,10 @@ defmodule FireflyWeb.Login do
   import Phoenix.Controller
   import Plug.Conn
 
-  alias Firefly.{Penalties, Repo, TwoFactor, WebAuthn}
-  alias Firefly.Forums.User
+  alias Firefly.Repo
+  alias Firefly.Accounts.{TwoFactor, WebAuthn}
+  alias Firefly.Moderation.Penalties
+  alias Firefly.Accounts.User
 
   @pending_seconds 600
 

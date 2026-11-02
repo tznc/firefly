@@ -10,7 +10,7 @@ defmodule FireflyWeb.StaffLive.Groups do
   on_mount({FireflyWeb.UserAuth, :require_user})
 
   alias Firefly.Groups
-  alias Firefly.Forums.Role
+  alias Firefly.Groups.Role
 
   @labels %{
     "public" => "Everyone",
@@ -94,7 +94,7 @@ defmodule FireflyWeb.StaffLive.Groups do
 
   defp group_event("remove_member", %{"role_id" => role_id, "user_id" => user_id}, socket) do
     role = Groups.get_group!(role_id)
-    user = Firefly.Forums.get_user!(user_id)
+    user = Firefly.Accounts.get_user!(user_id)
 
     case Groups.remove_member(role, user, socket.assigns.current_user) do
       {:ok, user} ->

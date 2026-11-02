@@ -5,58 +5,56 @@ defmodule FireflyWeb.AccountTest do
   import Ecto.Query, only: [from: 2]
   import Firefly.DataCase, only: [errors_on: 1]
 
-  alias Firefly.{
-    AccountDeletion,
-    AccountExport,
-    Forums,
-    Messages,
-    Notifications,
-    PasswordReset,
-    RateLimit,
-    Repo
-  }
+  alias Firefly.{Accounts, Discussion, Messaging, Notifications, RateLimit, Repo}
+  alias Firefly.Accounts.{AccountDeletion, AccountExport, PasswordReset}
 
-  alias Firefly.Forums.{Post, PostLike, Subscriptions, User}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Post, PostLike}
+  alias Firefly.Notifications.Subscriptions
 
   setup do
     {:ok, _} = Notifications.start_link()
 
     {:ok, ada} =
-      Forums.register_user(%{username: "ada", email: "ada@example.com", password: "ada-password"})
+      Accounts.register_user(%{
+        username: "ada",
+        email: "ada@example.com",
+        password: "ada-password"
+      })
 
-    {:ok, ada} = Forums.confirm_user(ada)
+    {:ok, ada} = Accounts.confirm_user(ada)
 
     bob =
       user_fixture(%{username: "bob", email: "bob-secret@example.com", name: "Robert Secret"})
 
     category = category_fixture("Elixir")
-    {:ok, tag_category} = Forums.create_category(%{title: "Watched category"})
+    {:ok, tag_category} = Discussion.create_category(%{title: "Watched category"})
 
     thread =
       thread_fixture(category, ada, %{title: "Ada's thread", body: "My first post", tags: "beam"})
 
     [first] = Repo.preload(thread, :posts).posts
-    {:ok, _} = Forums.update_post(first, ada, %{body: "My first post, edited"})
+    {:ok, _} = Discussion.update_post(first, ada, %{body: "My first post, edited"})
 
-    {:ok, bob_reply} = Forums.create_post(thread, bob, %{body: "bob's public reply @ada"})
-    :ok = Forums.like_post(first, bob)
-    :ok = Forums.like_post(bob_reply, ada)
+    {:ok, bob_reply} = Discussion.create_post(thread, bob, %{body: "bob's public reply @ada"})
+    :ok = Discussion.like_post(first, bob)
+    :ok = Discussion.like_post(bob_reply, ada)
     {:ok, _} = Subscriptions.set_category_level(ada, tag_category, "tracking")
-    {:ok, _} = Subscriptions.set_tag_level(ada, Forums.get_tag!("beam"), "watching")
-    Forums.mark_thread_read(ada, thread)
+    {:ok, _} = Subscriptions.set_tag_level(ada, Discussion.get_tag!("beam"), "watching")
+    Discussion.mark_thread_read(ada, thread)
 
     {:ok, conversation} =
-      Messages.start_conversation(bob, %{
+      Messaging.start_conversation(bob, %{
         "recipients" => "ada",
         "title" => "A private chat",
         "body" => "bob's private words"
       })
 
-    {:ok, _} = Messages.reply(conversation, ada, %{body: "Ada's private answer"})
+    {:ok, _} = Messaging.reply(conversation, ada, %{body: "Ada's private answer"})
     :sys.get_state(Notifications)
 
     %{
-      ada: Forums.get_user!(ada.id),
+      ada: Accounts.get_user!(ada.id),
       bob: bob,
       thread: thread,
       first: first,
@@ -106,9 +104,9 @@ defmodule FireflyWeb.AccountTest do
       bob: bob,
       conversation: conversation
     } do
-      :ok = Messages.leave(conversation, ada)
+      :ok = Messaging.leave(conversation, ada)
       user_fixture(%{username: "carol"})
-      {:ok, _} = Messages.add_participants(conversation, bob, "carol")
+      {:ok, _} = Messaging.add_participants(conversation, bob, "carol")
 
       assert [chat] = AccountExport.build(ada).conversations
       assert chat.id == conversation.id
@@ -164,7 +162,7 @@ defmodule FireflyWeb.AccountTest do
       |> click_button("Delete my account")
       |> assert_has("#flash-error", text: "That doesn't match")
 
-      refute User.deleted?(Forums.get_user!(ada.id))
+      refute User.deleted?(Accounts.get_user!(ada.id))
 
       conn
       |> log_in_as(ada)
@@ -175,7 +173,7 @@ defmodule FireflyWeb.AccountTest do
       |> assert_has("#flash-info", text: "Your account was deleted.")
       |> assert_has("nav a", text: "Log in")
 
-      gone = Forums.get_user!(ada.id)
+      gone = Accounts.get_user!(ada.id)
       assert gone.username == "deleted-user-#{ada.id}"
       assert %{email: nil, password_hash: nil, bio: nil} = gone
       assert gone.api_token != ada.api_token
@@ -184,7 +182,7 @@ defmodule FireflyWeb.AccountTest do
       assert Repo.get!(Post, first.id).user_id == ada.id
 
       assert [%{body: "Ada's private answer"}] =
-               conversation |> Messages.messages() |> Enum.filter(&(&1.user_id == ada.id))
+               conversation |> Messaging.messages() |> Enum.filter(&(&1.user_id == ada.id))
 
       conn
       |> visit(~p"/categories/#{thread.category_id}/threads/#{thread}")
@@ -192,16 +190,16 @@ defmodule FireflyWeb.AccountTest do
       |> refute_has("#posts", text: "@ada ")
 
       # Personal data goes.
-      assert Forums.notifications_for(gone) == []
+      assert Notifications.notifications_for(gone) == []
       assert Repo.all(from l in PostLike, where: l.user_id == ^ada.id) == []
       assert Subscriptions.thread_level(gone, thread) == nil
-      assert Forums.thread_read(gone, thread) == nil
-      refute Messages.participant?(conversation, gone)
-      assert Messages.participants(conversation) |> Enum.map(& &1.username) == ["bob"]
+      assert Discussion.thread_read(gone, thread) == nil
+      refute Messaging.participant?(conversation, gone)
+      assert Messaging.participants(conversation) |> Enum.map(& &1.username) == ["bob"]
 
       # Every way back in is closed.
       conn |> log_in_as(ada) |> visit(~p"/") |> assert_has("nav a", text: "Log in")
-      assert {:error, _} = Forums.authenticate_by_password("ada", "ada-password")
+      assert {:error, _} = Accounts.authenticate_by_password("ada", "ada-password")
       assert PasswordReset.verify(reset_token) == {:error, :invalid}
 
       api =
@@ -212,10 +210,10 @@ defmodule FireflyWeb.AccountTest do
       assert api.status == 401
 
       # The placeholder can't be mentioned or messaged.
-      assert Forums.users_by_username(["deleted-user-#{ada.id}"]) == %{}
+      assert Accounts.users_by_username(["deleted-user-#{ada.id}"]) == %{}
 
       assert {:error, _} =
-               Messages.start_conversation(bob, %{
+               Messaging.start_conversation(bob, %{
                  "recipients" => "deleted-user-#{ada.id}",
                  "title" => "t",
                  "body" => "b"
@@ -223,7 +221,7 @@ defmodule FireflyWeb.AccountTest do
     end
 
     test "other users' notifications stop naming the deleted user", %{ada: ada, bob: bob} do
-      subjects = fn -> bob |> Forums.notifications_for() |> Enum.map(& &1.subject) end
+      subjects = fn -> bob |> Notifications.notifications_for() |> Enum.map(& &1.subject) end
       assert Enum.any?(subjects.(), &(&1 =~ "@ada liked your post"))
       assert Enum.any?(subjects.(), &(&1 =~ "@ada"))
 
@@ -239,7 +237,7 @@ defmodule FireflyWeb.AccountTest do
       ada: ada
     } do
       assert {:error, changeset} =
-               Forums.register_user(%{
+               Accounts.register_user(%{
                  username: "Deleted-User-#{ada.id}",
                  email: "x@example.com",
                  password: "password123"
@@ -248,18 +246,27 @@ defmodule FireflyWeb.AccountTest do
       assert "is reserved" in errors_on(changeset).username
 
       assert {:ok, %{username: "gh-deleted-user-7"}} =
-               Firefly.Auth.login(%{provider: :github, uid: 7, nickname: "deleted-user-7"})
+               Firefly.Accounts.Auth.login(%{
+                 provider: :github,
+                 uid: 7,
+                 nickname: "deleted-user-7"
+               })
 
       # A legacy account that already has the name.
       Repo.insert!(%User{username: "deleted-user-#{ada.id}", name: "x", api_token: "t"})
 
       assert {:error, _} = AccountDeletion.delete_account(ada, "ada-password")
-      refute User.deleted?(Forums.get_user!(ada.id))
+      refute User.deleted?(Accounts.get_user!(ada.id))
     end
 
     test "GitHub accounts confirm with their username", %{conn: conn} do
       {:ok, octo} =
-        Firefly.Auth.login(%{provider: :github, uid: 42, nickname: "Octo", name: "Octo Cat"})
+        Firefly.Accounts.Auth.login(%{
+          provider: :github,
+          uid: 42,
+          nickname: "Octo",
+          name: "Octo Cat"
+        })
 
       conn
       |> log_in_as(octo)
@@ -275,12 +282,12 @@ defmodule FireflyWeb.AccountTest do
       |> click_button("Delete my account")
       |> assert_has("#flash-info", text: "Your account was deleted.")
 
-      assert %{deleted_at: %DateTime{}} = Forums.get_user!(octo.id)
-      assert Firefly.Auth.identities(octo) == %{}
+      assert %{deleted_at: %DateTime{}} = Accounts.get_user!(octo.id)
+      assert Firefly.Accounts.Auth.identities(octo) == %{}
 
       # The GitHub account can sign up afresh.
       assert {:ok, again} =
-               Firefly.Auth.login(%{provider: :github, uid: 42, nickname: "Octo"})
+               Firefly.Accounts.Auth.login(%{provider: :github, uid: 42, nickname: "Octo"})
 
       assert again.id != octo.id
     end

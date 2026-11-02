@@ -3,9 +3,12 @@ defmodule FireflyWeb.UploadsTest do
 
   import Firefly.UploadHelpers
 
-  alias Firefly.{AccountDeletion, AccountExport, Drafts, Forums, Messages, Repo}
-  alias Firefly.{SiteSettings, StaffLog, Uploads}
-  alias Firefly.Forums.StaffAction
+  alias Firefly.{Accounts, Discussion, Messaging, Repo}
+  alias Firefly.Accounts.{AccountDeletion, AccountExport}
+  alias Firefly.Discussion.Drafts
+  alias Firefly.{SiteSettings, Uploads}
+  alias Firefly.Moderation.StaffLog
+  alias Firefly.Moderation.StaffAction
   alias Firefly.Uploads.{Processor, Storage, Upload}
 
   @moduletag :tmp_dir
@@ -166,11 +169,14 @@ defmodule FireflyWeb.UploadsTest do
       {:ok, upload} = Uploads.create(user, image_file(dir, "a.png"), "a.png")
       other = user_fixture()
       thread = thread_fixture(category_fixture(), other)
-      {:ok, _} = Forums.create_post(thread, other, %{body: Uploads.markdown(upload)})
+      {:ok, _} = Discussion.create_post(thread, other, %{body: Uploads.markdown(upload)})
       assert Repo.reload!(upload).attached_to == nil
 
       post = post_fixture(user)
-      {:ok, _} = Forums.update_post(post, user, %{body: "now with " <> Uploads.markdown(upload)})
+
+      {:ok, _} =
+        Discussion.update_post(post, user, %{body: "now with " <> Uploads.markdown(upload)})
+
       assert Repo.reload!(upload).post_id == post.id
     end
 
@@ -211,7 +217,7 @@ defmodule FireflyWeb.UploadsTest do
       admin = admin_fixture()
       {:ok, team} = Firefly.Groups.create_group(%{name: "insiders"}, admin)
       {:ok, _} = Firefly.Groups.add_member(team, user.username, admin)
-      {:ok, category} = Forums.create_category(%{title: "Secret", role_ids: [team.id]})
+      {:ok, category} = Discussion.create_category(%{title: "Secret", role_ids: [team.id]})
 
       {:ok, upload} = Uploads.create(user, image_file(dir, "a.png"), "a.png")
       thread_fixture(category, user, %{body: Uploads.markdown(upload)})
@@ -227,7 +233,7 @@ defmodule FireflyWeb.UploadsTest do
       recipient = user_fixture()
 
       {:ok, _conversation} =
-        Messages.start_conversation(user, %{
+        Messaging.start_conversation(user, %{
           "title" => "Hi",
           "recipients" => recipient.username,
           "body" => Uploads.markdown(upload)
@@ -310,8 +316,8 @@ defmodule FireflyWeb.UploadsTest do
       assert first.attached_to == "avatar"
       assert Uploads.readable?(first, nil)
       assert first.thumbnail
-      assert Firefly.Forums.User.avatar_url(user) == "/avatars/#{first.id}"
-      assert Firefly.Forums.User.avatar_url(user, 96) == "/avatars/#{first.id}/small"
+      assert Firefly.Accounts.User.avatar_url(user) == "/avatars/#{first.id}"
+      assert Firefly.Accounts.User.avatar_url(user, 96) == "/avatars/#{first.id}/small"
 
       {:ok, user} =
         Uploads.set_profile_image(user, :avatar, image_file(dir, "me2.png", 300, 600), "me2.png")
@@ -337,10 +343,10 @@ defmodule FireflyWeb.UploadsTest do
       assert {background.width, background.attached_to} == {1600, "background"}
       assert Uploads.readable?(background, nil)
 
-      assert Firefly.Forums.User.background_url(user, :profile_background) ==
+      assert Firefly.Accounts.User.background_url(user, :profile_background) ==
                "/backgrounds/#{background.id}"
 
-      assert Firefly.Forums.User.background_url(user, :card_background) == nil
+      assert Firefly.Accounts.User.background_url(user, :card_background) == nil
 
       {:ok, user} = Uploads.remove_profile_image(user, :profile_background)
       refute user.profile_background_upload_id
@@ -371,7 +377,7 @@ defmodule FireflyWeb.UploadsTest do
                &(&1.url == Uploads.url(used) and &1.attached_to == "post")
              )
 
-      user = Forums.get_user!(user.id)
+      user = Accounts.get_user!(user.id)
       {:ok, deleted} = AccountDeletion.delete_account(user, user.username)
       refute deleted.avatar_upload_id
 

@@ -2,13 +2,13 @@ defmodule FireflyWeb.CategoryLive.Show do
   @moduledoc "A category's threads, most recently active first; updates live."
   use FireflyWeb, :live_view
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Subscriptions
+  alias Firefly.Discussion
+  alias Firefly.Notifications.Subscriptions
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    category = Forums.get_category_with_family!(id, socket.assigns.current_user)
-    if connected?(socket), do: Forums.subscribe("forums:category:#{category.id}")
+    category = Discussion.get_category_with_family!(id, socket.assigns.current_user)
+    if connected?(socket), do: Discussion.subscribe("forums:category:#{category.id}")
 
     {:ok,
      socket
@@ -33,7 +33,7 @@ defmodule FireflyWeb.CategoryLive.Show do
 
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :manage_category) do
-      {:ok, _} = Forums.delete_category(socket.assigns.category, socket.assigns.current_user)
+      {:ok, _} = Discussion.delete_category(socket.assigns.category, socket.assigns.current_user)
 
       {:noreply,
        socket
@@ -48,7 +48,7 @@ defmodule FireflyWeb.CategoryLive.Show do
     assign(
       socket,
       :threads,
-      Forums.recent_threads(socket.assigns.category, socket.assigns.current_user)
+      Discussion.recent_threads(socket.assigns.category, socket.assigns.current_user)
     )
   end
 

@@ -1,15 +1,15 @@
 defmodule FireflyWeb.SolvedLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Forums, Repo}
-  alias Firefly.Forums.Category
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Discussion.Category
 
   setup do
     asker = user_fixture(%{username: "asker"})
     helper = user_fixture(%{username: "helper"})
-    {:ok, qa} = Forums.create_category(%{title: "Questions", allow_accepted_answers: true})
+    {:ok, qa} = Discussion.create_category(%{title: "Questions", allow_accepted_answers: true})
     thread = thread_fixture(qa, asker, %{title: "Why OTP", body: "the question"})
-    {:ok, answer} = Forums.create_post(thread, helper, %{body: "because supervisors"})
+    {:ok, answer} = Discussion.create_post(thread, helper, %{body: "because supervisors"})
     %{asker: asker, helper: helper, qa: qa, thread: thread, answer: answer}
   end
 
@@ -54,7 +54,7 @@ defmodule FireflyWeb.SolvedLiveTest do
     thread: thread,
     answer: answer
   } do
-    {:ok, _} = Firefly.Solved.accept(thread, answer, asker)
+    {:ok, _} = Firefly.Discussion.Solved.accept(thread, answer, asker)
 
     session =
       conn
@@ -62,7 +62,7 @@ defmodule FireflyWeb.SolvedLiveTest do
       |> visit(path(thread))
       |> assert_has("#accepted-answer")
 
-    {:ok, _} = Forums.delete_post(answer, helper)
+    {:ok, _} = Discussion.delete_post(answer, helper)
     refute_has(session, "#accepted-answer")
   end
 

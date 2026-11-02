@@ -4,8 +4,11 @@ defmodule Firefly.TopicToolsTest do
   import Firefly.Fixtures,
     only: [user_fixture: 0, admin_fixture: 0, category_fixture: 1, thread_fixture: 3]
 
-  alias Firefly.{Forums, Posting, StaffLog, TopicTimers, TopicTools}
-  alias Firefly.Forums.{Notification, Post, StaffAction, Subscriptions, Thread, ThreadTimer}
+  alias Firefly.{Accounts, Discussion, Notifications}
+  alias Firefly.Moderation.{Posting, StaffLog, TopicTimers, TopicTools}
+  alias Firefly.Discussion.{Post, Thread}
+  alias Firefly.Moderation.{StaffAction, ThreadTimer}
+  alias Firefly.Notifications.{Notification, Subscriptions}
 
   setup do
     admin = admin_fixture()
@@ -44,7 +47,7 @@ defmodule Firefly.TopicToolsTest do
   defp log_entries(action), do: Repo.all(from(a in StaffAction, where: a.action == ^action))
 
   defp completely_read?(thread, user),
-    do: Enum.find(Forums.latest_threads(user), &(&1.id == thread.id)).completely_read?
+    do: Enum.find(Discussion.latest_threads(user), &(&1.id == thread.id)).completely_read?
 
   describe "merge/3" do
     setup %{alice: alice, bob: bob, category: category} do
@@ -52,12 +55,12 @@ defmodule Firefly.TopicToolsTest do
       # take the target's place.
       source = thread_fixture(category, alice, %{title: "Source", body: "s1"})
       age(first_post(source), 300)
-      {:ok, s2} = Forums.create_post(source, bob, %{body: "s2"})
+      {:ok, s2} = Discussion.create_post(source, bob, %{body: "s2"})
       age(s2, 100)
 
       target = thread_fixture(category, bob, %{title: "Target", body: "t1"})
       age(first_post(target), 200)
-      {:ok, _t2} = Forums.create_post(target, alice, %{body: "t2"})
+      {:ok, _t2} = Discussion.create_post(target, alice, %{body: "t2"})
 
       %{source: source, target: target}
     end
@@ -77,7 +80,7 @@ defmodule Firefly.TopicToolsTest do
       stub = Repo.get!(Thread, source.id)
       assert stub.merged_into_id == target.id
       assert Thread.closed?(stub)
-      assert Forums.get_thread_after_merges(source.id).id == target.id
+      assert Discussion.get_thread_after_merges(source.id).id == target.id
     end
 
     test "the stub is on no list", %{
@@ -87,21 +90,21 @@ defmodule Firefly.TopicToolsTest do
       source: source,
       target: target
     } do
-      {:ok, _} = Forums.update_thread(source, %{tags: "otp"}, admin)
+      {:ok, _} = Discussion.update_thread(source, %{tags: "otp"}, admin)
       {:ok, _} = TopicTools.merge(source, target, admin)
 
       for threads <- [
-            Forums.latest_threads(nil),
-            Forums.latest_threads(alice),
-            Forums.list_threads(category),
-            Forums.recent_threads(category),
-            Forums.participating_threads(alice),
-            elem(Forums.get_recent_threads_for_categories([category], nil), 1)[category.id]
+            Discussion.latest_threads(nil),
+            Discussion.latest_threads(alice),
+            Discussion.list_threads(category),
+            Discussion.recent_threads(category),
+            Discussion.participating_threads(alice),
+            elem(Discussion.get_recent_threads_for_categories([category], nil), 1)[category.id]
           ] do
         assert Enum.map(threads, & &1.id) == [target.id]
       end
 
-      assert Forums.list_tags() == []
+      assert Discussion.list_tags() == []
     end
 
     test "is logged", %{admin: admin, source: source, target: target} do
@@ -120,13 +123,13 @@ defmodule Firefly.TopicToolsTest do
       target: target
     } do
       carol = user_fixture()
-      {:ok, _} = Forums.mark_thread_read(alice, source)
-      {:ok, _} = Forums.mark_thread_read(alice, target)
-      {:ok, _} = Forums.mark_thread_read(carol, target)
-      {:ok, _} = Forums.mark_thread_read(bob, source)
+      {:ok, _} = Discussion.mark_thread_read(alice, source)
+      {:ok, _} = Discussion.mark_thread_read(alice, target)
+      {:ok, _} = Discussion.mark_thread_read(carol, target)
+      {:ok, _} = Discussion.mark_thread_read(bob, source)
       {:ok, _} = TopicTools.merge(source, target, admin)
 
-      read = fn user -> Forums.thread_read(user, target).last_read_post_id end
+      read = fn user -> Discussion.thread_read(user, target).last_read_post_id end
 
       [t1, s1, s2, t2] =
         Repo.all(
@@ -143,7 +146,7 @@ defmodule Firefly.TopicToolsTest do
       assert read.(carol) == Enum.min([s1, s2]) - 1
       # Bob read all of the source but only t1 of the target: up to t2.
       assert read.(bob) == t2 - 1
-      assert Forums.thread_read(alice, source) == nil
+      assert Discussion.thread_read(alice, source) == nil
     end
 
     test "combines notification levels", %{
@@ -176,9 +179,9 @@ defmodule Firefly.TopicToolsTest do
       post = first_post(source)
 
       {:ok, notification} =
-        Forums.notify(
+        Notifications.notify(
           bob,
-          Notification.for_post("new_post", source, post, Forums.get_user!(post.user_id))
+          Notification.for_post("new_post", source, post, Accounts.get_user!(post.user_id))
         )
 
       {:ok, _} = TopicTools.merge(source, target, admin)
@@ -187,7 +190,7 @@ defmodule Firefly.TopicToolsTest do
       assert notification.thread_id == target.id
       assert notification.url =~ "/threads/#{target.id}#post-#{post.id}"
       # Reading the target reads it.
-      {:ok, _} = Forums.mark_thread_read(bob, Repo.get!(Thread, target.id))
+      {:ok, _} = Discussion.mark_thread_read(bob, Repo.get!(Thread, target.id))
       assert Repo.get!(Notification, notification.id).read_at
     end
 
@@ -203,7 +206,7 @@ defmodule Firefly.TopicToolsTest do
       {:ok, _} = TopicTools.merge(Repo.get!(Thread, target.id), third, admin)
 
       assert Repo.get!(Thread, source.id).merged_into_id == third.id
-      assert Forums.get_thread_after_merges(source.id).id == third.id
+      assert Discussion.get_thread_after_merges(source.id).id == third.id
     end
 
     test "refuses the same thread or a merged one", %{
@@ -221,9 +224,9 @@ defmodule Firefly.TopicToolsTest do
   describe "split/4" do
     setup %{alice: alice, bob: bob, category: category} do
       thread = thread_fixture(category, alice, %{title: "Big", body: "op"})
-      {:ok, r1} = Forums.create_post(thread, bob, %{body: "r1"})
-      {:ok, r2} = Forums.create_post(thread, alice, %{body: "r2"})
-      {:ok, r3} = Forums.create_post(thread, bob, %{body: "r3"})
+      {:ok, r1} = Discussion.create_post(thread, bob, %{body: "r1"})
+      {:ok, r2} = Discussion.create_post(thread, alice, %{body: "r2"})
+      {:ok, r3} = Discussion.create_post(thread, bob, %{body: "r3"})
       %{thread: thread, r1: r1, r2: r2, r3: r3}
     end
 
@@ -236,7 +239,7 @@ defmodule Firefly.TopicToolsTest do
       r3: r3
     } do
       other = category_fixture("Other")
-      {:ok, _} = Forums.mark_thread_read(alice, thread)
+      {:ok, _} = Discussion.mark_thread_read(alice, thread)
 
       assert {:ok, new} =
                TopicTools.split(
@@ -252,15 +255,15 @@ defmodule Firefly.TopicToolsTest do
       assert bodies(thread) == ["op", "r2"]
 
       # Alice had read it all: the new thread is read too.
-      assert Forums.thread_read(alice, new).last_read_post_id == r3.id
+      assert Discussion.thread_read(alice, new).last_read_post_id == r3.id
       assert completely_read?(new, alice)
 
       # Bob is told where his posts went; Alice wasn't moved.
       assert [%{kind: "moved", post_id: post_id, thread_id: thread_id}] =
-               Forums.notifications_for(bob)
+               Notifications.notifications_for(bob)
 
       assert post_id == r1.id and thread_id == new.id
-      assert Forums.notifications_for(alice) == []
+      assert Notifications.notifications_for(alice) == []
 
       assert [
                %{
@@ -357,7 +360,7 @@ defmodule Firefly.TopicToolsTest do
     end
 
     test "reopen and delete", %{admin: admin, thread: thread} do
-      {:ok, thread} = Forums.close_thread(thread, true, admin)
+      {:ok, thread} = Discussion.close_thread(thread, true, admin)
       {:ok, _} = TopicTimers.set_timer(thread, %{action: "open", run_at: in_seconds(60)}, admin)
       TopicTimers.run_due(in_seconds(61))
       refute Repo.get!(Thread, thread.id).closed_at
@@ -428,12 +431,12 @@ defmodule Firefly.TopicToolsTest do
 
       # Bob hasn't posted yet; then he has.
       assert Posting.check(bob, thread) == :ok
-      {:ok, reply} = Forums.create_post(thread, bob, %{body: "hi"})
+      {:ok, reply} = Discussion.create_post(thread, bob, %{body: "hi"})
       assert {:error, {:slow_mode, _}} = Posting.check(bob, thread)
       age(reply, 601)
       assert Posting.check(bob, thread) == :ok
 
-      {:ok, _} = Forums.create_post(thread, admin, %{body: "staff"})
+      {:ok, _} = Discussion.create_post(thread, admin, %{body: "staff"})
       assert Posting.check(admin, thread) == :ok
 
       {:ok, thread} = TopicTools.set_slow_mode(thread, 0, admin)

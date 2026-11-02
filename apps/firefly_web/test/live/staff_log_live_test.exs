@@ -3,8 +3,9 @@ defmodule FireflyWeb.StaffLogLiveTest do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Firefly.{Forums, Repo}
-  alias Firefly.Forums.{Category, StaffAction}
+  alias Firefly.{Accounts, Discussion, Groups, Repo}
+  alias Firefly.Discussion.Category
+  alias Firefly.Moderation.StaffAction
 
   setup do
     admin = admin_fixture(%{username: "boss"})
@@ -43,9 +44,9 @@ defmodule FireflyWeb.StaffLogLiveTest do
   test "filters by action and staff member, and shows deleted targets' details", ctx do
     %{conn: conn, admin: admin, thread: thread} = ctx
     other = admin_fixture(%{username: "mod"})
-    {:ok, thread} = Forums.pin_thread(thread, true, admin)
-    {:ok, _} = Forums.close_thread(thread, true, other)
-    {:ok, _} = Forums.delete_thread(thread, other)
+    {:ok, thread} = Discussion.pin_thread(thread, true, admin)
+    {:ok, _} = Discussion.close_thread(thread, true, other)
+    {:ok, _} = Discussion.delete_thread(thread, other)
 
     conn
     |> log_in_as(admin)
@@ -63,7 +64,7 @@ defmodule FireflyWeb.StaffLogLiveTest do
   end
 
   test "edits show before and after", %{conn: conn, admin: admin, category: category} do
-    {:ok, _} = Forums.update_category(category, %{description: "BEAM talk"}, admin)
+    {:ok, _} = Discussion.update_category(category, %{description: "BEAM talk"}, admin)
 
     conn
     |> log_in_as(admin)
@@ -108,7 +109,7 @@ defmodule FireflyWeb.StaffLogLiveTest do
 
       assert details["title"] == %{"before" => "Elixir", "after" => "Erlang"}
 
-      {:ok, role} = Forums.create_role("moderator")
+      {:ok, role} = Groups.create_role("moderator")
       put(conn, "/admin/accounts/role/#{role.id}", %{"role" => %{"name" => "mod"}})
 
       conn
@@ -119,17 +120,20 @@ defmodule FireflyWeb.StaffLogLiveTest do
 
     test "granting and revoking roles is logged on the user", %{conn: conn, admin: admin} do
       member = user_fixture(%{username: "promoted"})
-      role = Repo.get_by!(Forums.Role, name: "admin")
+      role = Repo.get_by!(Firefly.Groups.Role, name: "admin")
       conn = log_in_as(conn, admin)
 
       post(conn, "/admin/accounts/role_membership", %{
         "role_membership" => %{"user_id" => member.id, "role_id" => role.id}
       })
 
-      assert Forums.admin?(member)
-      membership = Repo.get_by!(Forums.RoleMembership, user_id: member.id, role_id: role.id)
+      assert Accounts.admin?(member)
+
+      membership =
+        Repo.get_by!(Firefly.Groups.RoleMembership, user_id: member.id, role_id: role.id)
+
       delete(conn, "/admin/accounts/role_membership/#{membership.id}")
-      refute Forums.admin?(member)
+      refute Accounts.admin?(member)
 
       assert [grant, revoke] = Repo.all(from(a in StaffAction, order_by: a.id))
 
@@ -142,14 +146,16 @@ defmodule FireflyWeb.StaffLogLiveTest do
 
     test "role memberships can't be edited in place", %{conn: conn, admin: admin} do
       member = user_fixture(%{username: "member"})
-      role = Repo.get_by!(Forums.Role, name: "admin")
+      role = Repo.get_by!(Firefly.Groups.Role, name: "admin")
       conn = log_in_as(conn, admin)
 
       post(conn, "/admin/accounts/role_membership", %{
         "role_membership" => %{"user_id" => member.id, "role_id" => role.id}
       })
 
-      membership = Repo.get_by!(Forums.RoleMembership, user_id: member.id, role_id: role.id)
+      membership =
+        Repo.get_by!(Firefly.Groups.RoleMembership, user_id: member.id, role_id: role.id)
+
       other = user_fixture(%{username: "mallory"})
 
       form = get(conn, "/admin/accounts/role_membership/#{membership.id}")
@@ -159,15 +165,15 @@ defmodule FireflyWeb.StaffLogLiveTest do
         "role_membership" => %{"user_id" => other.id, "role_id" => role.id}
       })
 
-      assert Repo.get!(Forums.RoleMembership, membership.id).user_id == member.id
-      refute Forums.admin?(other)
+      assert Repo.get!(Firefly.Groups.RoleMembership, membership.id).user_id == member.id
+      refute Accounts.admin?(other)
       assert ["role.grant"] = Repo.all(from(a in StaffAction, select: a.action))
     end
   end
 
   test "moving a thread to its own category isn't logged", %{admin: admin, thread: thread} do
     category = Repo.get!(Category, thread.category_id)
-    assert {:ok, _} = Forums.move_thread(thread, category, admin)
+    assert {:ok, _} = Discussion.move_thread(thread, category, admin)
     assert Repo.all(StaffAction) == []
   end
 
@@ -177,14 +183,18 @@ defmodule FireflyWeb.StaffLogLiveTest do
     thread: thread
   } do
     {:ok, ada} =
-      Forums.register_user(%{username: "ada", email: "ada@example.com", password: "ada-password"})
+      Accounts.register_user(%{
+        username: "ada",
+        email: "ada@example.com",
+        password: "ada-password"
+      })
 
-    {:ok, ada} = Forums.confirm_user(ada)
-    {:ok, post} = Forums.create_post(thread, ada, %{body: "Ada's reply"})
-    {:ok, _} = Forums.delete_post(post, admin)
+    {:ok, ada} = Accounts.confirm_user(ada)
+    {:ok, post} = Discussion.create_post(thread, ada, %{body: "Ada's reply"})
+    {:ok, _} = Discussion.delete_post(post, admin)
 
     conn = log_in_as(conn, admin)
-    role = Repo.get_by!(Forums.Role, name: "admin")
+    role = Repo.get_by!(Firefly.Groups.Role, name: "admin")
 
     put(conn, "/admin/accounts/user/#{ada.id}", %{"user" => %{"email" => "ada@new.example"}})
 
@@ -192,7 +202,7 @@ defmodule FireflyWeb.StaffLogLiveTest do
       "role_membership" => %{"user_id" => ada.id, "role_id" => role.id}
     })
 
-    membership = Repo.get_by!(Forums.RoleMembership, user_id: ada.id, role_id: role.id)
+    membership = Repo.get_by!(Firefly.Groups.RoleMembership, user_id: ada.id, role_id: role.id)
     delete(conn, "/admin/accounts/role_membership/#{membership.id}")
 
     log = fn -> Repo.all(from(a in StaffAction, select: a.details)) |> Jason.encode!() end
@@ -200,7 +210,7 @@ defmodule FireflyWeb.StaffLogLiveTest do
     assert log.() =~ ~s{"ada"}
 
     {:ok, _} =
-      Firefly.AccountDeletion.delete_account(Forums.get_user!(ada.id), "ada-password")
+      Firefly.Accounts.AccountDeletion.delete_account(Accounts.get_user!(ada.id), "ada-password")
 
     refute log.() =~ "ada@"
     refute log.() =~ ~s{"ada"}

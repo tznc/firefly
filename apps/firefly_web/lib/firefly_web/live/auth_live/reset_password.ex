@@ -4,8 +4,8 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
 
   on_mount({FireflyWeb.UserAuth, :password_login})
 
-  alias Firefly.{Forums, PasswordReset}
-  alias Firefly.Forums.User
+  alias Firefly.Accounts
+  alias Firefly.Accounts.{PasswordReset, User}
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do
@@ -32,7 +32,7 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
   end
 
   def handle_event("save", %{"user" => params}, socket) do
-    case Forums.reset_user_password(socket.assigns.user, params) do
+    case Accounts.reset_user_password(socket.assigns.user, params) do
       {:ok, _user} ->
         {:noreply,
          socket

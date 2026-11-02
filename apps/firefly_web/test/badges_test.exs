@@ -4,8 +4,12 @@ defmodule FireflyWeb.BadgesTest do
   import Ecto.Query, only: [where: 2, where: 3]
   import Firefly.DataCase, only: [errors_on: 1]
 
-  alias Firefly.{AccountDeletion, AccountExport, Badges, Forums, JobRuns, Repo, TrustLevels}
-  alias Firefly.Forums.{Badge, Notification, StaffAction, User, UserBadge}
+  alias Firefly.{Badges, Discussion, Groups, JobRuns, Repo, TrustLevels}
+  alias Firefly.Accounts.{AccountDeletion, AccountExport}
+  alias Firefly.Accounts.User
+  alias Firefly.Badges.{Badge, UserBadge}
+  alias Firefly.Moderation.StaffAction
+  alias Firefly.Notifications.Notification
 
   setup do
     admin = admin_fixture()
@@ -30,8 +34,11 @@ defmodule FireflyWeb.BadgesTest do
     test "are created and granted by the job, once each", ctx do
       author = user_fixture()
       liker = user_fixture()
-      {:ok, reply} = Forums.create_post(ctx.thread, author, %{body: "hello @#{liker.username}"})
-      Forums.like_post(reply, liker)
+
+      {:ok, reply} =
+        Discussion.create_post(ctx.thread, author, %{body: "hello @#{liker.username}"})
+
+      Discussion.like_post(reply, liker)
 
       Badges.grant_earned(nil)
       Badges.grant_earned(nil)
@@ -49,12 +56,12 @@ defmodule FireflyWeb.BadgesTest do
       user = user_fixture()
 
       {:ok, _} =
-        Forums.create_post(ctx.thread, user, %{
+        Discussion.create_post(ctx.thread, user, %{
           body: "> [@someone said:](/x)\n>\n> hi\n\nsee /categories/1/threads/2"
         })
 
-      {:ok, post} = Forums.create_post(ctx.thread, user, %{body: "draft"})
-      {:ok, _} = Forums.update_post(post, user, %{body: "final"})
+      {:ok, post} = Discussion.create_post(ctx.thread, user, %{body: "draft"})
+      {:ok, _} = Discussion.update_post(post, user, %{body: "final"})
       Repo.update!(Ecto.Changeset.change(user, bio: "Hi"))
 
       Badges.grant_earned([user.id])
@@ -66,8 +73,8 @@ defmodule FireflyWeb.BadgesTest do
       likers = for _ <- 1..10, do: user_fixture()
 
       for _ <- 1..2 do
-        {:ok, reply} = Forums.create_post(ctx.thread, author, %{body: "great"})
-        for liker <- likers, do: Forums.like_post(reply, liker)
+        {:ok, reply} = Discussion.create_post(ctx.thread, author, %{body: "great"})
+        for liker <- likers, do: Discussion.like_post(reply, liker)
       end
 
       Badges.grant_earned([author.id])
@@ -184,13 +191,13 @@ defmodule FireflyWeb.BadgesTest do
     end
 
     test "a grant's post shows only to who may read it", %{conn: conn, admin: admin} do
-      {:ok, role} = Forums.create_role("insiders")
-      {:ok, secret} = Forums.create_category(%{title: "Secret"})
+      {:ok, role} = Groups.create_role("insiders")
+      {:ok, secret} = Discussion.create_category(%{title: "Secret"})
       Repo.insert_all("forums_category_roles", [%{category_id: secret.id, role_id: role.id}])
       author = user_fixture()
       thread = thread_fixture(secret, admin, %{title: "Hidden plans"})
-      {:ok, reply} = Forums.create_post(thread, author, %{body: "secret"})
-      Forums.like_post(reply, admin)
+      {:ok, reply} = Discussion.create_post(thread, author, %{body: "secret"})
+      Discussion.like_post(reply, admin)
       Badges.grant_earned([author.id])
 
       conn

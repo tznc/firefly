@@ -2,8 +2,9 @@ defmodule FireflyWeb.LinkPreviewsTest do
   # Changes global config (fetching on, which local addresses are allowed).
   use FireflyWeb.ConnCase, async: false
 
-  alias Firefly.{Forums, LinkPreviews, Repo, SiteSettings, Uploads}
-  alias Firefly.LinkPreviews.{Fetcher, LinkPreview, Parser}
+  alias Firefly.{Discussion, Repo, SiteSettings, Uploads}
+  alias Firefly.Rendering.LinkPreviews
+  alias Firefly.Rendering.LinkPreviews.{Fetcher, LinkPreview, Parser}
   alias Firefly.Plugins.HTTP
 
   # A small website to preview.
@@ -165,8 +166,8 @@ defmodule FireflyWeb.LinkPreviewsTest do
   defp thread_with(body) do
     user = user_fixture()
     thread = thread_fixture(category_fixture(), user)
-    :ok = Forums.subscribe("forums:thread:#{thread.id}")
-    {:ok, post} = Forums.create_post(thread, user, %{body: body})
+    :ok = Discussion.subscribe("forums:thread:#{thread.id}")
+    {:ok, post} = Discussion.create_post(thread, user, %{body: body})
     {thread, post}
   end
 
@@ -177,8 +178,8 @@ defmodule FireflyWeb.LinkPreviewsTest do
       path = ~p"/categories/#{thread.category_id}/threads/#{thread}"
       session = visit(conn, path)
 
-      :ok = Forums.subscribe("forums:thread:#{thread.id}")
-      {:ok, _post} = Forums.create_post(thread, user, %{body: "Read this:\n\n#{base}/page"})
+      :ok = Discussion.subscribe("forums:thread:#{thread.id}")
+      {:ok, _post} = Discussion.create_post(thread, user, %{body: "Read this:\n\n#{base}/page"})
       thread_id = thread.id
       assert_receive {:link_previews_ready, ^thread_id}, 5_000
 

@@ -1,27 +1,30 @@
 defmodule Firefly.SearchTest do
   use Firefly.DataCase
 
-  alias Firefly.{Forums, Search}
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Discussion.Search
 
   setup do
-    {:ok, elixir} = Forums.create_category(%{title: "Elixir"})
-    {:ok, otp} = Forums.create_category(%{title: "OTP", parent_id: elixir.id})
-    {:ok, other} = Forums.create_category(%{title: "Other"})
+    {:ok, elixir} = Discussion.create_category(%{title: "Elixir"})
+    {:ok, otp} = Discussion.create_category(%{title: "OTP", parent_id: elixir.id})
+    {:ok, other} = Discussion.create_category(%{title: "Other"})
     alice = user("alice")
     bob = user("bob")
 
     {:ok, supervisors} =
-      Forums.create_thread(otp, alice, %{
+      Discussion.create_thread(otp, alice, %{
         title: "Supervisors explained",
         body: "Let it crash.",
         tags: "beam"
       })
 
     {:ok, reply} =
-      Forums.create_post(supervisors, bob, %{body: "Supervision trees restart crashed children."})
+      Discussion.create_post(supervisors, bob, %{
+        body: "Supervision trees restart crashed children."
+      })
 
     {:ok, cooking} =
-      Forums.create_thread(other, bob, %{title: "Cooking", body: "Crash-free pancakes"})
+      Discussion.create_thread(other, bob, %{title: "Cooking", body: "Crash-free pancakes"})
 
     %{
       elixir: elixir,
@@ -34,7 +37,9 @@ defmodule Firefly.SearchTest do
   end
 
   defp user(name) do
-    {:ok, user} = Forums.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+    {:ok, user} =
+      Accounts.create_user(%{username: name, name: name, email: "#{name}@example.com"})
+
     user
   end
 
@@ -76,7 +81,7 @@ defmodule Firefly.SearchTest do
     assert post_ids("supervisors crash") == [first_post_id(ctx.supervisors)]
 
     # Renaming re-indexes the first post
-    {:ok, _} = Forums.update_thread(ctx.supervisors, %{"title" => "Trees"})
+    {:ok, _} = Discussion.update_thread(ctx.supervisors, %{"title" => "Trees"})
     assert post_ids("explained") == []
 
     assert post_ids("trees") |> Enum.sort() ==
@@ -108,7 +113,7 @@ defmodule Firefly.SearchTest do
   end
 
   test "sorts by relevance or latest", ctx do
-    {:ok, newer} = Forums.create_post(ctx.supervisors, ctx.alice, %{body: "a crash"})
+    {:ok, newer} = Discussion.create_post(ctx.supervisors, ctx.alice, %{body: "a crash"})
     first = first_post_id(ctx.supervisors)
 
     # The (weightier) title match ranks the first post above newer posts
@@ -117,16 +122,16 @@ defmodule Firefly.SearchTest do
   end
 
   test "leaves out deleted posts and archived threads", ctx do
-    {:ok, _} = Forums.delete_post(ctx.reply, ctx.bob)
+    {:ok, _} = Discussion.delete_post(ctx.reply, ctx.bob)
     assert post_ids("restarting") == []
 
-    {:ok, _} = Forums.archive_thread(ctx.cooking, true, ctx.bob)
+    {:ok, _} = Discussion.archive_thread(ctx.cooking, true, ctx.bob)
     assert post_ids("pancakes") == []
   end
 
   test "headlines mark matches and escape everything else", ctx do
     {:ok, _} =
-      Forums.create_post(ctx.supervisors, ctx.alice, %{
+      Discussion.create_post(ctx.supervisors, ctx.alice, %{
         body: "<script>alert(1)</script> \u0001 fish & <b>dangerous</b> chips"
       })
 

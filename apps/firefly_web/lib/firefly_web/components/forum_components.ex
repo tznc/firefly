@@ -12,8 +12,8 @@ defmodule FireflyWeb.ForumComponents do
 
   import FireflyWeb.CoreComponents, only: [icon: 1, input: 1]
 
-  alias Firefly.Forums.User
-  alias Firefly.Markdown
+  alias Firefly.Accounts.User
+  alias Firefly.Rendering.Markdown
 
   ## Helpers
 
@@ -101,7 +101,7 @@ defmodule FireflyWeb.ForumComponents do
 
   @doc """
   A category badge, colored from the category's slug, with a lock if it's
-  restricted (see `Firefly.Forums.mark_restricted/1`).
+  restricted (see `Firefly.Discussion.mark_restricted/1`).
   """
   attr :category, :any, required: true
 
@@ -161,7 +161,7 @@ defmodule FireflyWeb.ForumComponents do
       value={@value || @field.value}
       type="text"
       label="Tags"
-      placeholder={"Up to #{Firefly.Forums.Tag.max_per_thread()} tags, e.g. otp, phoenix"}
+      placeholder={"Up to #{Firefly.Discussion.Tag.max_per_thread()} tags, e.g. otp, phoenix"}
       autocomplete="off"
       phx-debounce="300"
     />
@@ -170,7 +170,7 @@ defmodule FireflyWeb.ForumComponents do
 
   @doc """
   The tag picker under a thread form's tags field: the tags on offer by
-  group (see `Firefly.Tags.picker/1`). Clicking one sends `pick_tag`
+  group (see `Firefly.Discussion.Tags.picker/1`). Clicking one sends `pick_tag`
   with its name.
   """
   attr :groups, :list, required: true
@@ -409,7 +409,7 @@ defmodule FireflyWeb.ForumComponents do
   attr :can_edit, :boolean, default: false
   attr :accepted, :boolean, default: false, doc: "the thread's accepted answer"
   attr :viewer, :any, default: nil, doc: "the current user, to link categories they may read"
-  attr :refs, :map, default: nil, doc: "`Firefly.Mentions.refs/2` of the page's posts"
+  attr :refs, :map, default: nil, doc: "`Firefly.Discussion.Mentions.refs/2` of the page's posts"
 
   attr :card_target, :string,
     default: nil,
@@ -637,7 +637,7 @@ defmodule FireflyWeb.ForumComponents do
 
   @doc """
   What members see in place of a post by someone they ignore (see
-  `Firefly.Ignores`); Show sends `reveal_ignored` with the post `id`.
+  `Firefly.Accounts.Ignores`); Show sends `reveal_ignored` with the post `id`.
   """
   attr :post, :any, required: true
 
@@ -664,7 +664,7 @@ defmodule FireflyWeb.ForumComponents do
 
   @doc """
   How the viewer treats another member: normal, muted or ignored (for a
-  while; see `Firefly.Ignores`). Submits `set_ignore` with
+  while; see `Firefly.Accounts.Ignores`). Submits `set_ignore` with
   `ignore[user_id]`, `ignore[level]` and `ignore[duration]`.
   """
   attr :id, :string, required: true
@@ -711,7 +711,7 @@ defmodule FireflyWeb.ForumComponents do
           id={"#{@id}-duration"}
           type="select"
           label="Ignore for"
-          options={Firefly.Ignores.durations()}
+          options={Firefly.Accounts.Ignores.durations()}
         />
       </div>
       <button class="btn btn-sm mb-2">Save</button>
@@ -765,8 +765,12 @@ defmodule FireflyWeb.ForumComponents do
   @doc "Markdown rendered (and sanitized) to HTML, with code highlighting."
   attr :id, :string, required: true
   attr :body, :string, required: true
-  attr :viewer, :any, default: nil, doc: "who reads it (see `Firefly.Markdown.render/2`)"
-  attr :refs, :map, default: nil, doc: "see `Firefly.Markdown.render/2`"
+
+  attr :viewer, :any,
+    default: nil,
+    doc: "who reads it (see `Firefly.Rendering.Markdown.render/2`)"
+
+  attr :refs, :map, default: nil, doc: "see `Firefly.Rendering.Markdown.render/2`"
   attr :post, :any, default: nil, doc: "the post this is the body of, for plugins' content hooks"
   attr :thread, :any, default: nil, doc: "the post's thread"
 
@@ -779,7 +783,7 @@ defmodule FireflyWeb.ForumComponents do
   end
 
   @doc """
-  A word diff (see `Firefly.Forums.Diff`) with insertions and deletions
+  A word diff (see `Firefly.Discussion.Diff`) with insertions and deletions
   highlighted. The text is HTML-escaped; the markup is built here so that no
   stray template whitespace ends up inside the preformatted text.
   """
@@ -817,10 +821,10 @@ defmodule FireflyWeb.ForumComponents do
     """
   end
 
-  defp render_oembed(oembed), do: Phoenix.HTML.raw(Firefly.OEmbed.to_html(oembed))
+  defp render_oembed(oembed), do: Phoenix.HTML.raw(Firefly.Rendering.OEmbed.to_html(oembed))
 
   @doc """
-  A link preview card (see `Firefly.LinkPreviews`): the page's title
+  A link preview card (see `Firefly.Rendering.LinkPreviews`): the page's title
   linking to it, its site, description and image (a copy in uploads).
   Every value is escaped text.
   """

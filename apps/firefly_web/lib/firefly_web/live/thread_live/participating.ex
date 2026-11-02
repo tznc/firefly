@@ -7,5 +7,5 @@ defmodule FireflyWeb.ThreadLive.Participating do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  defp load(user), do: Forums.participating_threads(user)
+  defp load(user), do: Discussion.participating_threads(user)
 end

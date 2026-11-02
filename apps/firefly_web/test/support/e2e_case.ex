@@ -20,20 +20,20 @@ defmodule FireflyWeb.E2ECase do
 
   import PhoenixTest
 
-  alias Firefly.Forums
+  alias Firefly.{Accounts, Groups}
 
   @password "s3cret-password"
 
   @doc "Creates a confirmed basic user (trust level 1) who can log in with `@password`."
   def member_fixture(username) do
     {:ok, user} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: username,
         email: "#{username}@example.com",
         password: @password
       })
 
-    {:ok, user} = Forums.confirm_user(user)
+    {:ok, user} = Accounts.confirm_user(user)
     # Past the new-user stage (see Firefly.TrustLevels), like most members.
     Firefly.Repo.update!(Ecto.Changeset.change(user, trust_level: 1))
   end
@@ -41,8 +41,8 @@ defmodule FireflyWeb.E2ECase do
   @doc "Creates a member with the admin role."
   def admin_fixture(username) do
     user = member_fixture(username)
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(user, role)
+    {:ok, role} = Groups.create_role("admin")
+    {:ok, _} = Groups.add_role(user, role)
     user
   end
 

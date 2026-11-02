@@ -2,8 +2,8 @@ defmodule FireflyWeb.StoreChannelTest do
   use FireflyWeb.ChannelCase
   alias FireflyWeb.StoreChannel
   alias FireflyWeb.Api.V1.FetchJSON
-  alias Firefly.Store.{ReplenishResponse, ReplenishRequest}
-  alias Firefly.Forums
+  alias Firefly.Discussion.Store.{ReplenishRequest, ReplenishResponse}
+  alias Firefly.{Accounts, Discussion}
 
   setup do
     {:ok, _, socket} =
@@ -22,7 +22,7 @@ defmodule FireflyWeb.StoreChannelTest do
   end
 
   test "responds with a category", %{socket: socket} do
-    {:ok, elixir} = Forums.create_category(%{title: "Elixir"})
+    {:ok, elixir} = Discussion.create_category(%{title: "Elixir"})
 
     request =
       empty_replenish_request()
@@ -33,13 +33,13 @@ defmodule FireflyWeb.StoreChannelTest do
   end
 
   test "responds with a thread", %{socket: socket} do
-    {:ok, elixir} = Forums.create_category(%{title: "Elixir"})
+    {:ok, elixir} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, bob} =
-      Forums.create_user(%{email: "bob@example.com", name: "Bob Vladbob", username: "bob"})
+      Accounts.create_user(%{email: "bob@example.com", name: "Bob Vladbob", username: "bob"})
 
     {:ok, otp_is_cool} =
-      Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
+      Discussion.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
 
     request =
       empty_replenish_request()
@@ -50,15 +50,15 @@ defmodule FireflyWeb.StoreChannelTest do
   end
 
   test "responds with a post", %{socket: socket} do
-    {:ok, elixir} = Forums.create_category(%{title: "Elixir"})
+    {:ok, elixir} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, bob} =
-      Forums.create_user(%{email: "bob@example.com", name: "Bob Vladbob", username: "bob"})
+      Accounts.create_user(%{email: "bob@example.com", name: "Bob Vladbob", username: "bob"})
 
     {:ok, otp_is_cool} =
-      Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
+      Discussion.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
 
-    {:ok, yup} = Forums.create_post(otp_is_cool, bob, %{body: "Yup"})
+    {:ok, yup} = Discussion.create_post(otp_is_cool, bob, %{body: "Yup"})
 
     request =
       empty_replenish_request()
@@ -70,7 +70,7 @@ defmodule FireflyWeb.StoreChannelTest do
 
   test "responds with a user", %{socket: socket} do
     {:ok, bob} =
-      Forums.create_user(%{email: "bob@example.com", name: "Bob Vladbob", username: "bob"})
+      Accounts.create_user(%{email: "bob@example.com", name: "Bob Vladbob", username: "bob"})
 
     request =
       empty_replenish_request()

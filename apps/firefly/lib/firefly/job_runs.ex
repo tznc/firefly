@@ -1,7 +1,7 @@
 defmodule Firefly.JobRuns do
   @moduledoc """
   When each periodic job last ran (`job_runs`, one row per job), so a job
-  run by the scheduler (`Firefly.TopicTimers.Scheduler`) on every
+  run by the scheduler (`Firefly.Moderation.TopicTimers.Scheduler`) on every
   node runs once per interval in all: `claim/2` takes the run atomically.
   """
 

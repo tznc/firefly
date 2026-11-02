@@ -1,13 +1,13 @@
 defmodule FireflyWeb.PostEditingTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   setup do
     author = user_fixture(%{username: "author"})
     category = category_fixture()
     thread = thread_fixture(category, author, %{title: "Edits", body: "The original text"})
-    {:ok, reply} = Forums.create_post(thread, author, %{body: "A reply"})
+    {:ok, reply} = Discussion.create_post(thread, author, %{body: "A reply"})
     %{author: author, category: category, thread: thread, reply: reply}
   end
 
@@ -35,7 +35,7 @@ defmodule FireflyWeb.PostEditingTest do
   end
 
   test "diffs are escaped", %{conn: conn, author: author, reply: reply, thread: thread} do
-    {:ok, _} = Forums.update_post(reply, author, %{body: "<script>alert(1)</script>"})
+    {:ok, _} = Discussion.update_post(reply, author, %{body: "<script>alert(1)</script>"})
 
     html =
       conn
@@ -58,7 +58,7 @@ defmodule FireflyWeb.PostEditingTest do
 
   test "closed threads can only be edited by admins", ctx do
     %{conn: conn, author: author, thread: thread, reply: reply} = ctx
-    {:ok, _} = Forums.close_thread(thread, true, admin_fixture())
+    {:ok, _} = Discussion.close_thread(thread, true, admin_fixture())
 
     conn
     |> log_in_as(author)
@@ -81,14 +81,14 @@ defmodule FireflyWeb.PostEditingTest do
       |> log_in_as(author)
       |> visit(thread_path(thread) <> "/posts/#{reply.id}/edit")
 
-    {:ok, _} = Forums.close_thread(thread, true, admin_fixture())
+    {:ok, _} = Discussion.close_thread(thread, true, admin_fixture())
 
     session
     |> fill_in("Body", with: "Too late")
     |> click_button("Save edit")
     |> assert_has("#flash-error", text: "You are not allowed to do that.")
 
-    assert Forums.get_post!(reply.id).body == "A reply"
+    assert Discussion.get_post!(reply.id).body == "A reply"
   end
 
   test "new users can't add too many links in an edit", ctx do
@@ -107,7 +107,7 @@ defmodule FireflyWeb.PostEditingTest do
     %{conn: conn, author: author, thread: thread, reply: reply} = ctx
     session = visit(conn, thread_path(thread))
 
-    {:ok, _} = Forums.update_post(reply, author, %{body: "Changed while you read"})
+    {:ok, _} = Discussion.update_post(reply, author, %{body: "Changed while you read"})
 
     session
     |> assert_has("#post-#{reply.id}", text: "Changed while you read")
@@ -119,8 +119,8 @@ defmodule FireflyWeb.PostEditingTest do
     session = visit(conn, thread_path(thread) <> "/posts/#{reply.id}/history")
 
     # Fetched the way the edit page fetches it (no user preloaded)
-    post = Forums.get_post!(thread, reply.id)
-    {:ok, _} = Forums.update_post(post, author, %{body: "Changed while you read"})
+    post = Discussion.get_post!(thread, reply.id)
+    {:ok, _} = Discussion.update_post(post, author, %{body: "Changed while you read"})
 
     assert_has(session, "#revision-1")
   end
@@ -133,7 +133,7 @@ defmodule FireflyWeb.PostEditingTest do
       |> log_in_as(author)
       |> visit(thread_path(thread) <> "/posts/#{reply.id}/edit")
 
-    {:ok, _} = Forums.update_post(reply, admin_fixture(), %{body: "Moderated"})
+    {:ok, _} = Discussion.update_post(reply, admin_fixture(), %{body: "Moderated"})
 
     session
     |> fill_in("Body", with: "My version")
@@ -142,13 +142,13 @@ defmodule FireflyWeb.PostEditingTest do
     |> click_button("Save edit")
     |> assert_has("#flash-info", text: "Post updated successfully.")
 
-    assert Forums.get_post!(thread, reply.id).body == "My version"
+    assert Discussion.get_post!(thread, reply.id).body == "My version"
   end
 
   test "an edited first post stays first", ctx do
     %{conn: conn, author: author, thread: thread} = ctx
     [first, _reply] = Firefly.Repo.preload(thread, :posts, force: true).posts
-    {:ok, _} = Forums.update_post(first, author, %{body: "The original text, edited"})
+    {:ok, _} = Discussion.update_post(first, author, %{body: "The original text, edited"})
 
     conn
     |> visit(thread_path(thread))

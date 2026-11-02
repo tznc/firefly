@@ -1,8 +1,8 @@
 defmodule FireflyWeb.ModerationTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Thread
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Discussion.Thread
 
   setup do
     admin = admin_fixture()
@@ -27,7 +27,7 @@ defmodule FireflyWeb.ModerationTest do
   } do
     newer = thread_fixture(category, member, %{title: "Newer"})
 
-    assert [%{id: first} | _] = Forums.recent_threads(category)
+    assert [%{id: first} | _] = Discussion.recent_threads(category)
     assert first == newer.id
 
     conn
@@ -37,7 +37,7 @@ defmodule FireflyWeb.ModerationTest do
     |> assert_has("#flash-info", text: "Thread pinned.")
     |> assert_has("h1 .pinned")
 
-    assert hd(Forums.recent_threads(category)).id == thread.id
+    assert hd(Discussion.recent_threads(category)).id == thread.id
 
     conn
     |> visit(~p"/categories/#{category}")
@@ -57,9 +57,9 @@ defmodule FireflyWeb.ModerationTest do
     |> assert_has("#closed-notice", text: "closed to new replies")
     |> refute_has("a", text: "Reply")
 
-    assert {:error, :closed} = Forums.create_post(thread, member, %{body: "too late"})
+    assert {:error, :closed} = Discussion.create_post(thread, member, %{body: "too late"})
 
-    {:ok, member} = Forums.confirm_user(member)
+    {:ok, member} = Accounts.confirm_user(member)
 
     build_conn()
     |> log_in_as(member)
@@ -81,7 +81,8 @@ defmodule FireflyWeb.ModerationTest do
     |> click_button("#moderation button", "Reopen")
     |> refute_has("#closed-notice")
 
-    assert {:ok, _} = Forums.create_post(Forums.get_thread!(thread.id), member, %{body: "ok"})
+    assert {:ok, _} =
+             Discussion.create_post(Discussion.get_thread!(thread.id), member, %{body: "ok"})
   end
 
   test "archiving makes a thread read-only and hides it from Latest", %{
@@ -96,11 +97,11 @@ defmodule FireflyWeb.ModerationTest do
     |> click_button("#moderation button", "Archive")
     |> assert_has("#closed-notice", text: "archived")
 
-    refute Enum.any?(Forums.latest_threads(nil), &(&1.id == thread.id))
-    refute Enum.any?(Forums.top_threads("all", nil), &(&1.id == thread.id))
+    refute Enum.any?(Discussion.latest_threads(nil), &(&1.id == thread.id))
+    refute Enum.any?(Discussion.top_threads("all", nil), &(&1.id == thread.id))
     # Still listed (and marked) in its category
     conn |> visit(~p"/categories/#{category}") |> assert_has("#thread-#{thread.id} .archived")
-    assert Thread.closed?(Forums.get_thread!(thread.id))
+    assert Thread.closed?(Discussion.get_thread!(thread.id))
   end
 
   test "moving a thread to another category", %{conn: conn, admin: admin, thread: thread} do
@@ -114,7 +115,7 @@ defmodule FireflyWeb.ModerationTest do
     |> assert_has("#flash-info", text: "Thread moved to Erlang.")
     |> assert_path(~p"/categories/#{other}/threads/#{thread}")
 
-    assert Forums.get_thread!(thread.id).category_id == other.id
+    assert Discussion.get_thread!(thread.id).category_id == other.id
   end
 
   test "links from before a move redirect to the thread's new place", %{
@@ -125,7 +126,7 @@ defmodule FireflyWeb.ModerationTest do
   } do
     old_path = thread_path(thread)
     other = category_fixture("Erlang")
-    {:ok, moved} = Forums.move_thread(thread, other, admin)
+    {:ok, moved} = Discussion.move_thread(thread, other, admin)
 
     conn
     |> log_in_as(member)
@@ -154,7 +155,7 @@ defmodule FireflyWeb.ModerationTest do
     admin: admin,
     thread: thread
   } do
-    {:ok, archived} = Forums.archive_thread(thread, true, admin)
+    {:ok, archived} = Discussion.archive_thread(thread, true, admin)
     refute FireflyWeb.Authorization.can?(member, :update_thread, archived)
     refute FireflyWeb.Authorization.can?(member, :delete_thread, archived)
     assert FireflyWeb.Authorization.can?(admin, :update_thread, archived)
@@ -165,11 +166,11 @@ defmodule FireflyWeb.ModerationTest do
     member: member,
     thread: thread
   } do
-    {:ok, member} = Forums.confirm_user(member)
+    {:ok, member} = Accounts.confirm_user(member)
     session = conn |> log_in_as(member) |> visit(thread_path(thread) <> "/posts/new")
 
     # Closed after the form opened (the reply form holds a stale thread)
-    Forums.Thread
+    Firefly.Discussion.Thread
     |> Firefly.Repo.get!(thread.id)
     |> Ecto.Changeset.change(closed_at: DateTime.utc_now(:second))
     |> Firefly.Repo.update!()

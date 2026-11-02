@@ -1,14 +1,13 @@
 defmodule FireflyWeb.AuthLive.MagicLinkConfirm do
   @moduledoc """
-  The page an emailed login link opens (see `Firefly.MagicLinks`):
+  The page an emailed login link opens (see `Firefly.Accounts.MagicLinks`):
   says which account it logs into (or creates), and its button uses the
   link (`FireflyWeb.MagicLinkController`). Opening the page doesn't,
   so email scanners can't use links up.
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.MagicLinks
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.{MagicLinks, User}
 
   @impl true
   def mount(%{"token" => token}, _session, socket) do

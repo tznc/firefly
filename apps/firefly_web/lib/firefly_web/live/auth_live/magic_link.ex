@@ -1,11 +1,12 @@
 defmodule FireflyWeb.AuthLive.MagicLink do
   @moduledoc """
-  Asks for a login link by email (see `Firefly.MagicLinks`). The
+  Asks for a login link by email (see `Firefly.Accounts.MagicLinks`). The
   answer is the same whether or not an account has the address.
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.{MagicLinks, RateLimit}
+  alias Firefly.RateLimit
+  alias Firefly.Accounts.MagicLinks
 
   @impl true
   def mount(_params, _session, socket) do

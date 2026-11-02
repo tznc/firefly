@@ -5,15 +5,16 @@ defmodule FireflyWeb.TopicToolsLiveTest do
 
   import Ecto.Query, only: [where: 2]
 
-  alias Firefly.{Forums, Repo, TopicTimers, TopicTools}
-  alias Firefly.Forums.{Post, Thread}
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Moderation.{TopicTimers, TopicTools}
+  alias Firefly.Discussion.{Post, Thread}
 
   setup do
     admin = admin_fixture()
     member = user_fixture()
     category = category_fixture()
     thread = thread_fixture(category, member, %{title: "Original", body: "opening"})
-    {:ok, reply} = Forums.create_post(thread, member, %{body: "a tangent"})
+    {:ok, reply} = Discussion.create_post(thread, member, %{body: "a tangent"})
     %{admin: admin, member: member, category: category, thread: thread, reply: reply}
   end
 

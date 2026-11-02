@@ -3,22 +3,25 @@ defmodule Firefly.Directory do
   The user directory (as Discourse's): every member with their stats over
   a period (`all`, `year`, `month`, `week`, `day`): likes received and
   given, topics (threads) started, replies, days visited (see
-  `Firefly.Visits`), posts read and topics viewed. Searchable by
+  `Firefly.Accounts.Visits`), posts read and topics viewed. Searchable by
   username or name, sortable by any stat, paginated.
 
   The stats aren't aggregated per page view: `refresh/0` recomputes them
   for everyone into `directory_items` (one row per user and period), and
-  the scheduler (`Firefly.TopicTimers.Scheduler`) runs it through
+  the scheduler (`Firefly.Moderation.TopicTimers.Scheduler`) runs it through
   `run_due/0` once the last refresh is over an hour old. Only published
   posts count, and likes on them. Members who left the directory or hid
   their profile (privacy settings) or deleted their account aren't listed; new members
   are, with no stats until the next refresh.
   """
 
+  use Boundary, top_level?: true, check: [out: false], exports: []
+
   import Ecto.Query
 
   alias Firefly.Repo
-  alias Firefly.Forums.{DirectoryItem, User}
+  alias Firefly.Accounts.User
+  alias Firefly.Directory.DirectoryItem
 
   @periods %{"all" => nil, "year" => 365, "month" => 30, "week" => 7, "day" => 1}
 

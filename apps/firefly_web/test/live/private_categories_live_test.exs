@@ -5,8 +5,10 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
   import Phoenix.ChannelTest, only: [socket: 3, subscribe_and_join: 3]
   require Phoenix.LiveViewTest
 
-  alias Firefly.{Forums, Groups, Repo, ReplyAddress}
-  alias Firefly.Forums.{Post, StaffAction}
+  alias Firefly.{Discussion, Groups, Repo}
+  alias Firefly.Notifications.ReplyAddress
+  alias Firefly.Discussion.Post
+  alias Firefly.Moderation.StaffAction
 
   @endpoint FireflyWeb.Endpoint
 
@@ -18,7 +20,7 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
     {:ok, _} = Groups.add_member(team, "insider", admin)
 
     public = category_fixture("Public")
-    {:ok, secret} = Forums.create_category(%{title: "Secret", role_ids: [team.id]})
+    {:ok, secret} = Discussion.create_category(%{title: "Secret", role_ids: [team.id]})
 
     thread =
       thread_fixture(secret, insider, %{title: "Launch plans", body: "classified words"})
@@ -101,7 +103,7 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
     {:ok, view, _html} =
       ctx.conn |> log_in_as(ctx.outsider) |> Phoenix.LiveViewTest.live(thread_path(open))
 
-    {:ok, _} = Forums.move_thread(open, ctx.secret, ctx.admin)
+    {:ok, _} = Discussion.move_thread(open, ctx.secret, ctx.admin)
 
     flash = Phoenix.LiveViewTest.assert_redirect(view, ~p"/")
     assert flash["error"] == "This thread is no longer available."
@@ -118,7 +120,7 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
     {:ok, edit, _html} =
       Phoenix.LiveViewTest.live(conn, thread_path(open) <> "/posts/#{post.id}/edit")
 
-    {:ok, _} = Forums.move_thread(open, ctx.secret, ctx.admin)
+    {:ok, _} = Discussion.move_thread(open, ctx.secret, ctx.admin)
 
     # Saving from the already-open edit page is refused.
     edit
@@ -130,7 +132,7 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
     assert Repo.get!(Post, post.id).body == "first words"
 
     # An edit made by someone who can still read it isn't pushed.
-    {:ok, _} = Forums.update_post(post, ctx.admin, %{body: "staff edit"})
+    {:ok, _} = Discussion.update_post(post, ctx.admin, %{body: "staff edit"})
     flash = Phoenix.LiveViewTest.assert_redirect(history, ~p"/")
     assert flash["error"] == "This thread is no longer available."
   end
@@ -230,7 +232,7 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
         |> click_button("Create group")
         |> assert_has("#flash-info", text: "Group mods created.")
 
-      mods = Repo.get_by!(Forums.Role, name: "mods")
+      mods = Repo.get_by!(Firefly.Groups.Role, name: "mods")
 
       session
       |> within("#add-member-#{mods.id}", &fill_in(&1, "Add a member to mods", with: "outsider"))
@@ -252,10 +254,10 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
       |> assert_has("#category-restricted", text: "Only team")
 
       refute Bodyguard.permit?(
-               Forums,
+               Discussion,
                :view_category,
                ctx.outsider,
-               Forums.get_category!(ctx.public.id)
+               Discussion.get_category!(ctx.public.id)
              )
 
       ctx.conn

@@ -12,13 +12,13 @@ defmodule FireflyWeb.ThreadLive.ListView do
     quote bind_quoted: [opts: opts] do
       use FireflyWeb, :live_view
 
-      alias Firefly.Forums
+      alias Firefly.Discussion
 
       @list_opts opts
 
       @impl true
       def mount(_params, _session, socket) do
-        if connected?(socket), do: Forums.subscribe("forums:threads")
+        if connected?(socket), do: Discussion.subscribe("forums:threads")
 
         {:ok,
          socket

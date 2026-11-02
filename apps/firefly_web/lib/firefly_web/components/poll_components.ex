@@ -1,6 +1,6 @@
 defmodule FireflyWeb.PollComponents do
   @moduledoc """
-  Poll UI (see `Firefly.Polls`): the composer's "Add poll" section
+  Poll UI (see `Firefly.Discussion.Polls`): the composer's "Add poll" section
   and a post's poll on its thread page.
   """
   use Phoenix.Component
@@ -8,7 +8,7 @@ defmodule FireflyWeb.PollComponents do
   import FireflyWeb.CoreComponents, only: [icon: 1, input: 1]
   import FireflyWeb.ForumComponents, only: [time_ago: 1]
 
-  alias Firefly.Forums.Poll
+  alias Firefly.Discussion.Poll
 
   @doc "The composer form's defaults."
   def defaults,
@@ -79,7 +79,7 @@ defmodule FireflyWeb.PollComponents do
   end
 
   @doc """
-  A post's poll (`view`, see `Firefly.Polls.view/2`): the vote form
+  A post's poll (`view`, see `Firefly.Discussion.Polls.view/2`): the vote form
   for those who `can_vote` while it's open (sends `vote` with `poll_id`),
   the results when they may see them, and Close/Reopen for those who
   `can_manage` (sends `close_poll`/`reopen_poll` with `id`).

@@ -1,16 +1,17 @@
 defmodule FireflyWeb.PostLive.New do
   @moduledoc """
   Replies to a thread, optionally quoting one of its posts, optionally
-  with a poll (see `Firefly.Polls`). What's typed is kept as a draft
+  with a poll (see `Firefly.Discussion.Polls`). What's typed is kept as a draft
   (see `FireflyWeb.Drafting`, the poll excepted) until it's posted.
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Forums, Polls, Quote, Repo}
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Discussion.{Polls, Quote}
   alias FireflyWeb.LocalTime
-  alias Firefly.Forums.Post
+  alias Firefly.Discussion.Post
   alias FireflyWeb.{Editor, PollComponents}
 
   import FireflyWeb.Drafting
@@ -18,11 +19,11 @@ defmodule FireflyWeb.PostLive.New do
 
   @impl true
   def mount(%{"category_id" => category_id, "thread_id" => thread_id} = params, _session, socket) do
-    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
-    thread = Forums.get_visible_thread!(category, thread_id, socket.assigns.current_user)
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Discussion.get_visible_thread!(category, thread_id, socket.assigns.current_user)
 
     # A merged thread takes no replies: they go where its posts went.
-    case thread.merged_into_id && Forums.get_thread_after_merges(thread.merged_into_id) do
+    case thread.merged_into_id && Discussion.get_thread_after_merges(thread.merged_into_id) do
       nil ->
         mount_reply(category, thread, params, socket)
 
@@ -49,7 +50,7 @@ defmodule FireflyWeb.PostLive.New do
      |> assign(:page_title, "Reply - #{thread.title}")
      |> assign(:category, category)
      |> assign(:thread, thread)
-     |> assign(:form, to_form(Forums.change_post(%Post{thread_id: thread.id, body: body})))
+     |> assign(:form, to_form(Discussion.change_post(%Post{thread_id: thread.id, body: body})))
      |> assign(:poll_open?, false)
      |> assign(:poll_form, to_form(PollComponents.defaults(), as: :poll))
      |> assign(:tz_offset, LocalTime.offset(socket))
@@ -72,7 +73,7 @@ defmodule FireflyWeb.PostLive.New do
     do: {:noreply, assign(socket, :poll_open?, !socket.assigns.poll_open?)}
 
   def handle_event("discard_draft", _params, socket) do
-    form = to_form(Forums.change_post(%Post{thread_id: socket.assigns.thread.id}))
+    form = to_form(Discussion.change_post(%Post{thread_id: socket.assigns.thread.id}))
     {:noreply, socket |> discard_draft() |> assign(:form, form)}
   end
 
@@ -80,17 +81,17 @@ defmodule FireflyWeb.PostLive.New do
     %{thread: thread, category: category, current_user: user} = socket.assigns
     socket = keep_poll_params(socket, all["poll"])
 
-    case Firefly.Posting.check(user, thread) do
+    case Firefly.Moderation.Posting.check(user, thread) do
       :ok ->
         create_post(socket, thread, category, user, params)
 
       {:error, reason} ->
-        {:noreply, put_flash(socket, :error, Firefly.Posting.message(reason))}
+        {:noreply, put_flash(socket, :error, Firefly.Moderation.Posting.message(reason))}
     end
   end
 
   defp create_post(socket, thread, category, user, params) do
-    case Forums.create_post(thread, user, with_poll(socket, %{body: params["body"]})) do
+    case Discussion.create_post(thread, user, with_poll(socket, %{body: params["body"]})) do
       {:ok, post} ->
         {:noreply,
          socket
@@ -99,7 +100,7 @@ defmodule FireflyWeb.PostLive.New do
          |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
 
       {:error, :closed} ->
-        {:noreply, put_flash(socket, :error, Firefly.Posting.message(:closed))}
+        {:noreply, put_flash(socket, :error, Firefly.Moderation.Posting.message(:closed))}
 
       {:error, changeset} ->
         poll_form =
@@ -135,7 +136,7 @@ defmodule FireflyWeb.PostLive.New do
   # `&selection=` if it's really part of the post).
   defp quote_body(category, thread, %{"quote" => post_id} = params) do
     with {id, ""} <- Integer.parse(post_id),
-         %Post{} = post <- Forums.get_post(thread, id),
+         %Post{} = post <- Discussion.get_post(thread, id),
          # Quotes publish what they copy: only from posts anyone can read.
          true <- Post.readable_by?(post, nil) do
       post = Repo.preload(post, :user)

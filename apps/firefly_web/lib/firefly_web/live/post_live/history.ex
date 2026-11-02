@@ -5,8 +5,8 @@ defmodule FireflyWeb.PostLive.History do
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.Forums
-  alias Firefly.Forums.Post
+  alias Firefly.Discussion
+  alias Firefly.Discussion.Post
 
   @impl true
   def mount(
@@ -14,15 +14,15 @@ defmodule FireflyWeb.PostLive.History do
         _session,
         socket
       ) do
-    category = Forums.get_visible_category!(category_id, socket.assigns.current_user)
-    thread = Forums.get_visible_thread!(category, thread_id, socket.assigns.current_user)
-    post = thread |> Forums.get_post!(id) |> Firefly.Repo.preload(:user)
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Discussion.get_visible_thread!(category, thread_id, socket.assigns.current_user)
+    post = thread |> Discussion.get_post!(id) |> Firefly.Repo.preload(:user)
     socket = assign(socket, category: category, thread: thread)
 
     # The history shows the content, so it's for those who may read that
     # (see `Post.readable_by?/2`).
     if Post.readable_by?(post, socket.assigns.current_user) do
-      if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
+      if connected?(socket), do: Discussion.subscribe("forums:thread:#{thread.id}")
       {:ok, socket |> assign(:page_title, "Edit history - #{thread.title}") |> load(post)}
     else
       {:ok,
@@ -46,7 +46,7 @@ defmodule FireflyWeb.PostLive.History do
   @impl true
   def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket) do
     user = socket.assigns.current_user
-    thread = Forums.get_thread(socket.assigns.thread.id)
+    thread = Discussion.get_thread(socket.assigns.thread.id)
 
     cond do
       is_nil(thread) or not can?(user, :view_thread, thread) ->
@@ -86,7 +86,7 @@ defmodule FireflyWeb.PostLive.History do
     |> push_navigate(to: ~p"/")
   end
 
-  defp load(socket, post), do: assign(socket, post: post, edits: Forums.post_edits(post))
+  defp load(socket, post), do: assign(socket, post: post, edits: Discussion.post_edits(post))
 
   @impl true
   def render(assigns) do

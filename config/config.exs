@@ -45,7 +45,7 @@ config :phoenix, :json_library, Jason
 
 # Configures Ueberauth for OAuth stuff
 # Every social login is listed; each only works once its client id and
-# secret are set (see config/runtime.exs and Firefly.Auth).
+# secret are set (see config/runtime.exs and Firefly.Accounts.Auth).
 config :ueberauth, Ueberauth,
   providers: [
     github: {Ueberauth.Strategy.Github, [default_scope: ""]},
@@ -54,11 +54,11 @@ config :ueberauth, Ueberauth,
     # No scopes: Apple then answers with a GET (scopes need a cross-site
     # form POST, which carries no session or CSRF token). It gives no email.
     apple: {Ueberauth.Strategy.Apple, [default_scope: ""]},
-    x: {Firefly.Auth.Strategies.X, []},
+    x: {Firefly.Accounts.Auth.Strategies.X, []},
     facebook: {Ueberauth.Strategy.Facebook, []},
-    slack: {Firefly.Auth.Strategies.Slack, []},
+    slack: {Firefly.Accounts.Auth.Strategies.Slack, []},
     # Single sign-on with the configured OpenID Connect provider.
-    oidc: {Firefly.Auth.Strategies.OIDC, []},
+    oidc: {Firefly.Accounts.Auth.Strategies.OIDC, []},
     identity: {Ueberauth.Strategy.Identity, [callback_methods: ["POST"]]}
   ]
 

@@ -4,8 +4,11 @@ defmodule Firefly.DraftsTest do
   import Firefly.Fixtures,
     only: [user_fixture: 0, admin_fixture: 0, category_fixture: 1, thread_fixture: 3]
 
-  alias Firefly.{AccountDeletion, AccountExport, Drafts, Forums, TopicTools}
-  alias Firefly.Forums.{Draft, Post}
+  alias Firefly.{Discussion, Groups}
+  alias Firefly.Accounts.{AccountDeletion, AccountExport}
+  alias Firefly.Discussion.Drafts
+  alias Firefly.Moderation.TopicTools
+  alias Firefly.Discussion.{Draft, Post}
 
   setup do
     user = user_fixture()
@@ -55,7 +58,7 @@ defmodule Firefly.DraftsTest do
     assert errors_on(changeset).body != []
 
     assert {:error, changeset} =
-             Forums.create_post(thread, user, %{body: too_long})
+             Discussion.create_post(thread, user, %{body: too_long})
 
     assert errors_on(changeset).body != []
 
@@ -87,19 +90,19 @@ defmodule Firefly.DraftsTest do
     category: category,
     thread: thread
   } do
-    {:ok, reply} = Forums.create_post(thread, user, %{body: "reply"})
+    {:ok, reply} = Discussion.create_post(thread, user, %{body: "reply"})
     {:ok, _} = Drafts.save(user, {:reply, thread}, %{body: "r"})
     {:ok, _} = Drafts.save(user, {:new_thread, category}, %{title: "n"})
     {:ok, _} = Drafts.save(user, {:edit, reply}, %{body: "e"})
     assert length(Drafts.list(user)) == 3
 
-    {:ok, _} = Forums.delete_post(reply, user)
+    {:ok, _} = Discussion.delete_post(reply, user)
     assert Enum.map(Drafts.list(user), & &1.kind) |> Enum.sort() == ["new_thread", "reply"]
 
     # The category is restricted to a group the user isn't in.
     admin = admin_fixture()
-    {:ok, role} = Forums.create_role("staff-only")
-    {:ok, _} = Forums.update_category(category, %{"role_ids" => [role.id]}, admin)
+    {:ok, role} = Groups.create_role("staff-only")
+    {:ok, _} = Discussion.update_category(category, %{"role_ids" => [role.id]}, admin)
     assert Drafts.list(user) == []
   end
 
@@ -115,7 +118,7 @@ defmodule Firefly.DraftsTest do
     {:ok, _} = TopicTools.merge(thread, target, admin)
     assert %Draft{body: "r"} = Drafts.get(user, {:reply, target})
 
-    {:ok, _} = Forums.delete_thread(Repo.get!(Forums.Thread, target.id), admin)
+    {:ok, _} = Discussion.delete_thread(Repo.get!(Firefly.Discussion.Thread, target.id), admin)
     assert Repo.aggregate(Draft, :count) == 0
   end
 

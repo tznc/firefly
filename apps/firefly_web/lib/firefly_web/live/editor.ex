@@ -4,7 +4,7 @@ defmodule FireflyWeb.Editor do
   a markdown textarea with a live preview, `@username` autocomplete, file
   attachments (picked, dropped on the editor or pasted into it; stored by
   `Firefly.Uploads`), an emoji picker and `:emoji` autocomplete (see
-  `Firefly.Emoji`), and the toolbar
+  `Firefly.Rendering.Emoji`), and the toolbar
   buttons plugins add (they insert text; see `Firefly.Plugin.Manifest`).
   The preview shows plain markdown: plugins only transform published posts.
   """
@@ -19,7 +19,8 @@ defmodule FireflyWeb.Editor do
       put_flash: 3
     ]
 
-  alias Firefly.{Forums, Markdown, Plugins, RateLimit, Uploads}
+  alias Firefly.{Accounts, Plugins, RateLimit, Uploads}
+  alias Firefly.Rendering.Markdown
 
   @max_entries 5
 
@@ -84,7 +85,7 @@ defmodule FireflyWeb.Editor do
 
   defp mention_matches(prefix) when is_binary(prefix) do
     if prefix =~ ~r/^[A-Za-z0-9_-]{1,32}$/ do
-      for user <- Forums.search_usernames(prefix), do: Map.take(user, [:username, :name])
+      for user <- Accounts.search_usernames(prefix), do: Map.take(user, [:username, :name])
     else
       []
     end
@@ -231,7 +232,9 @@ defmodule FireflyWeb.Editor do
   end
 
   defp custom_emoji_json do
-    Jason.encode!(for {name, url} <- Firefly.Emoji.custom(), do: %{name: name, url: url})
+    Jason.encode!(
+      for {name, url} <- Firefly.Rendering.Emoji.custom(), do: %{name: name, url: url}
+    )
   end
 
   # Toolbar buttons the active plugins declare (manifest `composer_buttons`),

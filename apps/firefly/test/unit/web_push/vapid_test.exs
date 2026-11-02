@@ -1,7 +1,7 @@
-defmodule Firefly.WebPush.VAPIDTest do
+defmodule Firefly.Notifications.WebPush.VAPIDTest do
   use ExUnit.Case, async: true
 
-  alias Firefly.WebPush.{Encryption, VAPID}
+  alias Firefly.Notifications.WebPush.{Encryption, VAPID}
 
   test "signs an ES256 JWT for the push service's origin" do
     {public, private} = VAPID.generate_keys()

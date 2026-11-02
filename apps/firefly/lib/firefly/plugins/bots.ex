@@ -9,8 +9,8 @@ defmodule Firefly.Plugins.Bots do
 
   import Ecto.Query
 
-  alias Firefly.{Forums, Repo}
-  alias Firefly.Forums.User
+  alias Firefly.{Accounts, Repo}
+  alias Firefly.Accounts.User
 
   @doc "`plugin`'s bot user, created if needed (`plugin` a manifest or plugin)."
   def ensure(%{id: id, name: name}), do: ensure(id, name)
@@ -27,7 +27,7 @@ defmodule Firefly.Plugins.Bots do
     {:ok, bot} =
       Repo.transact(fn ->
         {:ok, user} =
-          Forums.create_user(%{
+          Accounts.create_user(%{
             username: free_username("#{id}-bot"),
             name: String.slice("#{name} (bot)", 0, 100)
           })

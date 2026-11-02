@@ -6,10 +6,12 @@ defmodule FireflyWeb.PluginNetworkTest do
   import Ecto.Query, only: [from: 2]
   import FireflyPlugins.PluginHelpers
 
-  alias Firefly.{Flags, Forums, Markdown, Plugins, Repo, Review, SiteSettings}
-  alias Firefly.Forums.Post
+  alias Firefly.{Discussion, Plugins, Repo, SiteSettings}
+  alias Firefly.Moderation.{Flags, Review}
+  alias Firefly.Rendering.Markdown
+  alias Firefly.Discussion.Post
   alias Firefly.Plugin.{Host, Manifest, Runner}
-  alias Firefly.Plugins.{Egress, EgressEntry, Health, HTTP}
+  alias Firefly.Plugins.{Egress, EgressEntry, HTTP, Health}
 
   @url "http://127.0.0.1:4002/?token=secret"
   @sync_error "permission denied: http.fetch is not available in synchronous hooks"
@@ -146,7 +148,7 @@ defmodule FireflyWeb.PluginNetworkTest do
 
       member = user_fixture()
       thread = thread_fixture(category_fixture("Public"), admin, %{body: "Hi"})
-      {:ok, post} = Forums.create_post(thread, member, %{body: "check me"})
+      {:ok, post} = Discussion.create_post(thread, member, %{body: "check me"})
       assert post.queued_reason =~ "#{@sync_error} (moderate_post); use an event or job"
 
       {:ok, approved} = Review.approve(post, admin)

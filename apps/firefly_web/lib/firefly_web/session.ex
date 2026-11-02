@@ -4,8 +4,8 @@ defmodule FireflyWeb.Session do
   the user id). A deleted or suspended account's sessions resolve to nobody.
   """
 
-  alias Firefly.Forums
-  alias Firefly.Forums.User
+  alias Firefly.Accounts
+  alias Firefly.Accounts.User
 
   @doc "The current user for a conn, from its assigns or its session."
   def current_user(%Plug.Conn{assigns: %{current_user: user}}), do: user
@@ -20,27 +20,27 @@ defmodule FireflyWeb.Session do
   def user_from_id(nil), do: nil
 
   def user_from_id(id) do
-    case Forums.get_user(id) do
+    case Accounts.get_user(id) do
       %{deleted_at: nil} = user -> if User.suspended?(user), do: nil, else: user
       _missing_or_deleted -> nil
     end
   end
 
-  @doc "The id LiveView sockets of `user` share (see `Firefly.UserSessions`)."
-  defdelegate live_socket_id(user), to: Firefly.UserSessions
+  @doc "The id LiveView sockets of `user` share (see `Firefly.Accounts.UserSessions`)."
+  defdelegate live_socket_id(user), to: Firefly.Accounts.UserSessions
 
   @doc """
   Makes every open page of `user` pick up a change to their account (see
-  `Firefly.UserSessions.reload_pages/1` and `FireflyWeb.UserAuth`).
+  `Firefly.Accounts.UserSessions.reload_pages/1` and `FireflyWeb.UserAuth`).
   """
-  defdelegate reload_pages(user), to: Firefly.UserSessions
+  defdelegate reload_pages(user), to: Firefly.Accounts.UserSessions
 
   def logged_in?(conn), do: !!current_user(conn)
 
   def admin?(conn) do
     case current_user(conn) do
       nil -> false
-      user -> Forums.admin?(user)
+      user -> Accounts.admin?(user)
     end
   end
 end

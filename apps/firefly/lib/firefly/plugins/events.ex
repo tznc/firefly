@@ -31,8 +31,9 @@ defmodule Firefly.Plugins.Events do
 
   import Ecto.Query
 
-  alias Firefly.{Forums, Plugins, Repo}
-  alias Firefly.Forums.{Post, Thread, User}
+  alias Firefly.{Discussion, Plugins, Repo}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Plugin.Runner
   alias Firefly.Plugins.{Health, QueuedEvent}
   alias Firefly.URLs
@@ -93,7 +94,7 @@ defmodule Firefly.Plugins.Events do
     thread = if is_function(thread, 0), do: thread.(), else: thread
 
     (is_nil(post) or Post.readable_by?(post, nil)) and
-      (is_nil(thread) or Bodyguard.permit?(Forums, :view_thread, nil, thread))
+      (is_nil(thread) or Bodyguard.permit?(Discussion, :view_thread, nil, thread))
   end
 
   @doc "A post as events describe it."

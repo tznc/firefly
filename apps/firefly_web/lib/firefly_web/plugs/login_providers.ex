@@ -1,7 +1,7 @@
 defmodule FireflyWeb.Plugs.LoginProviders do
   @moduledoc """
   Sends `/auth/<provider>` (and its callback) back to the login page for
-  login providers that aren't enabled (see `Firefly.Auth`), before
+  login providers that aren't enabled (see `Firefly.Accounts.Auth`), before
   Ueberauth would send the browser to the provider with no credentials,
   and password logins (`/auth/identity`) when single sign-on is the only
   way in. Runs after the session and flash are fetched.
@@ -10,7 +10,7 @@ defmodule FireflyWeb.Plugs.LoginProviders do
 
   import Plug.Conn
 
-  alias Firefly.Auth
+  alias Firefly.Accounts.Auth
 
   @impl true
   def init(opts), do: opts

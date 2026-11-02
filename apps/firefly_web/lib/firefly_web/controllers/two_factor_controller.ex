@@ -8,7 +8,8 @@ defmodule FireflyWeb.TwoFactorController do
   """
   use FireflyWeb, :controller
 
-  alias Firefly.{RateLimit, TwoFactor, WebAuthn}
+  alias Firefly.RateLimit
+  alias Firefly.Accounts.{TwoFactor, WebAuthn}
   alias FireflyWeb.Login
 
   def create(conn, params) do

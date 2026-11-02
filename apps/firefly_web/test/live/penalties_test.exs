@@ -6,7 +6,7 @@ defmodule FireflyWeb.PenaltiesTest do
   import ExUnit.CaptureLog
   require Phoenix.LiveViewTest
 
-  alias Firefly.Messages
+  alias Firefly.Messaging
 
   defmodule DownMailer do
     @moduledoc false
@@ -16,8 +16,11 @@ defmodule FireflyWeb.PenaltiesTest do
     def supports_attachments?, do: false
   end
 
-  alias Firefly.{Forums, Penalties, Posting, Repo}
-  alias Firefly.Forums.{Notification, StaffAction, User}
+  alias Firefly.{Accounts, Discussion, Repo}
+  alias Firefly.Moderation.{Penalties, Posting}
+  alias Firefly.Accounts.User
+  alias Firefly.Moderation.StaffAction
+  alias Firefly.Notifications.Notification
 
   @password "member-password"
 
@@ -25,13 +28,13 @@ defmodule FireflyWeb.PenaltiesTest do
     admin = admin_fixture(%{username: "boss"})
 
     {:ok, member} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: "member",
         email: "member@example.com",
         password: @password
       })
 
-    {:ok, member} = Forums.confirm_user(member)
+    {:ok, member} = Accounts.confirm_user(member)
     category = category_fixture("Elixir")
     thread = thread_fixture(category, admin, %{title: "Rules"})
     %{admin: admin, member: member, thread: thread}
@@ -139,16 +142,16 @@ defmodule FireflyWeb.PenaltiesTest do
       |> click_button("Like post #{post.id}")
       |> assert_has("#flash-error", text: "You've been silenced until")
 
-      refute Forums.liked?(post, member)
+      refute Discussion.liked?(post, member)
     end
 
     test "are held to it on pages opened before it", ctx do
       %{admin: admin, thread: thread} = ctx
 
       {:ok, fresh} =
-        Forums.register_user(%{username: "fresh", email: "f@example.com", password: @password})
+        Accounts.register_user(%{username: "fresh", email: "f@example.com", password: @password})
 
-      {:ok, fresh} = Forums.confirm_user(fresh)
+      {:ok, fresh} = Accounts.confirm_user(fresh)
 
       # A session without a live_socket_id (from before it existed).
       {:ok, view, _html} =
@@ -167,7 +170,7 @@ defmodule FireflyWeb.PenaltiesTest do
 
       # Started before the silence.
       {:ok, conversation} =
-        Messages.start_conversation(member, %{
+        Messaging.start_conversation(member, %{
           "recipients" => "boss",
           "title" => "Hello",
           "body" => "Hi"
@@ -180,7 +183,7 @@ defmodule FireflyWeb.PenaltiesTest do
       |> click_button("Add people")
       |> assert_has("#flash-error", text: "You've been silenced")
 
-      assert conversation |> Messages.participants() |> Enum.map(& &1.username) |> Enum.sort() ==
+      assert conversation |> Messaging.participants() |> Enum.map(& &1.username) |> Enum.sort() ==
                ["boss", "member"]
 
       own = thread_fixture(category_fixture("Own"), member, %{title: "Mine"})
@@ -193,7 +196,7 @@ defmodule FireflyWeb.PenaltiesTest do
       |> click_button("Submit")
       |> assert_has("#flash-error", text: "You've been silenced")
 
-      assert Repo.get!(Forums.Thread, own.id).title == "Mine"
+      assert Repo.get!(Firefly.Discussion.Thread, own.id).title == "Mine"
 
       conn
       |> log_in_as(member)
@@ -293,8 +296,8 @@ defmodule FireflyWeb.PenaltiesTest do
     test "admins lift a penalty even after the user became an admin", ctx do
       %{conn: conn, admin: admin, member: member} = ctx
       {:ok, _} = silence(member, admin)
-      role = Repo.get_by!(Forums.Role, name: "admin")
-      Repo.insert!(%Forums.RoleMembership{user_id: member.id, role_id: role.id})
+      role = Repo.get_by!(Firefly.Groups.Role, name: "admin")
+      Repo.insert!(%Firefly.Groups.RoleMembership{user_id: member.id, role_id: role.id})
 
       conn
       |> log_in_as(admin)

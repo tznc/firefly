@@ -1,15 +1,16 @@
 defmodule FireflyWeb.BookmarksLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{Bookmarks, Forums, Repo}
-  alias Firefly.Forums.Bookmark
+  alias Firefly.{Discussion, Repo}
+  alias Firefly.Discussion.Bookmarks
+  alias Firefly.Discussion.Bookmark
 
   setup do
     author = user_fixture(%{username: "author"})
     reader = user_fixture(%{username: "reader"})
     category = category_fixture()
     thread = thread_fixture(category, author, %{title: "Worth keeping", body: "first post"})
-    {:ok, reply} = Forums.create_post(thread, author, %{body: "the good part"})
+    {:ok, reply} = Discussion.create_post(thread, author, %{body: "the good part"})
     %{author: author, reader: reader, thread: thread, reply: reply}
   end
 
@@ -114,7 +115,7 @@ defmodule FireflyWeb.BookmarksLiveTest do
     reply: reply
   } do
     {:ok, _} = Bookmarks.bookmark(reader, reply)
-    {:ok, _} = Forums.delete_post(reply, author)
+    {:ok, _} = Discussion.delete_post(reply, author)
 
     conn
     |> log_in_as(reader)

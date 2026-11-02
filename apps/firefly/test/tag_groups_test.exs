@@ -3,15 +3,18 @@ defmodule Firefly.TagGroupsTest do
 
   import Firefly.Fixtures, only: [user_fixture: 0, admin_fixture: 0, category_fixture: 1]
 
-  alias Firefly.{Forums, Search, Tags}
-  alias Firefly.Forums.{StaffAction, Subscriptions, Tag, TagGroup}
+  alias Firefly.Discussion
+  alias Firefly.Discussion.{Search, Tags}
+  alias Firefly.Discussion.{Tag, TagGroup}
+  alias Firefly.Moderation.StaffAction
+  alias Firefly.Notifications.Subscriptions
 
   setup do
     %{admin: admin_fixture(), member: user_fixture(), category: category_fixture("Elixir")}
   end
 
   defp create(category, user, tags, title \\ "T") do
-    Forums.create_thread(category, user, %{title: title, body: "B", tags: tags})
+    Discussion.create_thread(category, user, %{title: title, body: "B", tags: tags})
   end
 
   defp tag_names(thread),
@@ -83,11 +86,11 @@ defmodule Firefly.TagGroupsTest do
       assert "announcement: only staff can use this tag" in errors_on(changeset).tags
 
       {:ok, thread} = create(category, admin, "announcement")
-      {:ok, thread} = Forums.update_thread(thread, %{"tags" => "otp"}, member)
+      {:ok, thread} = Discussion.update_thread(thread, %{"tags" => "otp"}, member)
       assert tag_names(thread) == ["announcement", "otp"]
 
       # Admins can remove it.
-      {:ok, thread} = Forums.update_thread(thread, %{"tags" => "otp"}, admin)
+      {:ok, thread} = Discussion.update_thread(thread, %{"tags" => "otp"}, admin)
       assert tag_names(thread) == ["otp"]
     end
 
@@ -105,7 +108,7 @@ defmodule Firefly.TagGroupsTest do
       assert {:error, changeset} = create(category, member, "solved, open")
       assert "solved, open: pick one of the Status tags" in errors_on(changeset).tags
       assert {:ok, thread} = create(category, member, "solved, otp")
-      assert {:error, _} = Forums.update_thread(thread, %{"tags" => "solved open"}, admin)
+      assert {:error, _} = Discussion.update_thread(thread, %{"tags" => "solved open"}, admin)
     end
 
     test "the picker offers tags by group, staff-only ones to staff", %{

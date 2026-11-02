@@ -1,21 +1,19 @@
 defmodule FireflyWeb.Api.V1.PostControllerTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.{
-    Markdown,
-    Forums
-  }
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Rendering.Markdown
 
   test "POST /", %{conn: conn} do
-    {:ok, elixir} = Forums.create_category(%{title: "Elixir"})
+    {:ok, elixir} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, bob} =
-      Forums.register_user(%{username: "bob", email: "bob@example.com", password: "password1"})
+      Accounts.register_user(%{username: "bob", email: "bob@example.com", password: "password1"})
 
-    {:ok, bob} = Forums.confirm_user(bob)
+    {:ok, bob} = Accounts.confirm_user(bob)
 
     {:ok, otp_is_cool} =
-      Forums.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
+      Discussion.create_thread(elixir, bob, %{title: "OTP is cool", body: "Don't you think?"})
 
     post = %{
       "body" => "this is **neat**"

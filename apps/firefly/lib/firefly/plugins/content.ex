@@ -1,7 +1,7 @@
 defmodule Firefly.Plugins.Content do
   @moduledoc """
   Plugins' content hooks: shortcodes and post-render transforms, applied to
-  a post's HTML after `Firefly.Markdown` renders and sanitizes it.
+  a post's HTML after `Firefly.Rendering.Markdown` renders and sanitizes it.
 
     * Shortcodes: `[name attr="value"]content[/name]` or `[name attr=value]`,
       for names a plugin declares in its manifest `shortcodes`; the first
@@ -27,8 +27,8 @@ defmodule Firefly.Plugins.Content do
   reconfiguring a plugin makes the cache miss without explicit clearing.
   """
 
-  alias Firefly.{Forums, Plugin, Plugins}
-  alias Firefly.Forums.{Post, Thread}
+  alias Firefly.{Discussion, Plugin, Plugins}
+  alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Plugin.Runner
 
   @cache :plugin_render_cache
@@ -56,7 +56,7 @@ defmodule Firefly.Plugins.Content do
   end
 
   defp public?(post, thread),
-    do: Post.readable_by?(post, nil) and Bodyguard.permit?(Forums, :view_thread, nil, thread)
+    do: Post.readable_by?(post, nil) and Bodyguard.permit?(Discussion, :view_thread, nil, thread)
 
   defp cached(html, post, thread, plugins) do
     key = {Plugins.fingerprint(plugins), post.id, :crypto.hash(:sha256, html)}
@@ -97,7 +97,7 @@ defmodule Firefly.Plugins.Content do
   @doc "Sanitizes HTML with the markdown renderer's allow-list."
   def sanitize(html) do
     MDEx.safe_html(html,
-      sanitize: Firefly.Markdown.sanitize_options(),
+      sanitize: Firefly.Rendering.Markdown.sanitize_options(),
       escape: [content: false, curly_braces_in_code: false]
     )
   end

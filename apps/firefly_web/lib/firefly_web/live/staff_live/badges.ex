@@ -10,7 +10,7 @@ defmodule FireflyWeb.StaffLive.Badges do
   on_mount({FireflyWeb.UserAuth, :require_user})
 
   alias Firefly.Badges
-  alias Firefly.Forums.Badge
+  alias Firefly.Badges.Badge
 
   @impl true
   def mount(_params, _session, socket) do

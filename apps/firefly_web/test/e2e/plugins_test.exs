@@ -3,16 +3,19 @@ defmodule FireflyWeb.E2E.PluginsTest do
 
   import FireflyPlugins.PluginHelpers
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
   alias Firefly.Plugins.Storage
 
   test "the example plugin: shortcode, widget bridge, composer button and page", %{conn: conn} do
     admin = admin_fixture("alice")
     install_example!(admin, "hello")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, thread} =
-      Forums.create_thread(category, admin, %{title: "Greetings", body: ~s([hello name="World"])})
+      Discussion.create_thread(category, admin, %{
+        title: "Greetings",
+        body: ~s([hello name="World"])
+      })
 
     conn
     |> log_in("alice")

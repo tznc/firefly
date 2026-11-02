@@ -3,13 +3,13 @@ defmodule FireflyWeb.AuthLiveTest do
 
   require Phoenix.LiveViewTest
 
-  alias Firefly.Forums
+  alias Firefly.Accounts
 
   @password "s3cret-password"
 
   defp register(username) do
     {:ok, user} =
-      Forums.register_user(%{
+      Accounts.register_user(%{
         username: username,
         email: "#{username}@example.com",
         password: @password
@@ -56,7 +56,7 @@ defmodule FireflyWeb.AuthLiveTest do
     |> assert_path(~p"/auth/identity")
     |> assert_has("#flash-error", text: "No user found with that username or password")
 
-    refute Forums.get_user_by_username("stranger")
+    refute Accounts.get_user_by_username("stranger")
   end
 
   test "a wrong password is rejected", %{conn: conn} do
@@ -82,7 +82,7 @@ defmodule FireflyWeb.AuthLiveTest do
     |> assert_has("#flash-info", text: "Successfully authenticated.")
     |> assert_has("nav a", text: "Your profile")
 
-    assert %{email: "newbie@example.com"} = Forums.get_user_by_username("newbie")
+    assert %{email: "newbie@example.com"} = Accounts.get_user_by_username("newbie")
   end
 
   test "registration explains invalid input", %{conn: conn} do
@@ -97,7 +97,7 @@ defmodule FireflyWeb.AuthLiveTest do
     |> assert_has("p", text: "must be a valid email")
     |> assert_has("p", text: "should be at least 8 character(s)")
 
-    refute Forums.get_user_by_username("new bie")
+    refute Accounts.get_user_by_username("new bie")
   end
 
   test "registration rejects a taken username", %{conn: conn} do
@@ -126,7 +126,7 @@ defmodule FireflyWeb.AuthLiveTest do
       })
 
     assert html =~ "Registration failed"
-    refute Forums.get_user_by_username("spambot")
+    refute Accounts.get_user_by_username("spambot")
   end
 
   test "logging out clears the session", %{conn: conn} do
@@ -169,7 +169,7 @@ defmodule FireflyWeb.AuthLiveTest do
       |> FireflyWeb.AuthController.callback(%{})
 
     assert redirected_to(conn) == ~p"/"
-    user = Forums.get_user!(get_session(conn, :current_user))
-    assert %{"github" => %{uid: "4242"}} = Firefly.Auth.identities(user)
+    user = Accounts.get_user!(get_session(conn, :current_user))
+    assert %{"github" => %{uid: "4242"}} = Firefly.Accounts.Auth.identities(user)
   end
 end

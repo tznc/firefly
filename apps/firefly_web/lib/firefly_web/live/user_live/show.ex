@@ -5,34 +5,28 @@ defmodule FireflyWeb.UserLive.Show do
   replies), badges (`/users/:id/badges`, see `Firefly.Badges`; a
   title badge also shows under their name) and the activity stream (`/users/:id`, filtered by `?filter=`:
   all posts, topics, replies, likes given, solved; see
-  `Firefly.Profiles.activity_filters/0`), paginated. What others see
-  follows the user's privacy preferences (see `Firefly.Profiles`);
+  `Firefly.Accounts.Profiles.activity_filters/0`), paginated. What others see
+  follows the user's privacy preferences (see `Firefly.Accounts.Profiles`);
   admins see everything.
   Admins see a member's penalties here, and silence or suspend them (see
-  `Firefly.Penalties`), and reset their two-factor authentication
-  (see `Firefly.TwoFactor.reset/2`), and set or lock their trust level
+  `Firefly.Moderation.Penalties`), and reset their two-factor authentication
+  (see `Firefly.Accounts.TwoFactor.reset/2`), and set or lock their trust level
   (see `Firefly.TrustLevels`). Members see their own progress toward
   the next trust level here, and admins anyone's. Members mute or ignore
-  others here (see `Firefly.Ignores`).
+  others here (see `Firefly.Accounts.Ignores`).
   """
   use FireflyWeb, :live_view
 
-  alias Firefly.{
-    Badges,
-    Forums,
-    Ignores,
-    Mentions,
-    Penalties,
-    Profiles,
-    TrustLevels,
-    TwoFactor
-  }
+  alias Firefly.{Accounts, Badges, Discussion, TrustLevels}
+  alias Firefly.Accounts.{Ignores, Profiles, TwoFactor}
+  alias Firefly.Discussion.Mentions
+  alias Firefly.Moderation.Penalties
 
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.User
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    user = Forums.get_user!(id)
+    user = Accounts.get_user!(id)
 
     {:ok,
      socket
@@ -47,8 +41,8 @@ defmodule FireflyWeb.UserLive.Show do
      )
      |> assign(:visible?, Profiles.visible?(user, socket.assigns.current_user))
      |> assign(:activity?, Profiles.activity_visible?(user, socket.assigns.current_user))
-     |> assign(:last_post, Forums.user_last_post(user, socket.assigns.current_user))
-     |> assign(:last_seen, Forums.user_last_seen(user))
+     |> assign(:last_post, Discussion.user_last_post(user, socket.assigns.current_user))
+     |> assign(:last_seen, Accounts.user_last_seen(user))
      |> assign(:title, Badges.title(user))
      |> assign_ignore()}
   end
@@ -56,7 +50,7 @@ defmodule FireflyWeb.UserLive.Show do
   # Members may mute or ignore anyone but themselves and staff.
   defp assign_ignore(socket) do
     %{current_user: viewer, user: user} = socket.assigns
-    ignorable? = viewer != nil and viewer.id != user.id and not Forums.admin?(user)
+    ignorable? = viewer != nil and viewer.id != user.id and not Accounts.admin?(user)
 
     socket
     |> assign(:ignorable?, ignorable?)
@@ -81,7 +75,7 @@ defmodule FireflyWeb.UserLive.Show do
   end
 
   defp staff?(nil), do: false
-  defp staff?(viewer), do: Forums.admin?(viewer)
+  defp staff?(viewer), do: Accounts.admin?(viewer)
 
   @filters Enum.map(Profiles.activity_filters(), &elem(&1, 0))
 
@@ -105,14 +99,14 @@ defmodule FireflyWeb.UserLive.Show do
   def handle_params(params, _uri, socket) do
     %{user: user, current_user: viewer} = socket.assigns
     filter = if params["filter"] in @filters, do: params["filter"], else: "all"
-    posts_page = Forums.user_posts(user, viewer, %{page: params["page"], filter: filter})
+    posts_page = Discussion.user_posts(user, viewer, %{page: params["page"], filter: filter})
 
     posts_page = %{
       posts_page
       | entries:
           posts_page.entries
-          |> Enum.map(&Forums.decorate_post_oembeds/1)
-          |> Firefly.LinkPreviews.decorate()
+          |> Enum.map(&Discussion.decorate_post_oembeds/1)
+          |> Firefly.Rendering.LinkPreviews.decorate()
     }
 
     {:noreply,

@@ -7,7 +7,7 @@ defmodule FireflyWeb.BadgeLive.Index do
   use FireflyWeb, :live_view
 
   alias Firefly.Badges
-  alias Firefly.Forums.Badge
+  alias Firefly.Badges.Badge
 
   @impl true
   def mount(_params, _session, socket) do

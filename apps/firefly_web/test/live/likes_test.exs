@@ -1,7 +1,7 @@
 defmodule FireflyWeb.LikesTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Forums
+  alias Firefly.{Accounts, Discussion}
 
   setup do
     author = user_fixture(%{username: "author"})
@@ -28,7 +28,7 @@ defmodule FireflyWeb.LikesTest do
     |> refute_has("#post-#{post.id}-likes button")
 
     conn
-    |> log_in_as(Forums.get_user_by_username("bob"))
+    |> log_in_as(Accounts.get_user_by_username("bob"))
     |> visit(path)
     |> click_button("Unlike post #{post.id}")
     |> assert_has("button[aria-pressed=false]")
@@ -39,27 +39,27 @@ defmodule FireflyWeb.LikesTest do
     %{conn: conn, author: author, thread: thread, post: post, path: path} = ctx
     reader = user_fixture(%{username: "reader"})
     session = conn |> log_in_as(reader) |> visit(path)
-    read_before = Forums.thread_read(reader, thread).last_read_post_id
+    read_before = Discussion.thread_read(reader, thread).last_read_post_id
 
     # A post that arrives without a live update: a full reload would show it
     # and move the reader's read position.
-    Firefly.Repo.insert!(%Forums.Post{
+    Firefly.Repo.insert!(%Firefly.Discussion.Post{
       thread_id: thread.id,
       user_id: author.id,
       body: "Quiet"
     })
 
-    Forums.like_post(post, user_fixture(%{username: "bob"}))
+    Discussion.like_post(post, user_fixture(%{username: "bob"}))
 
     session
     |> assert_has("#post-#{post.id}-likes .like-count", text: "1")
     |> refute_has("p", text: "Quiet")
 
-    assert Forums.thread_read(reader, thread).last_read_post_id == read_before
+    assert Discussion.thread_read(reader, thread).last_read_post_id == read_before
   end
 
   test "authors can't like their own posts", %{conn: conn, author: author, post: post, path: path} do
-    Forums.like_post(post, user_fixture(%{username: "fan"}))
+    Discussion.like_post(post, user_fixture(%{username: "fan"}))
 
     conn
     |> log_in_as(author)
@@ -70,7 +70,7 @@ defmodule FireflyWeb.LikesTest do
 
   test "the author's liked notification links to the post", ctx do
     %{conn: conn, author: author, post: post, path: path} = ctx
-    Forums.like_post(post, user_fixture(%{username: "fan"}))
+    Discussion.like_post(post, user_fixture(%{username: "fan"}))
 
     conn
     |> log_in_as(author)

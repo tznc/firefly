@@ -1,9 +1,10 @@
 defmodule Mix.Tasks.Firefly.Gen.VapidKeys do
+  use Boundary, classify_to: Firefly.Notifications
   @shortdoc "Generates a VAPID key pair for browser push notifications"
 
   @moduledoc """
   Generates a VAPID key pair for browser push notifications (see
-  `Firefly.WebPush`) and prints it as environment variables:
+  `Firefly.Notifications.WebPush`) and prints it as environment variables:
 
       mix firefly.gen.vapid_keys
 
@@ -16,7 +17,7 @@ defmodule Mix.Tasks.Firefly.Gen.VapidKeys do
 
   @impl true
   def run(_args) do
-    {public, private} = Firefly.WebPush.VAPID.generate_keys()
+    {public, private} = Firefly.Notifications.WebPush.VAPID.generate_keys()
 
     Mix.shell().info("""
     FIREFLY_VAPID_PUBLIC_KEY=#{public}

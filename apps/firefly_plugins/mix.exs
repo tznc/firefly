@@ -16,7 +16,8 @@ defmodule FireflyPlugins.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      compilers: [:boundary] ++ Mix.compilers()
     ]
   end
 
@@ -29,6 +30,8 @@ defmodule FireflyPlugins.MixProject do
 
   defp deps do
     [
+      # Enforces the contexts' public APIs at compile time (see the Firefly module).
+      {:boundary, "~> 0.10.4", runtime: false},
       {:firefly, in_umbrella: true},
       {:jason, "~> 1.4"},
       {:wasmex, "~> 0.15.1"}

@@ -1,6 +1,6 @@
 defmodule FireflyWeb.Api.V1.UserJSON do
   @moduledoc "JSON representation of users (public fields only)."
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.User
 
   def data(%User{} = user) do
     user

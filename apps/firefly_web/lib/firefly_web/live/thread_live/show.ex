@@ -5,25 +5,25 @@ defmodule FireflyWeb.ThreadLive.Show do
   current user's read position to its newest post; posts that were unread when
   the page opened are marked with a "new since your last visit" divider.
 
-  Members can flag other people's posts (see `Firefly.Flags`). A post
+  Members can flag other people's posts (see `Firefly.Moderation.Flags`). A post
   hidden after flags shows as a placeholder, except to its author and
   admins, who see it with a notice; admins also see pending flag counts.
-  Posts awaiting approval (see `Firefly.Review`) are only shown to
+  Posts awaiting approval (see `Firefly.Moderation.Review`) are only shown to
   their author and admins, marked as such.
 
-  A thread merged into another (see `Firefly.TopicTools`) redirects
-  there. A pending timer and slow mode (see `Firefly.TopicTimers`)
+  A thread merged into another (see `Firefly.Moderation.TopicTools`) redirects
+  there. A pending timer and slow mode (see `Firefly.Moderation.TopicTimers`)
   are shown above the reply button; admins manage them, and merge and
   split, from the thread's tools page (`ThreadLive.Tools`).
 
-  Members can bookmark posts (see `Firefly.Bookmarks`): bookmarking
+  Members can bookmark posts (see `Firefly.Discussion.Bookmarks`): bookmarking
   one opens a form for an optional note and reminder.
 
   In a Q&A category the thread's author and staff can accept a reply as
-  the answer (see `Firefly.Solved`); it's shown under the first post.
+  the answer (see `Firefly.Discussion.Solved`); it's shown under the first post.
 
-  Posts' polls (see `Firefly.Polls`) take votes here, and their
-  results update live. Link previews (see `Firefly.LinkPreviews`)
+  Posts' polls (see `Firefly.Discussion.Polls`) take votes here, and their
+  results update live. Link previews (see `Firefly.Rendering.LinkPreviews`)
   appear once fetched.
 
   Admins make posts wikis (or not); members may then edit them (see the
@@ -31,7 +31,7 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   Clicking a post's author opens their user card (`FireflyWeb.UserCard`).
 
-  Posts by users the viewer ignores (see `Firefly.Ignores`) are
+  Posts by users the viewer ignores (see `Firefly.Accounts.Ignores`) are
   collapsed into an "ignored content" placeholder until revealed.
   """
   use FireflyWeb, :live_view
@@ -39,17 +39,25 @@ defmodule FireflyWeb.ThreadLive.Show do
   import FireflyWeb.BookmarkComponents
   import FireflyWeb.PollComponents, only: [poll: 1]
 
-  alias Firefly.{Bookmarks, Flags, Forums, Ignores, LinkPreviews, Mentions, Polls, Posting}
-  alias Firefly.{RateLimit, Repo, Solved, TopicTimers}
-  alias Firefly.Forums.{Category, Flag, Post, Subscriptions, Thread, ThreadTimer}
+  alias Firefly.Discussion
+  alias Firefly.Accounts.Ignores
+  alias Firefly.Discussion.{Bookmarks, Mentions, Polls}
+  alias Firefly.Moderation.{Flags, Posting}
+  alias Firefly.Rendering.LinkPreviews
+  alias Firefly.{RateLimit, Repo}
+  alias Firefly.Discussion.Solved
+  alias Firefly.Moderation.TopicTimers
+  alias Firefly.Discussion.{Category, Post, Thread}
+  alias Firefly.Moderation.{Flag, ThreadTimer}
+  alias Firefly.Notifications.Subscriptions
 
   @impl true
   def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
     viewer = socket.assigns.current_user
-    thread = Forums.get_thread!(id)
+    thread = Discussion.get_thread!(id)
     # Raises (404) unless the viewer may read the thread where it is now.
-    category = Forums.get_visible_category!(thread.category_id, viewer)
-    thread = Forums.get_visible_thread!(category, id, viewer)
+    category = Discussion.get_visible_category!(thread.category_id, viewer)
+    thread = Discussion.get_visible_thread!(category, id, viewer)
 
     # Links from before a move (notifications, emails, bookmarks) still carry
     # the old category, and those to a merged thread its old id: send them to
@@ -65,17 +73,17 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   # Where a merged thread's posts went (that thread's page checks access).
   defp merged_path(thread) do
-    case Forums.get_thread_after_merges(thread.merged_into_id) do
+    case Discussion.get_thread_after_merges(thread.merged_into_id) do
       nil -> ~p"/"
       target -> thread_path(target)
     end
   end
 
   defp mount_thread(category, thread, socket) do
-    if connected?(socket), do: Forums.subscribe("forums:thread:#{thread.id}")
+    if connected?(socket), do: Discussion.subscribe("forums:thread:#{thread.id}")
 
     # Where the user had read up to before this visit (nil: never opened).
-    read = Forums.thread_read(socket.assigns.current_user, thread)
+    read = Discussion.thread_read(socket.assigns.current_user, thread)
 
     {:ok,
      socket
@@ -101,7 +109,7 @@ defmodule FireflyWeb.ThreadLive.Show do
            ] do
     # Read again: a post's change can change the thread (e.g. a deleted
     # answer is unaccepted).
-    case Forums.get_thread(socket.assigns.thread.id) do
+    case Discussion.get_thread(socket.assigns.thread.id) do
       nil ->
         {:noreply, leave(socket)}
 
@@ -228,8 +236,8 @@ defmodule FireflyWeb.ThreadLive.Show do
     %{thread: thread, current_user: user} = socket.assigns
 
     with true <- can?(user, :move_thread, thread) || :denied,
-         %Category{} = category <- Forums.get_category(category_id) || :no_category,
-         {:ok, moved} <- Forums.move_thread(thread, category, user) do
+         %Category{} = category <- Discussion.get_category(category_id) || :no_category,
+         {:ok, moved} <- Discussion.move_thread(thread, category, user) do
       {:noreply,
        socket
        |> put_flash(:info, "Thread moved to #{category.title}.")
@@ -243,10 +251,11 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   def handle_event("delete_post", %{"id" => id}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
-    post = Forums.get_post!(thread, id)
+    post = Discussion.get_post!(thread, id)
 
-    with true <- can?(user, :delete_post, %{post: post, thread: Forums.get_thread!(thread.id)}),
-         {:ok, _} <- Forums.delete_post(post, user) do
+    with true <-
+           can?(user, :delete_post, %{post: post, thread: Discussion.get_thread!(thread.id)}),
+         {:ok, _} <- Discussion.delete_post(post, user) do
       {:noreply, socket |> put_flash(:info, "Post deleted.") |> load_thread(thread)}
     else
       {:error, :first_post} ->
@@ -261,7 +270,7 @@ defmodule FireflyWeb.ThreadLive.Show do
     %{thread: thread, current_user: user} = socket.assigns
 
     if can?(user, :restore_post) do
-      {:ok, _} = thread |> Forums.get_post!(id) |> Forums.restore_post(user)
+      {:ok, _} = thread |> Discussion.get_post!(id) |> Discussion.restore_post(user)
       {:noreply, socket |> put_flash(:info, "Post restored.") |> load_thread(thread)}
     else
       {:noreply, put_flash(socket, :error, denied_message(user))}
@@ -270,14 +279,14 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   def handle_event("toggle_like", %{"id" => id}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
-    post = Forums.get_post!(thread, id)
+    post = Discussion.get_post!(thread, id)
 
-    with true <- can?(user, :like_post, %{post: post, thread: Forums.get_thread!(thread.id)}),
+    with true <- can?(user, :like_post, %{post: post, thread: Discussion.get_thread!(thread.id)}),
          :ok <- Posting.check(user, :like),
          :ok <- RateLimit.check_like(user) do
-      if Forums.liked?(post, user),
-        do: Forums.unlike_post(post, user),
-        else: Forums.like_post(post, user)
+      if Discussion.liked?(post, user),
+        do: Discussion.unlike_post(post, user),
+        else: Discussion.like_post(post, user)
 
       {:noreply, refresh_likers(socket, post)}
     else
@@ -287,7 +296,7 @@ defmodule FireflyWeb.ThreadLive.Show do
   end
 
   def handle_event("flag", %{"id" => id}, socket) do
-    post = Forums.get_post!(socket.assigns.thread, id)
+    post = Discussion.get_post!(socket.assigns.thread, id)
 
     if can?(socket.assigns.current_user, :flag_post, %{post: post, thread: socket.assigns.thread}),
        do: {:noreply, assign(socket, flagging: post.id, flag_form: flag_form())},
@@ -309,7 +318,7 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   def handle_event("submit_flag", %{"flag" => params}, socket) do
     %{thread: thread, current_user: user, flagging: post_id} = socket.assigns
-    post = Forums.get_post!(thread, post_id)
+    post = Discussion.get_post!(thread, post_id)
 
     case Flags.flag_post(post, user, params) do
       {:ok, _flag} ->
@@ -331,7 +340,7 @@ defmodule FireflyWeb.ThreadLive.Show do
     %{thread: thread, current_user: user} = socket.assigns
 
     with true <- can?(user, :unhide_post) || {:error, :unauthorized},
-         {:ok, _post} <- thread |> Forums.get_post!(id) |> Flags.unhide(user) do
+         {:ok, _post} <- thread |> Discussion.get_post!(id) |> Flags.unhide(user) do
       {:noreply, socket |> put_flash(:info, "Post unhidden.") |> load_thread(thread)}
     else
       {:error, reason} -> {:noreply, put_flash(socket, :error, Flags.message(reason))}
@@ -340,7 +349,7 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   def handle_event("accept_answer", %{"id" => id}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
-    post = Forums.get_post!(thread, id)
+    post = Discussion.get_post!(thread, id)
 
     case Solved.accept(thread, post, user) do
       {:ok, thread} ->
@@ -396,10 +405,10 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   def handle_event("toggle_wiki", %{"id" => id}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
-    post = Forums.get_post!(thread, id)
+    post = Discussion.get_post!(thread, id)
 
     if can?(user, :toggle_wiki) do
-      {:ok, post} = Forums.set_wiki(post, !Post.wiki?(post), user)
+      {:ok, post} = Discussion.set_wiki(post, !Post.wiki?(post), user)
       message = if Post.wiki?(post), do: "Post is now a wiki.", else: "Post is no longer a wiki."
       {:noreply, socket |> put_flash(:info, message) |> load_thread(thread)}
     else
@@ -409,7 +418,7 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   def handle_event("toggle_bookmark", %{"id" => id}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
-    post = Forums.get_post!(thread, id)
+    post = Discussion.get_post!(thread, id)
 
     if bookmark = Bookmarks.get_for_post(user, post) do
       :ok = Bookmarks.delete(user, bookmark.id)
@@ -461,7 +470,7 @@ defmodule FireflyWeb.ThreadLive.Show do
 
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :delete_thread, socket.assigns.thread) do
-      {:ok, _} = Forums.delete_thread(socket.assigns.thread, socket.assigns.current_user)
+      {:ok, _} = Discussion.delete_thread(socket.assigns.thread, socket.assigns.current_user)
 
       {:noreply,
        socket
@@ -477,12 +486,12 @@ defmodule FireflyWeb.ThreadLive.Show do
     thread = Repo.preload(thread, [:tags, posts: [:user, :deleted_by]], force: true)
 
     [first_post | replies] =
-      thread.posts |> Enum.map(&Forums.decorate_post_oembeds/1) |> LinkPreviews.decorate()
+      thread.posts |> Enum.map(&Discussion.decorate_post_oembeds/1) |> LinkPreviews.decorate()
 
     # Replies awaiting approval are only for their author and admins.
     replies = Enum.reject(replies, &(Post.queued?(&1) and not can?(user, :view_hidden_post, &1)))
 
-    if user && connected?(socket), do: Forums.mark_thread_read(user, thread)
+    if user && connected?(socket), do: Discussion.mark_thread_read(user, thread)
 
     socket
     |> assign(:page_title, "#{thread.title} - #{socket.assigns.category.title}")
@@ -495,7 +504,7 @@ defmodule FireflyWeb.ThreadLive.Show do
     |> assign(:editable_ids, permitted_ids(user, thread, :edit_post))
     |> assign(:deletable_ids, permitted_ids(user, thread, :delete_post))
     |> assign(:admin?, can?(user, :view_deleted_posts))
-    |> assign(:likers, Forums.likers(thread.posts))
+    |> assign(:likers, Discussion.likers(thread.posts))
     |> assign(:likeable_ids, permitted_ids(user, thread, :like_post))
     |> assign(:flaggable_ids, permitted_ids(user, thread, :flag_post))
     |> assign(:flagged_ids, Flags.flagged_ids(thread.posts, user))
@@ -520,7 +529,7 @@ defmodule FireflyWeb.ThreadLive.Show do
     |> assign(:can_wiki?, can?(user, :toggle_wiki))
     |> assign(
       :categories,
-      if(can?(user, :move_thread, thread), do: Forums.list_categories(user), else: [])
+      if(can?(user, :move_thread, thread), do: Discussion.list_categories(user), else: [])
     )
     |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
     |> assign(:timer, TopicTimers.get_timer(thread))
@@ -542,12 +551,12 @@ defmodule FireflyWeb.ThreadLive.Show do
   defp slow_mode_wait(nil, _thread), do: 0
   defp slow_mode_wait(user, thread), do: Posting.slow_mode_wait(user, thread.id)
 
-  defp moderate(thread, "pin", user), do: Forums.pin_thread(thread, true, user)
-  defp moderate(thread, "unpin", user), do: Forums.pin_thread(thread, false, user)
-  defp moderate(thread, "close", user), do: Forums.close_thread(thread, true, user)
-  defp moderate(thread, "open", user), do: Forums.close_thread(thread, false, user)
-  defp moderate(thread, "archive", user), do: Forums.archive_thread(thread, true, user)
-  defp moderate(thread, "unarchive", user), do: Forums.archive_thread(thread, false, user)
+  defp moderate(thread, "pin", user), do: Discussion.pin_thread(thread, true, user)
+  defp moderate(thread, "unpin", user), do: Discussion.pin_thread(thread, false, user)
+  defp moderate(thread, "close", user), do: Discussion.close_thread(thread, true, user)
+  defp moderate(thread, "open", user), do: Discussion.close_thread(thread, false, user)
+  defp moderate(thread, "archive", user), do: Discussion.archive_thread(thread, true, user)
+  defp moderate(thread, "unarchive", user), do: Discussion.archive_thread(thread, false, user)
   defp moderate(_thread, _action, _user), do: {:error, :unknown_action}
 
   # Leaders (trust level 4) pin and close; archiving is for admins.
@@ -579,7 +588,7 @@ defmodule FireflyWeb.ThreadLive.Show do
   defp flag_form, do: to_form(Flag.changeset(%Flag{}, %{}))
 
   defp refresh_likers(socket, post) do
-    likers = Map.get(Forums.likers([post]), post.id, [])
+    likers = Map.get(Discussion.likers([post]), post.id, [])
     assign(socket, :likers, Map.put(socket.assigns.likers, post.id, likers))
   end
 

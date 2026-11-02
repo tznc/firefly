@@ -1,6 +1,6 @@
 defmodule FireflyWeb.CategoriesChannel do
   use FireflyWeb, :channel
-  alias Firefly.Store.ReplenishResponse
+  alias Firefly.Discussion.Store.ReplenishResponse
   alias FireflyWeb.Api.V1.FetchJSON
 
   intercept(["update"])
@@ -19,7 +19,7 @@ defmodule FireflyWeb.CategoriesChannel do
 
   defp public?(id) do
     with {id, ""} <- Integer.parse(id),
-         %{} = category <- Firefly.Repo.get(Firefly.Forums.Category, id) do
+         %{} = category <- Firefly.Repo.get(Firefly.Discussion.Category, id) do
       can?(nil, :view_category, category)
     else
       _ -> false

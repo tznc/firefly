@@ -1,6 +1,6 @@
 defmodule FireflyWeb.PasskeyController do
   @moduledoc """
-  Logging in with a passkey (see `Firefly.Passkeys`): `challenge`
+  Logging in with a passkey (see `Firefly.Accounts.Passkeys`): `challenge`
   answers the `PasskeyLogin` hook with the options for
   `navigator.credentials.get` and keeps the challenge in the session;
   `create` checks the browser's answer (once per challenge) and logs in,
@@ -9,7 +9,8 @@ defmodule FireflyWeb.PasskeyController do
   """
   use FireflyWeb, :controller
 
-  alias Firefly.{Passkeys, RateLimit, WebAuthn}
+  alias Firefly.RateLimit
+  alias Firefly.Accounts.{Passkeys, WebAuthn}
   alias FireflyWeb.Login
 
   def challenge(conn, _params) do

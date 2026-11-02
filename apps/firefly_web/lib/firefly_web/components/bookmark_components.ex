@@ -1,13 +1,13 @@
 defmodule FireflyWeb.BookmarkComponents do
   @moduledoc """
-  Bookmark UI (see `Firefly.Bookmarks`): the toggle on posts and the
+  Bookmark UI (see `Firefly.Discussion.Bookmarks`): the toggle on posts and the
   note and reminder form, shared by thread pages and `/bookmarks`.
   """
   use Phoenix.Component
 
   import FireflyWeb.CoreComponents, only: [icon: 1, input: 1, button: 1]
 
-  alias Firefly.Bookmarks
+  alias Firefly.Discussion.Bookmarks
   alias FireflyWeb.LocalTime
 
   @doc "The form's params for `bookmark`: its note and current reminder."
@@ -41,7 +41,7 @@ defmodule FireflyWeb.BookmarkComponents do
 
   @doc """
   The note and reminder form for a bookmark: sends `save_bookmark` (with
-  `bookmark` params, see `Firefly.Bookmarks.update/4`) and
+  `bookmark` params, see `Firefly.Discussion.Bookmarks.update/4`) and
   `cancel_bookmark`.
   """
   attr :form, :any, required: true

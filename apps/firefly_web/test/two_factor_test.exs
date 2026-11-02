@@ -4,14 +4,16 @@ defmodule FireflyWeb.TwoFactorTest do
   import Phoenix.LiveViewTest, only: [live: 2, render_hook: 3, render_click: 2, assert_reply: 2]
   require Phoenix.LiveViewTest
 
-  alias Firefly.{Auth, Repo, SiteSettings, SoftAuthenticator, TwoFactor, WebAuthn}
-  alias Firefly.Forums.{StaffAction, User}
+  alias Firefly.{Repo, SiteSettings, SoftAuthenticator}
+  alias Firefly.Accounts.{Auth, TwoFactor, WebAuthn}
+  alias Firefly.Accounts.User
+  alias Firefly.Moderation.StaffAction
 
   @password "correct horse battery"
 
   defp password_user do
     {:ok, user} =
-      Firefly.Forums.register_user(%{
+      Firefly.Accounts.register_user(%{
         username: "ada#{System.unique_integer([:positive])}",
         email: "ada@example.com",
         password: @password
@@ -350,7 +352,7 @@ defmodule FireflyWeb.TwoFactorTest do
     with_totp(user)
     assert %{authenticator_app: true, backup_codes_left: 10} = TwoFactor.export(user)
 
-    {:ok, _} = Firefly.AccountDeletion.delete_account(user, @password)
+    {:ok, _} = Firefly.Accounts.AccountDeletion.delete_account(user, @password)
     refute TwoFactor.enabled?(Repo.get!(User, user.id))
     assert TwoFactor.backup_codes_left(user) == 0
   end

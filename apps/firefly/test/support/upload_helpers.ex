@@ -1,6 +1,9 @@
 defmodule Firefly.UploadHelpers do
   @moduledoc "Files for upload tests."
 
+  # Test support, for any app's tests: unchecked.
+  use Boundary, top_level?: true, check: [in: false, out: false]
+
   @doc "Writes a `width`x`height` image to `dir/name` (its type from the extension)."
   def image_file(dir, name, width \\ 40, height \\ 30) do
     path = Path.join(dir, name)

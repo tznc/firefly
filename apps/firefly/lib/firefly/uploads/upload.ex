@@ -12,15 +12,17 @@ defmodule Firefly.Uploads.Upload do
   `"post"` (`post_id`) or `"message"` (`message_id`), whoever may read
   that; `"avatar"`, the uploader's profile picture, `"background"`, their
   profile or user card background, and `"emoji"`, a
-  custom emoji (see `Firefly.Emoji`), and `"preview"`, a link
-  preview's image (see `Firefly.LinkPreviews`), anyone. Nil: nothing
+  custom emoji (see `Firefly.Rendering.Emoji`), and `"preview"`, a link
+  preview's image (see `Firefly.Rendering.LinkPreviews`), anyone. Nil: nothing
   yet (just uploaded in a composer), the uploader and admins only, and
   removed after a grace period.
   """
 
   use Ecto.Schema
 
-  alias Firefly.Forums.{Message, Post, User}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.Post
+  alias Firefly.Messaging.Message
 
   @kinds ~w(post message avatar background emoji preview)
 

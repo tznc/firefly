@@ -9,7 +9,7 @@ defmodule Firefly.Plugins.HTTP do
   (no loopback, private, link-local, carrier-grade NAT, multicast or
   reserved ranges, IPv4 or IPv6), and the request goes to that address, so a
   second lookup can't swap in an internal one (TLS is still verified against
-  the host name). Link previews (`Firefly.LinkPreviews.Fetcher`) use
+  the host name). Link previews (`Firefly.Rendering.LinkPreviews.Fetcher`) use
   the same guard (`resolve/1`, `target/2`); only plugins' `http.fetch`
   calls go to the egress log. Redirects aren't followed. Requests time out
   after 5 seconds; request bodies are at most 100 KB and responses 1 MB.

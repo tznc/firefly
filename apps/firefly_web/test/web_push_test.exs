@@ -3,8 +3,9 @@ defmodule FireflyWeb.WebPushTest do
 
   require Phoenix.LiveViewTest
 
-  alias Firefly.{Forums, Repo, WebPush}
-  alias Firefly.WebPush.{Encryption, Subscription, VAPID}
+  alias Firefly.{Accounts, Notifications, Repo}
+  alias Firefly.Notifications.WebPush
+  alias Firefly.Notifications.WebPush.{Encryption, Subscription, VAPID}
 
   # A push service: records each push and answers 201, or 410 for a
   # subscription the browser dropped.
@@ -80,7 +81,7 @@ defmodule FireflyWeb.WebPushTest do
 
   defp notify(user) do
     {:ok, notification} =
-      Forums.notify(user, %{
+      Notifications.notify(user, %{
         kind: "promoted",
         subject: "You're now a member",
         body: "b",
@@ -117,7 +118,7 @@ defmodule FireflyWeb.WebPushTest do
     notify(user)
     refute_received {:push, _, _, _}
 
-    {:ok, user} = Forums.update_preferences(user, %{"push_only_when_away" => "false"})
+    {:ok, user} = Accounts.update_preferences(user, %{"push_only_when_away" => "false"})
     notify(user)
     assert_received {:push, "/push/abc", _, _}
   end

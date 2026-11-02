@@ -17,7 +17,7 @@ defmodule FireflyWeb.MixProject do
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
-      compilers: [:phoenix_live_view] ++ Mix.compilers()
+      compilers: [:boundary, :phoenix_live_view] ++ Mix.compilers()
     ]
   end
 
@@ -30,6 +30,8 @@ defmodule FireflyWeb.MixProject do
 
   defp deps do
     [
+      # Enforces the contexts' public APIs at compile time (see the Firefly module).
+      {:boundary, "~> 0.10.4", runtime: false},
       {:firefly, in_umbrella: true},
       {:firefly_plugins, in_umbrella: true},
       {:phoenix, "~> 1.8.16"},

@@ -1,6 +1,6 @@
 defmodule FireflyWeb.ThreadsChannel do
   use FireflyWeb, :channel
-  alias Firefly.Store.ReplenishResponse
+  alias Firefly.Discussion.Store.ReplenishResponse
   alias FireflyWeb.Api.V1.FetchJSON
 
   intercept(["update"])
@@ -19,7 +19,7 @@ defmodule FireflyWeb.ThreadsChannel do
 
   defp public?(id) do
     with {id, ""} <- Integer.parse(id),
-         %{} = thread <- Firefly.Repo.get(Firefly.Forums.Thread, id) do
+         %{} = thread <- Firefly.Repo.get(Firefly.Discussion.Thread, id) do
       can?(nil, :view_thread, thread)
     else
       _ -> false

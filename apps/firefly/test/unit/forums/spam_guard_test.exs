@@ -1,8 +1,10 @@
-defmodule Firefly.Forums.SpamGuardTest do
+defmodule Firefly.Discussion.SpamGuardTest do
   use Firefly.DataCase, async: true
 
-  alias Firefly.{Forums, Repo}
-  alias Firefly.Forums.{SiteSetting, SpamGuard, User}
+  alias Firefly.{Accounts, Discussion, Groups, Repo}
+  alias Firefly.Accounts.User
+  alias Firefly.Moderation.SpamGuard
+  alias Firefly.SiteSettings.SiteSetting
 
   @links "see https://a.example and http://b.example and www.c.example"
 
@@ -10,7 +12,7 @@ defmodule Firefly.Forums.SpamGuardTest do
     unique = System.unique_integer([:positive])
 
     {:ok, user} =
-      Forums.create_user(%{
+      Accounts.create_user(%{
         username: "u#{unique}",
         name: "U",
         email: "u#{unique}@example.com",
@@ -20,7 +22,7 @@ defmodule Firefly.Forums.SpamGuardTest do
     user
   end
 
-  defp category, do: elem(Forums.create_category(%{title: "C"}), 1)
+  defp category, do: elem(Discussion.create_category(%{title: "C"}), 1)
 
   test "counts links, images and attachments" do
     assert SpamGuard.link_count(@links) == 3
@@ -37,55 +39,55 @@ defmodule Firefly.Forums.SpamGuardTest do
     user = user(0)
 
     assert {:error, changeset} =
-             Forums.create_thread(category(), user, %{title: "Spam", body: @links})
+             Discussion.create_thread(category(), user, %{title: "Spam", body: @links})
 
     [post_changeset] = changeset.changes.posts
     assert "new users can include at most 2 links per post" in errors_on(post_changeset).body
 
     assert {:ok, thread} =
-             Forums.create_thread(category(), user, %{
+             Discussion.create_thread(category(), user, %{
                title: "Fine",
                body: "one https://a.example"
              })
 
-    assert {:error, changeset} = Forums.create_post(thread, user, %{body: @links})
+    assert {:error, changeset} = Discussion.create_post(thread, user, %{body: @links})
     assert errors_on(changeset).body == ["new users can include at most 2 links per post"]
   end
 
   test "new users' images, attachments and mentions are limited" do
     user = user(0)
-    {:ok, thread} = Forums.create_thread(category(), user(1), %{title: "T", body: "b"})
+    {:ok, thread} = Discussion.create_thread(category(), user(1), %{title: "T", body: "b"})
 
     images = "![a](https://x.example/a.png) ![b](https://x.example/b.png)"
-    assert {:error, changeset} = Forums.create_post(thread, user, %{body: images})
+    assert {:error, changeset} = Discussion.create_post(thread, user, %{body: images})
     assert "new users can include at most 1 images per post" in errors_on(changeset).body
 
     attachment = "[doc](/uploads/aaaaaaaaaaaaaaaaaaaaaa/doc.pdf)"
-    assert {:error, changeset} = Forums.create_post(thread, user, %{body: attachment})
+    assert {:error, changeset} = Discussion.create_post(thread, user, %{body: attachment})
     assert "new users can include at most 0 attachments per post" in errors_on(changeset).body
 
     [a, b, c] = for _ <- 1..3, do: user(1)
     mentions = "@#{a.username} @#{b.username} @#{c.username}"
-    assert {:error, changeset} = Forums.create_post(thread, user, %{body: mentions})
+    assert {:error, changeset} = Discussion.create_post(thread, user, %{body: mentions})
     assert "can mention at most 2 users" in errors_on(changeset).body
 
     Repo.insert!(%SiteSetting{key: "new_user_max_mentions", value: "3"})
-    assert {:ok, _} = Forums.create_post(thread, user, %{body: mentions})
+    assert {:ok, _} = Discussion.create_post(thread, user, %{body: mentions})
   end
 
   test "basic users and admins aren't limited" do
     basic = user(1)
-    {:ok, thread} = Forums.create_thread(category(), basic, %{title: "1", body: "a"})
+    {:ok, thread} = Discussion.create_thread(category(), basic, %{title: "1", body: "a"})
 
     refute Firefly.TrustLevels.new_user?(basic)
-    assert {:ok, _} = Forums.create_post(thread, basic, %{body: @links})
+    assert {:ok, _} = Discussion.create_post(thread, basic, %{body: @links})
 
     admin = user(0)
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(admin, role)
+    {:ok, role} = Groups.create_role("admin")
+    {:ok, _} = Groups.add_role(admin, role)
     admin = Repo.get!(User, admin.id)
 
     refute Firefly.TrustLevels.new_user?(admin)
-    assert {:ok, _} = Forums.create_post(thread, admin, %{body: @links})
+    assert {:ok, _} = Discussion.create_post(thread, admin, %{body: @links})
   end
 end

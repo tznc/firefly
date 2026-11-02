@@ -1,8 +1,9 @@
-defmodule Firefly.Forums.PolicyTest do
+defmodule Firefly.Discussion.PolicyTest do
   use Firefly.DataCase
 
-  alias Firefly.Forums
-  alias Firefly.Forums.{Policy, User}
+  alias Firefly.{Accounts, Discussion, Groups}
+  alias Firefly.Accounts.User
+  alias Firefly.Discussion.Policy
 
   @alice %User{id: 1}
   @bob %User{id: 2}
@@ -22,14 +23,14 @@ defmodule Firefly.Forums.PolicyTest do
   end
 
   setup do
-    {:ok, author} = Forums.create_user(%{username: "author", name: "A", email: "a@example.com"})
-    {:ok, member} = Forums.create_user(%{username: "member", name: "M", email: "m@example.com"})
-    {:ok, admin} = Forums.create_user(%{username: "admin", name: "Ad", email: "ad@example.com"})
-    {:ok, role} = Forums.create_role("admin")
-    {:ok, _} = Forums.add_role(admin, role)
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
-    {:ok, thread} = Forums.create_thread(category, author, %{title: "T", body: "B"})
-    {:ok, _} = Forums.create_post(thread, member, %{body: "reply"})
+    {:ok, author} = Accounts.create_user(%{username: "author", name: "A", email: "a@example.com"})
+    {:ok, member} = Accounts.create_user(%{username: "member", name: "M", email: "m@example.com"})
+    {:ok, admin} = Accounts.create_user(%{username: "admin", name: "Ad", email: "ad@example.com"})
+    {:ok, role} = Groups.create_role("admin")
+    {:ok, _} = Groups.add_role(admin, role)
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+    {:ok, thread} = Discussion.create_thread(category, author, %{title: "T", body: "B"})
+    {:ok, _} = Discussion.create_post(thread, member, %{body: "reply"})
 
     {:ok, author: author, member: member, admin: admin, thread: thread}
   end

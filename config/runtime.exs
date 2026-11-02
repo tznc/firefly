@@ -27,14 +27,14 @@ if config_env() != :test do
     local_dir: System.get_env("FIREFLY_UPLOAD_DIR", "uploads")
 
   # Social logins: each provider is enabled when its client id and secret
-  # are set (see Firefly.Auth).
+  # are set (see Firefly.Accounts.Auth).
   for {provider, config_key} <- [
         {"GITHUB", Ueberauth.Strategy.Github.OAuth},
         {"GOOGLE", Ueberauth.Strategy.Google.OAuth},
         {"DISCORD", Ueberauth.Strategy.Discord.OAuth},
         {"FACEBOOK", Ueberauth.Strategy.Facebook.OAuth},
-        {"X", Firefly.Auth.Strategies.X},
-        {"SLACK", Firefly.Auth.Strategies.Slack}
+        {"X", Firefly.Accounts.Auth.Strategies.X},
+        {"SLACK", Firefly.Accounts.Auth.Strategies.Slack}
       ] do
     config :ueberauth, config_key,
       client_id: System.get_env("FIREFLY_#{provider}_CLIENT_ID"),
@@ -43,38 +43,39 @@ if config_env() != :test do
 
   # Apple's client secret is a JWT signed with the key Apple issued
   # (FIREFLY_APPLE_PRIVATE_KEY, the .p8 file's contents); see
-  # Firefly.Auth.AppleSecret.
+  # Firefly.Accounts.Auth.AppleSecret.
   if System.get_env("FIREFLY_APPLE_PRIVATE_KEY") do
     config :ueberauth, Ueberauth.Strategy.Apple.OAuth,
       client_id: System.get_env("FIREFLY_APPLE_CLIENT_ID"),
-      client_secret: {Firefly.Auth.AppleSecret, :client_secret}
+      client_secret: {Firefly.Accounts.Auth.AppleSecret, :client_secret}
 
-    config :firefly, Firefly.Auth.AppleSecret,
+    config :firefly, Firefly.Accounts.Auth.AppleSecret,
       team_id: System.get_env("FIREFLY_APPLE_TEAM_ID"),
       key_id: System.get_env("FIREFLY_APPLE_KEY_ID"),
       private_key: System.get_env("FIREFLY_APPLE_PRIVATE_KEY")
   end
 
-  # Single sign-on (see Firefly.Auth.OIDC and
-  # Firefly.Auth.DiscourseConnect); FIREFLY_SSO_ONLY makes it the only
+  # Single sign-on (see Firefly.Accounts.Auth.OIDC and
+  # Firefly.Accounts.Auth.DiscourseConnect); FIREFLY_SSO_ONLY makes it the only
   # way to log in.
-  config :firefly, Firefly.Auth.OIDC,
+  config :firefly, Firefly.Accounts.Auth.OIDC,
     discovery_url: System.get_env("FIREFLY_OIDC_DISCOVERY_URL"),
     client_id: System.get_env("FIREFLY_OIDC_CLIENT_ID"),
     client_secret: System.get_env("FIREFLY_OIDC_CLIENT_SECRET"),
     scopes: System.get_env("FIREFLY_OIDC_SCOPES"),
     name: System.get_env("FIREFLY_OIDC_NAME")
 
-  config :firefly, Firefly.Auth.DiscourseConnect,
+  config :firefly, Firefly.Accounts.Auth.DiscourseConnect,
     url: System.get_env("FIREFLY_DISCOURSE_CONNECT_URL"),
     secret: System.get_env("FIREFLY_DISCOURSE_CONNECT_SECRET"),
     name: System.get_env("FIREFLY_DISCOURSE_CONNECT_NAME")
 
-  config :firefly, Firefly.Auth, sso_only: System.get_env("FIREFLY_SSO_ONLY") in ~w(true 1)
+  config :firefly, Firefly.Accounts.Auth,
+    sso_only: System.get_env("FIREFLY_SSO_ONLY") in ~w(true 1)
 
-  # Browser push notifications (Firefly.WebPush): off unless all three
+  # Browser push notifications (Firefly.Notifications.WebPush): off unless all three
   # are set. `mix firefly.gen.vapid_keys` makes a key pair.
-  config :firefly, Firefly.WebPush,
+  config :firefly, Firefly.Notifications.WebPush,
     public_key: System.get_env("FIREFLY_VAPID_PUBLIC_KEY"),
     private_key: System.get_env("FIREFLY_VAPID_PRIVATE_KEY"),
     subject: System.get_env("FIREFLY_VAPID_SUBJECT")

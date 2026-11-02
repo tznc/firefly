@@ -16,6 +16,7 @@ defmodule Firefly.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
+      compilers: [:boundary] ++ Mix.compilers(),
       package: [licenses: ["Apache-2.0"], links: %{"tznc.dev" => "https://tznc.dev"}]
     ]
   end
@@ -29,6 +30,8 @@ defmodule Firefly.MixProject do
 
   defp deps do
     [
+      # Enforces the contexts' public APIs at compile time (see the Firefly module).
+      {:boundary, "~> 0.10.4", runtime: false},
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
       {:phoenix_pubsub, "~> 2.1"},

@@ -5,17 +5,10 @@ defmodule FireflyWeb.PasswordlessTest do
   import Phoenix.LiveViewTest, only: [live: 2, render_hook: 3, assert_reply: 2, render: 1]
   require Phoenix.LiveViewTest
 
-  alias Firefly.{
-    Auth,
-    MagicLinks,
-    Passkeys,
-    Repo,
-    SiteSettings,
-    SoftAuthenticator,
-    TwoFactor
-  }
+  alias Firefly.{Repo, SiteSettings, SoftAuthenticator}
+  alias Firefly.Accounts.{Auth, MagicLinks, Passkeys, TwoFactor}
 
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.User
 
   defp logged_in(conn), do: get_session(conn, :current_user)
 
@@ -120,7 +113,7 @@ defmodule FireflyWeb.PasswordlessTest do
     test "renaming, and removing all but the last way in", %{conn: conn} do
       # No password, no email: the passkey is all they have.
       {:ok, user} =
-        Firefly.Forums.create_user(%{username: "solo", name: "Solo", email: nil})
+        Firefly.Accounts.create_user(%{username: "solo", name: "Solo", email: nil})
 
       {_key, _view} = add_passkey(conn, user)
       [passkey] = Passkeys.list(user)
@@ -200,7 +193,7 @@ defmodule FireflyWeb.PasswordlessTest do
 
     test "never go to unconfirmed addresses", %{conn: _conn} do
       {:ok, _} =
-        Firefly.Forums.register_user(%{
+        Firefly.Accounts.register_user(%{
           username: "unconfirmed",
           email: "new@example.com",
           password: "a long password"

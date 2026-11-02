@@ -4,9 +4,10 @@ defmodule FireflyWeb.EmojiTest do
   import Firefly.DataCase, only: [errors_on: 1]
   import Firefly.UploadHelpers
 
-  alias Firefly.{Emoji, Markdown, Repo, Uploads}
-  alias Firefly.Emoji.CustomEmoji
-  alias Firefly.Forums.StaffAction
+  alias Firefly.{Repo, Uploads}
+  alias Firefly.Rendering.{Emoji, Markdown}
+  alias Firefly.Rendering.Emoji.CustomEmoji
+  alias Firefly.Moderation.StaffAction
   alias Firefly.Uploads.Upload
 
   @moduletag :tmp_dir
@@ -39,7 +40,8 @@ defmodule FireflyWeb.EmojiTest do
       assert [%StaffAction{action: "emoji.create", details: %{"name" => "partyblob"}}] =
                Repo.all(StaffAction)
 
-      assert [%{name: "partyblob"}] = Firefly.AccountExport.build(admin).custom_emoji_added
+      assert [%{name: "partyblob"}] =
+               Firefly.Accounts.AccountExport.build(admin).custom_emoji_added
     end
 
     test "need a valid, free, non-standard name and an image", %{admin: admin, tmp_dir: dir} do

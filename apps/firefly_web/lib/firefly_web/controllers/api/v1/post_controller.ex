@@ -1,7 +1,8 @@
 defmodule FireflyWeb.Api.V1.PostController do
   use FireflyWeb, :controller
 
-  alias Firefly.{Forums, Posting}
+  alias Firefly.Discussion
+  alias Firefly.Moderation.Posting
 
   plug(FireflyWeb.Plugs.RequireApiUser)
 
@@ -9,9 +10,9 @@ defmodule FireflyWeb.Api.V1.PostController do
     user = conn.assigns.current_user
 
     # A merged thread's replies go where its posts went.
-    with %{} = thread <- Forums.get_thread_after_merges(thread_id),
+    with %{} = thread <- Discussion.get_thread_after_merges(thread_id),
          :ok <- Posting.check(user, thread),
-         {:ok, post} <- Forums.create_post(thread, user, %{body: post_params["body"]}) do
+         {:ok, post} <- Discussion.create_post(thread, user, %{body: post_params["body"]}) do
       conn
       |> put_status(201)
       |> render(:show, post: post)

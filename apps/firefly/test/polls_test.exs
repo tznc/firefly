@@ -4,9 +4,13 @@ defmodule Firefly.PollsTest do
   import Firefly.Fixtures,
     only: [user_fixture: 0, admin_fixture: 0, category_fixture: 1, thread_fixture: 3]
 
-  alias Firefly.{AccountDeletion, AccountExport, Forums, Groups, Penalties, Polls}
-  alias Firefly.{TopicTimers, TopicTools}
-  alias Firefly.Forums.{Poll, PollVote, Post, StaffAction}
+  alias Firefly.{Discussion, Groups}
+  alias Firefly.Accounts.{AccountDeletion, AccountExport}
+  alias Firefly.Discussion.Polls
+  alias Firefly.Moderation.Penalties
+  alias Firefly.Moderation.{TopicTimers, TopicTools}
+  alias Firefly.Discussion.{Poll, PollVote, Post}
+  alias Firefly.Moderation.StaffAction
 
   setup do
     admin = admin_fixture()
@@ -19,7 +23,10 @@ defmodule Firefly.PollsTest do
 
   defp poll_post(thread, user, poll_attrs) do
     attrs = Map.merge(%{"options_text" => "Red\nGreen\nBlue"}, poll_attrs)
-    {:ok, post} = Forums.create_post(thread, user, %{body: "a poll", poll: Polls.attrs(attrs, 0)})
+
+    {:ok, post} =
+      Discussion.create_post(thread, user, %{body: "a poll", poll: Polls.attrs(attrs, 0)})
+
     poll = Poll |> Repo.get_by!(post_id: post.id) |> Repo.preload(:options)
     {post, poll}
   end
@@ -43,7 +50,7 @@ defmodule Firefly.PollsTest do
       assert Enum.map(poll.options, & &1.text) == ~w(Red Green Blue)
 
       {:ok, new} =
-        Forums.create_thread(category, author, %{
+        Discussion.create_thread(category, author, %{
           title: "Thread poll",
           body: "pick",
           poll: Polls.attrs(%{"options_text" => "Yes\nNo", "kind" => "single"}, 0)
@@ -55,7 +62,7 @@ defmodule Firefly.PollsTest do
     test "invalid polls stop the post", %{author: author, thread: thread} do
       bad = fn attrs ->
         assert {:error, changeset} =
-                 Forums.create_post(thread, author, %{body: "x", poll: Polls.attrs(attrs, 0)})
+                 Discussion.create_post(thread, author, %{body: "x", poll: Polls.attrs(attrs, 0)})
 
         changeset.changes.poll
       end
@@ -203,22 +210,22 @@ defmodule Firefly.PollsTest do
 
       assert {:error, :unavailable} = Polls.vote(poll, other, choice)
       Repo.update_all(where(Post, id: ^post.id), set: [queued_at: nil])
-      {:ok, _} = Forums.delete_post(Repo.reload!(post), author)
+      {:ok, _} = Discussion.delete_post(Repo.reload!(post), author)
       assert {:error, :unavailable} = Polls.vote(poll, other, choice)
-      {:ok, _} = Forums.restore_post(Repo.reload!(post), admin)
+      {:ok, _} = Discussion.restore_post(Repo.reload!(post), admin)
 
       {:ok, _} = Polls.close(poll, author)
       assert {:error, :poll_closed} = Polls.vote(poll, other, choice)
       {:ok, _} = Polls.reopen(poll, author)
       assert {:ok, _} = Polls.vote(poll, other, choice)
 
-      {:ok, _} = Forums.archive_thread(thread, true, admin)
+      {:ok, _} = Discussion.archive_thread(thread, true, admin)
       assert {:error, :unavailable} = Polls.vote(poll, other, choice)
     end
 
     test "not in a category the voter can't read", %{admin: admin, author: author, voter: voter} do
       {:ok, team} = Groups.create_group(%{name: "team"}, admin)
-      {:ok, secret} = Forums.create_category(%{title: "Secret", role_ids: [team.id]})
+      {:ok, secret} = Discussion.create_category(%{title: "Secret", role_ids: [team.id]})
       thread = thread_fixture(secret, admin, %{title: "Secret poll", body: "x"})
       {_post, poll} = poll_post(thread, admin, %{})
 
@@ -261,7 +268,7 @@ defmodule Firefly.PollsTest do
       {post, poll} =
         poll_post(thread, author, %{"close_at" => Firefly.LocalTime.to_input(at, 0)})
 
-      Forums.subscribe("forums:thread:#{thread.id}")
+      Discussion.subscribe("forums:thread:#{thread.id}")
 
       assert Polls.run_due() == 0
       refute Poll.closed?(poll)
@@ -311,7 +318,7 @@ defmodule Firefly.PollsTest do
         admin
       )
 
-    Forums.subscribe("forums:thread:#{split.id}")
+    Discussion.subscribe("forums:thread:#{split.id}")
 
     {:ok, view} =
       Polls.vote(poll, user_fixture(), %{"option" => to_string(option_id(poll, "Red"))})

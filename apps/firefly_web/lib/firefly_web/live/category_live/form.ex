@@ -1,14 +1,14 @@
 defmodule FireflyWeb.CategoryLive.Form do
   @moduledoc """
   Creates or edits a category, including which groups (roles) it's
-  restricted to (see `Firefly.Forums.Policy`).
+  restricted to (see `Firefly.Discussion.Policy`).
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Forums, Groups, Repo}
-  alias Firefly.Forums.Category
+  alias Firefly.{Discussion, Groups, Repo}
+  alias Firefly.Discussion.Category
 
   @impl true
   def mount(params, _session, socket) do
@@ -29,19 +29,19 @@ defmodule FireflyWeb.CategoryLive.Form do
     |> assign_roles(category)
     |> assign(:page_title, "New Category")
     |> assign(:category, category)
-    |> assign(:parents, Forums.parent_category_options(category))
-    |> assign(:form, to_form(Forums.change_category(category)))
+    |> assign(:parents, Discussion.parent_category_options(category))
+    |> assign(:form, to_form(Discussion.change_category(category)))
   end
 
   defp apply_action(socket, :edit, %{"id" => id}) do
-    category = id |> Forums.get_category!() |> Repo.preload(:roles)
+    category = id |> Discussion.get_category!() |> Repo.preload(:roles)
 
     socket
     |> assign_roles(category)
     |> assign(:page_title, "Edit #{category.title}")
     |> assign(:category, category)
-    |> assign(:parents, Forums.parent_category_options(category))
-    |> assign(:form, to_form(Forums.change_category(category)))
+    |> assign(:parents, Discussion.parent_category_options(category))
+    |> assign(:form, to_form(Discussion.change_category(category)))
   end
 
   defp assign_roles(socket, category) do
@@ -65,7 +65,7 @@ defmodule FireflyWeb.CategoryLive.Form do
   end
 
   defp save(socket, :new, params) do
-    case Forums.create_category(params, socket.assigns.current_user) do
+    case Discussion.create_category(params, socket.assigns.current_user) do
       {:ok, category} ->
         {:noreply,
          socket
@@ -78,7 +78,7 @@ defmodule FireflyWeb.CategoryLive.Form do
   end
 
   defp save(socket, :edit, params) do
-    case Forums.update_category(socket.assigns.category, params, socket.assigns.current_user) do
+    case Discussion.update_category(socket.assigns.category, params, socket.assigns.current_user) do
       {:ok, category} ->
         {:noreply,
          socket

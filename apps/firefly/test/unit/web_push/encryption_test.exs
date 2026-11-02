@@ -1,7 +1,7 @@
-defmodule Firefly.WebPush.EncryptionTest do
+defmodule Firefly.Notifications.WebPush.EncryptionTest do
   use ExUnit.Case, async: true
 
-  alias Firefly.WebPush.Encryption
+  alias Firefly.Notifications.WebPush.Encryption
 
   # RFC 8291, Appendix A.
   @plaintext "When I grow up, I want to be a watermelon"

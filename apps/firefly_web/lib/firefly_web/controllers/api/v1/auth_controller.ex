@@ -2,17 +2,18 @@ defmodule FireflyWeb.Api.V1.AuthController do
   @moduledoc """
   Trades a username and password for the user's API token. Users with
   two-factor authentication also send a current code (`user[otp]`, an
-  authenticator or backup code; see `Firefly.TwoFactor`).
+  authenticator or backup code; see `Firefly.Accounts.TwoFactor`).
   """
   use FireflyWeb, :controller
-  alias Firefly.{Forums, Penalties, RateLimit, TwoFactor}
-  alias Firefly.Forums.User
+  alias Firefly.{Accounts, RateLimit}
+  alias Firefly.Accounts.{TwoFactor, User}
+  alias Firefly.Moderation.Penalties
 
   def identity(conn, %{"user" => user_params}) do
-    with true <- Firefly.Auth.password_login?() || {:error, :sso_only},
+    with true <- Firefly.Accounts.Auth.password_login?() || {:error, :sso_only},
          :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-
-           Forums.authenticate_by_password(user_params["username"], user_params["password"]),
+           Accounts.authenticate_by_password(user_params["username"], user_params["password"]),
          true <- not User.suspended?(user) || {:suspended, user},
          :ok <- second_factor(user, user_params["otp"]) do
       json(conn, %{"data" => %{"api_token" => user.api_token}})

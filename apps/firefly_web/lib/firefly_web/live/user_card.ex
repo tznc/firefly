@@ -7,7 +7,7 @@ defmodule FireflyWeb.UserCard do
   badges (see `Firefly.Badges`), stats, when they
   joined and were last seen, and actions: message
   them, open their profile, mute or ignore them (see
-  `Firefly.Ignores`). A hidden profile (see `Firefly.Profiles`)
+  `Firefly.Accounts.Ignores`). A hidden profile (see `Firefly.Accounts.Profiles`)
   shows only the username and avatar. Muting or ignoring from the card
   sends the page `{:ignores_changed, viewer}`.
 
@@ -17,15 +17,16 @@ defmodule FireflyWeb.UserCard do
   """
   use FireflyWeb, :live_component
 
-  alias Firefly.{Badges, Forums, Ignores, Profiles, TrustLevels}
-  alias Firefly.Forums.User
+  alias Firefly.{Accounts, Badges, TrustLevels}
+  alias Firefly.Accounts.{Ignores, Profiles}
+  alias Firefly.Accounts.User
 
   @impl true
   def mount(socket), do: {:ok, assign(socket, :user, nil)}
 
   @impl true
   def handle_event("open", %{"user-id" => id}, socket) do
-    case Forums.get_user(id) do
+    case Accounts.get_user(id) do
       %User{} = user -> {:noreply, open(socket, user)}
       nil -> {:noreply, socket}
     end
@@ -52,7 +53,7 @@ defmodule FireflyWeb.UserCard do
   defp open(socket, user) do
     viewer = socket.assigns.current_user
     visible? = Profiles.visible?(user, viewer)
-    ignorable? = viewer != nil and viewer.id != user.id and not Forums.admin?(user)
+    ignorable? = viewer != nil and viewer.id != user.id and not Accounts.admin?(user)
 
     socket
     |> assign(:user, user)

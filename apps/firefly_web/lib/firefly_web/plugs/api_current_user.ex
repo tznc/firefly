@@ -6,8 +6,8 @@ defmodule FireflyWeb.Plugs.ApiCurrentUser do
   """
 
   import Plug.Conn
-  alias Firefly.Forums
-  alias Firefly.Forums.User
+  alias Firefly.Accounts
+  alias Firefly.Accounts.User
 
   def init(options), do: options
 
@@ -21,7 +21,7 @@ defmodule FireflyWeb.Plugs.ApiCurrentUser do
           authorization
           |> String.replace("Bearer ", "")
 
-        case Forums.get_user_by_api_token(api_token) do
+        case Accounts.get_user_by_api_token(api_token) do
           %{deleted_at: nil} = user -> assign_unless_suspended(conn, user)
           _missing_or_deleted -> conn
         end

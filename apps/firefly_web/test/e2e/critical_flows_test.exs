@@ -1,7 +1,7 @@
 defmodule FireflyWeb.E2E.CriticalFlowsTest do
   use FireflyWeb.E2ECase, async: false
 
-  alias Firefly.Forums
+  alias Firefly.Discussion
 
   test "a new member registers, logs out and logs back in", %{conn: conn} do
     conn
@@ -56,10 +56,10 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
   test "a reply appears live for someone already reading the thread", %{conn: conn} = context do
     alice = member_fixture("alice")
     member_fixture("bob")
-    category = Forums.create_category(%{title: "Elixir"}) |> elem(1)
+    category = Discussion.create_category(%{title: "Elixir"}) |> elem(1)
 
     {:ok, thread} =
-      Forums.create_thread(category, alice, %{title: "OTP is cool", body: "Don't you think?"})
+      Discussion.create_thread(category, alice, %{title: "OTP is cool", body: "Don't you think?"})
 
     thread_path = "/categories/#{category.id}/threads/#{thread.id}"
 
@@ -86,10 +86,10 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     start_supervised!(Firefly.Notifications)
     alice = member_fixture("alice")
     member_fixture("bob")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, thread} =
-      Forums.create_thread(category, alice, %{title: "GenStage", body: "Kinda streamy no?"})
+      Discussion.create_thread(category, alice, %{title: "GenStage", body: "Kinda streamy no?"})
 
     thread_path = "/categories/#{category.id}/threads/#{thread.id}"
 
@@ -123,7 +123,7 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
        %{conn: conn} = context do
     admin_fixture("root")
     member_fixture("alice")
-    {:ok, _} = Forums.create_category(%{title: "Elixir"})
+    {:ok, _} = Discussion.create_category(%{title: "Elixir"})
 
     conn
     |> log_in("root")
@@ -142,10 +142,10 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
   test "selecting text in a post and clicking Quote quotes just the selection", %{conn: conn} do
     alice = member_fixture("alice")
     member_fixture("bob")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, thread} =
-      Forums.create_thread(category, alice, %{
+      Discussion.create_thread(category, alice, %{
         title: "Supervision",
         body: "Let it crash. Supervisors restart children for you."
       })
@@ -181,8 +181,8 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
   test "typing @ in the editor suggests users to mention", %{conn: conn} do
     alice = member_fixture("alice")
     member_fixture("bob")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
-    {:ok, thread} = Forums.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+    {:ok, thread} = Discussion.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
 
     conn
     |> log_in("bob")
@@ -199,8 +199,8 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
   test "a file pasted into the editor is uploaded and shown in the reply", %{conn: conn} do
     alice = member_fixture("alice")
     member_fixture("bob")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
-    {:ok, thread} = Forums.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+    {:ok, thread} = Discussion.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
 
     conn
     |> log_in("bob")
@@ -221,8 +221,8 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
 
   test "emoji come from the picker and from typing a colon", %{conn: conn} do
     alice = member_fixture("alice")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
-    {:ok, thread} = Forums.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
+    {:ok, thread} = Discussion.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
 
     conn
     |> log_in("alice")
@@ -243,10 +243,10 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
 
   test "a spoiler stays hidden until clicked or activated by keyboard", %{conn: conn} do
     alice = member_fixture("alice")
-    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, category} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, thread} =
-      Forums.create_thread(category, alice, %{
+      Discussion.create_thread(category, alice, %{
         title: "Endings",
         body: "It was [spoiler]the butler[/spoiler]. And [spoiler]the cook[/spoiler]."
       })
@@ -269,10 +269,10 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
 
   test "math is typeset with the vendored KaTeX", %{conn: conn} do
     alice = member_fixture("alice")
-    {:ok, category} = Forums.create_category(%{title: "Math"})
+    {:ok, category} = Discussion.create_category(%{title: "Math"})
 
     {:ok, thread} =
-      Forums.create_thread(category, alice, %{title: "Circles", body: "Area: $\\pi r^2$"})
+      Discussion.create_thread(category, alice, %{title: "Circles", body: "Area: $\\pi r^2$"})
 
     [post] = thread.posts
 
@@ -283,8 +283,8 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
 
   test "a reply draft survives leaving the page straight after typing", %{conn: conn} do
     alice = member_fixture("alice")
-    category = Forums.create_category(%{title: "Elixir"}) |> elem(1)
-    {:ok, thread} = Forums.create_thread(category, alice, %{title: "OTP", body: "Thoughts?"})
+    category = Discussion.create_category(%{title: "Elixir"}) |> elem(1)
+    {:ok, thread} = Discussion.create_thread(category, alice, %{title: "OTP", body: "Thoughts?"})
     reply_path = "/categories/#{category.id}/threads/#{thread.id}/posts/new"
 
     conn

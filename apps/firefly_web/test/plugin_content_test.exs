@@ -5,7 +5,8 @@ defmodule FireflyWeb.PluginContentTest do
 
   import FireflyPlugins.PluginHelpers
 
-  alias Firefly.{Forums, Markdown, Plugins, Repo}
+  alias Firefly.{Discussion, Groups, Plugins, Repo}
+  alias Firefly.Rendering.Markdown
   alias Firefly.Plugins.Health
   alias FireflyPlugins.Test.GreeterPlugin
 
@@ -136,8 +137,8 @@ defmodule FireflyWeb.PluginContentTest do
 
   test "posts in private categories never reach plugins", %{admin: admin} do
     transformer(admin, "peek", "exports.render_post = ({html}) => html + '<p>seen</p>'")
-    {:ok, role} = Forums.create_role("staff")
-    {:ok, private} = Forums.create_category(%{title: "Staff", role_ids: [role.id]})
+    {:ok, role} = Groups.create_role("staff")
+    {:ok, private} = Discussion.create_category(%{title: "Staff", role_ids: [role.id]})
     thread = thread_fixture(private, admin)
     [post] = Repo.preload(thread, :posts).posts
 
@@ -183,7 +184,7 @@ defmodule FireflyWeb.PluginContentTest do
   test "the thread page shows transformed posts and the composer has plugin buttons",
        %{admin: admin, conn: conn, thread: thread} do
     spoiler_plugin(admin)
-    {:ok, _} = Forums.create_post(thread, admin, %{body: "[spoiler]The butler[/spoiler]"})
+    {:ok, _} = Discussion.create_post(thread, admin, %{body: "[spoiler]The butler[/spoiler]"})
 
     conn
     |> log_in_as(admin)

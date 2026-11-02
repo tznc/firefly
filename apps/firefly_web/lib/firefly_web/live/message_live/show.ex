@@ -8,23 +8,24 @@ defmodule FireflyWeb.MessageLive.Show do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Messages, Posting}
-  alias Firefly.Forums.Message
+  alias Firefly.Messaging
+  alias Firefly.Moderation.Posting
+  alias Firefly.Messaging.Message
   alias FireflyWeb.Editor
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     user = socket.assigns.current_user
-    conversation = Messages.get_conversation(id)
+    conversation = Messaging.get_conversation(id)
 
     if conversation && can?(user, :view_conversation, conversation) do
-      if connected?(socket), do: Messages.subscribe(conversation)
+      if connected?(socket), do: Messaging.subscribe(conversation)
 
       {:ok,
        socket
        |> assign(:page_title, conversation.title)
        |> assign(:conversation, conversation)
-       |> assign(:last_read_id, Messages.last_read_message_id(conversation, user))
+       |> assign(:last_read_id, Messaging.last_read_message_id(conversation, user))
        |> assign(:add_form, to_form(%{"usernames" => ""}, as: :add))
        |> assign_reply_form(%{})
        |> load()
@@ -57,7 +58,7 @@ defmodule FireflyWeb.MessageLive.Show do
     %{conversation: conversation, current_user: user} = socket.assigns
 
     with :ok <- Posting.check(user),
-         {:ok, _message} <- Messages.reply(conversation, user, %{body: params["body"]}) do
+         {:ok, _message} <- Messaging.reply(conversation, user, %{body: params["body"]}) do
       {:noreply, socket |> assign_reply_form(%{}) |> load()}
     else
       {:error, %Ecto.Changeset{} = changeset} ->
@@ -76,7 +77,7 @@ defmodule FireflyWeb.MessageLive.Show do
 
     with true <- can?(user, :add_participants, conversation),
          :ok <- Posting.check(user, :like),
-         {:ok, added} <- Messages.add_participants(conversation, user, usernames) do
+         {:ok, added} <- Messaging.add_participants(conversation, user, usernames) do
       {:noreply,
        socket
        |> put_flash(:info, "Added #{Enum.map_join(added, ", ", &"@#{&1.username}")}.")
@@ -104,7 +105,7 @@ defmodule FireflyWeb.MessageLive.Show do
   end
 
   def handle_event("leave", _params, socket) do
-    :ok = Messages.leave(socket.assigns.conversation, socket.assigns.current_user)
+    :ok = Messaging.leave(socket.assigns.conversation, socket.assigns.current_user)
 
     {:noreply,
      socket
@@ -124,11 +125,11 @@ defmodule FireflyWeb.MessageLive.Show do
 
   defp load(socket) do
     %{conversation: conversation, current_user: user} = socket.assigns
-    if connected?(socket), do: Messages.mark_read(conversation, user)
+    if connected?(socket), do: Messaging.mark_read(conversation, user)
 
     socket
-    |> assign(:messages, Messages.messages(conversation))
-    |> assign(:participants, Messages.participants(conversation))
+    |> assign(:messages, Messaging.messages(conversation))
+    |> assign(:participants, Messaging.participants(conversation))
     |> assign(:can_add?, can?(user, :add_participants, conversation))
   end
 

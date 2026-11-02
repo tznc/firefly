@@ -36,7 +36,7 @@ defmodule Firefly.Plugins.UI do
   """
 
   alias Firefly.{Plugin, Plugins, RateLimit}
-  alias Firefly.Forums.User
+  alias Firefly.Accounts.User
   alias Firefly.Plugin.Runner
   alias Firefly.Plugins.{Content, Storage}
 
