@@ -1,5 +1,7 @@
 defmodule FirestormWeb.TagsTest do
   use FirestormWeb.DataCase
+  # The notifications process delivers emails; route them to this test.
+  use Bamboo.Test, shared: true
 
   alias FirestormWeb.{Forums, Notifications, Repo}
   alias FirestormWeb.Forums.{Subscriptions, Tag}

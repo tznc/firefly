@@ -1,5 +1,7 @@
 defmodule FirestormWeb.Web.AdminTest do
   use FirestormWeb.Web.ConnCase
+  # The notifications process delivers emails; route them to this test.
+  use Bamboo.Test, shared: true
 
   test "visitors are sent away from /admin", %{conn: conn} do
     conn
