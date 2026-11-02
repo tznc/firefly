@@ -13,13 +13,17 @@ defmodule FirestormWeb.Uploads.Processor do
   fit `max_dimension` pixels, plus a thumbnail when larger than
   `thumbnail_size/0`. Animated GIFs keep their frames, so they're stored
   as uploaded (GIF has no EXIF to strip) with no downscaling or thumbnail.
-  Avatars are cropped square to `avatar_size/0`; custom emoji are scaled
+  Avatars are cropped square to `avatar_size/0`, with a square
+  `avatar_thumbnail_size/0` thumbnail for small avatars in lists; profile
+  and user card backgrounds are scaled to fit `background_size/0`; custom emoji are scaled
   to fit `emoji_size/0` (animated GIF emoji are kept as uploaded), link
   preview images to fit `thumbnail_size/0`.
   """
 
   @thumbnail_size 640
   @avatar_size 256
+  @avatar_thumbnail_size 96
+  @background_size 1600
   @emoji_size 128
   # Pixels a decoded image may have: bigger is a decompression bomb, not a photo.
   @max_pixels 50_000_000
@@ -29,6 +33,12 @@ defmodule FirestormWeb.Uploads.Processor do
 
   @doc "An avatar's side, in pixels."
   def avatar_size, do: @avatar_size
+
+  @doc "A small avatar's side, in pixels."
+  def avatar_thumbnail_size, do: @avatar_thumbnail_size
+
+  @doc "A profile or card background's longest side, in pixels."
+  def background_size, do: @background_size
 
   @doc "A custom emoji's longest side, in pixels."
   def emoji_size, do: @emoji_size
@@ -62,7 +72,8 @@ defmodule FirestormWeb.Uploads.Processor do
 
   @doc """
   Prepares `data` of `content_type` for storing. `:max_dimension` caps an
-  image's longest side; `variant: "avatar"` crops it square, `"emoji"`
+  image's longest side; `variant: "avatar"` crops it square (with a small
+  square thumbnail), `"background"` fits it to `background_size/0`, `"emoji"`
   scales it to emoji size. Returns
   `{:ok, %{data: data, width: w, height: h, thumbnail: data | nil}}`
   (no dimensions for other files) or `{:error, message}`.
@@ -73,6 +84,7 @@ defmodule FirestormWeb.Uploads.Processor do
       case opts[:variant] do
         "avatar" -> avatar(image, content_type)
         "emoji" -> image(data, image, content_type, @emoji_size)
+        "background" -> image(data, image, content_type, @background_size)
         "preview" -> image(data, image, content_type, @thumbnail_size)
         nil -> image(data, image, content_type, opts[:max_dimension])
       end
@@ -114,8 +126,11 @@ defmodule FirestormWeb.Uploads.Processor do
   defp avatar(image, content_type) do
     with {:ok, {image, _flags}} <- Image.autorotate(image),
          {:ok, image} <- Image.thumbnail(image, @avatar_size, crop: :attention),
-         {:ok, data} <- encode(image, content_type) do
-      {:ok, %{data: data, width: Image.width(image), height: Image.height(image), thumbnail: nil}}
+         {:ok, small} <- Image.thumbnail(image, @avatar_thumbnail_size, crop: :attention),
+         {:ok, data} <- encode(image, content_type),
+         {:ok, thumbnail} <- encode(small, content_type) do
+      {:ok,
+       %{data: data, width: Image.width(image), height: Image.height(image), thumbnail: thumbnail}}
     else
       {:error, _reason} -> {:error, "That image couldn't be processed."}
     end

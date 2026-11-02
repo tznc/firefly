@@ -2209,13 +2209,76 @@ defmodule FirestormWeb.Forums do
     Enum.reject(users, &MapSet.member?(muted, &1.id))
   end
 
-  @doc "A page of `user`'s posts that `viewer` may read, newest first."
-  def user_posts(user, viewer, %{page: page}) do
+  @doc """
+  A page of `user`'s activity that `viewer` may read, newest first.
+  `filter`: `"all"` their posts, `"topics"` the threads they started (their
+  first posts), `"replies"` their other posts, `"solved"` their replies
+  accepted as answers, `"likes"` the posts they liked (newest like first).
+  """
+  def user_posts(user, viewer, %{page: page} = opts) do
     user
-    |> readable_posts_by(viewer)
-    |> order_by([p], desc: p.inserted_at)
+    |> user_activity(viewer, Map.get(opts, :filter, "all"))
     |> preload([p], thread: [:category], user: [])
     |> Repo.paginate(page: page)
+  end
+
+  defp user_activity(user, viewer, "likes") do
+    Post
+    |> Post.visible()
+    |> join(:inner, [p], l in PostLike,
+      as: :like,
+      on: l.post_id == p.id and l.user_id == ^user.id
+    )
+    |> join(:inner, [p], t in assoc(p, :thread), as: :thread)
+    |> Policy.readable_threads(viewer)
+    |> where([p], is_nil(p.hidden_at))
+    |> order_by([like: l], desc: l.inserted_at)
+  end
+
+  defp user_activity(user, viewer, filter) do
+    user
+    |> readable_posts_by(viewer)
+    |> activity_filter(filter)
+    |> order_by([p], desc: p.inserted_at)
+  end
+
+  defp activity_filter(query, "topics"), do: where(query, ^first_post())
+  defp activity_filter(query, "replies"), do: where(query, ^dynamic(not (^first_post())))
+
+  defp activity_filter(query, "solved"),
+    do: where(query, [p, thread: t], t.accepted_post_id == p.id)
+
+  defp activity_filter(query, _all), do: query
+
+  # The post (the query's first binding) is its thread's first.
+  defp first_post do
+    dynamic(
+      [p],
+      fragment(
+        "? = (SELECT f.id FROM forums_posts f WHERE f.thread_id = ? ORDER BY f.inserted_at, f.id LIMIT 1)",
+        p.id,
+        p.thread_id
+      )
+    )
+  end
+
+  @doc """
+  `user`'s most liked threads (`:topics`, by their first post) or replies
+  (`:replies`) that `viewer` may read: up to `limit` `{post, likes}`, with
+  their threads.
+  """
+  def top_user_posts(user, viewer, kind, limit \\ 5) when kind in [:topics, :replies] do
+    user
+    |> readable_posts_by(viewer)
+    |> activity_filter(to_string(kind))
+    |> join(:left, [p], l in PostLike, as: :like, on: l.post_id == p.id)
+    |> group_by([p], p.id)
+    |> having([like: l], count(l.id) > 0)
+    |> order_by([p, like: l], desc: count(l.id), desc: p.inserted_at)
+    |> limit(^limit)
+    |> select([p, like: l], {p, count(l.id)})
+    |> Repo.all()
+    |> Enum.map(fn {post, likes} -> {Repo.preload(post, thread: [:category]), likes} end)
   end
 
   @doc "`user`'s latest post that `viewer` may read."

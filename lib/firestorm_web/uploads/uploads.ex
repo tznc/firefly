@@ -31,7 +31,7 @@ defmodule FirestormWeb.Uploads do
   alias FirestormWeb.Uploads.{Processor, Storage, Upload}
 
   # Uploads stored processed their own way, attached as soon as they're made.
-  @variants ~w(avatar emoji preview)
+  @variants ~w(avatar background emoji preview)
   @token_pattern ~r"/uploads/([A-Za-z0-9_-]{22})/"
 
   @doc "The largest file accepted, in bytes (the `max_upload_kb` setting)."
@@ -334,34 +334,53 @@ defmodule FirestormWeb.Uploads do
   defp target_field(%Post{}), do: {"post", :post_id}
   defp target_field(%Message{}), do: {"message", :message_id}
 
-  ## Avatars
+  ## Profile images
 
-  @doc "Makes the image at `path` `user`'s avatar, replacing any previous one."
-  def set_avatar(%User{} = user, path, filename) do
-    with {:ok, upload} <- create(user, path, filename, variant: "avatar") do
-      previous = user.avatar_upload_id
+  # A user's images: the upload variant and the user field holding it.
+  @profile_images %{
+    avatar: {"avatar", :avatar_upload_id},
+    profile_background: {"background", :profile_background_upload_id},
+    card_background: {"background", :card_background_upload_id}
+  }
 
-      {:ok, user} =
-        user |> Ecto.Changeset.change(avatar_upload_id: upload.id) |> Repo.update()
+  @doc "The profile images a user can upload: `:avatar`, `:profile_background`, `:card_background`."
+  def profile_images, do: Map.keys(@profile_images)
 
+  @doc """
+  Makes the image at `path` `user`'s `image` (see `profile_images/0`),
+  replacing any previous one.
+  """
+  def set_profile_image(%User{} = user, image, path, filename)
+      when is_map_key(@profile_images, image) do
+    {variant, field} = @profile_images[image]
+
+    with {:ok, upload} <- create(user, path, filename, variant: variant) do
+      previous = Map.fetch!(user, field)
+      {:ok, user} = user |> Ecto.Changeset.change([{field, upload.id}]) |> Repo.update()
       if previous && previous != upload.id, do: remove_by_id(previous)
       {:ok, user}
     end
   end
 
-  @doc "Goes back to the generated avatar."
-  def remove_avatar(%User{avatar_upload_id: nil} = user), do: {:ok, user}
+  @doc "Removes `user`'s `image` (an avatar goes back to the generated one)."
+  def remove_profile_image(%User{} = user, image) when is_map_key(@profile_images, image) do
+    {_variant, field} = @profile_images[image]
 
-  def remove_avatar(%User{avatar_upload_id: id} = user) do
-    {:ok, user} = user |> Ecto.Changeset.change(avatar_upload_id: nil) |> Repo.update()
-    remove_by_id(id)
-    {:ok, user}
+    case Map.fetch!(user, field) do
+      nil ->
+        {:ok, user}
+
+      id ->
+        {:ok, user} = user |> Ecto.Changeset.change([{field, nil}]) |> Repo.update()
+        remove_by_id(id)
+        {:ok, user}
+    end
   end
 
-  @doc "The avatar upload with that id (a string from a URL), or nil."
-  def get_avatar(id) do
+  @doc "The upload of `variant` (avatar or background) with that id (a string from a URL), or nil."
+  def get_profile_image(variant, id) when variant in ~w(avatar background) do
     case Integer.parse(to_string(id)) do
-      {id, ""} -> Repo.get_by(Upload, id: id, attached_to: "avatar")
+      {id, ""} -> Repo.get_by(Upload, id: id, attached_to: variant)
       _invalid -> nil
     end
   end
@@ -445,10 +464,11 @@ defmodule FirestormWeb.Uploads do
       {:ok, upload}
     end)
 
-    if upload.attached_to == "avatar" do
+    # Whoever showed it goes without.
+    for {variant, field} <- Map.values(@profile_images), upload.attached_to == variant do
       User
-      |> where([u], u.avatar_upload_id == ^upload.id)
-      |> Repo.update_all(set: [avatar_upload_id: nil])
+      |> where([u], field(u, ^field) == ^upload.id)
+      |> Repo.update_all(set: [{field, nil}])
     end
 
     remove(upload)
@@ -484,14 +504,14 @@ defmodule FirestormWeb.Uploads do
   end
 
   @doc """
-  For account deletion: removes `user`'s avatar and the uploads they never
+  For account deletion: removes `user`'s avatar, backgrounds and the uploads they never
   used. Those in posts and messages stay with them, as the posts and
   messages do (with the anonymized author).
   """
   def delete_account_uploads(%User{id: user_id}) do
     Upload
     |> where([u], u.user_id == ^user_id)
-    |> where([u], is_nil(u.attached_to) or u.attached_to == "avatar")
+    |> where([u], is_nil(u.attached_to) or u.attached_to in ["avatar", "background"])
     |> Repo.all()
     |> Enum.each(&remove/1)
   end

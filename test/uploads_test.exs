@@ -302,25 +302,54 @@ defmodule FirestormWeb.UploadsTest do
 
   describe "avatars" do
     test "are cropped square, public and replace the previous one", %{user: user, tmp_dir: dir} do
-      {:ok, user} = Uploads.set_avatar(user, image_file(dir, "me.png", 600, 300), "me.png")
+      {:ok, user} =
+        Uploads.set_profile_image(user, :avatar, image_file(dir, "me.png", 600, 300), "me.png")
+
       first = Repo.get!(Upload, user.avatar_upload_id)
       assert {first.width, first.height} == {256, 256}
       assert first.attached_to == "avatar"
       assert Uploads.readable?(first, nil)
+      assert first.thumbnail
       assert FirestormWeb.Forums.User.avatar_url(user) == "/avatars/#{first.id}"
+      assert FirestormWeb.Forums.User.avatar_url(user, 96) == "/avatars/#{first.id}/small"
 
-      {:ok, user} = Uploads.set_avatar(user, image_file(dir, "me2.png", 300, 600), "me2.png")
+      {:ok, user} =
+        Uploads.set_profile_image(user, :avatar, image_file(dir, "me2.png", 300, 600), "me2.png")
+
       refute Repo.reload(first)
       assert user.avatar_upload_id
 
-      {:ok, user} = Uploads.remove_avatar(user)
+      {:ok, user} = Uploads.remove_profile_image(user, :avatar)
       refute user.avatar_upload_id
       assert Repo.aggregate(Upload, :count) == 0
     end
 
+    test "backgrounds are scaled to fit and public", %{user: user, tmp_dir: dir} do
+      {:ok, user} =
+        Uploads.set_profile_image(
+          user,
+          :profile_background,
+          image_file(dir, "bg.png", 2000, 500),
+          "bg.png"
+        )
+
+      background = Repo.get!(Upload, user.profile_background_upload_id)
+      assert {background.width, background.attached_to} == {1600, "background"}
+      assert Uploads.readable?(background, nil)
+
+      assert FirestormWeb.Forums.User.background_url(user, :profile_background) ==
+               "/backgrounds/#{background.id}"
+
+      assert FirestormWeb.Forums.User.background_url(user, :card_background) == nil
+
+      {:ok, user} = Uploads.remove_profile_image(user, :profile_background)
+      refute user.profile_background_upload_id
+      refute Repo.reload(background)
+    end
+
     test "must be images", %{user: user, tmp_dir: dir} do
       assert {:error, "An avatar must be an image."} =
-               Uploads.set_avatar(user, file(dir, "a.txt", "text"), "a.txt")
+               Uploads.set_profile_image(user, :avatar, file(dir, "a.txt", "text"), "a.txt")
     end
   end
 
@@ -332,7 +361,7 @@ defmodule FirestormWeb.UploadsTest do
       {:ok, unused} = Uploads.create(user, image_file(dir, "a.png", 40, 40), "a.png")
       {:ok, used} = Uploads.create(user, image_file(dir, "b.png", 41, 41), "b.png")
       :ok = Uploads.attach(Uploads.markdown(used), user, post_fixture(user))
-      {:ok, user} = Uploads.set_avatar(user, image_file(dir, "me.png"), "me.png")
+      {:ok, user} = Uploads.set_profile_image(user, :avatar, image_file(dir, "me.png"), "me.png")
 
       export = AccountExport.build(user)
       assert length(export.uploads) == 3
@@ -398,8 +427,10 @@ defmodule FirestormWeb.UploadsTest do
       assert response.status == 200
       assert response.resp_body |> Image.from_binary!() |> Image.width() == 640
 
-      {:ok, user} = Uploads.set_avatar(user, image_file(dir, "me.png"), "me.png")
+      {:ok, user} = Uploads.set_profile_image(user, :avatar, image_file(dir, "me.png"), "me.png")
       assert get(conn, "/avatars/#{user.avatar_upload_id}").status == 200
+      small = get(conn, "/avatars/#{user.avatar_upload_id}/small")
+      assert small.resp_body |> Image.from_binary!() |> Image.width() == 96
       assert get(conn, "/avatars/#{upload.id}").status == 404
       assert get(conn, "/avatars/nope").status == 404
     end

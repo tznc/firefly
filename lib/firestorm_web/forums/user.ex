@@ -30,8 +30,12 @@ defmodule FirestormWeb.Forums.User do
     field(:deleted_at, :utc_datetime)
     # When the user last had a page open (see FirestormWeb.Visits).
     field(:last_seen_at, :utc_datetime)
-    # An uploaded profile picture (see FirestormWeb.Uploads.set_avatar/3).
+    # Uploaded profile images (see FirestormWeb.Uploads.set_profile_image/4).
     field(:avatar_upload_id, :id)
+    field(:profile_background_upload_id, :id)
+    field(:card_background_upload_id, :id)
+    # Hides the profile, user card and last seen from others (see FirestormWeb.Profiles).
+    field(:hide_profile, :boolean, default: false)
     field(:silenced_until, :utc_datetime)
     field(:silence_reason, :string)
     field(:suspended_until, :utc_datetime)
@@ -86,13 +90,21 @@ defmodule FirestormWeb.Forums.User do
       :reply_level,
       :new_thread_level,
       :hide_profile_activity,
-      :hide_from_directory
+      :hide_from_directory,
+      :hide_profile
     ])
     |> validate_required([:theme, :reply_level, :new_thread_level])
     |> validate_inclusion(:theme, themes())
     |> validate_inclusion(:reply_level, reply_levels())
     |> validate_inclusion(:new_thread_level, new_thread_levels())
   end
+
+  @doc "The profile or user card background's URL (`image`: `:profile_background` or `:card_background`), or nil."
+  def background_url(%__MODULE__{profile_background_upload_id: id}, :profile_background),
+    do: id && "/backgrounds/#{id}"
+
+  def background_url(%__MODULE__{card_background_upload_id: id}, :card_background),
+    do: id && "/backgrounds/#{id}"
 
   @doc "Whether the account was deleted (it remains, anonymized, as its posts' author)."
   def deleted?(%__MODULE__{deleted_at: deleted_at}), do: not is_nil(deleted_at)
@@ -216,8 +228,11 @@ defmodule FirestormWeb.Forums.User do
   """
   def avatar_url(user, size \\ 256)
 
-  def avatar_url(%__MODULE__{avatar_upload_id: id}, _size) when is_integer(id),
-    do: "/avatars/#{id}"
+  def avatar_url(%__MODULE__{avatar_upload_id: id}, size) when is_integer(id) do
+    if size <= FirestormWeb.Uploads.Processor.avatar_thumbnail_size(),
+      do: "/avatars/#{id}/small",
+      else: "/avatars/#{id}"
+  end
 
   def avatar_url(%__MODULE__{email: email, username: username}, size) do
     (email || "#{username}@users.firestorm.invalid")

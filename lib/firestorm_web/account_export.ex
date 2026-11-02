@@ -45,7 +45,7 @@ defmodule FirestormWeb.AccountExport do
   @profile ~w(id username name email bio website location github_uid confirmed_at inserted_at
               last_seen_at)a
   @preferences ~w(theme email_notifications allow_private_messages reply_level new_thread_level
-                  hide_profile_activity hide_from_directory)a
+                  hide_profile hide_profile_activity hide_from_directory)a
 
   @doc "The export as a JSON string."
   def to_json(%User{} = user), do: user |> build() |> Jason.encode!(pretty: true)

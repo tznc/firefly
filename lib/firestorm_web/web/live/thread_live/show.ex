@@ -29,6 +29,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   Admins make posts wikis (or not); members may then edit them (see the
   `:edit_post` policy).
 
+  Clicking a post's author opens their user card (`FirestormWeb.Web.UserCard`).
+
   Posts by users the viewer ignores (see `FirestormWeb.Ignores`) are
   collapsed into an "ignored content" placeholder until revealed.
   """
@@ -159,6 +161,10 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
      |> put_flash(:error, "This thread was deleted.")
      |> push_navigate(to: ~p"/categories/#{socket.assigns.category}")}
   end
+
+  # Muted or ignored someone from a user card.
+  def handle_info({:ignores_changed, viewer}, socket),
+    do: {:noreply, assign(socket, :ignored_user_ids, MapSet.new(Ignores.ignored_ids(viewer)))}
 
   def handle_info({_event, _thread}, socket), do: {:noreply, socket}
 
@@ -715,6 +721,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             thread={@thread}
             viewer={@current_user}
             refs={@refs}
+            card_target="#user-card"
             can_edit={MapSet.member?(@editable_ids, @first_post.id)}
           >
             <:poll :if={@polls[@first_post.id]}>
@@ -790,6 +797,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
             thread={@thread}
             viewer={@current_user}
             refs={@refs}
+            card_target="#user-card"
             can_edit={MapSet.member?(@editable_ids, post.id)}
             accepted={post.id == @thread.accepted_post_id}
           >
@@ -848,6 +856,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           <.bookmark_form :if={@bookmarking == post.id} form={@bookmark_form} />
         </li>
       </ol>
+
+      <.live_component module={FirestormWeb.Web.UserCard} id="user-card" current_user={@current_user} />
 
       <div :if={@timer} id="thread-timer" role="status" class="alert alert-info">
         <.icon name="hero-clock" class="size-5" />

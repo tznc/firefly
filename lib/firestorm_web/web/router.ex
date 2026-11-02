@@ -64,6 +64,13 @@ defmodule FirestormWeb.Web.Router do
     pipe_through(:uploads)
 
     get("/:id", UploadController, :avatar)
+    get("/:id/:size", UploadController, :avatar)
+  end
+
+  scope "/backgrounds", FirestormWeb.Web do
+    pipe_through(:uploads)
+
+    get("/:id", UploadController, :background)
   end
 
   # Plugins' inbound endpoints, authenticated per plugin.
@@ -131,6 +138,7 @@ defmodule FirestormWeb.Web.Router do
       live("/reset-password/:token", AuthLive.ResetPassword, :edit)
       live("/users", UserLive.Index, :index)
       live("/users/:id", UserLive.Show, :show)
+      live("/users/:id/summary", UserLive.Show, :summary)
       live("/search", SearchLive.Index, :index)
       live("/plugins/:id", PluginLive.Page, :show)
       live("/plugins/:id/*path", PluginLive.Page, :show)
