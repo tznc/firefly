@@ -165,6 +165,15 @@ defmodule FirestormWeb.SiteSettings do
         help: "A post flagged by this many members is hidden until staff review it."
       },
       %{
+        key: "bbcode",
+        section: "Content",
+        type: :boolean,
+        label: "BBCode",
+        default: true,
+        help:
+          "Posts may use BBCode ([b], [quote], [url], [list], [spoiler]...) as well as Markdown."
+      },
+      %{
         key: "max_upload_kb",
         section: "Uploads",
         type: :integer,

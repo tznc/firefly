@@ -21,6 +21,10 @@ defmodule FirestormWeb.Markdown do
   several posts, pass `Mentions.refs/2` of all their bodies to `render/2`
   instead of the viewer, so the names are looked up once.
 
+  BBCode (see `FirestormWeb.BBCode`, the `bbcode` site setting) is
+  converted to Markdown first. `<span class="spoiler">` and
+  `<div class="spoiler">` (from `[spoiler]`) are hidden until clicked.
+
   Custom emoji (see `FirestormWeb.Emoji`) written `:name:` become
   `<img class="emoji">` (not in code).
 
@@ -34,7 +38,7 @@ defmodule FirestormWeb.Markdown do
   whose output is sanitized again.
   """
 
-  alias FirestormWeb.{Emoji, Mentions}
+  alias FirestormWeb.{BBCode, Emoji, Mentions, SiteSettings}
 
   @sanitize MDEx.Document.default_sanitize_options()
             |> Keyword.merge(
@@ -76,6 +80,7 @@ defmodule FirestormWeb.Markdown do
 
   def render(body, refs_or_viewer, opts) when is_binary(body) do
     body
+    |> bbcode()
     |> Mentions.parse()
     |> Mentions.link(refs_or_viewer)
     |> custom_emoji(Emoji.custom())
@@ -130,6 +135,14 @@ defmodule FirestormWeb.Markdown do
     do: ~s(<img class="emoji" src="#{escape(url)}" alt=":#{name}:" title=":#{name}:">)
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+  # A shortcode an active plugin declares (see FirestormWeb.Plugins.Content)
+  # is the plugin's, even when BBCode has a tag of that name.
+  defp bbcode(body) do
+    if SiteSettings.get("bbcode"),
+      do: BBCode.to_markdown(body, FirestormWeb.Plugins.Content.shortcode_names()),
+      else: body
+  end
 
   defp plugins(html, nil, _thread), do: html
   defp plugins(html, post, thread), do: FirestormWeb.Plugins.Content.transform(html, post, thread)

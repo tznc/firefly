@@ -1,5 +1,5 @@
 defmodule FirestormWeb.MarkdownTest do
-  use ExUnit.Case, async: true
+  use FirestormWeb.DataCase, async: true
   alias FirestormWeb.Markdown
 
   test "renders basic things" do
