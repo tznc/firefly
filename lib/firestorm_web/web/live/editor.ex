@@ -1,14 +1,16 @@
 defmodule FirestormWeb.Web.Editor do
   @moduledoc """
   Shared pieces of the post editor used by the new thread and reply pages:
-  a markdown textarea with a live preview, `@username` autocomplete, and file
-  attachments uploaded straight from the browser to S3.
+  a markdown textarea with a live preview, `@username` autocomplete, file
+  attachments uploaded straight from the browser to S3, and the toolbar
+  buttons plugins add (they insert text; see `FirestormWeb.Plugin.Manifest`).
+  The preview shows plain markdown: plugins only transform published posts.
   """
   use FirestormWeb.Web, :html
 
   import Phoenix.LiveView, only: [allow_upload: 3, attach_hook: 4, consume_uploaded_entry: 3]
 
-  alias FirestormWeb.{Forums, Markdown, Uploads}
+  alias FirestormWeb.{Forums, Markdown, Plugins, Uploads}
 
   @image_types ~w(image/png image/jpeg image/jpg image/gif image/webp)
 
@@ -91,6 +93,8 @@ defmodule FirestormWeb.Web.Editor do
   attr :placeholder, :string, default: "Type post content here. Use markdown syntax."
 
   def body_editor(assigns) do
+    assigns = assign(assigns, :buttons, composer_buttons())
+
     ~H"""
     <div class="space-y-3">
       <div class="relative">
@@ -114,7 +118,25 @@ defmodule FirestormWeb.Web.Editor do
         >
         </ul>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <div
+          :if={@buttons != []}
+          id={"#{@field.id}-plugin-buttons"}
+          phx-hook="ComposerButtons"
+          data-target={@field.id}
+          class="join"
+          aria-label="Insert"
+        >
+          <button
+            :for={button <- @buttons}
+            type="button"
+            class="btn btn-ghost btn-sm join-item"
+            data-insert={button.insert}
+            title={"Inserts: " <> button.insert}
+          >
+            {button.label}
+          </button>
+        </div>
         <label class="btn btn-ghost btn-sm" for={@uploads.attachment.ref}>
           <.icon name="hero-paper-clip" class="size-4" /> Attach a file
         </label>
@@ -143,6 +165,14 @@ defmodule FirestormWeb.Web.Editor do
       </section>
     </div>
     """
+  end
+
+  # Toolbar buttons the active plugins declare (manifest `composer_buttons`),
+  # in plugin order.
+  defp composer_buttons do
+    for plugin <- Plugins.active(), button <- plugin.manifest.composer_buttons do
+      %{label: button["label"], insert: button["insert"]}
+    end
   end
 
   defp upload_error(:too_large), do: "That file is too large (10 MB max)."

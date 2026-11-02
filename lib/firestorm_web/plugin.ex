@@ -93,13 +93,34 @@ defmodule FirestormWeb.Plugin do
   @callback call_export(t, function :: String.t(), args :: term) ::
               {:ok, term} | {:error, String.t() | failure}
 
-  @optional_callbacks enabled: 1, disabled: 1, call_export: 3
+  @doc """
+  Transforms a post's rendered, sanitized HTML. `input` is
+  `%{"html" => html, "post" => context}` (see `FirestormWeb.Plugins.Content`);
+  the result is the new HTML, sanitized again before it's shown. Runs only
+  for posts anonymous visitors can read.
+  """
+  @callback render_post(t, input :: map) :: {:ok, String.t()} | {:error, failure}
+
+  @doc """
+  Renders the plugin's shortcodes (its manifest `shortcodes`) found in a
+  post: `input` is `%{"shortcodes" => [%{"name", "attrs", "content"}],
+  "post" => context}`; the result is one HTML string per shortcode, in order.
+  """
+  @callback render_shortcodes(t, input :: map) :: {:ok, [String.t()]} | {:error, failure}
+
+  @optional_callbacks enabled: 1,
+                      disabled: 1,
+                      call_export: 3,
+                      render_post: 2,
+                      render_shortcodes: 2
 
   # Hook name (as in manifests) => callback.
   @hooks %{
     "enabled" => {:enabled, 1},
     "disabled" => {:disabled, 1},
-    "call_export" => {:call_export, 3}
+    "call_export" => {:call_export, 3},
+    "render_post" => {:render_post, 2},
+    "render_shortcodes" => {:render_shortcodes, 2}
   }
 
   @doc "The hooks a plugin may implement, by manifest name, with their callbacks."
