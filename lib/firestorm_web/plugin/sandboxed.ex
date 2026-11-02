@@ -20,7 +20,7 @@ defmodule FirestormWeb.Plugin.Sandboxed do
   @behaviour FirestormWeb.Plugin
 
   alias FirestormWeb.Plugin
-  alias FirestormWeb.Plugin.{Host, Manifest}
+  alias FirestormWeb.Plugin.{Host, Manifest, Runner}
   alias FirestormWeb.Plugin.Sandboxed.Runtime
   alias FirestormWeb.Plugins.InstalledPlugin
 
@@ -101,11 +101,19 @@ defmodule FirestormWeb.Plugin.Sandboxed do
   @spec run(Plugin.t(), String.t(), term) :: {:ok, term} | {:error, Plugin.failure()}
   def run(%Plugin{} = plugin, hook, input) do
     config = Application.get_env(:firestorm_web, __MODULE__, [])
+    # Host calls are answered in the instance's process: they run in this
+    # call's context (see `Runner.context/0`).
+    context = Runner.context()
+
+    host = fn name, args ->
+      Runner.put_context(context)
+      Host.call(plugin, name, args)
+    end
 
     opts =
       config
       |> Keyword.take([:memory, :fuel, :max_output])
-      |> Keyword.put(:host, &Host.call(plugin, &1, &2))
+      |> Keyword.put(:host, host)
       |> Keyword.put(:timeout, max(Process.get(:firefly_plugin_timeout, 2_000) - 50, 10))
 
     Runtime.run(prelude(plugin) <> plugin.state.code, hook, input, opts)
