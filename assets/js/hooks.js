@@ -198,4 +198,38 @@ const ComposerButtons = {
   },
 }
 
-export default {ComposerButtons, Highlight, LocalTime, MentionAutocomplete, QuoteSelection, Uploaders}
+// A plugin widget: a sandboxed iframe (no same-origin) talking to the page
+// through postMessage only (see priv/plugins/sdk/widget.js). The page
+// answers its "ready" with the viewer's public profile and the widget's
+// context, resizes it on request (within bounds), and relays its calls to
+// the plugin's server-side handler as a LiveView event.
+const PluginWidget = {
+  mounted() {
+    this.frame = this.el.querySelector("iframe")
+    this.onMessage = event => {
+      const message = event.data || {}
+      if (!this.frame || event.source !== this.frame.contentWindow || message.firefly !== 1) { return }
+      const context = JSON.parse(this.el.dataset.context || "null")
+      if (message.type === "ready") {
+        this.send({type: "init", user: JSON.parse(this.el.dataset.user || "null"), context, plugin: this.el.dataset.plugin})
+        this.el.dataset.ready = "true"
+      } else if (message.type === "resize") {
+        const height = Math.max(20, Math.min(2000, Math.round(Number(message.height) || 0)))
+        this.frame.style.height = `${height}px`
+        this.el.dataset.height = height
+      } else if (message.type === "call") {
+        const params = {plugin: this.el.dataset.plugin, handler: String(message.handler), args: message.args, context}
+        this.pushEvent("plugin_widget_call", params, reply => this.send({...reply, type: "result", id: message.id}))
+      }
+    }
+    window.addEventListener("message", this.onMessage)
+  },
+  destroyed() { window.removeEventListener("message", this.onMessage) },
+  send(message) {
+    // The frame's origin is opaque, so "*" is the only possible target; it
+    // only ever gets public data.
+    if (this.frame.contentWindow) { this.frame.contentWindow.postMessage({...message, firefly: 1}, "*") }
+  },
+}
+
+export default {ComposerButtons, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection, Uploaders}

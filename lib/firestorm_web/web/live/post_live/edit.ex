@@ -169,7 +169,7 @@ defmodule FirestormWeb.Web.PostLive.Edit do
       </.page_header>
 
       <.form for={@form} id="post-form" phx-change="validate" phx-submit="save" class="space-y-4">
-        <Editor.body_editor field={@form[:body]} uploads={@uploads} />
+        <Editor.body_editor field={@form[:body]} uploads={@uploads} user={@current_user} />
         <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">
           <.link

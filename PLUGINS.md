@@ -127,6 +127,8 @@ again.
   "jobs": [{"name": "digest", "every": 3600}, {"name": "nightly", "cron": "30 2 * * *"}],
   "http_hosts": ["api.example.com", "*.example.org"],
   "fields": [{"type": "post", "key": "score", "public": true}],
+  "widgets": [{"outlet": "post_footer", "asset": "widget.html", "height": 80}],
+  "endpoint_auth": "secret",
   "composer_buttons": [{"label": "Spoiler", "insert": "[spoiler]{{selection}}[/spoiler]"}],
   "priority": 100,
   "source": "upload"
@@ -170,6 +172,13 @@ requirements; core and uploaded plugins can depend on each other.
 | `run_job` | `run_job(plugin, input)` | `{job}` | ignored |
 | `moderate_post` | `moderate_post(plugin, input)` | `{kind, title, body, user, thread, category_id}` | `{action: "allow"}`, `{action: "queue", reason}` or `{action: "reject", message}` |
 | `flag_created` | `flag_created(plugin, input)` | `{post, thread, flag: {reason, note}}` | `{action: "none"}` or `{action: "hide"}` |
+| `handle_widget` | `handle_widget(plugin, input)` | `{handler, args, context, user}` | anything, back to the widget |
+| `render_page` | `render_page(plugin, input)` | `{path, params, user}` | `{title, html}` or `{title, iframe: asset}` |
+| `render_admin` | `render_admin(plugin, input)` | `{user}` | as `render_page` |
+| `handle_request` | `handle_request(plugin, input)` | `{method, path, query, body, user}` | `{status, body}` (JSON) |
+
+Core plugins can also implement `asset(plugin, path)` to serve the files
+their widgets and pages use (uploaded bundles serve their `assets`).
 
 `post` is `{id, thread_id, category_id, user_id}`.
 
@@ -287,6 +296,57 @@ posts in categories anonymous visitors can't read aren't checked.
 
 `flag_created` (needs `flag`) runs when a member flags a public post;
 answering `hide` hides it until staff review it, as enough flags would.
+
+## Interface
+
+**Widgets** (manifest `widgets`) show one of the plugin's HTML `assets` in
+an outlet: `post_footer`, `thread_header`, `sidebar`, `user_profile` or
+`composer`. Each is an `<iframe sandbox="allow-scripts">` (no
+`allow-same-origin`: an opaque origin, no access to the page, its cookies
+or storage) loading `/plugins/:id/assets/<asset>`, which is served with a
+strict CSP (`default-src 'none'`, scripts and styles only from the site
+and inline, `connect-src 'none'`, `sandbox allow-scripts`). Widgets about a
+post or thread only appear on content anonymous visitors can read.
+
+Widgets talk to the page through `postMessage` only, with the SDK:
+
+```html
+<script src="/plugins/sdk.js"></script>
+<script>
+  Firefly.ready(({user, context, plugin}) => {      // user: {id, username, name} or null
+    Firefly.call("view", {}).then((result) => {     // the plugin's handle_widget
+      document.body.textContent = JSON.stringify(result);
+      Firefly.resize();                             // also automatic on changes
+    });
+  });
+</script>
+```
+
+`context` comes from the page (e.g. `{post_id, thread_id}`) and, like
+`args`, must be treated as untrusted by the handler. Calls are rate limited
+(60 a minute per member or IP). Heights are kept between 20 and 2000 px.
+
+**Pages**: `/plugins/:id` and `/plugins/:id/*path` call `render_page`;
+`html` is sanitized and shown in the site's layout, `iframe` shows an asset
+as a full sandboxed app (same bridge, `context: {path}`). **Staff
+sections**: `render_admin` adds the plugin's own section to
+`/staff/plugins/:id`.
+
+**Endpoints**: any method to `/api/plugins/:id/*path` calls
+`handle_request` and returns its `body` as JSON with its `status`. Callers
+authenticate as `endpoint_auth` says: `secret` (header `x-plugin-secret`,
+shown on the plugin's staff page, where staff can replace it), `user` (a
+member's API token, `Authorization: Bearer`), or `either`. 300 requests a
+minute per plugin and client IP; bodies up to 100 KB.
+
+## Example
+
+`priv/plugins/examples/hello` uses most hooks: a `[hello name="…"]`
+shortcode and a post transform, a composer button, a widget under posts
+backed by `handle_widget`, a page and a frame app, a staff section, an
+endpoint (`GET /api/plugins/hello/stats`), events, a scheduled job,
+moderation driven by its settings, a flag hook, a public custom field and
+an export. Zip the folder and upload it at `/staff/plugins`.
 
 ## Storage and custom fields
 

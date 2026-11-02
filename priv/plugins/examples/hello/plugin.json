@@ -1,0 +1,38 @@
+{
+  "id": "hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "firefly": "~> 1.0",
+  "description": "An example plugin that uses most of the plugin API: a [hello] shortcode, a widget under posts, a page, an endpoint, events, a scheduled job, moderation and settings.",
+  "author": "Firefly",
+  "license": "Apache-2.0",
+  "url": "https://github.com/tznc/firefly",
+  "hooks": [
+    "enabled",
+    "render_shortcodes",
+    "render_post",
+    "handle_event",
+    "run_job",
+    "moderate_post",
+    "flag_created",
+    "handle_widget",
+    "render_page",
+    "render_admin",
+    "handle_request"
+  ],
+  "permissions": ["read", "flag", "fields"],
+  "settings": [
+    {"key": "greeting", "type": "string", "default": "Hello", "label": "Greeting", "help": "What [hello] says."},
+    {"key": "blocked_words", "type": "text", "default": "", "label": "Blocked words", "help": "One per line: posts containing any are refused."},
+    {"key": "review_links", "type": "boolean", "default": false, "label": "Review posts with links", "help": "Send posts with links to the review queue."}
+  ],
+  "assets": ["widget.html", "app.html"],
+  "widgets": [{"outlet": "post_footer", "asset": "widget.html", "height": 40}],
+  "shortcodes": ["hello"],
+  "composer_buttons": [{"label": "Hello", "insert": "[hello name=\"{{selection}}\"]"}],
+  "events": ["post_created", "thread_created"],
+  "jobs": [{"name": "tally", "every": 3600}],
+  "fields": [{"type": "post", "key": "hellos", "public": true}],
+  "exports": ["greet"],
+  "endpoint_auth": "either"
+}

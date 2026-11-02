@@ -799,6 +799,28 @@ defmodule FirestormWeb.Plugins do
     :ok
   end
 
+  @doc "The secret for `id`'s inbound endpoints, made on first use."
+  def secret(id) do
+    case Repo.get_by(InstalledPlugin, plugin_id: id) do
+      %InstalledPlugin{secret: secret} when is_binary(secret) -> secret
+      _ -> save_state(id, %{secret: new_secret()}).secret
+    end
+  end
+
+  @doc "Replaces `id`'s endpoint secret as `admin` (the old one stops working)."
+  def rotate_secret(id, %User{} = admin) do
+    {:ok, row} =
+      Repo.transact(fn ->
+        row = save_state(id, %{secret: new_secret()})
+        StaffLog.record(admin, "plugin.secret", {"plugin", row.id}, %{plugin: id})
+        {:ok, row}
+      end)
+
+    row.secret
+  end
+
+  defp new_secret, do: Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+
   ## Errors
 
   @doc "Adds to a plugin's error log (see `FirestormWeb.Plugins.Health`)."

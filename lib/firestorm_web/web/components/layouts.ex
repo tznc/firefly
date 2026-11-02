@@ -196,6 +196,13 @@ defmodule FirestormWeb.Web.Layouts do
               Log in
             </.nav_item>
           <% end %>
+          <li>
+            <FirestormWeb.Web.PluginComponents.plugin_outlet
+              outlet="sidebar"
+              key="nav"
+              user={@current_user}
+            />
+          </li>
           <li class="menu-title">About</li>
           <li :if={@contact_email != ""}>
             <a id="contact-email" href={"mailto:" <> @contact_email}>

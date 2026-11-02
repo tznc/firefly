@@ -35,6 +35,24 @@ defmodule FirestormWeb.Web.Router do
     plug(FirestormWeb.Web.Plugs.ApiCurrentUser)
   end
 
+  pipeline :plugin_api do
+    plug(FirestormWeb.Web.Plugs.ApiCurrentUser)
+  end
+
+  # Plugins' assets and widget SDK: served to sandboxed frames, so no
+  # session or browser pipeline (see FirestormWeb.Plugins.UI).
+  scope "/plugins", FirestormWeb.Web do
+    get("/sdk.js", PluginController, :sdk)
+    get("/:id/assets/*path", PluginController, :asset)
+  end
+
+  # Plugins' inbound endpoints, authenticated per plugin.
+  scope "/api/plugins", FirestormWeb.Web do
+    pipe_through(:plugin_api)
+
+    match(:*, "/:id/*path", PluginController, :endpoint)
+  end
+
   scope "/", FirestormWeb.Web do
     pipe_through(:browser)
 
@@ -42,7 +60,11 @@ defmodule FirestormWeb.Web.Router do
     get("/settings/export", AccountController, :export)
     delete("/settings/account", AccountController, :delete)
 
-    live_session :default, on_mount: [{FirestormWeb.Web.UserAuth, :mount_current_user}] do
+    live_session :default,
+      on_mount: [
+        {FirestormWeb.Web.UserAuth, :mount_current_user},
+        FirestormWeb.Web.PluginWidgets
+      ] do
       # Declared first so that e.g. /categories/new wins over /categories/:id.
       # These LiveViews also run `on_mount {UserAuth, :require_user}`.
       live("/threads/watching", ThreadLive.Watching, :index)
@@ -87,6 +109,8 @@ defmodule FirestormWeb.Web.Router do
       live("/users", UserLive.Index, :index)
       live("/users/:id", UserLive.Show, :show)
       live("/search", SearchLive.Index, :index)
+      live("/plugins/:id", PluginLive.Page, :show)
+      live("/plugins/:id/*path", PluginLive.Page, :show)
       live("/tags", TagLive.Index, :index)
       live("/tags/:name", TagLive.Show, :show)
       live("/categories", CategoryLive.Index, :index)

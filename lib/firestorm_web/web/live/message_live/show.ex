@@ -218,7 +218,7 @@ defmodule FirestormWeb.Web.MessageLive.Show do
       </ol>
 
       <.form for={@form} id="reply-form" phx-change="validate" phx-submit="reply" class="space-y-4">
-        <Editor.body_editor field={@form[:body]} uploads={@uploads} placeholder="Write a reply. Use markdown syntax." />
+        <Editor.body_editor field={@form[:body]} uploads={@uploads} user={@current_user} placeholder="Write a reply. Use markdown syntax." />
         <div class="flex justify-end">
           <.button variant="primary" phx-disable-with="Sending...">
             <.icon name="hero-arrow-uturn-left" class="size-4" /> Reply
