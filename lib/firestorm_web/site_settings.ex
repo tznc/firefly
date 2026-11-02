@@ -176,21 +176,41 @@ defmodule FirestormWeb.SiteSettings do
         key: "new_user_max_links",
         section: "Spam and new users",
         type: :integer,
-        label: "Links per post for new users",
+        label: "Links per post at trust level 0",
         default: 2,
         min: 0,
         max: 100,
-        help: "How many links a new account's post may contain."
+        help: "How many links a new user's (trust level 0) post may contain."
       },
       %{
-        key: "new_user_hours",
+        key: "new_user_max_images",
         section: "Spam and new users",
         type: :integer,
-        label: "New-user period (hours)",
-        default: 24,
+        label: "Images per post at trust level 0",
+        default: 1,
         min: 0,
-        max: 24 * 365,
-        help: "Accounts are new until this old (and until they have 3 posts)."
+        max: 100,
+        help: "How many images a new user's post may embed."
+      },
+      %{
+        key: "new_user_max_attachments",
+        section: "Spam and new users",
+        type: :integer,
+        label: "Attachments per post at trust level 0",
+        default: 0,
+        min: 0,
+        max: 100,
+        help: "How many uploaded files (other than images) a new user's post may link."
+      },
+      %{
+        key: "new_user_max_mentions",
+        section: "Spam and new users",
+        type: :integer,
+        label: "Mentions per post at trust level 0",
+        default: 2,
+        min: 0,
+        max: 100,
+        help: "How many users a new user's post may @mention."
       },
       %{
         key: "max_mentions",
@@ -231,6 +251,193 @@ defmodule FirestormWeb.SiteSettings do
         help:
           "A new user's first this-many threads and replies wait in the review queue until staff approve them. 0: off."
       },
+      %{
+        key: "approve_unless_trust_level",
+        section: "Spam and new users",
+        type: :integer,
+        label: "Approve posts below trust level",
+        default: 0,
+        min: 0,
+        max: 4,
+        help: "Threads and replies by members below this trust level wait for approval. 0: off."
+      }
+    ] ++ trust_level_definitions() ++ content_definitions()
+  end
+
+  # Thresholds for automatic promotion (see FirestormWeb.TrustLevels), with
+  # Discourse's defaults.
+  defp trust_level_definitions do
+    [
+      tl(
+        "min_trust_to_send_messages",
+        "Trust level to send private messages",
+        1,
+        4,
+        "Members below it can't start conversations (they can still reply)."
+      ),
+      tl("min_trust_to_flag", "Trust level to flag posts", 1, 4, "Members below it can't flag."),
+      tl(
+        "min_trust_to_edit_wiki",
+        "Trust level to edit wiki posts",
+        1,
+        4,
+        "Members below it can't edit others' wiki posts."
+      ),
+      tl(
+        "tl1_requires_topics_entered",
+        "Level 1: topics entered",
+        5,
+        10_000,
+        "Threads a new user must open to become a basic user."
+      ),
+      tl(
+        "tl1_requires_read_posts",
+        "Level 1: posts read",
+        30,
+        100_000,
+        "Posts a new user must read to become a basic user."
+      ),
+      tl(
+        "tl2_requires_topics_entered",
+        "Level 2: topics entered",
+        20,
+        10_000,
+        "Threads a basic user must open to become a member."
+      ),
+      tl(
+        "tl2_requires_read_posts",
+        "Level 2: posts read",
+        100,
+        100_000,
+        "Posts a basic user must read to become a member."
+      ),
+      tl(
+        "tl2_requires_days_visited",
+        "Level 2: days visited",
+        15,
+        10_000,
+        "Days a basic user must visit on to become a member."
+      ),
+      tl(
+        "tl2_requires_likes_received",
+        "Level 2: likes received",
+        1,
+        10_000,
+        "Likes a basic user must receive to become a member."
+      ),
+      tl(
+        "tl2_requires_likes_given",
+        "Level 2: likes given",
+        1,
+        10_000,
+        "Likes a basic user must give to become a member."
+      ),
+      tl(
+        "tl2_requires_topic_reply_count",
+        "Level 2: topics replied to",
+        3,
+        10_000,
+        "Others' threads a basic user must reply to to become a member."
+      ),
+      Map.put(
+        tl(
+          "tl3_time_period",
+          "Level 3: period (days)",
+          100,
+          1_000,
+          "The window the other level 3 requirements (except all-time ones) are counted in."
+        ),
+        :min,
+        1
+      ),
+      tl(
+        "tl3_requires_days_visited",
+        "Level 3: days visited",
+        50,
+        1_000,
+        "Days visited in the period."
+      ),
+      tl(
+        "tl3_requires_topics_replied_to",
+        "Level 3: topics replied to",
+        10,
+        10_000,
+        "Others' threads replied to in the period."
+      ),
+      tl(
+        "tl3_requires_topics_viewed",
+        "Level 3: topics viewed (%)",
+        25,
+        100,
+        "Share of the threads created in the period (at most 500) the member opened."
+      ),
+      tl(
+        "tl3_requires_posts_read",
+        "Level 3: posts read (%)",
+        25,
+        100,
+        "Share of the posts made in the period (at most 20,000) the member read."
+      ),
+      tl(
+        "tl3_requires_topics_viewed_all_time",
+        "Level 3: topics viewed, all time",
+        200,
+        100_000,
+        "Threads opened, ever."
+      ),
+      tl(
+        "tl3_requires_posts_read_all_time",
+        "Level 3: posts read, all time",
+        500,
+        1_000_000,
+        "Posts read, ever."
+      ),
+      tl(
+        "tl3_requires_max_flagged",
+        "Level 3: most flagged posts",
+        5,
+        10_000,
+        "At most this many of the member's posts had flags staff agreed with in the period."
+      ),
+      tl(
+        "tl3_requires_likes_given",
+        "Level 3: likes given",
+        30,
+        10_000,
+        "Likes given in the period."
+      ),
+      tl(
+        "tl3_requires_likes_received",
+        "Level 3: likes received",
+        20,
+        10_000,
+        "Likes received in the period."
+      ),
+      tl(
+        "tl3_promotion_min_duration",
+        "Level 3: grace period (days)",
+        14,
+        365,
+        "A regular keeps level 3 at least this long before the review can demote them."
+      )
+    ]
+  end
+
+  defp tl(key, label, default, max, help) do
+    %{
+      key: key,
+      section: "Trust levels",
+      type: :integer,
+      label: label,
+      default: default,
+      min: 0,
+      max: max,
+      help: help
+    }
+  end
+
+  defp content_definitions do
+    [
       %{
         key: "max_tags_per_thread",
         section: "Content",

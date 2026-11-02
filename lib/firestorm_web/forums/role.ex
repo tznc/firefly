@@ -17,6 +17,9 @@ defmodule FirestormWeb.Forums.Role do
     * `description` - the About tab
 
   The "admin" group stays closed and staff-only: its members are staff.
+  The trust level groups (`trust_level_0` to `trust_level_4`, see
+  `FirestormWeb.TrustLevels`) stay closed: their members follow their
+  trust level.
   """
 
   use Ecto.Schema
@@ -79,5 +82,15 @@ defmodule FirestormWeb.Forums.Role do
     |> validate_inclusion(:visibility, ["staff"], message: "must be staff for the admin group")
   end
 
-  defp validate_staff_group(changeset), do: changeset
+  defp validate_staff_group(%{data: %{name: name}} = changeset) do
+    if automatic?(%__MODULE__{name: name}),
+      do:
+        validate_inclusion(changeset, :membership, ["closed"],
+          message: "must be closed for a trust level group"
+        ),
+      else: changeset
+  end
+
+  @doc "Whether the group is a trust level's, whose members are set automatically."
+  def automatic?(%__MODULE__{name: name}), do: FirestormWeb.TrustLevels.group?(name)
 end

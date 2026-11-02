@@ -43,7 +43,7 @@ defmodule FirestormWeb.AccountExport do
   }
 
   @profile ~w(id username name email bio website location confirmed_at inserted_at
-              last_seen_at)a
+              last_seen_at trust_level)a
   @preferences ~w(theme email_notifications allow_private_messages reply_level new_thread_level
                   hide_profile hide_profile_activity hide_from_directory)a
 

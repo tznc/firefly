@@ -210,7 +210,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   def handle_event("moderate", %{"action" => action}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
 
-    if can?(user, :moderate_thread) do
+    if can?(user, moderation_policy(action), thread) do
       case moderate(thread, action, user) do
         {:ok, thread} ->
           {:noreply,
@@ -227,7 +227,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   def handle_event("move", %{"move" => %{"category_id" => category_id}}, socket) do
     %{thread: thread, current_user: user} = socket.assigns
 
-    with true <- can?(user, :moderate_thread) || :denied,
+    with true <- can?(user, :move_thread, thread) || :denied,
          %Category{} = category <- Forums.get_category(category_id) || :no_category,
          {:ok, moved} <- Forums.move_thread(thread, category, user) do
       {:noreply,
@@ -513,10 +513,14 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
     |> assign(:accepted, Enum.find(replies, &(&1.id == thread.accepted_post_id)))
     |> assign(:can_accept?, can?(user, :accept_answer, thread))
     |> assign(:can_manage?, can?(user, :update_thread, thread))
+    |> assign(:can_delete?, can?(user, :delete_thread, thread))
     |> assign(:can_moderate?, can?(user, :moderate_thread))
+    |> assign(:can_close?, can?(user, :close_thread, thread))
+    |> assign(:can_move?, can?(user, :move_thread, thread))
+    |> assign(:can_wiki?, can?(user, :toggle_wiki))
     |> assign(
       :categories,
-      if(can?(user, :moderate_thread), do: Forums.list_categories(user), else: [])
+      if(can?(user, :move_thread, thread), do: Forums.list_categories(user), else: [])
     )
     |> assign(:first_unread_id, first_unread_id(replies, socket.assigns.last_read_post_id))
     |> assign(:timer, TopicTimers.get_timer(thread))
@@ -545,6 +549,10 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   defp moderate(thread, "archive", user), do: Forums.archive_thread(thread, true, user)
   defp moderate(thread, "unarchive", user), do: Forums.archive_thread(thread, false, user)
   defp moderate(_thread, _action, _user), do: {:error, :unknown_action}
+
+  # Leaders (trust level 4) pin and close; archiving is for admins.
+  defp moderation_policy(action) when action in ~w(pin unpin close open), do: :close_thread
+  defp moderation_policy(_action), do: :moderate_thread
 
   # The posts the user may edit or delete (roles loaded once, not per post).
   defp permitted_ids(nil, _thread, _action), do: MapSet.new()
@@ -623,8 +631,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
           </.link>
           · <.time_ago id="thread-time" at={@thread.inserted_at} />
           · <span id="reply-count">{ngettext("1 reply", "%{count} replies", reply_count(@replies))}</span>
-          <span :if={@can_manage? or @can_moderate?} class="ml-auto flex gap-1">
-            <div :if={@can_moderate?} id="moderation" class="dropdown dropdown-end">
+          <span :if={@can_manage? or @can_close? or @can_move?} class="ml-auto flex gap-1">
+            <div :if={@can_close? or @can_move?} id="moderation" class="dropdown dropdown-end">
               <div tabindex="0" role="button" class="btn btn-ghost btn-xs">
                 <.icon name="hero-shield-check" class="size-4" /> Moderate
               </div>
@@ -632,7 +640,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 tabindex="0"
                 class="dropdown-content z-10 w-64 space-y-2 rounded-box border border-base-300 bg-base-100 p-2 shadow"
               >
-                <ul class="menu w-full p-0">
+                <ul :if={@can_close?} class="menu w-full p-0">
                   <li>
                     <button
                       phx-click="moderate"
@@ -651,7 +659,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                       {if @thread.closed_at, do: "Reopen", else: "Close"}
                     </button>
                   </li>
-                  <li>
+                  <li :if={@can_moderate?}>
                     <button
                       phx-click="moderate"
                       phx-value-action={if @thread.archived_at, do: "unarchive", else: "archive"}
@@ -661,7 +669,14 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                     </button>
                   </li>
                 </ul>
-                <.form for={%{}} as={:move} id="move-thread-form" phx-submit="move" class="flex gap-1">
+                <.form
+                  :if={@can_move?}
+                  for={%{}}
+                  as={:move}
+                  id="move-thread-form"
+                  phx-submit="move"
+                  class="flex gap-1"
+                >
                   <select name="move[category_id]" class="select select-sm flex-1" aria-label="Move to category">
                     <option :for={c <- @categories} value={c.id} selected={c.id == @thread.category_id}>
                       {c.title}
@@ -670,6 +685,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                   <button class="btn btn-sm">Move</button>
                 </.form>
                 <.link
+                  :if={@can_moderate?}
                   navigate={~p"/categories/#{@category}/threads/#{@thread}/tools"}
                   class="btn btn-ghost btn-sm w-full justify-start"
                 >
@@ -685,7 +701,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
               Edit
             </.link>
             <button
-              :if={@can_manage?}
+              :if={@can_delete?}
               phx-click="delete"
               data-confirm="Delete this thread?"
               class="btn btn-ghost btn-xs text-error"
@@ -744,7 +760,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 flagged={MapSet.member?(@flagged_ids, @first_post.id)}
                 count={@flag_counts[@first_post.id]}
               />
-              <.wiki_button :if={@admin?} post={@first_post} />
+              <.wiki_button :if={@can_wiki?} post={@first_post} />
               <.bookmark_button
                 :if={@current_user}
                 post={@first_post}
@@ -826,7 +842,7 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
                 post={post}
                 accepted={post.id == @thread.accepted_post_id}
               />
-              <.wiki_button :if={@admin? and not Post.deleted?(post)} post={post} />
+              <.wiki_button :if={@can_wiki? and not Post.deleted?(post)} post={post} />
               <.bookmark_button
                 :if={@current_user}
                 post={post}

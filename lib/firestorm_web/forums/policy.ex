@@ -3,8 +3,14 @@ defmodule FirestormWeb.Forums.Policy do
   Authorization rules for the Forums context (see `Bodyguard.Policy`).
 
     * `:manage_category` (create, edit, delete) - admins
-    * `:update_thread`, `:delete_thread` - the thread's author (unless it's
-      archived) and admins
+    * `:update_thread` (rename, retag), `:delete_thread` - the thread's
+      author (unless it's archived) and admins; renaming and retagging
+      also regulars (trust level 3, see `FirestormWeb.TrustLevels`), on
+      threads that aren't archived
+    * `:move_thread` (to another category) - admins, and regulars on
+      threads that aren't archived
+    * `:close_thread` (pin, close; params: the thread) - admins and leaders
+      (trust level 4)
     * `:moderate_thread` (pin, close, archive, move) - admins; a plugin's bot
       with the `moderate` permission, on a thread anyone can read
     * `:tag_thread` (a plugin changing a thread's tags) - a plugin's bot with
@@ -12,13 +18,14 @@ defmodule FirestormWeb.Forums.Policy do
     * `:edit_post`, `:delete_post` (params `%{post: post, thread: thread}`) -
       the post's author while the thread is open (editing, also only within
       the `edit_grace_minutes` site setting; 0: forever), and admins; not
-      once the post is deleted. Authors can't edit a post while it awaits
+      once the post is deleted. Leaders (trust level 4) edit others' posts
+      too. Authors can't edit a post while it awaits
       approval. A wiki post (`Post.wiki?/1`) can also be edited, with no
-      time limit, by any member who may read it and its thread while the
-      thread is open; saving still goes through `Posting.check/2` (penalties,
+      time limit, by any member at `min_trust_to_edit_wiki` who may read
+      it and its thread while the thread is open; saving still goes through `Posting.check/2` (penalties,
       slow mode). (`Forums.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
-    * `:toggle_wiki` (make a post a wiki or not) - admins
+    * `:toggle_wiki` (make a post a wiki or not) - admins and leaders
     * `:accept_answer` (mark a reply as the accepted answer, or unmark it;
       params: the thread) - in a category that allows accepted answers, the
       thread's author unless it's archived, and admins; never on a merged
@@ -34,11 +41,12 @@ defmodule FirestormWeb.Forums.Policy do
       users who aren't admins
     * `:lift_penalty` (params: the user) - admins, on anyone (a penalized
       member may have been made an admin since)
-    * `:reset_two_factor` (params: the user) - admins, on anyone
+    * `:reset_two_factor`, `:set_trust_level` (params: the user) - admins,
+      on anyone
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
-    * `:flag_post` (same params) - members, on other people's posts that
-      aren't deleted or already hidden
+    * `:flag_post` (same params) - members at `min_trust_to_flag`, on other
+      people's posts that aren't deleted or already hidden
     * `:view_hidden_post` (params: the post) - its author and admins
     * `:view_flags` (flag counts and reasons), `:unhide_post`, `:review` (the
       review queue) - admins
@@ -67,7 +75,7 @@ defmodule FirestormWeb.Forums.Policy do
 
   import Ecto.Query
 
-  alias FirestormWeb.{Forums, Messages, Repo, SiteSettings}
+  alias FirestormWeb.{Forums, Messages, Repo, SiteSettings, TrustLevels}
   alias FirestormWeb.Forums.{Category, Conversation, Post, Role, RoleMembership, Thread, User}
 
   @impl true
@@ -118,10 +126,19 @@ defmodule FirestormWeb.Forums.Policy do
   # Archived threads are read-only, except to admins.
   def authorize(action, %User{} = user, %Thread{} = thread)
       when action in [:update_thread, :delete_thread] do
-    if Forums.thread_author_id(thread) == user.id and not Thread.archived?(thread),
-      do: :ok,
-      else: admin(user)
+    cond do
+      Thread.archived?(thread) -> admin(user)
+      Forums.thread_author_id(thread) == user.id -> :ok
+      action == :update_thread -> trusted(user, 3)
+      true -> admin(user)
+    end
   end
+
+  def authorize(:move_thread, %User{} = user, %Thread{} = thread),
+    do: if(Thread.archived?(thread), do: admin(user), else: trusted(user, 3))
+
+  def authorize(:close_thread, %User{} = user, %Thread{}), do: trusted(user, 4)
+  def authorize(:toggle_wiki, %User{} = user, _params), do: trusted(user, 4)
 
   def authorize(action, %User{} = user, %{post: %Post{} = post, thread: %Thread{} = thread})
       when action in [:edit_post, :delete_post] do
@@ -162,7 +179,7 @@ defmodule FirestormWeb.Forums.Policy do
 
   def authorize(:flag_post, %User{} = user, %{post: %Post{} = post, thread: %Thread{}}) do
     if post.user_id != user.id and not Post.deleted?(post) and not Post.hidden?(post) and
-         not Post.queued?(post),
+         not Post.queued?(post) and TrustLevels.allowed?(user, "min_trust_to_flag"),
        do: :ok,
        else: {:error, :unauthorized}
   end
@@ -184,7 +201,7 @@ defmodule FirestormWeb.Forums.Policy do
              :manage_plugins,
              :manage_uploads,
              :manage_emoji,
-             :toggle_wiki
+             :set_trust_level
            ],
       do: admin(user)
 
@@ -193,7 +210,8 @@ defmodule FirestormWeb.Forums.Policy do
 
   defp wiki_editable?(user, post, thread) do
     Post.wiki?(post) and not Thread.closed?(thread) and not Thread.merged?(thread) and
-      Post.readable_by?(post, user) and authorize(:view_thread, user, thread) == :ok
+      TrustLevels.allowed?(user, "min_trust_to_edit_wiki") and Post.readable_by?(post, user) and
+      authorize(:view_thread, user, thread) == :ok
   end
 
   defp may_edit(user, post, thread) do
@@ -202,7 +220,7 @@ defmodule FirestormWeb.Forums.Policy do
       Post.queued?(post) -> admin(user)
       post.user_id == user.id and not Thread.closed?(thread) and in_window?(post) -> :ok
       wiki_editable?(user, post, thread) -> :ok
-      true -> admin(user)
+      true -> trusted(user, 4)
     end
   end
 
@@ -219,6 +237,10 @@ defmodule FirestormWeb.Forums.Policy do
   end
 
   defp admin(user), do: if(Forums.admin?(user), do: :ok, else: {:error, :unauthorized})
+
+  # Admins, and members at `level` or above.
+  defp trusted(user, level),
+    do: if(TrustLevels.at_least?(user, level), do: :ok, else: {:error, :unauthorized})
 
   # A thread awaiting approval is for its author and admins.
   defp approved_or_own(user, thread) do

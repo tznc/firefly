@@ -126,6 +126,9 @@ defmodule FirestormWeb.FlagsTest do
         password: "correct horse battery"
       })
 
+    # A new user can't flag at all; one promoted before confirming still can't.
+    assert {:error, :unauthorized} = Flags.flag_post(reply, fresh, %{"reason" => "spam"})
+    fresh = Repo.update!(Ecto.Changeset.change(fresh, trust_level: 1))
     assert {:error, :unconfirmed} = Flags.flag_post(reply, fresh, %{"reason" => "spam"})
     assert Flags.message(:unconfirmed) =~ "confirm your email"
   end

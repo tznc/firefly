@@ -4,10 +4,12 @@ defmodule FirestormWeb.Flags do
   `FirestormWeb.Forums.Flag`): one flag per member per post, never their own
   posts, not while silenced or suspended, and within the `:flag` rate limit.
 
-  Flagging needs a confirmed account, so throwaway accounts can't add up
-  to a hide. When a post has the `flags_to_hide` site setting's number of
-  pending flags (from different members, since each flags once), it's
-  hidden pending review: members see a placeholder, its author and admins
+  Flagging needs a confirmed account and the `min_trust_to_flag` trust
+  level, so throwaway accounts can't add up to a hide. When a post has the
+  `flags_to_hide` site setting's number of pending flags (from different
+  members, since each flags once), it's hidden pending review; a spam flag
+  from a regular (trust level 3, see `FirestormWeb.TrustLevels`) on a new
+  user's post hides it at once: members see a placeholder, its author and admins
   still see it, and a hidden first post takes its thread off the lists.
   The author is notified (`post_hidden`). Admins' own posts are never
   hidden by flags; they're still flagged and reported. Admins get one
@@ -18,7 +20,7 @@ defmodule FirestormWeb.Flags do
 
   import Ecto.Query
 
-  alias FirestormWeb.{Forums, Posting, Repo, SiteSettings, StaffLog}
+  alias FirestormWeb.{Forums, Posting, Repo, SiteSettings, StaffLog, TrustLevels}
   alias FirestormWeb.Forums.{Flag, Notification, Post, User}
   alias FirestormWeb.Web.Paths
 
@@ -34,9 +36,10 @@ defmodule FirestormWeb.Flags do
          :ok <- Posting.check(user, :flag),
          :ok <- if(flagged?(post, user), do: {:error, :already_flagged}, else: :ok),
          {:ok, flag} <- insert(post, user, attrs) do
-      if FirestormWeb.Plugins.Moderation.flag_created(post, post.thread, flag) == :hide,
-        do: hide(post),
-        else: maybe_hide(post)
+      if FirestormWeb.Plugins.Moderation.flag_created(post, post.thread, flag) == :hide or
+           trusted_spam_flag?(flag, user, post),
+         do: hide(post),
+         else: maybe_hide(post)
 
       notify_admins(post, user)
       FirestormWeb.Review.changed()
@@ -143,6 +146,11 @@ defmodule FirestormWeb.Flags do
     |> order_by([f], desc: f.inserted_at, desc: f.id)
     |> preload(:user)
     |> Repo.all()
+  end
+
+  defp trusted_spam_flag?(flag, flagger, post) do
+    flag.reason == "spam" and post.user != nil and TrustLevels.at_least?(flagger, 3) and
+      TrustLevels.new_user?(post.user)
   end
 
   # Hides the post once it has enough pending flags. The update only matches

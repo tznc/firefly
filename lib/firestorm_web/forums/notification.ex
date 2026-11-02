@@ -19,7 +19,9 @@ defmodule FirestormWeb.Forums.Notification do
   `"group_mentioned"` (a post @mentioned a group you're in),
   `"group_message"` (a message to a group's inbox; with `conversation_id`),
   `"group_request"` (someone asked to join a group you own, or your request
-  was decided) or `"group_invite"` (an owner invited you to a group).
+  was decided) or `"group_invite"` (an owner invited you to a group), or
+  `"promoted"` (you reached a higher trust level; see
+  `FirestormWeb.TrustLevels`).
   `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
@@ -30,14 +32,14 @@ defmodule FirestormWeb.Forums.Notification do
 
   @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved
              bookmark_reminder answer_accepted plugin_disabled plugin
-             group_mentioned group_message group_request group_invite)
+             group_mentioned group_message group_request group_invite promoted)
 
   # Kinds that may have no thread_id: penalties are about the user, and a
   # rejected thread is gone. Any other notification without a thread_id or
   # conversation_id predates thread_id and can't be checked against thread
   # visibility.
   @threadless_kinds ~w(silenced suspended post_rejected plugin_disabled plugin group_request
-                       group_invite)
+                       group_invite promoted)
 
   @doc "Kinds that are about the user rather than a thread or conversation."
   def threadless_kinds, do: @threadless_kinds

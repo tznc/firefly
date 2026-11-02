@@ -39,6 +39,11 @@ defmodule FirestormWeb.Forums.User do
     field(:silence_reason, :string)
     field(:suspended_until, :utc_datetime)
     field(:suspend_reason, :string)
+    # 0 (new user) to 4 (leader), see FirestormWeb.TrustLevels. A locked
+    # level is one an admin set, which the periodic review leaves alone.
+    field(:trust_level, :integer, default: 0)
+    field(:manual_locked_trust_level, :integer)
+    field(:trust_level_changed_at, :utc_datetime)
     # The plugin this account acts for (see FirestormWeb.Plugins.Bots), if any.
     field(:plugin_bot, :string)
 

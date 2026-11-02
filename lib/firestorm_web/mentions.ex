@@ -58,14 +58,12 @@ defmodule FirestormWeb.Mentions do
   end
 
   @doc """
-  Adds a `:body` error when the post mentions more than `max_mentions/0`
-  users. Only names of existing users count: `@Override` or a list of
-  handles elsewhere pings nobody.
+  Adds a `:body` error when the post mentions more than `max` users (see
+  `FirestormWeb.Forums.SpamGuard`). Only names of existing users count:
+  `@Override` or a list of handles elsewhere pings nobody.
   """
-  def validate_count(%Ecto.Changeset{} = changeset) do
+  def validate_count(%Ecto.Changeset{} = changeset, max) do
     validate_change(changeset, :body, fn :body, body ->
-      max = max_mentions()
-
       if length(users(body)) > max,
         do: [body: {"can mention at most %{count} users", count: max}],
         else: []
