@@ -14,7 +14,8 @@ defmodule FirestormWeb.Uploads.Processor do
   `thumbnail_size/0`. Animated GIFs keep their frames, so they're stored
   as uploaded (GIF has no EXIF to strip) with no downscaling or thumbnail.
   Avatars are cropped square to `avatar_size/0`; custom emoji are scaled
-  to fit `emoji_size/0` (animated GIF emoji are kept as uploaded).
+  to fit `emoji_size/0` (animated GIF emoji are kept as uploaded), link
+  preview images to fit `thumbnail_size/0`.
   """
 
   @thumbnail_size 640
@@ -72,6 +73,7 @@ defmodule FirestormWeb.Uploads.Processor do
       case opts[:variant] do
         "avatar" -> avatar(image, content_type)
         "emoji" -> image(data, image, content_type, @emoji_size)
+        "preview" -> image(data, image, content_type, @thumbnail_size)
         nil -> image(data, image, content_type, opts[:max_dimension])
       end
     end

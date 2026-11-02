@@ -9,7 +9,8 @@ defmodule FirestormWeb.Plugins.HTTP do
   (no loopback, private, link-local, carrier-grade NAT, multicast or
   reserved ranges, IPv4 or IPv6), and the request goes to that address, so a
   second lookup can't swap in an internal one (TLS is still verified against
-  the host name). Redirects aren't followed. Requests time out after 5
+  the host name). Link previews (`FirestormWeb.LinkPreviews.Fetcher`) use
+  the same guard (`resolve/1`, `target/2`). Redirects aren't followed. Requests time out after 5
   seconds; request bodies are at most 100 KB and responses 1 MB.
 
   `args`: `url`, optional `method` (GET, POST, PUT, PATCH, DELETE, HEAD),
@@ -121,9 +122,12 @@ defmodule FirestormWeb.Plugins.HTTP do
   defp body(body) when is_binary(body) and byte_size(body) <= @max_request, do: {:ok, body}
   defp body(_body), do: {:error, "the body must be text of at most 100 KB"}
 
-  # Every address must be public: a name that also resolves internally is
-  # refused outright.
-  defp resolve(host) do
+  @doc """
+  Resolves `host` to an address to connect to: `{:ok, ip}` only if every
+  address it resolves to is public (see `public?/1`); a name that also
+  resolves internally is refused outright.
+  """
+  def resolve(host) when is_binary(host) do
     addresses =
       for family <- [:inet, :inet6],
           {:ok, ips} <- [:inet.getaddrs(String.to_charlist(host), family)],
@@ -137,11 +141,19 @@ defmodule FirestormWeb.Plugins.HTTP do
     end
   end
 
-  @doc "Whether `ip` is a public address plugins may reach."
+  def resolve(_host), do: {:error, "the URL has no host"}
+
+  @doc """
+  Whether `ip` is a public address plugins may reach. Tests reaching a
+  local server set `config :firestorm_web, FirestormWeb.Plugins.HTTP,
+  allow_private:` to `true` (any address) or a list of addresses.
+  """
   def public?(ip) do
-    if Application.get_env(:firestorm_web, __MODULE__, [])[:allow_private],
-      do: true,
-      else: not reserved?(ip)
+    case Application.get_env(:firestorm_web, __MODULE__, [])[:allow_private] do
+      true -> true
+      allowed when is_list(allowed) -> ip in allowed or not reserved?(ip)
+      _off -> not reserved?(ip)
+    end
   end
 
   # IPv4-mapped and NAT64 addresses are as public as the IPv4 they carry.
@@ -164,8 +176,8 @@ defmodule FirestormWeb.Plugins.HTTP do
 
   defp to_integer(ip), do: ip |> Tuple.to_list() |> Enum.reduce(0, &(&2 <<< 16 ||| &1))
 
-  # The URL with the resolved address in place of the host name.
-  defp target(uri, ip) do
+  @doc "`uri` with the resolved address `ip` in place of the host name."
+  def target(%URI{} = uri, ip) do
     port = uri.port || if(uri.scheme == "https", do: 443, else: 80)
     address = ip |> :inet.ntoa() |> to_string()
     address = if tuple_size(ip) == 8, do: "[#{address}]", else: address
