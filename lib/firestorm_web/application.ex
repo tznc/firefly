@@ -36,6 +36,8 @@ defmodule FirestormWeb.Application do
       {Task.Supervisor, name: FirestormWeb.Plugin.TaskSupervisor},
       # Loads plugins and reloads them when another node changes them
       FirestormWeb.Plugins.Registry,
+      # Posts as plugins transformed them
+      FirestormWeb.Plugins.Content.cache_spec(),
       # Start the endpoint when the application starts
       FirestormWeb.Web.Endpoint
     ] ++ topic_timers()

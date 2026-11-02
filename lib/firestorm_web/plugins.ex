@@ -181,6 +181,25 @@ defmodule FirestormWeb.Plugins do
   @doc "The active plugin `id`, or nil."
   def get_active(id), do: Enum.find(active(), &(&1.id == id))
 
+  @doc """
+  A fingerprint of `plugins`' identity, code and settings: it changes when
+  any of them is enabled, disabled, upgraded or reconfigured, so caches of
+  their output can key on it.
+  """
+  def fingerprint(plugins) do
+    :erlang.phash2(
+      for plugin <- plugins do
+        code =
+          case plugin.state do
+            %{checksum: checksum} -> checksum
+            _core -> plugin.module.module_info(:md5)
+          end
+
+        {plugin.id, plugin.manifest.version, code, plugin.settings}
+      end
+    )
+  end
+
   @doc "The active plugins implementing `hook`, in order."
   def implementing(hook), do: Enum.filter(active(), &Plugin.implements?(&1, hook))
 

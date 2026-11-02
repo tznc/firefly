@@ -25,8 +25,10 @@ defmodule FirestormWeb.Plugin.Sandboxed do
   alias FirestormWeb.Plugins.InstalledPlugin
 
   @impl true
-  def load(%InstalledPlugin{manifest: attrs, code: code}) when is_binary(code) do
-    with {:ok, manifest} <- Manifest.parse(attrs, "upload"), do: {:ok, manifest, %{code: code}}
+  def load(%InstalledPlugin{manifest: attrs, code: code, checksum: checksum})
+      when is_binary(code) do
+    with {:ok, manifest} <- Manifest.parse(attrs, "upload"),
+         do: {:ok, manifest, %{code: code, checksum: checksum}}
   end
 
   def load(_spec), do: {:error, "The plugin's bundle is missing."}
@@ -43,6 +45,12 @@ defmodule FirestormWeb.Plugin.Sandboxed do
 
   @impl true
   def call_export(%Plugin{} = plugin, function, args), do: run(plugin, function, args)
+
+  @impl true
+  def render_post(%Plugin{} = plugin, input), do: run(plugin, "render_post", input)
+
+  @impl true
+  def render_shortcodes(%Plugin{} = plugin, input), do: run(plugin, "render_shortcodes", input)
 
   @doc """
   Runs the plugin's handler `hook` with `input`. The time limit is the

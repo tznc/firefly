@@ -122,6 +122,8 @@ again.
   "dependencies": {"other": "~> 1.2"},
   "optional_dependencies": {"extra": ">= 0.3.0"},
   "exports": ["greet"],
+  "shortcodes": ["spoiler"],
+  "composer_buttons": [{"label": "Spoiler", "insert": "[spoiler]{{selection}}[/spoiler]"}],
   "priority": 100,
   "source": "upload"
 }
@@ -158,6 +160,37 @@ requirements; core and uploaded plugins can depend on each other.
 | `enabled` | `enabled(plugin)` | `{}` | ignored |
 | `disabled` | `disabled(plugin)` | `{}` | ignored |
 | (exports) | `call_export(plugin, function, args)` | `args` | the function's result |
+| `render_shortcodes` | `render_shortcodes(plugin, input)` | `{shortcodes: [{name, attrs, content}], post}` | one HTML string per shortcode |
+| `render_post` | `render_post(plugin, input)` | `{html, post}` | the new HTML |
+
+`post` is `{id, thread_id, category_id, user_id}`.
+
+## Content
+
+A post's body is rendered from markdown and sanitized, then:
+
+1. **Shortcodes**: `[name attr="value"]content[/name]` or `[name attr=value]`
+   for names in a plugin's `shortcodes` (the first plugin in hook order
+   owns a name). Not inside code. `content` is the rendered HTML between
+   the tags; each plugin gets all its shortcodes in a post in one call.
+2. **`render_post`** hooks, in order, each given the previous one's HTML.
+
+The result goes through the markdown sanitizer's allow-list again, so
+plugins can't add scripts, event handlers, `javascript:` URLs or iframes
+(and `class` survives only where markdown allows it, e.g. `span`, `div`,
+`code`). A plugin that fails or exceeds the render time limit (500 ms,
+`FirestormWeb.Plugins.Content, timeout:`) is skipped and its step keeps its
+input. Only posts anonymous visitors can read are transformed; posts in
+private categories, and deleted, hidden or queued posts, never reach
+plugins. Results are cached per node (10,000 entries, LRU), keyed by the
+input HTML and a fingerprint of the active content plugins' ids, versions,
+code and settings, so enabling, disabling, upgrading or reconfiguring a
+plugin takes effect at once. The editor preview, emails, private messages
+and the JSON API show the markdown rendering without plugin transforms.
+
+`composer_buttons` add buttons above the post editor that insert their
+`insert` text at the caret, with `{{selection}}` replaced by the selected
+text. They're data, not code: nothing runs in the browser.
 
 ## Host functions
 

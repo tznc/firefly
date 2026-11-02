@@ -73,6 +73,8 @@ defmodule FirestormWeb.Plugin.Sandboxed.Runtime do
     opts = Keyword.merge(@defaults, opts)
     host = Keyword.get(opts, :host, fn name, _args -> {:error, "unknown function #{name}"} end)
     callers = [self() | Process.get(:"$callers", [])]
+    # Compiling (once per node) doesn't count against the call's time.
+    compiled()
 
     task =
       Task.Supervisor.async_nolink(FirestormWeb.Plugin.TaskSupervisor, fn ->

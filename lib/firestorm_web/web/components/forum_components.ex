@@ -445,7 +445,14 @@ defmodule FirestormWeb.Web.ForumComponents do
             </div>
           </div>
         </header>
-        <.markdown id={"post-#{@post.id}-body"} body={@post.body} viewer={@viewer} refs={@refs} />
+        <.markdown
+          id={"post-#{@post.id}-body"}
+          body={@post.body}
+          viewer={@viewer}
+          refs={@refs}
+          post={@post}
+          thread={@thread}
+        />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
         {render_slot(@poll)}
         <footer class="flex items-center justify-end gap-1">
@@ -615,11 +622,13 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :body, :string, required: true
   attr :viewer, :any, default: nil, doc: "who reads it (see `FirestormWeb.Markdown.render/2`)"
   attr :refs, :map, default: nil, doc: "see `FirestormWeb.Markdown.render/2`"
+  attr :post, :any, default: nil, doc: "the post this is the body of, for plugins' content hooks"
+  attr :thread, :any, default: nil, doc: "the post's thread"
 
   def markdown(assigns) do
     ~H"""
     <div id={@id} phx-hook="Highlight" class="post-body prose prose-sm max-w-none">
-      {Phoenix.HTML.raw(Markdown.render(@body, @refs || @viewer))}
+      {Phoenix.HTML.raw(Markdown.render(@body, @refs || @viewer, post: @post, thread: @thread))}
     </div>
     """
   end
