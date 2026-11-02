@@ -420,6 +420,28 @@ Widgets talk to the page through `postMessage` only, with the SDK:
 `args`, must be treated as untrusted by the handler. Calls are rate limited
 (60 a minute per member or IP). Heights are kept between 20 and 2000 px.
 
+**Viewer storage**: a widget can keep data for the member looking at it,
+on the server, in the plugin's per-member store (the one `kv.*` reaches
+with `user_id`, same quota):
+
+```js
+Firefly.ready(async () => {
+  if (!Firefly.isLoggedIn()) return;                // Firefly.user is the viewer or null
+  const seen = (await Firefly.storage.get("seen")) || 0;
+  await Firefly.storage.set("seen", seen + 1);      // any JSON, at most 8 KB
+  await Firefly.storage.list("");                   // keys by prefix; also .delete(key)
+});
+```
+
+It's always the logged-in viewer's own data: the page relays the request
+and the server picks the member, so a widget can't name another
+`user_id`. Visitors get an error ("sign in to save data"), so hide what
+needs storage when `isLoggedIn()` is false. Writes are limited to 30 a
+minute per plugin and member. No permission is needed beyond having a
+widget (the plugin's frame apps can use it too); the data is the member's,
+in their account export and deleted with their account. There's no
+browser-side storage: the frame's opaque origin has none.
+
 **Pages**: `/plugins/:id` and `/plugins/:id/*path` call `render_page`;
 `html` is sanitized and shown in the site's layout, `iframe` shows an asset
 as a full sandboxed app (same bridge, `context: {path}`). **Staff
@@ -437,7 +459,8 @@ minute per plugin and client IP; bodies up to 100 KB.
 
 `priv/plugins/examples/hello` uses most hooks: a `[hello name="…"]`
 shortcode and a post transform, a composer button, a widget under posts
-backed by `handle_widget`, a page and a frame app, a staff section, an
+backed by `handle_widget` that counts each member's views in their own
+storage, a page and a frame app, a staff section, an
 endpoint (`GET /api/plugins/hello/stats`), events, a scheduled job,
 moderation driven by its settings, a flag hook, a public custom field and
 an export. Zip the folder and upload it at `/staff/plugins`.

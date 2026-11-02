@@ -26,7 +26,7 @@ defmodule FirestormWeb.Web.PluginController do
     end
   end
 
-  @doc "The widget SDK (`Firefly.ready`, `Firefly.call`, `Firefly.resize`)."
+  @doc "The widget SDK (`Firefly.ready`, `Firefly.call`, `Firefly.storage`, `Firefly.resize`)."
   def sdk(conn, _params) do
     conn
     |> sandbox_headers()
