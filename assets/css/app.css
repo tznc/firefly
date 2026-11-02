@@ -127,3 +127,6 @@
 .post-body blockquote.quote p::before, .post-body blockquote.quote p::after { content: none; }
 .post-body blockquote.quote .quote-attribution { margin: 0 0 0.25rem; font-size: 0.8125rem; font-weight: 600; }
 .post-body blockquote.quote .quote-attribution a { text-decoration: none; color: var(--color-base-content); }
+
+/* Custom emoji: inline, text-sized (see FirestormWeb.Emoji) */
+img.emoji { display: inline-block; height: 1.25em; width: auto; margin: 0 0.05em; vertical-align: -0.25em; }

@@ -97,7 +97,7 @@ defmodule FirestormWeb.Plugins.Content do
   @doc "Sanitizes HTML with the markdown renderer's allow-list."
   def sanitize(html) do
     MDEx.safe_html(html,
-      sanitize: MDEx.Document.default_sanitize_options(),
+      sanitize: FirestormWeb.Markdown.sanitize_options(),
       escape: [content: false, curly_braces_in_code: false]
     )
   end

@@ -21,16 +21,26 @@ defmodule FirestormWeb.Markdown do
   several posts, pass `Mentions.refs/2` of all their bodies to `render/2`
   instead of the viewer, so the names are looked up once.
 
+  Custom emoji (see `FirestormWeb.Emoji`) written `:name:` become
+  `<img class="emoji">` (not in code).
+
   Raw HTML is allowed in the input, but the output is always run through an
-  allow-list sanitizer, so scripts, event handlers and `javascript:` URLs are
-  stripped.
+  allow-list sanitizer (`sanitize_options/0`: MDEx's defaults plus only what
+  the steps above need, e.g. the `emoji` class on images), so scripts,
+  event handlers and `javascript:` URLs are stripped.
 
   A post's body (rendered with the `:post` and `:thread` options) also goes
   through the plugins' content hooks (see `FirestormWeb.Plugins.Content`),
   whose output is sanitized again.
   """
 
-  alias FirestormWeb.Mentions
+  alias FirestormWeb.{Emoji, Mentions}
+
+  @sanitize MDEx.Document.default_sanitize_options()
+            |> Keyword.merge(
+              # Custom emoji: `class` on images may only be "emoji".
+              add_allowed_classes: %{"img" => ["emoji"]}
+            )
 
   @options [
     extension: [
@@ -43,7 +53,7 @@ defmodule FirestormWeb.Markdown do
     parse: [smart: false],
     render: [hardbreaks: true, unsafe: true],
     syntax_highlight: nil,
-    sanitize: MDEx.Document.default_sanitize_options()
+    sanitize: @sanitize
   ]
 
   # A quote reply's attribution: a blockquote that starts with a link reading
@@ -52,6 +62,12 @@ defmodule FirestormWeb.Markdown do
 
   @doc false
   def options, do: @options
+
+  @doc """
+  The sanitizer allow-list for post HTML, also applied to what plugins
+  return (see `FirestormWeb.Plugins.Content.sanitize/1`).
+  """
+  def sanitize_options, do: @sanitize
 
   @spec render(String.t() | nil, Mentions.refs() | term, keyword) :: String.t()
   def render(body, refs_or_viewer \\ nil, opts \\ [])
@@ -62,6 +78,7 @@ defmodule FirestormWeb.Markdown do
     body
     |> Mentions.parse()
     |> Mentions.link(refs_or_viewer)
+    |> custom_emoji(Emoji.custom())
     |> MDEx.to_html!(@options)
     |> plugins(opts[:post], opts[:thread])
     # Safe to do after sanitizing: any literal `<pre>` in user text is escaped.
@@ -71,6 +88,48 @@ defmodule FirestormWeb.Markdown do
       ~s(<blockquote class="quote">\n<p class="quote-attribution">\\1</p>)
     )
   end
+
+  @emoji_name ~r/:([a-z0-9_]{2,32}):/
+
+  # Text nodes (code is literal, not text) with `:name:` of a custom emoji
+  # are split around an <img> for it.
+  defp custom_emoji(document, emoji) when emoji == %{}, do: document
+
+  defp custom_emoji(document, emoji) do
+    MDEx.traverse_and_update(document, fn
+      %{nodes: [_ | _] = nodes} = node ->
+        %{node | nodes: Enum.flat_map(nodes, &emoji_text(&1, emoji))}
+
+      node ->
+        node
+    end)
+  end
+
+  defp emoji_text(%MDEx.Text{literal: text} = node, emoji) do
+    if String.contains?(text, ":") do
+      @emoji_name
+      |> Regex.split(text, include_captures: true)
+      |> Enum.map(&emoji_part(&1, emoji))
+    else
+      [node]
+    end
+  end
+
+  defp emoji_text(node, _emoji), do: [node]
+
+  defp emoji_part(part, emoji) do
+    with [_, name] <- Regex.run(~r/\A:([a-z0-9_]{2,32}):\z/, part),
+         {:ok, url} <- Map.fetch(emoji, name) do
+      %MDEx.HtmlInline{literal: emoji_img(name, url)}
+    else
+      _text -> %MDEx.Text{literal: part}
+    end
+  end
+
+  defp emoji_img(name, url),
+    do: ~s(<img class="emoji" src="#{escape(url)}" alt=":#{name}:" title=":#{name}:">)
+
+  defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   defp plugins(html, nil, _thread), do: html
   defp plugins(html, post, thread), do: FirestormWeb.Plugins.Content.transform(html, post, thread)

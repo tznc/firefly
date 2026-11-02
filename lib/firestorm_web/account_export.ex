@@ -6,8 +6,8 @@ defmodule FirestormWeb.AccountExport do
   notifications, private messages they sent and the conversations they're
   in, notification levels, read positions, drafts, bookmarks, poll votes and the polls they created,
   their uploads (with links, which work while the user may still see them),
-  and what plugins keep for them (their storage entries and custom fields
-  on the user, by plugin id).
+  the custom emoji they added as staff, and what plugins keep for them
+  (their storage entries and custom fields on the user, by plugin id).
 
   Other people appear only by public username: no one else's email, name,
   messages or post bodies. (Notification bodies, which quote other people's
@@ -70,6 +70,7 @@ defmodule FirestormWeb.AccountExport do
       bookmarks: FirestormWeb.Bookmarks.export(user),
       polls: FirestormWeb.Polls.export(user),
       uploads: FirestormWeb.Uploads.export(user),
+      custom_emoji_added: FirestormWeb.Emoji.export(user),
       plugin_storage: FirestormWeb.Plugins.Storage.export(user),
       plugin_fields: FirestormWeb.Plugins.Fields.export(user)
     }

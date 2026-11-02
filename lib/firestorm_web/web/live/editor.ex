@@ -3,7 +3,8 @@ defmodule FirestormWeb.Web.Editor do
   Shared pieces of the post editor used by the new thread and reply pages:
   a markdown textarea with a live preview, `@username` autocomplete, file
   attachments (picked, dropped on the editor or pasted into it; stored by
-  `FirestormWeb.Uploads`), and the toolbar
+  `FirestormWeb.Uploads`), an emoji picker and `:emoji` autocomplete (see
+  `FirestormWeb.Emoji`), and the toolbar
   buttons plugins add (they insert text; see `FirestormWeb.Plugin.Manifest`).
   The preview shows plain markdown: plugins only transform published posts.
   """
@@ -102,7 +103,10 @@ defmodule FirestormWeb.Web.Editor do
   attr :user, :any, default: nil, doc: "the writer, for plugins' composer widgets"
 
   def body_editor(assigns) do
-    assigns = assign(assigns, :buttons, composer_buttons())
+    assigns =
+      assigns
+      |> assign(:buttons, composer_buttons())
+      |> assign(:custom_emoji, custom_emoji_json())
 
     ~H"""
     <div class="space-y-3">
@@ -122,18 +126,52 @@ defmodule FirestormWeb.Web.Editor do
           phx-debounce="300"
           phx-hook="MentionAutocomplete"
           data-menu={"#{@field.id}-mentions"}
+          data-custom-emoji={@custom_emoji}
           class="textarea w-full font-mono text-sm"
         />
         <ul
           id={"#{@field.id}-mentions"}
           phx-update="ignore"
           role="listbox"
-          aria-label="Mention suggestions"
+          aria-label="Suggestions"
           class="menu absolute top-full left-0 z-20 hidden w-64 rounded-box border border-base-300 bg-base-100 p-1 shadow"
         >
         </ul>
       </div>
       <div class="flex flex-wrap items-center gap-3">
+        <div
+          id={"#{@field.id}-emoji"}
+          class="relative"
+          phx-hook="EmojiPicker"
+          phx-update="ignore"
+          data-target={@field.id}
+          data-custom-emoji={@custom_emoji}
+        >
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm"
+            data-toggle
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            <.icon name="hero-face-smile" class="size-4" /> Emoji
+          </button>
+          <div
+            data-panel
+            hidden
+            role="dialog"
+            aria-label="Emoji"
+            class="absolute bottom-full left-0 z-30 mb-1 w-80 rounded-box border border-base-300 bg-base-100 p-2 shadow"
+          >
+            <input
+              type="search"
+              class="input input-sm mb-2 w-full"
+              placeholder="Search emoji"
+              aria-label="Search emoji"
+            />
+            <div data-grid class="grid max-h-64 grid-cols-8 overflow-y-auto"></div>
+          </div>
+        </div>
         <div
           :if={@buttons != []}
           id={"#{@field.id}-plugin-buttons"}
@@ -190,6 +228,10 @@ defmodule FirestormWeb.Web.Editor do
       </section>
     </div>
     """
+  end
+
+  defp custom_emoji_json do
+    Jason.encode!(for {name, url} <- FirestormWeb.Emoji.custom(), do: %{name: name, url: url})
   end
 
   # Toolbar buttons the active plugins declare (manifest `composer_buttons`),

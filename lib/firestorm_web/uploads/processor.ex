@@ -13,11 +13,13 @@ defmodule FirestormWeb.Uploads.Processor do
   fit `max_dimension` pixels, plus a thumbnail when larger than
   `thumbnail_size/0`. Animated GIFs keep their frames, so they're stored
   as uploaded (GIF has no EXIF to strip) with no downscaling or thumbnail.
-  Avatars are cropped square to `avatar_size/0`.
+  Avatars are cropped square to `avatar_size/0`; custom emoji are scaled
+  to fit `emoji_size/0` (animated GIF emoji are kept as uploaded).
   """
 
   @thumbnail_size 640
   @avatar_size 256
+  @emoji_size 128
   # Pixels a decoded image may have: bigger is a decompression bomb, not a photo.
   @max_pixels 50_000_000
 
@@ -26,6 +28,9 @@ defmodule FirestormWeb.Uploads.Processor do
 
   @doc "An avatar's side, in pixels."
   def avatar_size, do: @avatar_size
+
+  @doc "A custom emoji's longest side, in pixels."
+  def emoji_size, do: @emoji_size
 
   @doc "The file extension stored files of `content_type` get."
   def extension("image/png"), do: ".png"
@@ -56,16 +61,19 @@ defmodule FirestormWeb.Uploads.Processor do
 
   @doc """
   Prepares `data` of `content_type` for storing. `:max_dimension` caps an
-  image's longest side; `avatar: true` crops it square. Returns
+  image's longest side; `variant: "avatar"` crops it square, `"emoji"`
+  scales it to emoji size. Returns
   `{:ok, %{data: data, width: w, height: h, thumbnail: data | nil}}`
   (no dimensions for other files) or `{:error, message}`.
   """
   def process(data, "image/" <> _ = content_type, opts) do
     with {:ok, image} <- open(data),
          :ok <- check_pixels(image) do
-      if opts[:avatar],
-        do: avatar(image, content_type),
-        else: image(data, image, content_type, opts[:max_dimension])
+      case opts[:variant] do
+        "avatar" -> avatar(image, content_type)
+        "emoji" -> image(data, image, content_type, @emoji_size)
+        nil -> image(data, image, content_type, opts[:max_dimension])
+      end
     end
   end
 

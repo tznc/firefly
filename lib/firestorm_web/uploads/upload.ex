@@ -10,7 +10,8 @@ defmodule FirestormWeb.Uploads.Upload do
 
   `attached_to` says what it belongs to, which decides who may fetch it:
   `"post"` (`post_id`) or `"message"` (`message_id`), whoever may read
-  that; `"avatar"`, the uploader's profile picture, anyone. Nil: nothing
+  that; `"avatar"`, the uploader's profile picture, and `"emoji"`, a
+  custom emoji (see `FirestormWeb.Emoji`), anyone. Nil: nothing
   yet (just uploaded in a composer), the uploader and admins only, and
   removed after a grace period.
   """
@@ -19,7 +20,7 @@ defmodule FirestormWeb.Uploads.Upload do
 
   alias FirestormWeb.Forums.{Message, Post, User}
 
-  @kinds ~w(post message avatar)
+  @kinds ~w(post message avatar emoji)
 
   schema "uploads" do
     field(:token, :string)

@@ -219,6 +219,28 @@ defmodule FirestormWeb.E2E.CriticalFlowsTest do
     |> assert_has("#posts article a[href^='/uploads/']", text: "notes.txt")
   end
 
+  test "emoji come from the picker and from typing a colon", %{conn: conn} do
+    alice = member_fixture("alice")
+    {:ok, category} = Forums.create_category(%{title: "Elixir"})
+    {:ok, thread} = Forums.create_thread(category, alice, %{title: "Hello", body: "Hi all"})
+
+    conn
+    |> log_in("alice")
+    |> visit("/categories/#{category.id}/threads/#{thread.id}/posts/new")
+    |> PhoenixTest.Playwright.type("#post_body", "Hot :fir")
+    |> assert_has("#post_body-mentions [role=option]", text: ":fire:")
+    |> PhoenixTest.Playwright.press("#post_body", "Enter")
+    |> refute_has("#post_body-mentions [role=option]")
+    |> assert_has("#post-preview", text: "Hot 🔥")
+    |> click_button("Emoji")
+    |> fill_in("Search emoji", with: "tada")
+    |> PhoenixTest.Playwright.click("#post_body-emoji button[title=':tada:']")
+    |> assert_has("#post-preview", text: "🎉")
+    # The picker lists what was picked recently first.
+    |> click_button("Emoji")
+    |> assert_has("#post_body-emoji [data-grid] button:first-child[title=':tada:']")
+  end
+
   test "a reply draft survives leaving the page straight after typing", %{conn: conn} do
     alice = member_fixture("alice")
     category = Forums.create_category(%{title: "Elixir"}) |> elem(1)

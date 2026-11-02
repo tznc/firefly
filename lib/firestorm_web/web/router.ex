@@ -111,6 +111,7 @@ defmodule FirestormWeb.Web.Router do
       live("/staff/tags", StaffLive.Tags, :index)
       live("/staff/plugins", StaffLive.Plugins, :index)
       live("/staff/uploads", StaffLive.Uploads, :index)
+      live("/staff/emoji", StaffLive.Emoji, :index)
       live("/staff/plugins/:id", StaffLive.Plugin, :show)
       live("/categories/new", CategoryLive.Form, :new)
       live("/categories/:id/edit", CategoryLive.Form, :edit)
