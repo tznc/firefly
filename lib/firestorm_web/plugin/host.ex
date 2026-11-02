@@ -29,7 +29,9 @@ defmodule FirestormWeb.Plugin.Host do
     * `users.get` (`read`) - `{id}` or `{username}`: a user's public profile.
     * `kv.get`, `kv.set`, `kv.delete`, `kv.list` - `{key}`, `{key, value}`,
       `{key}`, `{prefix}`: the plugin's own storage (see
-      `FirestormWeb.Plugins.Storage`).
+      `FirestormWeb.Plugins.Storage`). With `user_id`, the store the plugin
+      keeps for that member (who must exist), a separate namespace with its
+      own quota.
     * `tags.add`, `tags.remove` (`tags`) - `{thread_id, tag}`.
     * `posts.reply` (`post`) - `{thread_id, body}`: replies as the plugin's
       bot; the result is `{id}`.
@@ -321,17 +323,9 @@ defmodule FirestormWeb.Plugin.Host do
     end
   end
 
-  defp run("kv.get", plugin, %{"key" => key}) when is_binary(key),
-    do: {:ok, Storage.get(plugin.id, key)}
-
-  defp run("kv.set", plugin, %{"key" => key} = args),
-    do: ok(Storage.put(plugin.id, key, args["value"]))
-
-  defp run("kv.delete", plugin, %{"key" => key}) when is_binary(key),
-    do: ok(Storage.delete(plugin.id, key))
-
-  defp run("kv.list", plugin, args),
-    do: {:ok, Storage.list(plugin.id, to_string(args["prefix"] || ""))}
+  defp run("kv." <> op, plugin, args) do
+    with {:ok, scope} <- kv_scope(plugin, args), do: kv(op, scope, args)
+  end
 
   defp run(name, plugin, %{"thread_id" => id, "tag" => tag})
        when name in ["tags.add", "tags.remove"] and is_binary(tag) do
@@ -432,6 +426,29 @@ defmodule FirestormWeb.Plugin.Host do
   end
 
   defp run(name, _plugin, _args), do: {:error, "invalid arguments for #{name}"}
+
+  # `user_id` picks a member's store instead of the plugin's global one. Any
+  # existing member will do: server-side code decides whose data it keeps.
+  defp kv_scope(plugin, %{"user_id" => nil}), do: {:ok, plugin.id}
+
+  defp kv_scope(plugin, %{"user_id" => id}) when is_integer(id) do
+    case Forums.get_user(id) do
+      %User{deleted_at: nil} -> {:ok, {plugin.id, id}}
+      _ -> {:error, "user not found"}
+    end
+  end
+
+  defp kv_scope(_plugin, %{"user_id" => _}), do: {:error, "user_id must be a user's id"}
+  defp kv_scope(plugin, _args), do: {:ok, plugin.id}
+
+  defp kv("get", scope, %{"key" => key}) when is_binary(key), do: {:ok, Storage.get(scope, key)}
+  defp kv("set", scope, %{"key" => key} = args), do: ok(Storage.put(scope, key, args["value"]))
+
+  defp kv("delete", scope, %{"key" => key}) when is_binary(key),
+    do: ok(Storage.delete(scope, key))
+
+  defp kv("list", scope, args), do: {:ok, Storage.list(scope, to_string(args["prefix"] || ""))}
+  defp kv(op, _scope, _args), do: {:error, "invalid arguments for kv.#{op}"}
 
   defp ok(:ok), do: {:ok, nil}
   defp ok(error), do: error
