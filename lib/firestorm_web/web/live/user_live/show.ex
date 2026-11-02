@@ -208,6 +208,13 @@ defmodule FirestormWeb.Web.UserLive.Show do
 
       <.markdown :if={@user.bio} id="user-bio" body={@user.bio} />
 
+      <FirestormWeb.Web.PluginComponents.plugin_outlet
+        outlet="user_profile"
+        key={@user.id}
+        context={%{user_id: @user.id}}
+        user={@current_user}
+      />
+
       <p :if={!@activity?} id="activity-hidden" class="text-base-content/60">
         {@user.username} keeps their activity private.
       </p>

@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <style>
+      body { margin: 0; font: 13px system-ui, sans-serif; color: #666; }
+    </style>
+  </head>
+  <body>
+    <p id="views">…</p>
+    <script src="/plugins/sdk.js"></script>
+    <script>
+      // Members also get their own count, kept in their storage.
+      const countMine = async () => {
+        if (!Firefly.isLoggedIn()) return "";
+        const seen = ((await Firefly.storage.get("seen")) || 0) + 1;
+        await Firefly.storage.set("seen", seen);
+        return ` You've seen it ${seen}.`;
+      };
+
+      Firefly.ready(async () => {
+        const {views, greeting} = await Firefly.call("view");
+        const mine = await countMine();
+        document.getElementById("views").textContent = `${greeting} Seen ${views} times.${mine}`;
+        Firefly.resize(48);
+      });
+    </script>
+  </body>
+</html>

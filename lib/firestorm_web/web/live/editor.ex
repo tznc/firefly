@@ -91,6 +91,7 @@ defmodule FirestormWeb.Web.Editor do
   attr :field, Phoenix.HTML.FormField, required: true
   attr :uploads, :map, required: true
   attr :placeholder, :string, default: "Type post content here. Use markdown syntax."
+  attr :user, :any, default: nil, doc: "the writer, for plugins' composer widgets"
 
   def body_editor(assigns) do
     assigns = assign(assigns, :buttons, composer_buttons())
@@ -155,6 +156,12 @@ defmodule FirestormWeb.Web.Editor do
           {upload_error(err)}
         </p>
       </div>
+      <FirestormWeb.Web.PluginComponents.plugin_outlet
+        outlet="composer"
+        key={@field.id}
+        context={%{field: @field.id}}
+        user={@user}
+      />
       <section class="rounded-box border border-dashed border-base-300 p-4" aria-label="Preview">
         <h2 class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60">
           Preview

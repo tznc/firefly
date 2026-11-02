@@ -136,7 +136,44 @@ defmodule FirestormWeb.Plugin do
   """
   @callback flag_created(t, input :: map) :: {:ok, map} | {:error, failure}
 
+  @doc """
+  A widget (see the manifest's `widgets`) called one of the plugin's
+  handlers through the widget bridge: `input` is `%{"handler", "args",
+  "context", "user"}`. `context` comes from the browser: treat it as
+  untrusted. `user` is the viewer's public profile, or nil.
+  """
+  @callback handle_widget(t, input :: map) :: {:ok, term} | {:error, String.t() | failure}
+
+  @doc """
+  Renders the plugin's page at `/plugins/:id/*path`: `input` is `%{"path",
+  "params", "user"}`; the result is `%{"title", "html"}` (sanitized, shown
+  in the site's layout) or `%{"title", "iframe" => asset}` (an app in a
+  sandboxed frame).
+  """
+  @callback render_page(t, input :: map) :: {:ok, map} | {:error, String.t() | failure}
+
+  @doc "Renders the plugin's own section of its staff page (`/staff/plugins/:id`), as `render_page/2`."
+  @callback render_admin(t, input :: map) :: {:ok, map} | {:error, String.t() | failure}
+
+  @doc """
+  Handles a request to `/api/plugins/:id/*path`: `input` is `%{"method",
+  "path", "query", "body", "user"}`; the result is `%{"status", "body"}`,
+  sent as JSON.
+  """
+  @callback handle_request(t, input :: map) :: {:ok, map} | {:error, String.t() | failure}
+
+  @doc """
+  One of the plugin's static assets (manifest `assets`), for widgets and
+  frames: `{:ok, binary}` or `:error`. Not a hook: no sandbox call.
+  """
+  @callback asset(t, path :: String.t()) :: {:ok, binary} | :error
+
   @optional_callbacks enabled: 1,
+                      handle_widget: 2,
+                      render_page: 2,
+                      render_admin: 2,
+                      handle_request: 2,
+                      asset: 2,
                       moderate_post: 2,
                       flag_created: 2,
                       disabled: 1,
@@ -156,7 +193,11 @@ defmodule FirestormWeb.Plugin do
     "handle_event" => {:handle_event, 2},
     "run_job" => {:run_job, 2},
     "moderate_post" => {:moderate_post, 2},
-    "flag_created" => {:flag_created, 2}
+    "flag_created" => {:flag_created, 2},
+    "handle_widget" => {:handle_widget, 2},
+    "render_page" => {:render_page, 2},
+    "render_admin" => {:render_admin, 2},
+    "handle_request" => {:handle_request, 2}
   }
 
   @doc "The hooks a plugin may implement, by manifest name, with their callbacks."

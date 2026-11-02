@@ -75,6 +75,7 @@ defmodule FirestormWeb.Web.MessageLive.New do
         <Editor.body_editor
           field={@form[:body]}
           uploads={@uploads}
+          user={@current_user}
           placeholder="Type your message. Use markdown syntax."
         />
         <div class="flex justify-end gap-2">

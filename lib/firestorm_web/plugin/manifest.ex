@@ -31,6 +31,8 @@ defmodule FirestormWeb.Plugin.Manifest do
                  {"name": "nightly", "cron": "30 2 * * *"}],
         "http_hosts": ["api.example.com", "*.example.org"],
         "fields": [{"type": "post", "key": "score", "public": true}],
+        "widgets": [{"outlet": "post_footer", "asset": "widget.html", "height": 80}],
+        "endpoint_auth": "secret",          // or "user", "either"
         "priority": 100,                    // lower runs first among peers
         "source": "upload"                  // "upload" for bundles, "core" for core plugins
       }
@@ -73,6 +75,8 @@ defmodule FirestormWeb.Plugin.Manifest do
     jobs: [],
     http_hosts: [],
     fields: [],
+    widgets: [],
+    endpoint_auth: "secret",
     priority: 100,
     source: "upload"
   ]
@@ -81,11 +85,15 @@ defmodule FirestormWeb.Plugin.Manifest do
 
   @keys ~w(id name version firefly description author url license main hooks permissions
            settings assets dependencies optional_dependencies exports shortcodes composer_buttons
-           events jobs http_hosts fields priority source registry)
+           events jobs http_hosts fields widgets endpoint_auth priority source registry)
   @required ~w(id name version firefly)
   @id_format ~r/^[a-z][a-z0-9_-]{1,39}$/
   @path_format ~r{^[A-Za-z0-9_-][A-Za-z0-9._/-]*$}
   @name_format ~r/^[A-Za-z_][A-Za-z0-9_]*$/
+  @outlets ~w(post_footer thread_header sidebar user_profile composer)
+
+  @doc "The places widgets can go."
+  def outlets, do: @outlets
 
   @doc "Whether `id` is a valid plugin id."
   def valid_id?(id), do: is_binary(id) and id =~ @id_format
@@ -264,6 +272,20 @@ defmodule FirestormWeb.Plugin.Manifest do
       ]
   end
 
+  defp check("widgets", value, _source) do
+    if is_list(value) and length(value) <= 10 and Enum.all?(value, &widget?/1),
+      do: [],
+      else: [
+        "\"widgets\" must be at most 10 {outlet, asset, height}: outlet one of #{Enum.join(@outlets, ", ")}, height 20 to 2000"
+      ]
+  end
+
+  defp check("endpoint_auth", value, _source) do
+    if value in ~w(secret user either),
+      do: [],
+      else: ["\"endpoint_auth\" must be secret, user or either"]
+  end
+
   defp check("assets", value, _source) do
     if is_list(value) and length(value) <= 50 and
          Enum.all?(value, &(is_binary(&1) and &1 =~ @path_format and not (&1 =~ ".."))),
@@ -315,6 +337,13 @@ defmodule FirestormWeb.Plugin.Manifest do
       ["\"settings\" must be a list of at most 50 settings"]
     end
   end
+
+  defp widget?(%{"outlet" => outlet, "asset" => asset} = widget) when outlet in @outlets do
+    Map.keys(widget) -- ~w(outlet asset height) == [] and is_binary(asset) and
+      Map.get(widget, "height", 100) in 20..2000
+  end
+
+  defp widget?(_widget), do: false
 
   defp host_pattern?(host) do
     is_binary(host) and

@@ -67,7 +67,8 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "plugin.settings" => "Changed plugin settings",
     "plugin.auto_disable" => "Turned off failing plugin",
     "plugin.suspend" => "Suspended plugin",
-    "plugin.resume" => "Resumed plugin"
+    "plugin.resume" => "Resumed plugin",
+    "plugin.secret" => "Changed plugin endpoint secret"
   }
 
   @impl true

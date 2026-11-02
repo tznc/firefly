@@ -39,6 +39,26 @@ defmodule FirestormWeb.PluginHelpers do
     bundle.manifest.id
   end
 
+  @doc "The example plugin `name` in priv/plugins/examples, zipped."
+  def example_zip(name) do
+    root = Path.join([File.cwd!(), "priv/plugins/examples", name])
+
+    root
+    |> Path.join("**/*")
+    |> Path.wildcard()
+    |> Enum.reject(&File.dir?/1)
+    |> Map.new(&{Path.relative_to(&1, root), File.read!(&1)})
+    |> zip()
+  end
+
+  @doc "Installs and enables the example plugin `name` as `admin`."
+  def install_example!(admin, name) do
+    {:ok, bundle} = Bundle.read(example_zip(name))
+    {:ok, _row} = Plugins.install(bundle, admin)
+    {:ok, _} = Plugins.enable(bundle.manifest.id, admin)
+    bundle.manifest.id
+  end
+
   @doc "Runs `fun` with `modules` as the core plugins."
   def with_core_plugins(modules, fun) do
     previous = Application.get_env(:firestorm_web, Plugins, [])

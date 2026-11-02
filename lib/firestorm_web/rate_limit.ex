@@ -22,6 +22,10 @@ defmodule FirestormWeb.RateLimit do
       client IP for visitors
     * `:plugin_notify` - notifications a plugin sends (see
       `FirestormWeb.Plugin.Host`), per plugin
+    * `:plugin_call` - widget calls to plugins' handlers, per user or client IP
+    * `:plugin_api` - requests to a plugin's endpoints, per plugin and client IP
+    * `:plugin_storage` - widget writes to a member's plugin storage, per
+      plugin and member
   """
   use Hammer, backend: :ets
 
@@ -38,7 +42,10 @@ defmodule FirestormWeb.RateLimit do
     password_reset: {10, :timer.hours(1)},
     search: {60, :timer.minutes(1)},
     flag: {20, :timer.hours(1)},
-    plugin_notify: {100, :timer.hours(1)}
+    plugin_notify: {100, :timer.hours(1)},
+    plugin_call: {60, :timer.minutes(1)},
+    plugin_api: {300, :timer.minutes(1)},
+    plugin_storage: {30, :timer.minutes(1)}
   ]
 
   @doc "Checks the `bucket` limit for `key`: `:ok` or `{:error, :rate_limited}`."

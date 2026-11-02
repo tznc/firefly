@@ -61,8 +61,11 @@ defmodule FirestormWeb.Plugin.Host do
   (`render_shortcodes`, `render_post`, `moderate_post`, `flag_created`): a slow or hostile host would hold up
   every page view, and content would leave the site each time it's shown.
   It's allowed in `enabled` and `disabled` (staff actions), `handle_event`
-  and `run_job` (background work), and in an export when the call chain
-  started in one of those (see `FirestormWeb.Plugin.Runner.context/0`).
+  and `run_job` (background work), on the plugin's own surfaces, where the
+  caller asked for the plugin and waits for it (`handle_widget`,
+  `handle_request`, `render_page`, `render_admin`; still within the hook's
+  time limit), and in an export when the call chain started in one of those
+  (see `FirestormWeb.Plugin.Runner.context/0`).
   The check reads the context the runner gave the calling process, so it
   holds the same for core and sandboxed plugins, and a process a core
   plugin starts outside a hook gets no network either.
@@ -93,7 +96,8 @@ defmodule FirestormWeb.Plugin.Host do
   }
 
   # Where `http.fetch` may run (see "Network access").
-  @network_contexts ~w(enabled disabled handle_event run_job)
+  @network_contexts ~w(enabled disabled handle_event run_job
+                       handle_widget handle_request render_page render_admin)
 
   # Function name => the permission it needs (nil: none).
   @functions %{
