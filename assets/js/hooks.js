@@ -28,11 +28,53 @@ const setUpSpoilers = root => {
   })
 }
 
-// Syntax-highlight code blocks inside rendered markdown, and set up its
-// spoilers.
+// Math in rendered markdown (`span[data-math-style]`, see
+// FirestormWeb.Markdown), typeset with KaTeX, vendored in
+// priv/static/vendor/katex and loaded the first time a page has math.
+// Untrusted input: no \href, \url or HTML extensions, and errors show the
+// source instead of throwing.
+let katexLoading = null
+const loadKatex = () => {
+  katexLoading = katexLoading || new Promise((resolve, reject) => {
+    const css = document.createElement("link")
+    css.rel = "stylesheet"
+    css.href = "/vendor/katex/katex.min.css"
+    document.head.append(css)
+    const script = document.createElement("script")
+    script.src = "/vendor/katex/katex.min.js"
+    script.onload = () => resolve(window.katex)
+    script.onerror = () => { katexLoading = null; reject(new Error("KaTeX didn't load")) }
+    document.head.append(script)
+  })
+  return katexLoading
+}
+const typesetMath = root => {
+  const pending = root.querySelectorAll("[data-math-style]:not([data-math-rendered])")
+  if (pending.length === 0) { return }
+  loadKatex().then(katex => pending.forEach(el => {
+    const tex = el.textContent
+    katex.render(tex, el, {
+      displayMode: el.dataset.mathStyle === "display",
+      throwOnError: false,
+      trust: false,
+      maxSize: 20,
+      maxExpand: 500,
+    })
+    el.dataset.mathRendered = "true"
+    el.setAttribute("title", tex)
+  })).catch(() => {})
+}
+
+// Syntax-highlight code blocks inside rendered markdown, typeset its math
+// and set up its spoilers.
+const renderMarkdown = el => {
+  Prism.highlightAllUnder(el)
+  typesetMath(el)
+  setUpSpoilers(el)
+}
 const Highlight = {
-  mounted() { Prism.highlightAllUnder(this.el); setUpSpoilers(this.el) },
-  updated() { Prism.highlightAllUnder(this.el); setUpSpoilers(this.el) },
+  mounted() { renderMarkdown(this.el) },
+  updated() { renderMarkdown(this.el) },
 }
 
 // Render an ISO 8601 UTC timestamp as relative time ("3 hours ago") in the

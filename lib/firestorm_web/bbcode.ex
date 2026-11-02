@@ -42,6 +42,19 @@ defmodule FirestormWeb.BBCode do
       else: text
   end
 
+  @doc """
+  `text` with `fun` applied to everything but its Markdown code (fenced
+  and indented blocks, code spans), which is kept as it is.
+  """
+  def outside_code(text, fun) do
+    if String.contains?(text, [@open_mark, @close_mark]) do
+      text
+    else
+      {text, protected} = protect_code(text)
+      text |> fun.() |> restore(protected)
+    end
+  end
+
   defp convert(text, skip) do
     {text, protected} = protect_code(text)
 
