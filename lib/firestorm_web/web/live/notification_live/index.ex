@@ -46,7 +46,7 @@ defmodule FirestormWeb.Web.NotificationLive.Index do
   defp kind_icon("moved"), do: "hero-arrows-right-left"
   defp kind_icon("bookmark_reminder"), do: "hero-bookmark"
   defp kind_icon("answer_accepted"), do: "hero-check-circle"
-  defp kind_icon("plugin_disabled"), do: "hero-puzzle-piece"
+  defp kind_icon(kind) when kind in ["plugin_disabled", "plugin"], do: "hero-puzzle-piece"
   defp kind_icon(_kind), do: "hero-arrow-uturn-left"
 
   @impl true

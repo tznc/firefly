@@ -26,6 +26,11 @@ defmodule FirestormWeb.Plugin.Manifest do
         "shortcodes": ["spoiler"],          // [spoiler]...[/spoiler] in posts
         "composer_buttons": [{"label": "Spoiler",
                               "insert": "[spoiler]{{selection}}[/spoiler]"}],
+        "events": ["post_created"],         // delivered to handle_event
+        "jobs": [{"name": "digest", "every": 3600},
+                 {"name": "nightly", "cron": "30 2 * * *"}],
+        "http_hosts": ["api.example.com", "*.example.org"],
+        "fields": [{"type": "post", "key": "score", "public": true}],
         "priority": 100,                    // lower runs first among peers
         "source": "upload"                  // "upload" for bundles, "core" for core plugins
       }
@@ -64,6 +69,10 @@ defmodule FirestormWeb.Plugin.Manifest do
     exports: [],
     shortcodes: [],
     composer_buttons: [],
+    events: [],
+    jobs: [],
+    http_hosts: [],
+    fields: [],
     priority: 100,
     source: "upload"
   ]
@@ -72,7 +81,7 @@ defmodule FirestormWeb.Plugin.Manifest do
 
   @keys ~w(id name version firefly description author url license main hooks permissions
            settings assets dependencies optional_dependencies exports shortcodes composer_buttons
-           priority source registry)
+           events jobs http_hosts fields priority source registry)
   @required ~w(id name version firefly)
   @id_format ~r/^[a-z][a-z0-9_-]{1,39}$/
   @path_format ~r{^[A-Za-z0-9_-][A-Za-z0-9._/-]*$}
@@ -115,10 +124,25 @@ defmodule FirestormWeb.Plugin.Manifest do
   # Keys that only make sense together.
   defp consistency(attrs) do
     hooks = Map.get(attrs, "hooks", [])
+    permissions = Map.get(attrs, "permissions", [])
+    events = Map.get(attrs, "events", [])
 
-    if Map.get(attrs, "shortcodes", []) != [] and "render_shortcodes" not in hooks,
-      do: ["\"shortcodes\" needs the render_shortcodes hook"],
-      else: []
+    [
+      {Map.get(attrs, "shortcodes", []) != [] and "render_shortcodes" not in hooks,
+       "\"shortcodes\" needs the render_shortcodes hook"},
+      {events != [] and "handle_event" not in hooks, "\"events\" needs the handle_event hook"},
+      {events != [] and "read" not in permissions, "\"events\" needs the read permission"},
+      {"flag_raised" in events and "flag" not in permissions,
+       "the flag_raised event needs the flag permission"},
+      {Map.get(attrs, "jobs", []) != [] and "run_job" not in hooks,
+       "\"jobs\" needs the run_job hook"},
+      {"http" in permissions != (Map.get(attrs, "http_hosts", []) != []),
+       "the http permission and \"http_hosts\" go together"},
+      {"fields" in permissions != (Map.get(attrs, "fields", []) != []),
+       "the fields permission and \"fields\" go together"}
+    ]
+    |> Enum.filter(&elem(&1, 0))
+    |> Enum.map(&elem(&1, 1))
   end
 
   defp build(attrs, source) do
@@ -210,6 +234,32 @@ defmodule FirestormWeb.Plugin.Manifest do
       ]
   end
 
+  defp check("events", value, _source),
+    do: known_list("events", value, FirestormWeb.Plugins.Events.names(), "event")
+
+  defp check("jobs", value, _source) do
+    if is_list(value) and length(value) <= 20 do
+      Enum.flat_map(value, &FirestormWeb.Plugins.Jobs.check_definition/1) ++
+        duplicates("jobs", Enum.map(value, &(is_map(&1) && &1["name"])))
+    else
+      ["\"jobs\" must be a list of at most 20 jobs"]
+    end
+  end
+
+  defp check("http_hosts", value, _source) do
+    if is_list(value) and length(value) <= 20 and Enum.all?(value, &host_pattern?/1),
+      do: [],
+      else: ["\"http_hosts\" must be a list of host names (a leading *. matches subdomains)"]
+  end
+
+  defp check("fields", value, _source) do
+    if is_list(value) and length(value) <= 50 and Enum.all?(value, &field?/1),
+      do: duplicates("fields", Enum.map(value, &{&1["type"], &1["key"]})),
+      else: [
+        "\"fields\" must be a list of {type, key, public}: type post, thread or user, key lowercase"
+      ]
+  end
+
   defp check("assets", value, _source) do
     if is_list(value) and length(value) <= 50 and
          Enum.all?(value, &(is_binary(&1) and &1 =~ @path_format and not (&1 =~ ".."))),
@@ -261,6 +311,18 @@ defmodule FirestormWeb.Plugin.Manifest do
       ["\"settings\" must be a list of at most 50 settings"]
     end
   end
+
+  defp host_pattern?(host) do
+    is_binary(host) and
+      host =~ ~r/^(\*\.)?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/
+  end
+
+  defp field?(%{"type" => type, "key" => key} = field) when type in ~w(post thread user) do
+    Map.keys(field) -- ~w(type key public) == [] and is_binary(key) and
+      key =~ ~r/^[a-z][a-z0-9_]{0,39}$/ and is_boolean(Map.get(field, "public", false))
+  end
+
+  defp field?(_field), do: false
 
   defp composer_button?(%{"label" => label, "insert" => insert} = button) do
     map_size(button) == 2 and is_binary(label) and String.length(label) in 1..40 and

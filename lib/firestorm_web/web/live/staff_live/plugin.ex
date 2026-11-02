@@ -1,18 +1,20 @@
 defmodule FirestormWeb.Web.StaffLive.Plugin do
   @moduledoc """
   One plugin (admins only): what it is and may do, its settings (a form
-  generated from its manifest's settings schema), statistics and error log.
+  generated from its manifest's settings schema), statistics, error log and
+  egress log (its recent outgoing requests, see
+  `FirestormWeb.Plugins.Egress`, filtered by host and allowed or blocked).
   Enabling and disabling are on the plugins page, which confirms cascades.
   """
   use FirestormWeb.Web, :live_view
 
   on_mount({FirestormWeb.Web.UserAuth, :require_user})
 
-  import FirestormWeb.Web.StaffLive.Plugins, only: [status_badge: 1, dependency_list: 1]
+  import FirestormWeb.Web.StaffLive.Plugins,
+    only: [status_badge: 1, dependency_list: 1, permission_list: 1]
 
-  alias FirestormWeb.Plugin.Host
   alias FirestormWeb.Plugins
-  alias FirestormWeb.Plugins.Health
+  alias FirestormWeb.Plugins.{Egress, Health}
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -41,9 +43,22 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
     |> assign(:plugin, plugin)
     |> assign(:errors, Health.errors(plugin.id))
     |> assign_form(form_values(plugin.settings || %{}), %{})
+    |> assign_egress(%{})
+  end
+
+  defp assign_egress(socket, filters) do
+    id = socket.assigns.plugin.id
+
+    socket
+    |> assign(:egress, Egress.list(id, filters))
+    |> assign(:egress_hosts, Egress.hosts(id))
+    |> assign(:egress_filters, to_form(filters, as: :egress))
   end
 
   @impl true
+  def handle_event("filter_egress", params, socket),
+    do: {:noreply, assign_egress(socket, Map.get(params, "egress", %{}))}
+
   def handle_event("save", params, socket) do
     plugin = socket.assigns.plugin
     values = Map.get(params, "settings", %{})
@@ -107,13 +122,12 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
               </ul>
             </div>
             <div :if={@plugin.manifest}>
-              <h3 class="font-medium">Permissions</h3>
-              <ul id="plugin-permissions" class="list-disc pl-5 text-sm">
-                <li :for={permission <- @plugin.manifest.permissions}>
-                  <strong>{permission}</strong>: {Host.describe_permission(permission)}
-                </li>
-                <li :if={@plugin.manifest.permissions == []}>None.</li>
-              </ul>
+              <h3 class="font-medium">What it can do</h3>
+              <.permission_list
+                id="plugin-permissions"
+                manifest={@plugin.manifest}
+                empty="Nothing beyond its own settings and logs."
+              />
             </div>
             <div :if={@plugin.dependencies != []} class="flex items-center gap-2 text-sm">
               <span class="font-medium">Needs</span>
@@ -169,6 +183,73 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
                 <pre class="whitespace-pre-wrap text-xs text-base-content/70">{error.message}</pre>
               </li>
             </ul>
+          </div>
+        </section>
+
+        <section id="plugin-egress" class="card border border-base-300 bg-base-100">
+          <div class="card-body gap-2">
+            <h2 class="card-title">Outgoing requests</h2>
+            <p class="text-sm text-base-content/70">
+              Every request it tried to make with http.fetch, sent or blocked, kept for {FirestormWeb.SiteSettings.get(
+                "plugin_egress_days"
+              )} days. Bodies, headers and query strings aren't recorded.
+            </p>
+            <.form
+              for={@egress_filters}
+              id="egress-filters"
+              phx-change="filter_egress"
+              class="flex flex-wrap gap-2"
+            >
+              <.input
+                field={@egress_filters[:host]}
+                type="select"
+                label="Host"
+                prompt="Any host"
+                options={@egress_hosts}
+              />
+              <.input
+                field={@egress_filters[:outcome]}
+                type="select"
+                label="Outcome"
+                prompt="Allowed or blocked"
+                options={[{"Allowed", "allowed"}, {"Blocked", "blocked"}]}
+              />
+            </.form>
+            <p :if={@egress == []} id="egress-empty" class="text-sm text-base-content/60">None.</p>
+            <div :if={@egress != []} class="overflow-x-auto">
+              <table id="egress-log" class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Request</th>
+                    <th>Result</th>
+                    <th>Sent / received</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr :for={entry <- @egress} id={"egress-#{entry.id}"}>
+                    <td><.time_ago at={entry.inserted_at} id={"egress-#{entry.id}-at"} /></td>
+                    <td class="font-mono text-xs break-all">
+                      {entry.method} {entry.host}{entry.path}
+                    </td>
+                    <td>
+                      <span :if={entry.blocked} class="badge badge-sm badge-error">
+                        blocked: {entry.error}
+                      </span>
+                      <span :if={!entry.blocked && entry.status} class="badge badge-sm badge-ghost">
+                        {entry.status}
+                      </span>
+                      <span :if={!entry.blocked && entry.error} class="badge badge-sm badge-warning">
+                        {entry.error}
+                      </span>
+                    </td>
+                    <td class="text-xs">{entry.request_bytes} B / {entry.response_bytes} B</td>
+                    <td class="text-xs">{entry.duration_ms} ms</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
       </div>

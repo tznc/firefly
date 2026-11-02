@@ -331,15 +331,28 @@ defmodule FirestormWeb.Polls do
         cond do
           not manageable?(actor, post, thread) -> {:error, :unauthorized}
           # Already so: nothing to do (or log).
-          Poll.closed?(poll) == close? -> {:ok, {poll, post}}
-          true -> {:ok, {update_closed(poll, close?, actor, post, thread), post}}
+          Poll.closed?(poll) == close? -> {:ok, {poll, post, false}}
+          true -> {:ok, {update_closed(poll, close?, actor, post, thread), post, true}}
         end
       end)
 
-    with {:ok, {updated, post}} <- result do
+    with {:ok, {updated, post, changed?}} <- result do
       changed(post)
+      if close? and changed?, do: closed(updated, actor)
       {:ok, updated}
     end
+  end
+
+  defp closed(poll, actor) do
+    post = Repo.get!(Post, poll.post_id)
+
+    FirestormWeb.Plugins.Events.emit(
+      "poll_closed",
+      %{poll_id: poll.id, post_id: post.id, thread_id: post.thread_id},
+      thread: fn -> Repo.get(Thread, post.thread_id) end,
+      post: post,
+      actor: actor
+    )
   end
 
   defp update_closed(poll, close?, actor, post, thread) do
@@ -405,6 +418,7 @@ defmodule FirestormWeb.Polls do
 
       {:ok, poll} ->
         changed(%Post{id: poll.post_id})
+        closed(poll, nil)
         run_due(now, count + 1)
     end
   end

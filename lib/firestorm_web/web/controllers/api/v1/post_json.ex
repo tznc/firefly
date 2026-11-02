@@ -1,6 +1,7 @@
 defmodule FirestormWeb.Web.Api.V1.PostJSON do
   @moduledoc "JSON representation of posts."
   alias FirestormWeb.{Markdown, OEmbed}
+  alias FirestormWeb.Plugins.Fields
   alias FirestormWeb.Forums.Post
 
   def show(%{post: %Post{} = post}), do: data(post)
@@ -25,7 +26,10 @@ defmodule FirestormWeb.Web.Api.V1.PostJSON do
       oembeds: Enum.map(oembeds, fn {url, oembed} -> [url, OEmbed.to_html(oembed)] end),
       inserted_at: post.inserted_at,
       updated_at: post.updated_at,
-      thread_id: post.thread_id
+      thread_id: post.thread_id,
+      # Plugins' public custom fields, by plugin id (see FirestormWeb.Plugins.Fields).
+      plugin_fields:
+        if(redacted?, do: %{}, else: Map.get(Fields.public("post", [post.id]), post.id, %{}))
     }
   end
 end

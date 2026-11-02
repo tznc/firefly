@@ -5,7 +5,10 @@ defmodule FirestormWeb.Forums.Policy do
     * `:manage_category` (create, edit, delete) - admins
     * `:update_thread`, `:delete_thread` - the thread's author (unless it's
       archived) and admins
-    * `:moderate_thread` (pin, close, archive, move) - admins
+    * `:moderate_thread` (pin, close, archive, move) - admins; a plugin's bot
+      with the `moderate` permission, on a thread anyone can read
+    * `:tag_thread` (a plugin changing a thread's tags) - a plugin's bot with
+      the `tags` permission, on a thread anyone can read
     * `:edit_post`, `:delete_post` (params `%{post: post, thread: thread}`) -
       the post's author while the thread is open (editing, also only within
       the `edit_grace_minutes` site setting; 0: forever), and admins; not
@@ -91,6 +94,18 @@ defmodule FirestormWeb.Forums.Policy do
     do: if(Forums.admin?(target), do: {:error, :unauthorized}, else: admin(user))
 
   def authorize(:lift_penalty, %User{} = user, %User{}), do: admin(user)
+
+  # A plugin's bot (see FirestormWeb.Plugins.Bots) moderates and tags as its
+  # plugin's permissions allow, and only threads anyone can read.
+  def authorize(action, %User{plugin_bot: plugin_id}, %Thread{} = thread)
+      when is_binary(plugin_id) and action in [:moderate_thread, :tag_thread] do
+    permission = if action == :moderate_thread, do: "moderate", else: "tags"
+
+    if FirestormWeb.Plugins.permitted?(plugin_id, permission) and
+         authorize(:view_thread, nil, thread) == :ok,
+       do: :ok,
+       else: {:error, :unauthorized}
+  end
 
   def authorize(:moderate_thread, %User{} = user, _params), do: admin(user)
 

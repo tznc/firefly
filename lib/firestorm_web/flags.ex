@@ -37,6 +37,14 @@ defmodule FirestormWeb.Flags do
       maybe_hide(post)
       notify_admins(post, user)
       FirestormWeb.Review.changed()
+
+      FirestormWeb.Plugins.Events.emit(
+        "flag_raised",
+        %{post_id: post.id, thread_id: post.thread_id, reason: flag.reason},
+        thread: post.thread,
+        actor: user
+      )
+
       {:ok, flag}
     end
   end

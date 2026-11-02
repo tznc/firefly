@@ -3,8 +3,10 @@ defmodule FirestormWeb.Web.StaffLive.Plugins do
   Plugins (admins only; see `FirestormWeb.Plugins`): every installed plugin
   in load order, with its status, dependencies, dependents and problems.
 
-  Uploading a bundle shows what it is and the permissions it requests
-  before it's installed (or upgrades the installed plugin with its id).
+  Uploading a bundle shows what it is and the permissions it requests, in
+  plain words naming the hosts it may send data to, before it's installed
+  (or upgrades the installed plugin with its id, highlighting what the new
+  version asks for that the installed one didn't).
   Enabling, disabling and uninstalling go through a confirm step that lists
   every plugin the change cascades to.
   """
@@ -158,6 +160,31 @@ defmodule FirestormWeb.Web.StaffLive.Plugins do
   defp dependency_state(:missing), do: ": missing"
   defp dependency_state({:incompatible, version}), do: ": #{version} installed"
 
+  @doc false
+  attr(:id, :string, required: true)
+  attr(:manifest, :any, required: true)
+  attr(:previous, :any, default: nil)
+  attr(:empty, :string, required: true)
+
+  def permission_list(assigns) do
+    assigns =
+      assign(assigns, :summary, Host.permission_summary(assigns.manifest, assigns.previous))
+
+    ~H"""
+    <ul id={@id} class="list-disc pl-5 text-sm space-y-1">
+      <li :for={item <- @summary} id={"#{@id}-#{item.permission}"}>
+        <span :if={item.new} class="badge badge-warning badge-sm">new</span>
+        <span class={item.new && "font-semibold"}>{item.text}</span>
+        <span :for={host <- item.hosts} :if={host.new} class="badge badge-warning badge-sm">
+          new: {host.name}
+        </span>
+        <span class="text-xs text-base-content/50">({item.permission})</span>
+      </li>
+      <li :if={@summary == []}>{@empty}</li>
+    </ul>
+    """
+  end
+
   defp enabled?(%{status: status}), do: status == :enabled or match?({:suspended, _}, status)
 
   @impl true
@@ -207,13 +234,23 @@ defmodule FirestormWeb.Web.StaffLive.Plugins do
             {@manifest.id} by {@manifest.author} · SHA-256 {@preview.bundle.checksum}
           </p>
           <div>
-            <h3 class="font-medium">It asks to</h3>
-            <ul id="preview-permissions" class="list-disc pl-5 text-sm">
-              <li :for={permission <- @manifest.permissions}>
-                <strong>{permission}</strong>: {Host.describe_permission(permission)}
-              </li>
-              <li :if={@manifest.permissions == []}>Nothing beyond its own settings and logs.</li>
-            </ul>
+            <h3 class="font-medium">What it can do</h3>
+            <p
+              :if={
+                @preview.current && @preview.current.manifest &&
+                  Host.more_access?(@manifest, @preview.current.manifest)
+              }
+              id="preview-more-access"
+              class="alert alert-warning py-2 text-sm my-2"
+            >
+              This version asks for more than version {@preview.current.version}: what's new is highlighted.
+            </p>
+            <.permission_list
+              id="preview-permissions"
+              manifest={@manifest}
+              previous={@preview.current && @preview.current.manifest}
+              empty="Nothing beyond its own settings and logs."
+            />
           </div>
           <div :if={@manifest.dependencies != %{} or @manifest.optional_dependencies != %{}}>
             <h3 class="font-medium">Depends on</h3>
@@ -245,7 +282,7 @@ defmodule FirestormWeb.Web.StaffLive.Plugins do
 
       <section :if={@confirm} id="plugin-confirm" class="alert alert-warning mb-6 flex-col items-start">
         <p :if={@confirm.action == "uninstall"}>
-          Uninstall <strong>{@confirm.id}</strong>? Its bundle, settings and error log are deleted.
+          Uninstall <strong>{@confirm.id}</strong>? Its bundle, settings, error log, stored data, custom fields, queued events and job schedule are deleted. Its bot's posts stay.
         </p>
         <p :if={@confirm.action != "uninstall"}>
           {String.capitalize(@confirm.action)} <strong>{@confirm.id}</strong>?

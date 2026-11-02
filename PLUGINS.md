@@ -123,6 +123,10 @@ again.
   "optional_dependencies": {"extra": ">= 0.3.0"},
   "exports": ["greet"],
   "shortcodes": ["spoiler"],
+  "events": ["post_created"],
+  "jobs": [{"name": "digest", "every": 3600}, {"name": "nightly", "cron": "30 2 * * *"}],
+  "http_hosts": ["api.example.com", "*.example.org"],
+  "fields": [{"type": "post", "key": "score", "public": true}],
   "composer_buttons": [{"label": "Spoiler", "insert": "[spoiler]{{selection}}[/spoiler]"}],
   "priority": 100,
   "source": "upload"
@@ -162,6 +166,8 @@ requirements; core and uploaded plugins can depend on each other.
 | (exports) | `call_export(plugin, function, args)` | `args` | the function's result |
 | `render_shortcodes` | `render_shortcodes(plugin, input)` | `{shortcodes: [{name, attrs, content}], post}` | one HTML string per shortcode |
 | `render_post` | `render_post(plugin, input)` | `{html, post}` | the new HTML |
+| `handle_event` | `handle_event(plugin, input)` | `{event, data}` | ignored; a failure is retried |
+| `run_job` | `run_job(plugin, input)` | `{job}` | ignored |
 
 `post` is `{id, thread_id, category_id, user_id}`.
 
@@ -203,9 +209,149 @@ text. They're data, not code: nothing runs in the browser.
 | `posts.get` | `read` | `{id}` | a public post |
 | `threads.get` | `read` | `{id}` | a public thread |
 | `users.get` | `read` | `{id}` or `{username}` | a public profile |
+| `kv.get` / `kv.set` / `kv.delete` / `kv.list` | | `{key}` / `{key, value}` / `{key}` / `{prefix}`, each with an optional `user_id` | value / `null` / `null` / keys |
+| `tags.add` / `tags.remove` | `tags` | `{thread_id, tag}` | the thread's tags |
+| `posts.reply` | `post` | `{thread_id, body}` | `{id}` |
+| `posts.flag` | `flag` | `{post_id, reason, note}` | `{id}` |
+| `notifications.send` | `notify` | `{user_id}` or `{username}`, `{subject, body, path}` | `null` |
+| `threads.close` / `threads.pin` | `moderate` | `{thread_id, closed}` / `{thread_id, pinned}` | `null` |
+| `http.fetch` | `http` | `{url, method, headers, body}` | `{status, headers, body}` |
+| `fields.get` / `fields.set` | `fields` | `{type, id}` / `{type, id, key, value}` | fields / `null` |
 
 Reads see only what an anonymous visitor may: private categories, deleted
-and hidden posts stay out of reach.
+and hidden posts stay out of reach. Writes act as the plugin's **bot user**
+(`<id>-bot`, created on install, or on first use for core plugins) through
+the same contexts and policies as a member's: `Posting.check` (penalties,
+closed threads, slow mode, rate limits), tag groups and `tags_admin_only`,
+flag rules, and only on public threads. Thread moderation and tagging are
+allowed to a bot by explicit policy rules (`:moderate_thread`,
+`:tag_thread`) for plugins holding the permission; staff actions by bots are
+staff-logged as the bot. Plugin notifications (`kind: "plugin"`) link only
+to paths on this site, at most 100 an hour per plugin.
+
+`http.fetch` reaches only the manifest's `http_hosts` (`*.example.com`
+for subdomains). The host is resolved by Firefly and every address must be
+public (no loopback, private, link-local, CGNAT, multicast, documentation
+or reserved ranges, IPv4 or IPv6, including IPv4-mapped); the request goes
+to the checked address (TLS still verified against the name), redirects
+aren't followed, 5 s timeout, 100 KB request and 1 MB response bodies.
+
+### Network access
+
+`http.fetch` only works where a slow or hostile host can't hold up members'
+pages and forum content doesn't leave the site every time it's shown. The
+host checks the hook the call runs in (the runner records it for the call's
+process), for core and sandboxed plugins alike; elsewhere it fails with
+"http.fetch is not available in synchronous hooks (<hook>); use an event or
+job", which also goes to the plugin's error log.
+
+| Hook | `http.fetch` |
+|---|---|
+| `render_shortcodes`, `render_post` | refused: they run while a page renders |
+| `handle_event`, `run_job` | allowed: background work |
+| `enabled`, `disabled` | allowed: a staff action, once (e.g. registering a webhook) |
+| exports | as the hook the call chain started in: allowed when a plugin's `handle_event` calls another's export through `plugins.call`, refused from its `render_post`; refused when Elixir code calls an export directly |
+
+A process a core plugin starts itself is outside any hook, so it gets no
+network either. To show remote data in posts, fetch it in the background and
+render from what you stored:
+
+```js
+// On post_created (needs "read" and the "post_created" event), look up
+// what the post links to and keep it; render_post only reads it.
+exports.handle_event = ({ event, data }) => {
+  const res = firefly.call("http.fetch", { url: `https://api.example.com/lookup?post=${data.post.id}` });
+  firefly.call("kv.set", { key: `card:${data.post.id}`, value: JSON.parse(res.body) });
+};
+exports.render_post = ({ html, post }) => {
+  const card = firefly.call("kv.get", { key: `card:${post.id}` });
+  return card ? html + `<p>${card.title}</p>` : html;
+};
+```
+
+### Egress log
+
+Every `http.fetch` a plugin attempts is logged, sent or refused (missing
+permission, a synchronous hook, a host not in `http_hosts`, a private
+address, a bad request): the plugin, method, host, path **without the query
+string** (where tokens travel), the status or the kind of error, bytes sent
+and received, the duration and the time. Request and response bodies and
+headers are never logged. Staff see the latest entries on
+`/staff/plugins/:id`, filtered by host and by allowed or blocked. Entries
+are kept for the `plugin_egress_days` site setting (14 days by default;
+`/staff/settings`, "Plugins") and pruned by the scheduler that runs topic
+timers; they stay after a plugin is uninstalled until then. Firefly's own
+requests (link previews) aren't plugin traffic and aren't logged here.
+
+### What staff see
+
+Staff see what a plugin may do in plain words before installing it and on
+its page: `http` reads "Can send forum content to: api.example.com,
+hooks.slack.com" (`*.example.org` as "any subdomain of example.org"), and
+each other permission says what it allows ("Can reply in public threads,
+as its bot account"). Uploading a newer version that asks for a permission
+or host the installed one didn't says so above the list and marks each one
+new.
+
+## Events
+
+Subscribe with `events` (needs the `read` permission and the
+`handle_event` hook; `flag_raised` also needs `flag`):
+
+| Event | Data |
+|---|---|
+| `post_created`, `post_edited` | `{post, thread}` |
+| `post_deleted` | `{post_id, thread_id}` |
+| `thread_created` | `{thread, post}` |
+| `user_registered` | `{user: {id, username}}` |
+| `flag_raised` | `{post_id, thread_id, reason}` |
+| `post_liked` | `{post_id, thread_id, user_id}` |
+| `solved` | `{thread_id, post_id}` |
+| `poll_closed` | `{poll_id, post_id, thread_id}` |
+
+A post is `{id, thread_id, user_id, author, body, url}`, a thread
+`{id, title, category_id, url}`. Events are queued in the database in the
+same transaction as the change and delivered by `FirestormWeb.Plugins.Queue`
+(within about a second): a failure is retried after 30 s, 2, 8 and 32
+minutes, then dropped and logged. Only content anonymous visitors can read
+produces events, and a plugin never hears about its own bot's actions.
+
+## Scheduled jobs
+
+`jobs` entries are `{"name", "every": seconds}` (60 or more) or
+`{"name", "cron": "m h dom mon dow"}` (UTC). Due jobs call `run_job` with
+`{job}`; the next run time is stored, so jobs survive restarts and run once
+across nodes. A failed run isn't retried before its next time.
+
+## Storage and custom fields
+
+Each plugin has a key-value store (any JSON values; 1,000 keys and 1 MB by
+default, `FirestormWeb.Plugins.Storage, max_keys:, max_bytes:`). Custom
+fields are values a plugin keeps on posts, threads or users, namespaced by
+plugin, limited to the keys its manifest declares; `public` post fields
+appear in the JSON API as `plugin_fields: {plugin_id: {key: value}}`.
+
+Passing `user_id` to `kv.*` uses the store the plugin keeps for that
+member instead: a separate namespace per (plugin, member), so `score` in
+the global store and in two members' stores are three keys. Each has its
+own quota (200 keys and 64 KB by default, `user_max_keys:`,
+`user_max_bytes:`). Server-side code may pass any existing member's id;
+an unknown or deleted one is an error. Member data is the member's: their
+entries and the plugin's fields on them (`type: "user"`) are in their
+account export, grouped by plugin id, and are deleted with their account.
+Fields on their posts and threads stay with the content.
+
+```js
+// One counter for the forum, one per member.
+const total = (firefly.call("kv.get", { key: "posts" }) || 0) + 1;
+firefly.call("kv.set", { key: "posts", value: total });
+const mine = (firefly.call("kv.get", { key: "posts", user_id: data.post.user_id }) || 0) + 1;
+firefly.call("kv.set", { key: "posts", value: mine, user_id: data.post.user_id });
+```
+
+Uninstalling a plugin (after a confirm step) deletes its bundle, settings,
+error log, storage (global and every member's), custom fields, queued
+events and job schedule; its bot user stays with its posts.
 
 ## The WebAssembly runtime
 

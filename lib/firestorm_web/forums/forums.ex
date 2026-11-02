@@ -6,6 +6,7 @@ defmodule FirestormWeb.Forums do
   defdelegate authorize(action, user, params), to: FirestormWeb.Forums.Policy
   import Ecto.{Query, Changeset}, warn: false
   alias FirestormWeb.{Repo, Notifications, SiteSettings, StaffLog}
+  alias FirestormWeb.Plugins.Events
   alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Store.ReplenishResponse
 
@@ -158,6 +159,7 @@ defmodule FirestormWeb.Forums do
       %User{api_token: generate_api_token()}
       |> User.registration_changeset(attrs)
       |> Repo.insert()
+      |> tap_ok(&Events.emit("user_registered", %{user: %{id: &1.id, username: &1.username}}))
     else
       {:error, :registration_closed}
     end
@@ -1144,6 +1146,17 @@ defmodule FirestormWeb.Forums do
     :ok = Endpoint.broadcast!("categories:#{thread.category_id}", "update", payload)
     broadcast_thread(:thread_created, thread)
     :ok = Notifications.thread_created(thread)
+
+    if post = thread.first_post do
+      Events.emit(
+        "thread_created",
+        fn -> %{thread: Events.thread_data(thread), post: Events.post_data(post, thread)} end,
+        thread: thread,
+        post: post,
+        actor: post.user
+      )
+    end
+
     thread
   end
 
@@ -1717,6 +1730,17 @@ defmodule FirestormWeb.Forums do
     :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
     broadcast("forums:thread:#{post.thread_id}", {:post_created, post})
     broadcast_thread(:thread_activity, post.thread)
+
+    Events.emit(
+      "post_created",
+      fn ->
+        %{post: Events.post_data(post, post.thread), thread: Events.thread_data(post.thread)}
+      end,
+      thread: post.thread,
+      post: post,
+      actor: post.user
+    )
+
     post
   end
 
@@ -1798,6 +1822,16 @@ defmodule FirestormWeb.Forums do
 
     :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
     broadcast("forums:thread:#{post.thread_id}", {:post_updated, post})
+
+    Events.emit(
+      "post_edited",
+      fn ->
+        %{post: Events.post_data(post, post.thread), thread: Events.thread_data(post.thread)}
+      end,
+      thread: post.thread,
+      post: post,
+      actor: editor
+    )
   end
 
   @doc """
@@ -1854,6 +1888,12 @@ defmodule FirestormWeb.Forums do
            logged(fn -> Repo.update(changeset) end, &log_post_delete(user, post, &1)) do
       # A deleted reply is no longer anyone's accepted answer.
       :ok = FirestormWeb.Solved.clear(deleted.id)
+
+      Events.emit("post_deleted", %{post_id: deleted.id, thread_id: deleted.thread_id},
+        thread: fn -> Repo.get(Thread, deleted.thread_id) end,
+        actor: user
+      )
+
       {:ok, deleted, fn -> announce_post_deleted(deleted) end}
     end
   end
@@ -1961,6 +2001,14 @@ defmodule FirestormWeb.Forums do
       {:ok, _like} ->
         if first_like?(post, user), do: update_like_notification(post, :liked)
         broadcast("forums:thread:#{post.thread_id}", {:post_likes_changed, post})
+
+        Events.emit(
+          "post_liked",
+          %{post_id: post.id, thread_id: post.thread_id, user_id: user.id},
+          thread: fn -> Repo.get(Thread, post.thread_id) end,
+          post: post,
+          actor: user
+        )
     end
   end
 

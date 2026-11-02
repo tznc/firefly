@@ -94,8 +94,12 @@ config :firestorm_web, FirestormWeb.RateLimit,
     email: {1_000, 60_000},
     password_reset: {1_000, 60_000},
     search: {1_000, 60_000},
-    flag: {1_000, 60_000}
+    flag: {1_000, 60_000},
+    plugin_notify: {1_000, 60_000}
   ]
 
 # Each test sees its own (transactional) plugins: no shared cache.
 config :firestorm_web, :plugins_cache, false
+
+# Tests deliver plugin events and run plugin jobs themselves.
+config :firestorm_web, FirestormWeb.Plugins.Queue, enabled: false

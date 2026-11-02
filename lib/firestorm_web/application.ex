@@ -40,7 +40,15 @@ defmodule FirestormWeb.Application do
       FirestormWeb.Plugins.Content.cache_spec(),
       # Start the endpoint when the application starts
       FirestormWeb.Web.Endpoint
-    ] ++ topic_timers()
+    ] ++ topic_timers() ++ plugin_queue()
+  end
+
+  # Delivers plugin events and runs plugins' scheduled jobs. Off in tests,
+  # which run them inside their own database transaction.
+  defp plugin_queue do
+    if Application.get_env(:firestorm_web, FirestormWeb.Plugins.Queue, [])[:enabled] == false,
+      do: [],
+      else: [FirestormWeb.Plugins.Queue]
   end
 
   # Runs due thread timers (close, reopen or delete at a set time),

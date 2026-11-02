@@ -20,6 +20,8 @@ defmodule FirestormWeb.RateLimit do
     * `:flag` - post flags per user
     * `:search` - searches (the search page and the API) per user, or per
       client IP for visitors
+    * `:plugin_notify` - notifications a plugin sends (see
+      `FirestormWeb.Plugin.Host`), per plugin
   """
   use Hammer, backend: :ets
 
@@ -35,7 +37,8 @@ defmodule FirestormWeb.RateLimit do
     email: {3, :timer.hours(1)},
     password_reset: {10, :timer.hours(1)},
     search: {60, :timer.minutes(1)},
-    flag: {20, :timer.hours(1)}
+    flag: {20, :timer.hours(1)},
+    plugin_notify: {100, :timer.hours(1)}
   ]
 
   @doc "Checks the `bucket` limit for `key`: `:ok` or `{:error, :rate_limited}`."

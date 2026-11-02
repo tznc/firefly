@@ -32,6 +32,8 @@ defmodule FirestormWeb.Forums.User do
     field(:silence_reason, :string)
     field(:suspended_until, :utc_datetime)
     field(:suspend_reason, :string)
+    # The plugin this account acts for (see FirestormWeb.Plugins.Bots), if any.
+    field(:plugin_bot, :string)
 
     has_many(:posts, Post)
     has_many(:role_memberships, RoleMembership)
