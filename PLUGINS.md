@@ -220,7 +220,7 @@ text. They're data, not code: nothing runs in the browser.
 | `posts.get` | `read` | `{id}` | a public post |
 | `threads.get` | `read` | `{id}` | a public thread |
 | `users.get` | `read` | `{id}` or `{username}` | a public profile |
-| `kv.get` / `kv.set` / `kv.delete` / `kv.list` | | `{key}` / `{key, value}` / `{key}` / `{prefix}` | value / `null` / `null` / keys |
+| `kv.get` / `kv.set` / `kv.delete` / `kv.list` | | `{key}` / `{key, value}` / `{key}` / `{prefix}`, each with an optional `user_id` | value / `null` / `null` / keys |
 | `tags.add` / `tags.remove` | `tags` | `{thread_id, tag}` | the thread's tags |
 | `posts.reply` | `post` | `{thread_id, body}` | `{id}` |
 | `posts.flag` | `flag` | `{post_id, reason, note}` | `{id}` |
@@ -290,7 +290,7 @@ ask the service from an event once the post is public:
 ```js
 // Synchronous: no network. Queue what needs a closer look.
 exports.moderate_post = ({ body, user }) =>
-  /https?:\/\//.test(body) && firefly.call("kv.get", { key: `trusted:${user.id}` }) !== true
+  /https?:\/\//.test(body) && firefly.call("kv.get", { key: "trusted", user_id: user.id }) !== true
     ? { action: "queue", reason: "links from a member not yet checked" }
     : { action: "allow" };
 
@@ -305,7 +305,7 @@ exports.handle_event = ({ event, data }) => {
   if (JSON.parse(res.body).spam) {
     firefly.call("posts.flag", { post_id: data.post.id, reason: "spam", note: "api.example.com says spam" });
   } else {
-    firefly.call("kv.set", { key: `trusted:${data.post.user_id}`, value: true });
+    firefly.call("kv.set", { key: "trusted", value: true, user_id: data.post.user_id });
   }
 };
 ```
@@ -314,6 +314,8 @@ Queued posts produce no events until staff approve them, and plugins can't
 approve or reject them, so the remote check runs on what's published (a
 post staff approved, or one `moderate_post` allowed) and reports through
 flags, which staff review and which `flags_to_hide` turns into hiding.
+`trusted` is kept in each member's own store (`user_id`), so it's in their
+account export and goes with their account.
 
 ### Egress log
 
@@ -418,6 +420,28 @@ Widgets talk to the page through `postMessage` only, with the SDK:
 `args`, must be treated as untrusted by the handler. Calls are rate limited
 (60 a minute per member or IP). Heights are kept between 20 and 2000 px.
 
+**Viewer storage**: a widget can keep data for the member looking at it,
+on the server, in the plugin's per-member store (the one `kv.*` reaches
+with `user_id`, same quota):
+
+```js
+Firefly.ready(async () => {
+  if (!Firefly.isLoggedIn()) return;                // Firefly.user is the viewer or null
+  const seen = (await Firefly.storage.get("seen")) || 0;
+  await Firefly.storage.set("seen", seen + 1);      // any JSON, at most 8 KB
+  await Firefly.storage.list("");                   // keys by prefix; also .delete(key)
+});
+```
+
+It's always the logged-in viewer's own data: the page relays the request
+and the server picks the member, so a widget can't name another
+`user_id`. Visitors get an error ("sign in to save data"), so hide what
+needs storage when `isLoggedIn()` is false. Writes are limited to 30 a
+minute per plugin and member. No permission is needed beyond having a
+widget (the plugin's frame apps can use it too); the data is the member's,
+in their account export and deleted with their account. There's no
+browser-side storage: the frame's opaque origin has none.
+
 **Pages**: `/plugins/:id` and `/plugins/:id/*path` call `render_page`;
 `html` is sanitized and shown in the site's layout, `iframe` shows an asset
 as a full sandboxed app (same bridge, `context: {path}`). **Staff
@@ -435,7 +459,8 @@ minute per plugin and client IP; bodies up to 100 KB.
 
 `priv/plugins/examples/hello` uses most hooks: a `[hello name="…"]`
 shortcode and a post transform, a composer button, a widget under posts
-backed by `handle_widget`, a page and a frame app, a staff section, an
+backed by `handle_widget` that counts each member's views in their own
+storage, a page and a frame app, a staff section, an
 endpoint (`GET /api/plugins/hello/stats`), events, a scheduled job,
 moderation driven by its settings, a flag hook, a public custom field and
 an export. Zip the folder and upload it at `/staff/plugins`.
@@ -448,9 +473,27 @@ fields are values a plugin keeps on posts, threads or users, namespaced by
 plugin, limited to the keys its manifest declares; `public` post fields
 appear in the JSON API as `plugin_fields: {plugin_id: {key: value}}`.
 
+Passing `user_id` to `kv.*` uses the store the plugin keeps for that
+member instead: a separate namespace per (plugin, member), so `score` in
+the global store and in two members' stores are three keys. Each has its
+own quota (200 keys and 64 KB by default, `user_max_keys:`,
+`user_max_bytes:`). Server-side code may pass any existing member's id;
+an unknown or deleted one is an error. Member data is the member's: their
+entries and the plugin's fields on them (`type: "user"`) are in their
+account export, grouped by plugin id, and are deleted with their account.
+Fields on their posts and threads stay with the content.
+
+```js
+// One counter for the forum, one per member.
+const total = (firefly.call("kv.get", { key: "posts" }) || 0) + 1;
+firefly.call("kv.set", { key: "posts", value: total });
+const mine = (firefly.call("kv.get", { key: "posts", user_id: data.post.user_id }) || 0) + 1;
+firefly.call("kv.set", { key: "posts", value: mine, user_id: data.post.user_id });
+```
+
 Uninstalling a plugin (after a confirm step) deletes its bundle, settings,
-error log, storage, custom fields, queued events and job schedule; its bot
-user stays with its posts.
+error log, storage (global and every member's), custom fields, queued
+events and job schedule; its bot user stays with its posts.
 
 ## The WebAssembly runtime
 
