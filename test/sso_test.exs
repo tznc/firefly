@@ -514,7 +514,11 @@ defmodule FirestormWeb.SSOTest do
   end
 
   defp role_names(user) do
-    user |> Repo.preload(:roles, force: true) |> Map.fetch!(:roles) |> Enum.map(& &1.name)
+    user
+    |> Repo.preload(:roles, force: true)
+    |> Map.fetch!(:roles)
+    |> Enum.map(& &1.name)
+    |> Enum.reject(&FirestormWeb.TrustLevels.group?/1)
   end
 
   defp merge_kid(jwk) do

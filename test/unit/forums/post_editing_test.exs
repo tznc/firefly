@@ -37,10 +37,11 @@ defmodule FirestormWeb.Forums.PostEditingTest do
     assert Repo.all(PostRevision) == []
   end
 
-  test "new accounts' link limit applies to edits", %{author: author, post: post} do
+  test "new users' link limit applies to edits", %{author: author, post: post} do
+    author = FirestormWeb.Repo.update!(Ecto.Changeset.change(author, trust_level: 0))
     links = "https://a.example https://b.example https://c.example"
     assert {:error, changeset} = Forums.update_post(post, author, %{body: links})
-    assert "new accounts can include at most 2 links per post" in errors_on(changeset).body
+    assert "new users can include at most 2 links per post" in errors_on(changeset).body
 
     assert {:ok, _} = Forums.update_post(post, admin_fixture(), %{body: links})
   end

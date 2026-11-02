@@ -127,7 +127,7 @@ defmodule FirestormWeb.Web.StaffLogLiveTest do
       })
 
       assert Forums.admin?(member)
-      membership = Repo.get_by!(Forums.RoleMembership, user_id: member.id)
+      membership = Repo.get_by!(Forums.RoleMembership, user_id: member.id, role_id: role.id)
       delete(conn, "/admin/accounts/role_membership/#{membership.id}")
       refute Forums.admin?(member)
 
@@ -149,7 +149,7 @@ defmodule FirestormWeb.Web.StaffLogLiveTest do
         "role_membership" => %{"user_id" => member.id, "role_id" => role.id}
       })
 
-      membership = Repo.get_by!(Forums.RoleMembership, user_id: member.id)
+      membership = Repo.get_by!(Forums.RoleMembership, user_id: member.id, role_id: role.id)
       other = user_fixture(%{username: "mallory"})
 
       form = get(conn, "/admin/accounts/role_membership/#{membership.id}")
@@ -192,7 +192,7 @@ defmodule FirestormWeb.Web.StaffLogLiveTest do
       "role_membership" => %{"user_id" => ada.id, "role_id" => role.id}
     })
 
-    membership = Repo.get_by!(Forums.RoleMembership, user_id: ada.id)
+    membership = Repo.get_by!(Forums.RoleMembership, user_id: ada.id, role_id: role.id)
     delete(conn, "/admin/accounts/role_membership/#{membership.id}")
 
     log = fn -> Repo.all(from(a in StaffAction, select: a.details)) |> Jason.encode!() end

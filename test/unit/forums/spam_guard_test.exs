@@ -2,35 +2,45 @@ defmodule FirestormWeb.Forums.SpamGuardTest do
   use FirestormWeb.DataCase, async: true
 
   alias FirestormWeb.{Forums, Repo}
-  alias FirestormWeb.Forums.{SpamGuard, User}
+  alias FirestormWeb.Forums.{SiteSetting, SpamGuard, User}
 
   @links "see https://a.example and http://b.example and www.c.example"
 
-  defp user(attrs \\ %{}) do
+  defp user(trust_level) do
     unique = System.unique_integer([:positive])
 
     {:ok, user} =
-      Forums.create_user(%{username: "u#{unique}", name: "U", email: "u#{unique}@example.com"})
+      Forums.create_user(%{
+        username: "u#{unique}",
+        name: "U",
+        email: "u#{unique}@example.com",
+        trust_level: trust_level
+      })
 
-    user |> Ecto.Changeset.change(attrs) |> Repo.update!()
+    user
   end
 
   defp category, do: elem(Forums.create_category(%{title: "C"}), 1)
 
-  test "counts links" do
+  test "counts links, images and attachments" do
     assert SpamGuard.link_count(@links) == 3
     assert SpamGuard.link_count("no links here") == 0
+
+    body =
+      "![a](/uploads/abc/a.png) <img src=x> [doc](/uploads/def/doc.pdf) [site](https://x.example)"
+
+    assert SpamGuard.image_count(body) == 2
+    assert SpamGuard.attachment_count(body) == 1
   end
 
-  test "new accounts can't post more than two links" do
-    user = user()
-    assert SpamGuard.new_user?(user)
+  test "new users (trust level 0) can't post more than two links" do
+    user = user(0)
 
     assert {:error, changeset} =
              Forums.create_thread(category(), user, %{title: "Spam", body: @links})
 
     [post_changeset] = changeset.changes.posts
-    assert "new accounts can include at most 2 links per post" in errors_on(post_changeset).body
+    assert "new users can include at most 2 links per post" in errors_on(post_changeset).body
 
     assert {:ok, thread} =
              Forums.create_thread(category(), user, %{
@@ -39,23 +49,43 @@ defmodule FirestormWeb.Forums.SpamGuardTest do
              })
 
     assert {:error, changeset} = Forums.create_post(thread, user, %{body: @links})
-    assert errors_on(changeset).body == ["new accounts can include at most 2 links per post"]
+    assert errors_on(changeset).body == ["new users can include at most 2 links per post"]
   end
 
-  test "established accounts and admins aren't limited" do
-    old = user(%{inserted_at: ~N[2020-01-01 00:00:00.000000]})
-    {:ok, thread} = Forums.create_thread(category(), old, %{title: "1", body: "a"})
-    for body <- ~w(b c), do: {:ok, _} = Forums.create_post(thread, old, %{body: body})
+  test "new users' images, attachments and mentions are limited" do
+    user = user(0)
+    {:ok, thread} = Forums.create_thread(category(), user(1), %{title: "T", body: "b"})
 
-    refute SpamGuard.new_user?(old)
-    assert {:ok, _} = Forums.create_post(thread, old, %{body: @links})
+    images = "![a](https://x.example/a.png) ![b](https://x.example/b.png)"
+    assert {:error, changeset} = Forums.create_post(thread, user, %{body: images})
+    assert "new users can include at most 1 images per post" in errors_on(changeset).body
 
-    admin = user()
+    attachment = "[doc](/uploads/aaaaaaaaaaaaaaaaaaaaaa/doc.pdf)"
+    assert {:error, changeset} = Forums.create_post(thread, user, %{body: attachment})
+    assert "new users can include at most 0 attachments per post" in errors_on(changeset).body
+
+    [a, b, c] = for _ <- 1..3, do: user(1)
+    mentions = "@#{a.username} @#{b.username} @#{c.username}"
+    assert {:error, changeset} = Forums.create_post(thread, user, %{body: mentions})
+    assert "can mention at most 2 users" in errors_on(changeset).body
+
+    Repo.insert!(%SiteSetting{key: "new_user_max_mentions", value: "3"})
+    assert {:ok, _} = Forums.create_post(thread, user, %{body: mentions})
+  end
+
+  test "basic users and admins aren't limited" do
+    basic = user(1)
+    {:ok, thread} = Forums.create_thread(category(), basic, %{title: "1", body: "a"})
+
+    refute FirestormWeb.TrustLevels.new_user?(basic)
+    assert {:ok, _} = Forums.create_post(thread, basic, %{body: @links})
+
+    admin = user(0)
     {:ok, role} = Forums.create_role("admin")
     {:ok, _} = Forums.add_role(admin, role)
     admin = Repo.get!(User, admin.id)
 
-    refute SpamGuard.new_user?(admin)
+    refute FirestormWeb.TrustLevels.new_user?(admin)
     assert {:ok, _} = Forums.create_post(thread, admin, %{body: @links})
   end
 end

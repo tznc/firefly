@@ -16,7 +16,7 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
     SiteSettings
   }
 
-  alias FirestormWeb.Forums.{Policy, SpamGuard, StaffAction, Tag}
+  alias FirestormWeb.Forums.{Policy, StaffAction, Tag}
 
   setup do
     %{admin: admin_fixture(%{username: "boss"})}
@@ -40,7 +40,8 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
              "allow_registrations" => true,
              "require_email_confirmation" => true,
              "new_user_max_links" => 2,
-             "new_user_hours" => 24,
+             "approve_unless_trust_level" => 0,
+             "min_trust_to_send_messages" => 1,
              "max_mentions" => 10,
              "tags_admin_only" => false,
              "max_tags_per_thread" => 5,
@@ -227,19 +228,15 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
       %{member: member, thread: thread}
     end
 
-    test "new-user link limit and period", %{admin: admin, member: member, thread: thread} do
+    test "new-user link limit", %{admin: admin, thread: thread} do
+      member = user_fixture(%{trust_level: 0})
       links = "https://a.example https://b.example"
       assert {:ok, _} = Forums.create_post(thread, member, %{body: links})
 
       set(admin, %{"new_user_max_links" => "1"})
       assert {:error, changeset} = Forums.create_post(thread, member, %{body: links})
-      assert "new accounts can include at most 1 links per post" in errors_on(changeset).body
-
-      # With a zero-hour period, only the post count keeps an account new.
-      set(admin, %{"new_user_hours" => "0"})
-      assert SpamGuard.new_user?(member)
-      for n <- 1..3, do: {:ok, _} = Forums.create_post(thread, member, %{body: "post #{n}"})
-      refute SpamGuard.new_user?(member)
+      assert "new users can include at most 1 links per post" in errors_on(changeset).body
+      assert FirestormWeb.TrustLevels.new_user?(member)
     end
 
     test "max mentions", %{admin: admin, member: member, thread: thread} do

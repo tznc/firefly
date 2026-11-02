@@ -21,7 +21,9 @@ defmodule FirestormWeb.Groups do
   (its inbox, see `FirestormWeb.Messages`) by whom its `mentionable` and
   `messageable` levels allow: `owners`, `members`, `everyone`, or `nobody`
   but staff. The "admin" group is staff: it stays closed, staff-only, and
-  only admins change its members.
+  only admins change its members. Trust level groups' members follow
+  their trust level (see `FirestormWeb.TrustLevels`): nobody adds,
+  removes, invites or makes owners there (`{:error, :automatic}`).
   """
 
   import Ecto.Query
@@ -213,11 +215,14 @@ defmodule FirestormWeb.Groups do
   admin). Errors: `:no_such_user`, `:already_member`, `:unauthorized`.
   """
   def add_member(%Role{} = role, username, %User{} = actor) do
-    with :ok <- authorize_manager(role, actor),
+    with :ok <- manual(role),
+         :ok <- authorize_manager(role, actor),
          {:ok, user} <- find_user(username) do
       if member?(role, user), do: {:error, :already_member}, else: grant(role, user, actor)
     end
   end
+
+  defp manual(role), do: if(Role.automatic?(role), do: {:error, :automatic}, else: :ok)
 
   defp authorize_manager(role, actor),
     do: if(manager?(role, actor), do: :ok, else: {:error, :unauthorized})
@@ -253,9 +258,16 @@ defmodule FirestormWeb.Groups do
     do: {:error, :own_admin}
 
   def remove_member(%Role{} = role, %User{} = user, %User{} = actor) do
-    if actor.id == user.id or manager?(role, actor),
-      do: Repo.transact(fn -> revoke(role, user, actor) end),
-      else: {:error, :unauthorized}
+    cond do
+      Role.automatic?(role) ->
+        {:error, :automatic}
+
+      actor.id == user.id or manager?(role, actor) ->
+        Repo.transact(fn -> revoke(role, user, actor) end)
+
+      true ->
+        {:error, :unauthorized}
+    end
   end
 
   defp revoke(role, user, actor) do
@@ -273,9 +285,11 @@ defmodule FirestormWeb.Groups do
 
   @doc "Makes `user` an owner of the group or not, as `admin` (staff-logged)."
   def set_owner(%Role{} = role, %User{} = user, owner?, %User{} = admin) do
-    if admin?(admin),
-      do: Repo.transact(fn -> owner(role, user, owner?, admin) end),
-      else: {:error, :unauthorized}
+    cond do
+      Role.automatic?(role) -> {:error, :automatic}
+      admin?(admin) -> Repo.transact(fn -> owner(role, user, owner?, admin) end)
+      true -> {:error, :unauthorized}
+    end
   end
 
   defp owner(role, user, owner?, admin) do
@@ -324,11 +338,20 @@ defmodule FirestormWeb.Groups do
   """
   def join(%Role{} = role, %User{} = user, message \\ nil) do
     cond do
-      role.name == "admin" or not visible?(role, user) -> {:error, :closed}
-      member?(role, user) -> {:error, :already_member}
-      role.membership == "open" -> join_open(role, user)
-      role.membership == "request" -> ask(role, user, message)
-      true -> {:error, :closed}
+      role.name == "admin" or Role.automatic?(role) or not visible?(role, user) ->
+        {:error, :closed}
+
+      member?(role, user) ->
+        {:error, :already_member}
+
+      role.membership == "open" ->
+        join_open(role, user)
+
+      role.membership == "request" ->
+        ask(role, user, message)
+
+      true ->
+        {:error, :closed}
     end
   end
 
@@ -437,7 +460,8 @@ defmodule FirestormWeb.Groups do
 
   @doc "Invites the user named `username` to the group, as an owner or admin."
   def invite(%Role{} = role, username, %User{} = actor) do
-    with :ok <- authorize_manager(role, actor),
+    with :ok <- manual(role),
+         :ok <- authorize_manager(role, actor),
          {:ok, user} <- find_user(username),
          true <- not member?(role, user) || {:error, :already_member} do
       attrs = %{role_id: role.id, user_id: user.id, kind: "invite"}
@@ -584,4 +608,5 @@ defmodule FirestormWeb.Groups do
   def message(:not_found), do: "That request is gone."
   def message(:not_member), do: "They're not in that group."
   def message(:invalid_level), do: "Pick a notification level."
+  def message(:automatic), do: "Trust level groups' members follow their trust level."
 end

@@ -9,12 +9,14 @@ defmodule FirestormWeb.Web.UserLive.Show do
   admins see everything.
   Admins see a member's penalties here, and silence or suspend them (see
   `FirestormWeb.Penalties`), and reset their two-factor authentication
-  (see `FirestormWeb.TwoFactor.reset/2`). Members mute or ignore others here (see
-  `FirestormWeb.Ignores`).
+  (see `FirestormWeb.TwoFactor.reset/2`), and set or lock their trust level
+  (see `FirestormWeb.TrustLevels`). Members see their own progress toward
+  the next trust level here, and admins anyone's. Members mute or ignore
+  others here (see `FirestormWeb.Ignores`).
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties, Profiles, TwoFactor}
+  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties, Profiles, TrustLevels, TwoFactor}
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -27,6 +29,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
      |> assign(:user, user)
      |> assign(:staff?, staff?(socket.assigns.current_user))
      |> assign(:penalty_form, penalty_form())
+     |> assign_trust_level()
      |> assign(
        :two_factor?,
        can?(socket.assigns.current_user, :reset_two_factor, user) and TwoFactor.enabled?(user)
@@ -46,6 +49,23 @@ defmodule FirestormWeb.Web.UserLive.Show do
     socket
     |> assign(:ignorable?, ignorable?)
     |> assign(:ignore_level, if(ignorable?, do: Ignores.level(viewer, user)))
+  end
+
+  defp assign_trust_level(socket) do
+    %{current_user: viewer, user: user} = socket.assigns
+    own? = viewer != nil and viewer.id == user.id
+
+    socket
+    |> assign(
+      :trust_form,
+      to_form(%{"level" => user.trust_level, "locked" => user.manual_locked_trust_level != nil},
+        as: :trust
+      )
+    )
+    |> assign(
+      :progress,
+      if(own? or can?(viewer, :set_trust_level, user), do: TrustLevels.progress(user))
+    )
   end
 
   defp staff?(nil), do: false
@@ -103,6 +123,24 @@ defmodule FirestormWeb.Web.UserLive.Show do
 
   def handle_event("set_ignore", _params, socket),
     do: {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+
+  def handle_event("set_trust_level", %{"trust" => params}, socket) do
+    %{current_user: admin, user: user} = socket.assigns
+
+    with true <- can?(admin, :set_trust_level, user),
+         {level, ""} when level in 0..4 <- Integer.parse(params["level"] || "") do
+      {:ok, user} = TrustLevels.set_level(user, level, params["locked"] == "true", admin)
+
+      {:noreply,
+       socket
+       |> assign(:user, user)
+       |> assign_trust_level()
+       |> put_flash(:info, "#{user.username} is now a #{TrustLevels.title(level)}.")}
+    else
+      false -> {:noreply, put_flash(socket, :error, denied_message(admin))}
+      _invalid -> {:noreply, put_flash(socket, :error, "Pick a trust level.")}
+    end
+  end
 
   def handle_event("reset_two_factor", _params, socket) do
     %{current_user: admin, user: user} = socket.assigns
@@ -195,6 +233,10 @@ defmodule FirestormWeb.Web.UserLive.Show do
             </p>
             <dl :if={@visible?} class="flex flex-wrap gap-x-6 gap-y-1 pt-2 text-sm">
               <div><dt class="inline font-semibold">Joined</dt> <dd class="inline">{short_date(@user.inserted_at)}</dd></div>
+              <div id="user-trust-level">
+                <dt class="inline font-semibold">Trust level</dt>
+                <dd class="inline">{TrustLevels.title(@user.trust_level)}</dd>
+              </div>
               <div :if={@activity? && @last_post}>
                 <dt class="inline font-semibold">Last post</dt>
                 <dd class="inline">{short_date(@last_post.inserted_at)}</dd>
@@ -272,6 +314,26 @@ defmodule FirestormWeb.Web.UserLive.Show do
             Reset two-factor
           </button>
         </div>
+        <.form
+          :if={can?(@current_user, :set_trust_level, @user)}
+          for={@trust_form}
+          id="trust-level-form"
+          phx-submit="set_trust_level"
+          class="flex flex-wrap items-end gap-3"
+        >
+          <.input
+            field={@trust_form[:level]}
+            type="select"
+            label="Trust level"
+            options={Enum.map(TrustLevels.levels(), &{TrustLevels.title(&1), &1})}
+          />
+          <.input
+            field={@trust_form[:locked]}
+            type="checkbox"
+            label="Lock (the automatic review leaves it alone)"
+          />
+          <.button phx-disable-with="Saving...">Set trust level</.button>
+        </.form>
         <details :if={can?(@current_user, :penalize_user, @user)} class="collapse-arrow collapse border border-base-300 bg-base-100">
           <summary class="collapse-title font-semibold">Silence or suspend</summary>
           <div class="collapse-content">
@@ -302,6 +364,8 @@ defmodule FirestormWeb.Web.UserLive.Show do
           </div>
         </details>
       </div>
+
+      <.trust_progress :if={@progress} progress={@progress} />
 
       <.markdown :if={@visible? && @user.bio} id="user-bio" body={@user.bio} />
 
@@ -373,6 +437,35 @@ defmodule FirestormWeb.Web.UserLive.Show do
         />
       </div>
     </Layouts.app>
+    """
+  end
+
+  attr :progress, :any, required: true
+
+  defp trust_progress(assigns) do
+    {level, requirements} = assigns.progress
+    assigns = assign(assigns, level: level, requirements: requirements)
+
+    ~H"""
+    <details id="trust-progress" class="collapse-arrow collapse border border-base-300 bg-base-100">
+      <summary class="collapse-title font-semibold">
+        Toward {TrustLevels.title(@level)}
+      </summary>
+      <div class="collapse-content overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr><th>Requirement</th><th>Now</th><th>Needed</th></tr>
+          </thead>
+          <tbody>
+            <tr :for={r <- @requirements} class={if r.met?, do: "text-success", else: ""}>
+              <td>{r.label}</td>
+              <td>{r.have}</td>
+              <td>{if r.max?, do: "at most #{r.need}", else: r.need}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
     """
   end
 

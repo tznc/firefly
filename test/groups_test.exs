@@ -393,10 +393,12 @@ defmodule FirestormWeb.GroupsTest do
     team = settings(team, %{"membership" => "request", "visibility" => "public"}, admin)
     {:ok, :requested} = Groups.join(team, outsider)
 
-    assert %{memberships: [], pending: [%{group: "team", kind: "request"}]} =
+    assert %{memberships: memberships, pending: [%{group: "team", kind: "request"}]} =
              Groups.export(outsider)
 
-    assert %{memberships: [%{group: "team", owner: true}]} = Groups.export(owner)
+    assert Enum.map(memberships, & &1.group) == ~w(trust_level_0 trust_level_1)
+    assert %{memberships: memberships} = Groups.export(owner)
+    assert Enum.any?(memberships, &match?(%{group: "team", owner: true}, &1))
 
     {:ok, _} = FirestormWeb.AccountDeletion.delete_account(outsider, outsider.username)
     assert Repo.all(from(r in "group_requests", select: r.id)) == []

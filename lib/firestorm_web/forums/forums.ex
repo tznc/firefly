@@ -130,8 +130,9 @@ defmodule FirestormWeb.Forums do
       attrs
       |> Map.put(:api_token, generate_api_token())
 
-    # Accounts created directly (by admins, scripts) are trusted.
-    %User{confirmed_at: DateTime.utc_now(:second)}
+    # Accounts created directly (by admins, scripts) are trusted: confirmed,
+    # and past the new-user stage (see FirestormWeb.TrustLevels).
+    %User{confirmed_at: DateTime.utc_now(:second), trust_level: Map.get(attrs, :trust_level, 1)}
     |> User.changeset(attrs)
     |> Repo.insert()
   end
@@ -1204,13 +1205,19 @@ defmodule FirestormWeb.Forums do
 
   @doc """
   Whether `user`'s next thread or reply waits for staff approval: their
-  first `approve_new_user_posts` (a site setting; 0: off) posts do, unless
-  they're an admin.
+  first `approve_new_user_posts` (a site setting; 0: off) posts do, and
+  every post while they're below the `approve_unless_trust_level` trust
+  level (0: off), unless they're an admin.
   """
   def approval_required?(%User{} = user) do
-    case SiteSettings.get("approve_new_user_posts") do
-      0 -> false
-      count -> not admin?(user) and published_post_count(user) < count
+    count = SiteSettings.get("approve_new_user_posts")
+    level = SiteSettings.get("approve_unless_trust_level")
+
+    cond do
+      count == 0 and level == 0 -> false
+      admin?(user) -> false
+      user.trust_level < level -> true
+      true -> published_post_count(user) < count
     end
   end
 
@@ -1911,7 +1918,7 @@ defmodule FirestormWeb.Forums do
   end
 
   @doc """
-  Makes `post` a wiki (or not) as `actor` (admins; see the `:toggle_wiki`
+  Makes `post` a wiki (or not) as `actor` (admins and leaders; see the `:toggle_wiki`
   policy), logged. A no-op if it already is.
   """
   def set_wiki(%Post{} = post, wiki?, %User{} = actor) when is_boolean(wiki?) do

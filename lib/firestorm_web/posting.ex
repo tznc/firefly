@@ -4,8 +4,10 @@ defmodule FirestormWeb.Posting do
   silenced or suspended (see `FirestormWeb.Penalties`), must have a
   confirmed email address (unless the `require_email_confirmation` site
   setting is off) and be within the posting rate limit, and a reply's
-  thread must be open. Starting a private conversation also counts against
-  the `:message` limit, so one account can't message crowds. Liking only
+  thread must be open. Starting a private conversation also needs the
+  `min_trust_to_send_messages` trust level (see `FirestormWeb.TrustLevels`)
+  and counts against the `:message` limit, so one account can't message
+  crowds. Liking only
   checks penalties (`check(user, :like)`), as do other public writes that
   aren't posts (adding people to a conversation, editing a thread's title or
   tags, editing one's profile); flagging checks penalties, a confirmed address
@@ -17,7 +19,7 @@ defmodule FirestormWeb.Posting do
   """
   import Ecto.Query, only: [from: 2]
 
-  alias FirestormWeb.{Forums, Penalties, RateLimit, Repo, SiteSettings}
+  alias FirestormWeb.{Forums, Penalties, RateLimit, Repo, SiteSettings, TrustLevels}
   alias FirestormWeb.Forums.{Post, Thread, User}
 
   def check(%User{} = user) do
@@ -29,7 +31,7 @@ defmodule FirestormWeb.Posting do
   def check(%User{} = user, :like) do
     # Penalties are read from the database, not from `user`: an open page
     # holds the user as they were when it mounted, before any penalty.
-    user = current_penalties(user)
+    user = current(user)
 
     cond do
       User.suspended?(user) -> {:error, {:suspended, user.suspended_until}}
@@ -47,7 +49,15 @@ defmodule FirestormWeb.Posting do
   end
 
   def check(%User{} = user, :new_conversation) do
-    with :ok <- check(user), do: RateLimit.check_message(user)
+    level = SiteSettings.get("min_trust_to_send_messages")
+
+    with :ok <- check(user),
+         :ok <-
+           if(TrustLevels.at_least?(current(user), level),
+             do: :ok,
+             else: {:error, {:trust_level, level}}
+           ),
+         do: RateLimit.check_message(user)
   end
 
   def check(%User{} = user, %Thread{id: thread_id} = thread) do
@@ -97,16 +107,21 @@ defmodule FirestormWeb.Posting do
   def confirmed_enough?(%User{} = user),
     do: User.confirmed?(user) or not SiteSettings.get("require_email_confirmation")
 
-  defp current_penalties(%User{id: id} = user) do
-    penalties =
+  # The user's penalties and trust level as they are now.
+  defp current(%User{id: id} = user) do
+    current =
       Repo.one(
         from(u in User,
           where: u.id == ^id,
-          select: %{silenced_until: u.silenced_until, suspended_until: u.suspended_until}
+          select: %{
+            silenced_until: u.silenced_until,
+            suspended_until: u.suspended_until,
+            trust_level: u.trust_level
+          }
         )
       )
 
-    Map.merge(user, penalties || %{})
+    Map.merge(user, current || %{})
   end
 
   def message({:silenced, until}),
@@ -121,6 +136,11 @@ defmodule FirestormWeb.Posting do
     do: "This thread is in slow mode: you can reply again in #{duration_text(wait)}."
 
   def message(:not_found), do: "Thread not found."
+
+  def message({:trust_level, level}),
+    do:
+      "You can start private conversations once you're a #{TrustLevels.title(level)}: keep reading and taking part."
+
   def message(:unconfirmed), do: "Please confirm your email address before posting."
   def message(:rate_limited), do: RateLimit.message()
 

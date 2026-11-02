@@ -91,15 +91,16 @@ defmodule FirestormWeb.Web.PostEditingTest do
     assert Forums.get_post!(reply.id).body == "A reply"
   end
 
-  test "new accounts can't add too many links in an edit", ctx do
+  test "new users can't add too many links in an edit", ctx do
     %{conn: conn, author: author, thread: thread, reply: reply} = ctx
+    author = FirestormWeb.Repo.update!(Ecto.Changeset.change(author, trust_level: 0))
 
     conn
     |> log_in_as(author)
     |> visit(thread_path(thread) <> "/posts/#{reply.id}/edit")
     |> fill_in("Body", with: "https://a.example https://b.example https://c.example")
     |> click_button("Save edit")
-    |> assert_has("p", text: "new accounts can include at most 2 links per post")
+    |> assert_has("p", text: "new users can include at most 2 links per post")
   end
 
   test "edits show up live for readers", ctx do

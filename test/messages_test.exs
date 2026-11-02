@@ -108,11 +108,11 @@ defmodule FirestormWeb.MessagesTest do
       assert start(alice, "hermit")
     end
 
-    test "new-account limits apply to the message", %{bob: bob} do
-      newbie = user("newbie")
+    test "new-user limits apply to the message", %{bob: bob} do
+      newbie = FirestormWeb.Repo.update!(Ecto.Changeset.change(user("newbie"), trust_level: 0))
       links = "https://a.example https://b.example https://c.example"
 
-      assert %{body: ["new accounts can include at most 2 links per post"]} =
+      assert %{body: ["new users can include at most 2 links per post"]} =
                errors(newbie, %{"recipients" => bob.username, "title" => "t", "body" => links})
     end
   end

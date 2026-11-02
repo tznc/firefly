@@ -24,7 +24,7 @@ defmodule FirestormWeb.E2ECase do
 
   @password "s3cret-password"
 
-  @doc "Creates a confirmed member who can log in with `@password`."
+  @doc "Creates a confirmed basic user (trust level 1) who can log in with `@password`."
   def member_fixture(username) do
     {:ok, user} =
       Forums.register_user(%{
@@ -34,7 +34,8 @@ defmodule FirestormWeb.E2ECase do
       })
 
     {:ok, user} = Forums.confirm_user(user)
-    user
+    # Past the new-user stage (see FirestormWeb.TrustLevels), like most members.
+    FirestormWeb.Repo.update!(Ecto.Changeset.change(user, trust_level: 1))
   end
 
   @doc "Creates a member with the admin role."

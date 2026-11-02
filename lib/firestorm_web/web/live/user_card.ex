@@ -3,7 +3,8 @@ defmodule FirestormWeb.Web.UserCard do
   The user card: clicking a post's avatar or username (on pages that
   render this component, with the post component's `card_target`) opens a
   card with the member's avatar, name, card background, the start of their
-  bio, stats, when they joined and were last seen, and actions: message
+  bio, trust level (see `FirestormWeb.TrustLevels`), stats, when they
+  joined and were last seen, and actions: message
   them, open their profile, mute or ignore them (see
   `FirestormWeb.Ignores`). A hidden profile (see `FirestormWeb.Profiles`)
   shows only the username and avatar. Muting or ignoring from the card
@@ -15,7 +16,7 @@ defmodule FirestormWeb.Web.UserCard do
   """
   use FirestormWeb.Web, :live_component
 
-  alias FirestormWeb.{Forums, Ignores, Profiles}
+  alias FirestormWeb.{Forums, Ignores, Profiles, TrustLevels}
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -77,6 +78,9 @@ defmodule FirestormWeb.Web.UserCard do
               <div class="rounded-full bg-base-100 p-1"><.avatar user={@user} size="size-20" /></div>
               <div class="min-w-0 pb-1">
                 <p class="truncate text-lg font-bold">@{@user.username}</p>
+                <span :if={@visible?} class="user-card-trust badge badge-ghost badge-sm">
+                  {TrustLevels.name(@user.trust_level)}
+                </span>
                 <p :if={@visible? && @user.name != @user.username} class="truncate text-sm text-base-content/70">
                   {@user.name}
                 </p>

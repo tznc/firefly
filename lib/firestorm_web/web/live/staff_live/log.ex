@@ -59,6 +59,7 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "user.suspend" => "Suspended user",
     "user.unsuspend" => "Lifted suspension",
     "user.reset_two_factor" => "Reset two-factor authentication",
+    "user.trust_level" => "Changed trust level",
     "setting.update" => "Changed setting",
     "admin.create" => "Created in admin",
     "admin.update" => "Updated in admin",
