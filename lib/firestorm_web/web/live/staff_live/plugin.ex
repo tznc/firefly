@@ -63,12 +63,27 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
     end
   end
 
+  def handle_event("fail_mode", %{"mode" => mode}, socket) when mode in ["open", "closed"] do
+    id = socket.assigns.plugin.id
+    :ok = Plugins.set_fail_closed(id, mode == "closed", socket.assigns.current_user)
+
+    {:noreply,
+     socket
+     |> put_flash(
+       :info,
+       "If its moderation fails, posting now #{if mode == "closed", do: "stops", else: "goes ahead"}."
+     )
+     |> load(Plugins.describe(id))}
+  end
+
   defp form_values(values), do: Map.new(values, fn {key, value} -> {key, to_string(value)} end)
 
   defp assign_form(socket, values, errors) do
     errors = Enum.map(errors, fn {key, message} -> {key, {message, []}} end)
     assign(socket, :form, to_form(values, as: :settings, errors: errors, action: :validate))
   end
+
+  defp fail_closed?(plugin), do: (plugin.row && plugin.row.fail_closed) || false
 
   defp input_type("boolean"), do: "checkbox"
   defp input_type("integer"), do: "number"
@@ -149,6 +164,35 @@ defmodule FirestormWeb.Web.StaffLive.Plugin do
             </div>
             <div><.button variant="primary" phx-disable-with="Saving...">Save settings</.button></div>
           </.form>
+        </section>
+
+        <section
+          :if={@plugin.manifest && "moderate_post" in @plugin.manifest.hooks}
+          id="plugin-moderation"
+          class="card border border-base-300 bg-base-100"
+        >
+          <div class="card-body gap-2">
+            <h2 class="card-title">Moderation</h2>
+            <p class="text-sm">
+              This plugin checks new posts before they're saved. If it fails or takes too long:
+            </p>
+            <div class="join">
+              <button
+                phx-click="fail_mode"
+                phx-value-mode="open"
+                class={["btn btn-sm join-item", !fail_closed?(@plugin) && "btn-active btn-primary"]}
+              >
+                Let posts through (fail open)
+              </button>
+              <button
+                phx-click="fail_mode"
+                phx-value-mode="closed"
+                class={["btn btn-sm join-item", fail_closed?(@plugin) && "btn-active btn-primary"]}
+              >
+                Refuse posts (fail closed)
+              </button>
+            </div>
+          </div>
         </section>
 
         <section id="plugin-stats" class="card border border-base-300 bg-base-100">

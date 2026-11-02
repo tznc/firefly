@@ -59,7 +59,7 @@ defmodule FirestormWeb.Plugin do
   alias FirestormWeb.Plugin.Manifest
 
   @enforce_keys [:id, :module, :manifest]
-  defstruct [:id, :module, :manifest, :state, source: "core", settings: %{}]
+  defstruct [:id, :module, :manifest, :state, source: "core", settings: %{}, fail_closed: false]
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -67,7 +67,8 @@ defmodule FirestormWeb.Plugin do
           manifest: Manifest.t(),
           state: term,
           source: String.t(),
-          settings: map
+          settings: map,
+          fail_closed: boolean
         }
 
   @typedoc "A hook's failure: what went wrong and a message for the error log."
@@ -118,7 +119,26 @@ defmodule FirestormWeb.Plugin do
   @doc "A scheduled job (manifest `jobs`) is due: `input` is `%{\"job\" => name}`."
   @callback run_job(t, input :: map) :: :ok | {:ok, term} | {:error, failure}
 
+  @doc """
+  Checks a new thread, reply or edit before it's saved, synchronously and
+  under a strict time limit: `input` is `%{"kind" => "thread" | "post" |
+  "edit", "title", "body", "user", "thread", "category_id"}`. The result is
+  `%{"action" => "allow"}`, `%{"action" => "queue", "reason" => text}`
+  (staff review it first) or `%{"action" => "reject", "message" => text}`
+  (shown to the author). See `FirestormWeb.Plugins.Moderation`.
+  """
+  @callback moderate_post(t, input :: map) :: {:ok, map} | {:error, failure}
+
+  @doc """
+  A member flagged a post: `input` is `%{"post", "thread", "flag" =>
+  %{"reason", "note"}}`. The result is `%{"action" => "none"}` or
+  `%{"action" => "hide"}` (hide the post until staff review it).
+  """
+  @callback flag_created(t, input :: map) :: {:ok, map} | {:error, failure}
+
   @optional_callbacks enabled: 1,
+                      moderate_post: 2,
+                      flag_created: 2,
                       disabled: 1,
                       call_export: 3,
                       render_post: 2,
@@ -134,7 +154,9 @@ defmodule FirestormWeb.Plugin do
     "render_post" => {:render_post, 2},
     "render_shortcodes" => {:render_shortcodes, 2},
     "handle_event" => {:handle_event, 2},
-    "run_job" => {:run_job, 2}
+    "run_job" => {:run_job, 2},
+    "moderate_post" => {:moderate_post, 2},
+    "flag_created" => {:flag_created, 2}
   }
 
   @doc "The hooks a plugin may implement, by manifest name, with their callbacks."

@@ -3,7 +3,9 @@ defmodule FirestormWeb.Plugins.InstalledPlugin do
   A plugin's stored state (see `FirestormWeb.Plugins`): whether it's
   enabled, its settings, and for an uploaded plugin its bundle (the zip and
   its SHA-256 `checksum`), parsed `manifest` and joined `code`. A plugin the
-  circuit breaker turned off has `disabled_reason`.
+  circuit breaker turned off has `disabled_reason`. `fail_closed`: whether
+  posting is refused when the plugin's moderation hook fails (see
+  `FirestormWeb.Plugins.Moderation`).
   """
 
   use Ecto.Schema
@@ -21,6 +23,7 @@ defmodule FirestormWeb.Plugins.InstalledPlugin do
     field(:enabled, :boolean, default: false)
     field(:disabled_reason, :string)
     field(:settings, :map, default: %{})
+    field(:fail_closed, :boolean, default: false)
     belongs_to(:installed_by, User)
 
     timestamps(type: :naive_datetime_usec)

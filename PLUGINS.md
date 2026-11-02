@@ -168,6 +168,8 @@ requirements; core and uploaded plugins can depend on each other.
 | `render_post` | `render_post(plugin, input)` | `{html, post}` | the new HTML |
 | `handle_event` | `handle_event(plugin, input)` | `{event, data}` | ignored; a failure is retried |
 | `run_job` | `run_job(plugin, input)` | `{job}` | ignored |
+| `moderate_post` | `moderate_post(plugin, input)` | `{kind, title, body, user, thread, category_id}` | `{action: "allow"}`, `{action: "queue", reason}` or `{action: "reject", message}` |
+| `flag_created` | `flag_created(plugin, input)` | `{post, thread, flag: {reason, note}}` | `{action: "none"}` or `{action: "hide"}` |
 
 `post` is `{id, thread_id, category_id, user_id}`.
 
@@ -265,6 +267,26 @@ produces events, and a plugin never hears about its own bot's actions.
 `{"name", "cron": "m h dom mon dow"}` (UTC). Due jobs call `run_job` with
 `{job}`; the next run time is stored, so jobs survive restarts and run once
 across nodes. A failed run isn't retried before its next time.
+
+## Moderation
+
+`moderate_post` (needs `read`) runs synchronously before a new thread,
+reply or edited body is saved, for every way of posting (web, API, inbound
+email all go through `FirestormWeb.Forums`), as a changeset validation:
+
+- `reject`: the post isn't saved; the author sees the message as a form
+  (or API) error. The first rejection wins.
+- `queue`: the post waits in the review queue at `/staff/review`, which
+  shows "Plugin <name>: <reason>"; staff approve or reject it as usual.
+
+The time limit is strict (300 ms, `FirestormWeb.Plugins.Moderation,
+timeout:`). If a plugin fails or times out, posting goes ahead by default
+(fail open); staff can switch a plugin to fail closed on its admin page, so
+posts are refused with a "try again" message instead. Admins' posts and
+posts in categories anonymous visitors can't read aren't checked.
+
+`flag_created` (needs `flag`) runs when a member flags a public post;
+answering `hide` hides it until staff review it, as enough flags would.
 
 ## Storage and custom fields
 

@@ -6,7 +6,7 @@ defmodule FirestormWeb.Forums do
   defdelegate authorize(action, user, params), to: FirestormWeb.Forums.Policy
   import Ecto.{Query, Changeset}, warn: false
   alias FirestormWeb.{Repo, Notifications, SiteSettings, StaffLog}
-  alias FirestormWeb.Plugins.Events
+  alias FirestormWeb.Plugins.{Events, Moderation}
   alias FirestormWeb.Web.Endpoint
   alias FirestormWeb.Store.ReplenishResponse
 
@@ -1090,6 +1090,7 @@ defmodule FirestormWeb.Forums do
       %{thread: thread_attrs, post: post_attrs}
       |> Thread.new_changeset(user)
       |> put_tags(attrs[:tags], user)
+      |> Moderation.validate_thread(user, category)
       |> Repo.insert()
 
     case thread_result do
@@ -1694,6 +1695,7 @@ defmodule FirestormWeb.Forums do
       %Post{queued_at: queued_at(user)}
       |> Post.changeset(attrs)
       |> SpamGuard.validate_post(user)
+      |> Moderation.validate(user, %{kind: "post", thread: thread})
 
     with {:ok, post} <- Repo.insert(changeset) do
       {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.reply_level)
@@ -1783,11 +1785,19 @@ defmodule FirestormWeb.Forums do
         end
       end)
 
-    tap_ok(result, &broadcast_post_updated(&1, editor))
+    tap_ok(result, fn post ->
+      # A plugin may have sent the edit to the review queue.
+      if Post.queued?(post), do: FirestormWeb.Review.changed()
+      broadcast_post_updated(post, editor)
+    end)
   end
 
   defp edit_post(current, editor, attrs) do
-    changeset = current |> Post.edit_changeset(attrs) |> SpamGuard.validate_post(editor)
+    changeset =
+      current
+      |> Post.edit_changeset(attrs)
+      |> SpamGuard.validate_post(editor)
+      |> moderate_edit(editor)
 
     if changeset.valid? and not Map.has_key?(changeset.changes, :body) do
       {:ok, current}
@@ -1795,6 +1805,17 @@ defmodule FirestormWeb.Forums do
       Repo.insert!(%PostRevision{post_id: current.id, user_id: editor.id, body: current.body})
       changeset = put_change(changeset, :edited_at, NaiveDateTime.utc_now())
       logged(fn -> Repo.update(changeset) end, &log_post_edit(editor, current, &1))
+    end
+  end
+
+  # Only a changed body is checked again; a post already waiting for review
+  # stays as it is.
+  defp moderate_edit(changeset, editor) do
+    if Map.has_key?(changeset.changes, :body) and not Post.queued?(changeset.data) do
+      thread = fn -> Repo.get!(Thread, changeset.data.thread_id) end
+      Moderation.validate(changeset, editor, %{kind: "edit", thread: thread})
+    else
+      changeset
     end
   end
 
