@@ -204,6 +204,25 @@ defmodule FirestormWeb.SiteSettings do
         min: 1,
         max: 24 * 30,
         help: "Uploads no post, message or draft uses are deleted after this long."
+      },
+      %{
+        key: "link_previews",
+        section: "Link previews",
+        type: :boolean,
+        label: "Show link previews",
+        default: true,
+        help:
+          "A link alone on its line shows as a card with the page's title, description and image (fetched by the server)."
+      },
+      %{
+        key: "link_preview_hours",
+        section: "Link previews",
+        type: :integer,
+        label: "Refresh previews after (hours)",
+        default: 168,
+        min: 1,
+        max: 24 * 90,
+        help: "How long a fetched preview is used before it's fetched again."
       }
     ]
   end

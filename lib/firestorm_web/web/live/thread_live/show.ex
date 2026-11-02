@@ -23,7 +23,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   the answer (see `FirestormWeb.Solved`); it's shown under the first post.
 
   Posts' polls (see `FirestormWeb.Polls`) take votes here, and their
-  results update live.
+  results update live. Link previews (see `FirestormWeb.LinkPreviews`)
+  appear once fetched.
 
   Admins make posts wikis (or not); members may then edit them (see the
   `:edit_post` policy).
@@ -33,7 +34,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   import FirestormWeb.Web.BookmarkComponents
   import FirestormWeb.Web.PollComponents, only: [poll: 1]
 
-  alias FirestormWeb.{Bookmarks, Flags, Forums, Mentions, Polls, Posting, RateLimit, Repo, Solved}
+  alias FirestormWeb.{Bookmarks, Flags, Forums, LinkPreviews, Mentions, Polls, Posting, RateLimit}
+  alias FirestormWeb.{Repo, Solved}
   alias FirestormWeb.TopicTimers
   alias FirestormWeb.Forums.{Category, Flag, Post, Subscriptions, Thread, ThreadTimer}
 
@@ -88,7 +90,8 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
              :post_created,
              :post_updated,
              :post_deleted,
-             :post_restored
+             :post_restored,
+             :link_previews_ready
            ] do
     # Read again: a post's change can change the thread (e.g. a deleted
     # answer is unaccepted).
@@ -457,7 +460,10 @@ defmodule FirestormWeb.Web.ThreadLive.Show do
   defp load_thread(socket, thread) do
     user = socket.assigns.current_user
     thread = Repo.preload(thread, [:tags, posts: [:user, :deleted_by]], force: true)
-    [first_post | replies] = Enum.map(thread.posts, &Forums.decorate_post_oembeds/1)
+
+    [first_post | replies] =
+      thread.posts |> Enum.map(&Forums.decorate_post_oembeds/1) |> LinkPreviews.decorate()
+
     # Replies awaiting approval are only for their author and admins.
     replies = Enum.reject(replies, &(Post.queued?(&1) and not can?(user, :view_hidden_post, &1)))
 

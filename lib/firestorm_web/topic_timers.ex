@@ -154,8 +154,9 @@ defmodule FirestormWeb.TopicTimers do
     Runs what's due, from the database: thread timers (see
     `FirestormWeb.TopicTimers`), bookmark reminders (see
     `FirestormWeb.Bookmarks`), polls' closing times (see
-    `FirestormWeb.Polls`) and unused uploads' removal (see
-    `FirestormWeb.Uploads`). At start (so nothing that fell due while the
+    `FirestormWeb.Polls`), unused uploads' removal (see
+    `FirestormWeb.Uploads`) and unseen link previews' (see
+    `FirestormWeb.LinkPreviews`). At start (so nothing that fell due while the
     app was down is lost), then every `:interval` milliseconds (the
     `FirestormWeb.TopicTimers` config; 30 seconds by default), so each runs
     at most that late. Every job takes its due rows one locked transaction
@@ -169,7 +170,8 @@ defmodule FirestormWeb.TopicTimers do
       FirestormWeb.TopicTimers,
       FirestormWeb.Bookmarks,
       FirestormWeb.Polls,
-      FirestormWeb.Uploads
+      FirestormWeb.Uploads,
+      FirestormWeb.LinkPreviews
     ]
 
     def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)

@@ -43,7 +43,10 @@ defmodule FirestormWeb.Web.UserLive.Show do
 
     posts_page = %{
       posts_page
-      | entries: Enum.map(posts_page.entries, &Forums.decorate_post_oembeds/1)
+      | entries:
+          posts_page.entries
+          |> Enum.map(&Forums.decorate_post_oembeds/1)
+          |> FirestormWeb.LinkPreviews.decorate()
     }
 
     {:noreply,

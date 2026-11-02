@@ -108,5 +108,8 @@ config :firestorm_web, FirestormWeb.RateLimit,
 # Each test sees its own (transactional) plugins: no shared cache.
 config :firestorm_web, :plugins_cache, false
 
+# Link previews aren't fetched, except by the tests of them.
+config :firestorm_web, FirestormWeb.LinkPreviews, enabled: false
+
 # Tests deliver plugin events and run plugin jobs themselves.
 config :firestorm_web, FirestormWeb.Plugins.Queue, enabled: false

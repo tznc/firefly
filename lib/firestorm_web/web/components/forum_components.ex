@@ -454,6 +454,7 @@ defmodule FirestormWeb.Web.ForumComponents do
           thread={@thread}
         />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
+        <.link_preview :for={preview <- @post.link_previews} preview={preview} />
         {render_slot(@poll)}
         <FirestormWeb.Web.PluginComponents.plugin_outlet
           outlet="post_footer"
@@ -681,6 +682,46 @@ defmodule FirestormWeb.Web.ForumComponents do
   end
 
   defp render_oembed(oembed), do: Phoenix.HTML.raw(FirestormWeb.OEmbed.to_html(oembed))
+
+  @doc """
+  A link preview card (see `FirestormWeb.LinkPreviews`): the page's title
+  linking to it, its site, description and image (a copy in uploads).
+  Every value is escaped text.
+  """
+  attr :preview, :any, required: true
+
+  def link_preview(assigns) do
+    ~H"""
+    <aside
+      class="link-preview flex gap-3 rounded-box border border-base-300 bg-base-200/50 p-3"
+      data-url={@preview.url}
+    >
+      <div class="min-w-0 flex-1 space-y-1">
+        <p class="truncate text-xs text-base-content/60">
+          {@preview.site_name || URI.parse(@preview.url).host}
+        </p>
+        <a
+          href={@preview.url}
+          class="link link-hover block font-semibold"
+          rel="noopener noreferrer nofollow ugc"
+          target="_blank"
+        >
+          {@preview.title}
+        </a>
+        <p :if={@preview.description} class="line-clamp-3 text-sm text-base-content/80">
+          {@preview.description}
+        </p>
+      </div>
+      <img
+        :if={@preview.image_upload}
+        src={FirestormWeb.Uploads.url(@preview.image_upload)}
+        alt=""
+        loading="lazy"
+        class="size-20 shrink-0 rounded object-cover"
+      />
+    </aside>
+    """
+  end
 
   @doc """
   Pagination links for a `Scrivener.Page`, linking to `path?page=N` (plus
