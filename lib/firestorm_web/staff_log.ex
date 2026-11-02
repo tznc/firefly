@@ -30,6 +30,8 @@ defmodule FirestormWeb.StaffLog do
     user.silence user.unsilence user.suspend user.unsuspend
     setting.update
     admin.create admin.update admin.delete
+    plugin.install plugin.upgrade plugin.enable plugin.disable plugin.uninstall plugin.settings
+    plugin.auto_disable plugin.suspend plugin.resume
   )
 
   @doc "Every action the log records, in display order."
@@ -46,11 +48,22 @@ defmodule FirestormWeb.StaffLog do
 
   def record(nil, _action, _target, _details), do: nil
 
-  def record(%User{} = actor, action, target, details) when action in @actions do
+  def record(%User{} = actor, action, target, details) when action in @actions,
+    do: insert(actor.id, action, target, details)
+
+  @doc """
+  Records an action Firefly took by itself, with no staff member behind it
+  (e.g. the plugin circuit breaker turning a failing plugin off). The log
+  shows it as the system's.
+  """
+  def record_system(action, target, details \\ %{}) when action in @actions,
+    do: insert(nil, action, target, details)
+
+  defp insert(actor_id, action, target, details) do
     {type, id} = target_ref(target)
 
     Repo.insert!(%StaffAction{
-      actor_id: actor.id,
+      actor_id: actor_id,
       action: action,
       target_type: type,
       target_id: id,

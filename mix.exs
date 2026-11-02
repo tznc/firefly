@@ -69,6 +69,8 @@ defmodule FirestormWeb.Mixfile do
       {:lru_cache, "~> 0.1.3"},
       {:cors_plug, "~> 3.0"},
       {:hammer, "~> 7.5"},
+      # Runs uploaded plugins: QuickJS compiled to WebAssembly, on wasmtime.
+      {:wasmex, "~> 0.15.1"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
       {:heroicons,

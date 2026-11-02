@@ -44,7 +44,7 @@ defmodule FirestormWeb.Forums.Policy do
     * `:add_participants` - participants who started the conversation, and
       admin participants
     * `:view_staff_log`, `:manage_site_settings`, `:manage_groups`,
-      `:manage_tags` (tag groups and synonyms) - admins
+      `:manage_tags` (tag groups and synonyms), `:manage_plugins` - admins
     * `:view_category`, `:view_thread` (in its category) - everyone, members
       or not, unless the category is restricted to roles (groups): then
       members of one of those roles, and admins. A subcategory also needs its
@@ -160,6 +160,7 @@ defmodule FirestormWeb.Forums.Policy do
              :manage_site_settings,
              :manage_groups,
              :manage_tags,
+             :manage_plugins,
              :toggle_wiki
            ],
       do: admin(user)

@@ -32,6 +32,10 @@ defmodule FirestormWeb.Application do
       # Add an LRU Cache for storing OEmbed results for a given URL, storing at
       # most 5000 results at a time in the cache.
       %{id: LruCache, start: {LruCache, :start_link, [:oembed_cache, 5_000]}},
+      # Runs plugin calls, so a crashing or runaway call never takes its caller down
+      {Task.Supervisor, name: FirestormWeb.Plugin.TaskSupervisor},
+      # Loads plugins and reloads them when another node changes them
+      FirestormWeb.Plugins.Registry,
       # Start the endpoint when the application starts
       FirestormWeb.Web.Endpoint
     ] ++ topic_timers()
