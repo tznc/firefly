@@ -279,7 +279,7 @@ ask the service from an event once the post is public:
 ```js
 // Synchronous: no network. Queue what needs a closer look.
 exports.moderate_post = ({ body, user }) =>
-  /https?:\/\//.test(body) && firefly.call("kv.get", { key: `trusted:${user.id}` }) !== true
+  /https?:\/\//.test(body) && firefly.call("kv.get", { key: "trusted", user_id: user.id }) !== true
     ? { action: "queue", reason: "links from a member not yet checked" }
     : { action: "allow" };
 
@@ -294,7 +294,7 @@ exports.handle_event = ({ event, data }) => {
   if (JSON.parse(res.body).spam) {
     firefly.call("posts.flag", { post_id: data.post.id, reason: "spam", note: "api.example.com says spam" });
   } else {
-    firefly.call("kv.set", { key: `trusted:${data.post.user_id}`, value: true });
+    firefly.call("kv.set", { key: "trusted", value: true, user_id: data.post.user_id });
   }
 };
 ```
@@ -303,6 +303,8 @@ Queued posts produce no events until staff approve them, and plugins can't
 approve or reject them, so the remote check runs on what's published (a
 post staff approved, or one `moderate_post` allowed) and reports through
 flags, which staff review and which `flags_to_hide` turns into hiding.
+`trusted` is kept in each member's own store (`user_id`), so it's in their
+account export and goes with their account.
 
 ### Egress log
 
