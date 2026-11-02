@@ -1,5 +1,7 @@
 defmodule Firefly.TagsTest do
   use Firefly.DataCase
+  # The notifications process delivers emails; route them to this test.
+  use Bamboo.Test, shared: true
 
   alias Firefly.{Accounts, Discussion, Groups, Notifications, Repo}
   alias Firefly.Discussion.Tag
