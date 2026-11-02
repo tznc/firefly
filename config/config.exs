@@ -49,6 +49,8 @@ config :ueberauth, Ueberauth,
     x: {FirestormWeb.Auth.Strategies.X, []},
     facebook: {Ueberauth.Strategy.Facebook, []},
     slack: {FirestormWeb.Auth.Strategies.Slack, []},
+    # Single sign-on with the configured OpenID Connect provider.
+    oidc: {FirestormWeb.Auth.Strategies.OIDC, []},
     identity: {Ueberauth.Strategy.Identity, [callback_methods: ["POST"]]}
   ]
 

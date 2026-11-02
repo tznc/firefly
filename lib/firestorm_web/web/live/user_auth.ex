@@ -12,6 +12,9 @@ defmodule FirestormWeb.Web.UserAuth do
     * `:require_user` - redirects to the categories page when nobody is
       logged in. Used by individual LiveViews, after the live session's
       `:mount_current_user`.
+    * `:password_login` - redirects to the login page when passwords are off
+      (single sign-on only, see `FirestormWeb.Auth.sso_only?/0`). Used by
+      the password login, registration and reset pages.
   """
 
   use FirestormWeb.Web, :verified_routes
@@ -39,6 +42,19 @@ defmodule FirestormWeb.Web.UserAuth do
         socket
         |> put_flash(:error, "You must be logged in to access this page.")
         |> redirect(to: ~p"/categories")
+
+      {:halt, socket}
+    end
+  end
+
+  def on_mount(:password_login, _params, _session, socket) do
+    if FirestormWeb.Auth.password_login?() do
+      {:cont, socket}
+    else
+      socket =
+        socket
+        |> put_flash(:error, "Log in with single sign-on.")
+        |> redirect(to: ~p"/login")
 
       {:halt, socket}
     end

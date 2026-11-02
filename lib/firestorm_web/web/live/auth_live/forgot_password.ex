@@ -2,6 +2,8 @@ defmodule FirestormWeb.Web.AuthLive.ForgotPassword do
   @moduledoc "Requests a password reset link by email."
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :password_login})
+
   alias FirestormWeb.{PasswordReset, RateLimit}
 
   @sent "If an account with a password uses that email, we've sent it a link to reset the password."

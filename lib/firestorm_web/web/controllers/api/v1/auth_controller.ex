@@ -4,7 +4,8 @@ defmodule FirestormWeb.Web.Api.V1.AuthController do
   alias FirestormWeb.Forums.User
 
   def identity(conn, %{"user" => user_params}) do
-    with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
+    with true <- FirestormWeb.Auth.password_login?() || {:error, :sso_only},
+         :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-
            Forums.authenticate_by_password(user_params["username"], user_params["password"]),
          true <- not User.suspended?(user) || {:suspended, user} do
@@ -12,6 +13,9 @@ defmodule FirestormWeb.Web.Api.V1.AuthController do
     else
       {:suspended, user} ->
         conn |> put_status(:forbidden) |> json(%{"error" => Penalties.suspended_message(user)})
+
+      {:error, :sso_only} ->
+        conn |> put_status(:forbidden) |> json(%{"error" => "Password login is off"})
 
       {:error, :rate_limited} ->
         conn |> put_status(:too_many_requests) |> json(%{"error" => RateLimit.message()})

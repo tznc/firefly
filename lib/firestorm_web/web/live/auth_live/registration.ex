@@ -8,6 +8,8 @@ defmodule FirestormWeb.Web.AuthLive.Registration do
   """
   use FirestormWeb.Web, :live_view
 
+  on_mount({FirestormWeb.Web.UserAuth, :password_login})
+
   alias FirestormWeb.{EmailConfirmation, Forums, RateLimit}
 
   @impl true

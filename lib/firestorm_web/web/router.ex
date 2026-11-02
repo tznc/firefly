@@ -171,6 +171,8 @@ defmodule FirestormWeb.Web.Router do
 
     # DELETE only: a GET would let any page log users out (CSRF).
     delete("/logout", AuthController, :delete)
+    get("/discourse_connect", DiscourseConnectController, :request)
+    get("/discourse_connect/callback", DiscourseConnectController, :callback)
     get("/:provider", AuthController, :request)
     get("/:provider/callback", AuthController, :callback)
     post("/:provider/callback", AuthController, :callback)

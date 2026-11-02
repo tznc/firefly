@@ -80,6 +80,26 @@ defmodule FirestormWeb.Web.StaffLive.Settings do
         >
           <div class="card-body gap-2">
             <legend class="card-title">{section}</legend>
+            <div :if={section == "Logins"} id="login-methods" class="text-sm">
+              <p class="text-base-content/70">
+                Login providers are configured in the server's environment (<code>FIREFLY_*</code>
+                variables).{if FirestormWeb.Auth.sso_only?(),
+                  do: " Single sign-on is the only way to log in."}
+              </p>
+              <ul class="mt-1 flex flex-wrap gap-1">
+                <li
+                  :for={provider <- FirestormWeb.Auth.providers()}
+                  class={[
+                    "badge badge-sm",
+                    FirestormWeb.Auth.enabled?(provider) && "badge-success"
+                  ]}
+                >
+                  {FirestormWeb.Auth.label(provider)}: {if FirestormWeb.Auth.enabled?(provider),
+                    do: "on",
+                    else: "off"}
+                </li>
+              </ul>
+            </div>
             <div :for={definition <- definitions}>
               <.input
                 field={@form[field(definition.key)]}

@@ -55,6 +55,24 @@ if config_env() != :test do
       private_key: System.get_env("FIREFLY_APPLE_PRIVATE_KEY")
   end
 
+  # Single sign-on (see FirestormWeb.Auth.OIDC and
+  # FirestormWeb.Auth.DiscourseConnect); FIREFLY_SSO_ONLY makes it the only
+  # way to log in.
+  config :firestorm_web, FirestormWeb.Auth.OIDC,
+    discovery_url: System.get_env("FIREFLY_OIDC_DISCOVERY_URL"),
+    client_id: System.get_env("FIREFLY_OIDC_CLIENT_ID"),
+    client_secret: System.get_env("FIREFLY_OIDC_CLIENT_SECRET"),
+    scopes: System.get_env("FIREFLY_OIDC_SCOPES"),
+    name: System.get_env("FIREFLY_OIDC_NAME")
+
+  config :firestorm_web, FirestormWeb.Auth.DiscourseConnect,
+    url: System.get_env("FIREFLY_DISCOURSE_CONNECT_URL"),
+    secret: System.get_env("FIREFLY_DISCOURSE_CONNECT_SECRET"),
+    name: System.get_env("FIREFLY_DISCOURSE_CONNECT_NAME")
+
+  config :firestorm_web, FirestormWeb.Auth,
+    sso_only: System.get_env("FIREFLY_SSO_ONLY") in ~w(true 1)
+
   # Configuration for AWS integration
   config :firestorm_web, :aws,
     access_key_id: System.get_env("FIREFLY_AWS_ACCESS_KEY_ID"),
