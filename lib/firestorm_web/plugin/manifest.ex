@@ -23,6 +23,9 @@ defmodule FirestormWeb.Plugin.Manifest do
         "dependencies": {"other": "~> 1.2"},
         "optional_dependencies": {"extra": ">= 0.3.0"},
         "exports": ["greet"],               // functions dependents may call
+        "shortcodes": ["spoiler"],          // [spoiler]...[/spoiler] in posts
+        "composer_buttons": [{"label": "Spoiler",
+                              "insert": "[spoiler]{{selection}}[/spoiler]"}],
         "priority": 100,                    // lower runs first among peers
         "source": "upload"                  // "upload" for bundles, "core" for core plugins
       }
@@ -59,6 +62,8 @@ defmodule FirestormWeb.Plugin.Manifest do
     dependencies: %{},
     optional_dependencies: %{},
     exports: [],
+    shortcodes: [],
+    composer_buttons: [],
     priority: 100,
     source: "upload"
   ]
@@ -66,7 +71,8 @@ defmodule FirestormWeb.Plugin.Manifest do
   @type t :: %__MODULE__{}
 
   @keys ~w(id name version firefly description author url license main hooks permissions
-           settings assets dependencies optional_dependencies exports priority source registry)
+           settings assets dependencies optional_dependencies exports shortcodes composer_buttons
+           priority source registry)
   @required ~w(id name version firefly)
   @id_format ~r/^[a-z][a-z0-9_-]{1,39}$/
   @path_format ~r{^[A-Za-z0-9_-][A-Za-z0-9._/-]*$}
@@ -95,6 +101,8 @@ defmodule FirestormWeb.Plugin.Manifest do
         end
       end)
 
+    errors = if errors == [], do: consistency(attrs), else: errors
+
     if errors == [] do
       {:ok, build(attrs, source)}
     else
@@ -103,6 +111,15 @@ defmodule FirestormWeb.Plugin.Manifest do
   end
 
   def parse(_attrs, _source), do: {:error, "Invalid manifest: it must be a JSON object."}
+
+  # Keys that only make sense together.
+  defp consistency(attrs) do
+    hooks = Map.get(attrs, "hooks", [])
+
+    if Map.get(attrs, "shortcodes", []) != [] and "render_shortcodes" not in hooks,
+      do: ["\"shortcodes\" needs the render_shortcodes hook"],
+      else: []
+  end
 
   defp build(attrs, source) do
     fields =
@@ -179,6 +196,20 @@ defmodule FirestormWeb.Plugin.Manifest do
       else: ["\"exports\" must be a list of function names"]
   end
 
+  defp check("shortcodes", value, _source) do
+    if is_list(value) and Enum.all?(value, &(is_binary(&1) and &1 =~ ~r/^[a-z][a-z0-9_-]{0,29}$/)),
+      do: duplicates("shortcodes", value),
+      else: ["\"shortcodes\" must be a list of lowercase names"]
+  end
+
+  defp check("composer_buttons", value, _source) do
+    if is_list(value) and length(value) <= 10 and Enum.all?(value, &composer_button?/1),
+      do: [],
+      else: [
+        "\"composer_buttons\" must be at most 10 buttons, each {label, insert} (text up to 40 and 2000 characters)"
+      ]
+  end
+
   defp check("assets", value, _source) do
     if is_list(value) and length(value) <= 50 and
          Enum.all?(value, &(is_binary(&1) and &1 =~ @path_format and not (&1 =~ ".."))),
@@ -230,6 +261,13 @@ defmodule FirestormWeb.Plugin.Manifest do
       ["\"settings\" must be a list of at most 50 settings"]
     end
   end
+
+  defp composer_button?(%{"label" => label, "insert" => insert} = button) do
+    map_size(button) == 2 and is_binary(label) and String.length(label) in 1..40 and
+      is_binary(insert) and String.length(insert) in 1..2000
+  end
+
+  defp composer_button?(_button), do: false
 
   defp string(key, value, min, max) do
     if is_binary(value) and String.length(String.trim(value)) in min..max//1,

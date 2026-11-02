@@ -11,6 +11,7 @@ defmodule FirestormWeb.Plugins.Registry do
   require Logger
 
   alias FirestormWeb.Plugins
+  alias FirestormWeb.Plugin.Sandboxed.Runtime
   alias FirestormWeb.Plugins.Health
 
   def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -20,15 +21,22 @@ defmodule FirestormWeb.Plugins.Registry do
     Health.create_table()
     Phoenix.PubSub.subscribe(FirestormWeb.PubSub, Plugins.topic())
 
-    if Application.get_env(:firestorm_web, :plugins_cache, true),
-      do: {:ok, %{}, {:continue, :load}},
-      else: {:ok, %{}}
+    {:ok, %{}, {:continue, :load}}
   end
 
   @impl true
   def handle_continue(:load, state) do
-    plugins = Plugins.active()
-    if plugins != [], do: Logger.info("Plugins loaded: #{Enum.map_join(plugins, ", ", & &1.id)}")
+    # Compile the sandbox runtime now rather than in the first plugin call.
+    Runtime.compiled()
+
+    # Tests load plugins from their own transaction instead.
+    if Application.get_env(:firestorm_web, :plugins_cache, true) do
+      plugins = Plugins.active()
+
+      if plugins != [],
+        do: Logger.info("Plugins loaded: #{Enum.map_join(plugins, ", ", & &1.id)}")
+    end
+
     {:noreply, state}
   rescue
     # A database that isn't up yet mustn't stop the app: plugins then load

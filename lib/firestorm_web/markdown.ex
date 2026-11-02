@@ -24,6 +24,10 @@ defmodule FirestormWeb.Markdown do
   Raw HTML is allowed in the input, but the output is always run through an
   allow-list sanitizer, so scripts, event handlers and `javascript:` URLs are
   stripped.
+
+  A post's body (rendered with the `:post` and `:thread` options) also goes
+  through the plugins' content hooks (see `FirestormWeb.Plugins.Content`),
+  whose output is sanitized again.
   """
 
   alias FirestormWeb.Mentions
@@ -49,16 +53,17 @@ defmodule FirestormWeb.Markdown do
   @doc false
   def options, do: @options
 
-  @spec render(String.t() | nil, Mentions.refs() | term) :: String.t()
-  def render(body, refs_or_viewer \\ nil)
+  @spec render(String.t() | nil, Mentions.refs() | term, keyword) :: String.t()
+  def render(body, refs_or_viewer \\ nil, opts \\ [])
 
-  def render(nil, _refs_or_viewer), do: ""
+  def render(nil, _refs_or_viewer, _opts), do: ""
 
-  def render(body, refs_or_viewer) when is_binary(body) do
+  def render(body, refs_or_viewer, opts) when is_binary(body) do
     body
     |> Mentions.parse()
     |> Mentions.link(refs_or_viewer)
     |> MDEx.to_html!(@options)
+    |> plugins(opts[:post], opts[:thread])
     # Safe to do after sanitizing: any literal `<pre>` in user text is escaped.
     |> String.replace("<pre>", ~s(<pre class="line-numbers">))
     |> String.replace(
@@ -66,4 +71,7 @@ defmodule FirestormWeb.Markdown do
       ~s(<blockquote class="quote">\n<p class="quote-attribution">\\1</p>)
     )
   end
+
+  defp plugins(html, nil, _thread), do: html
+  defp plugins(html, post, thread), do: FirestormWeb.Plugins.Content.transform(html, post, thread)
 end

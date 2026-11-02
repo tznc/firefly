@@ -178,4 +178,24 @@ const Uploaders = {
   },
 }
 
-export default {Highlight, LocalTime, MentionAutocomplete, QuoteSelection, Uploaders}
+// Plugin toolbar buttons above the post editor: each inserts its
+// `data-insert` template at the caret of the textarea named by `data-target`,
+// with `{{selection}}` replaced by the selected text, then fires an input
+// event so the form's phx-change sees the new text.
+const ComposerButtons = {
+  mounted() {
+    this.el.addEventListener("click", e => {
+      const button = e.target.closest("button[data-insert]")
+      const textarea = document.getElementById(this.el.dataset.target)
+      if (!button || !textarea) { return }
+      const {selectionStart: start, selectionEnd: end, value} = textarea
+      const text = button.dataset.insert.split("{{selection}}").join(value.slice(start, end))
+      textarea.value = value.slice(0, start) + text + value.slice(end)
+      textarea.focus()
+      textarea.setSelectionRange(start + text.length, start + text.length)
+      textarea.dispatchEvent(new Event("input", {bubbles: true}))
+    })
+  },
+}
+
+export default {ComposerButtons, Highlight, LocalTime, MentionAutocomplete, QuoteSelection, Uploaders}
