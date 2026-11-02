@@ -2416,8 +2416,8 @@ defmodule FirestormWeb.Forums do
   end
 
   @doc """
-  Sends a notification to a user, and tells their open pages so the badge
-  updates live.
+  Sends a notification to a user, tells their open pages so the badge
+  updates live, and pushes it to their browsers (see `FirestormWeb.WebPush`).
   """
   def notify(%User{} = user, attrs) do
     result =
@@ -2425,7 +2425,11 @@ defmodule FirestormWeb.Forums do
       |> Notification.changeset(Map.put(attrs, :user_id, user.id))
       |> Repo.insert()
 
-    with {:ok, _} <- result, do: notifications_changed(user.id)
+    with {:ok, notification} <- result do
+      notifications_changed(user.id)
+      FirestormWeb.WebPush.notification_created(user, notification)
+    end
+
     result
   end
 

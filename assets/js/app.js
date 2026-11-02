@@ -21,6 +21,9 @@ window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
 liveSocket.connect()
 
+// The service worker shows push notifications and makes the site installable.
+if ("serviceWorker" in navigator) { navigator.serviceWorker.register("/service-worker.js") }
+
 // expose liveSocket on window for web console debug logs and latency simulation:
 // >> liveSocket.enableDebug()
 // >> liveSocket.enableLatencySim(1000)

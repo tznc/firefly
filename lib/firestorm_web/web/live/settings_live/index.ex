@@ -10,7 +10,9 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     * Interface: the theme
     * Notifications (`/settings/notifications`): email, private messages,
       the levels threads get when you reply or start one, and how often
-      digest emails come (see `FirestormWeb.Digests`)
+      digest emails come (see `FirestormWeb.Digests`), and browser push
+      notifications for this browser, through the `PushNotifications` hook
+      (see `FirestormWeb.WebPush`)
     * Privacy: hiding your profile and presence (see `FirestormWeb.Profiles`),
       your activity from your profile, and yourself from the users directory
     * Muted & ignored (`/settings/users`): the members you mute or ignore
@@ -41,7 +43,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     SiteSettings,
     TwoFactor,
     Uploads,
-    WebAuthn
+    WebAuthn,
+    WebPush
   }
 
   alias FirestormWeb.Forums.User
@@ -61,7 +64,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   @preference_fields %{
     "interface" => ~w(theme),
     "notifications" =>
-      ~w(email_notifications allow_private_messages reply_level new_thread_level digest_frequency),
+      ~w(email_notifications allow_private_messages reply_level new_thread_level digest_frequency
+         push_only_when_away),
     "privacy" => ~w(hide_profile hide_profile_activity hide_from_directory)
   }
 
@@ -146,6 +150,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     |> assign(:current_user, user)
     |> assign(:profile_form, to_form(User.update_changeset(user, %{})))
     |> assign(:titles, Badges.titles(user))
+    |> assign(:push_subscriptions, WebPush.subscriptions(user))
+    |> assign_new(:push_state, fn -> "unknown" end)
     |> assign(:form, to_form(User.preferences_changeset(user, %{}), as: :preferences))
     |> assign_ignores()
     |> assign(:identities, Auth.identities(user))
@@ -210,6 +216,38 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, Badges.message(reason))}
     end
+  end
+
+  def handle_event("push_state", %{"state" => state}, socket)
+      when state in ~w(on off denied unsupported),
+      do: {:noreply, assign(socket, :push_state, state)}
+
+  def handle_event("push_subscribe", %{"subscription" => subscription} = params, socket) do
+    user = socket.assigns.current_user
+
+    case WebPush.subscribe(user, subscription, params["user_agent"]) do
+      {:ok, _subscription} ->
+        {:noreply,
+         socket
+         |> assign(:push_subscriptions, WebPush.subscriptions(user))
+         |> put_flash(:info, "Push notifications are on for this browser.")}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, "This browser's push subscription didn't work.")}
+    end
+  end
+
+  def handle_event("push_unsubscribe", params, socket) do
+    user = socket.assigns.current_user
+
+    target =
+      case params do
+        %{"id" => id} -> {:id, id}
+        %{"endpoint" => endpoint} -> endpoint
+      end
+
+    WebPush.unsubscribe(user, target)
+    {:noreply, assign(socket, :push_subscriptions, WebPush.subscriptions(user))}
   end
 
   def handle_event("validate_image", _params, socket), do: {:noreply, socket}
@@ -656,8 +694,58 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
             prompt={"Site default (#{Digests.label(SiteSettings.get("default_digest_frequency"))})"}
             options={Digests.frequency_options()}
           />
+          <.input
+            :if={WebPush.enabled?()}
+            field={@form[:push_only_when_away]}
+            type="checkbox"
+            label="Send browser push notifications only when I'm away from the site"
+          />
           <.button variant="primary" phx-disable-with="Saving...">Save</.button>
         </.form>
+
+        <section
+          :if={WebPush.enabled?()}
+          id="push-notifications"
+          phx-hook="PushNotifications"
+          data-public-key={WebPush.public_key()}
+          class="card border border-base-300 bg-base-100"
+        >
+          <div class="card-body gap-2">
+            <h2 class="card-title text-base">Browser push notifications</h2>
+            <p :if={@push_state == "unsupported"} class="text-sm">
+              This browser doesn't support push notifications.
+            </p>
+            <p :if={@push_state == "denied"} class="text-sm">
+              Notifications are blocked for this site in your browser's settings.
+            </p>
+            <div :if={@push_state in ~w(on off)} class="flex items-center gap-2">
+              <span id="push-state" class="text-sm">
+                {if @push_state == "on", do: "On for this browser.", else: "Off for this browser."}
+              </span>
+              <button :if={@push_state == "off"} type="button" data-push="on" class="btn btn-primary btn-sm">
+                Turn on
+              </button>
+              <button :if={@push_state == "on"} type="button" data-push="off" class="btn btn-sm">
+                Turn off
+              </button>
+            </div>
+            <ul :if={@push_subscriptions != []} id="push-subscriptions" class="text-sm">
+              <li :for={s <- @push_subscriptions} class="flex items-center gap-2">
+                <span class="flex-1 truncate">{s.user_agent || URI.parse(s.endpoint).host}</span>
+                <span class="text-base-content/60">since {short_date(s.inserted_at)}</span>
+                <button
+                  type="button"
+                  phx-click="push_unsubscribe"
+                  phx-value-id={s.id}
+                  class="btn btn-ghost btn-xs"
+                  aria-label="Remove this browser"
+                >
+                  Remove
+                </button>
+              </li>
+            </ul>
+          </div>
+        </section>
 
         <div class="prose prose-sm max-w-none text-base-content/80">
           <h2 class="text-base">Notification levels</h2>

@@ -6,7 +6,7 @@ defmodule FirestormWeb.AccountExport do
   notifications, private messages they sent and the conversations they're
   in, notification levels, read positions, drafts, bookmarks, the members they mute or ignore, their connected login accounts, the days they visited, poll votes and the polls they created,
   their uploads (with links, which work while the user may still see them),
-  their badges, the custom emoji they added as staff, and what plugins keep for them
+  their badges, the browsers they get push notifications on, the custom emoji they added as staff, and what plugins keep for them
   (their storage entries and custom fields on the user, by plugin id).
 
   Other people appear only by public username: no one else's email, name,
@@ -45,7 +45,7 @@ defmodule FirestormWeb.AccountExport do
   @profile ~w(id username name email bio website location confirmed_at inserted_at
               last_seen_at trust_level)a
   @preferences ~w(theme email_notifications allow_private_messages reply_level new_thread_level
-                  hide_profile hide_profile_activity hide_from_directory digest_frequency)a
+                  hide_profile hide_profile_activity hide_from_directory digest_frequency push_only_when_away)a
 
   @doc "The export as a JSON string."
   def to_json(%User{} = user), do: user |> build() |> Jason.encode!(pretty: true)
@@ -75,6 +75,7 @@ defmodule FirestormWeb.AccountExport do
       passkeys: FirestormWeb.Passkeys.export(user),
       groups: FirestormWeb.Groups.export(user),
       badges: FirestormWeb.Badges.export(user),
+      push_subscriptions: FirestormWeb.WebPush.export(user),
       visits: visits(user),
       polls: FirestormWeb.Polls.export(user),
       uploads: FirestormWeb.Uploads.export(user),

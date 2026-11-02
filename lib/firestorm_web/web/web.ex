@@ -12,7 +12,8 @@ defmodule FirestormWeb.Web do
   Do NOT define functions inside the quoted expressions.
   """
 
-  def static_paths, do: ~w(assets fonts images vendor favicon.ico robots.txt manifest.json)
+  def static_paths,
+    do: ~w(assets fonts images vendor favicon.ico robots.txt manifest.json service-worker.js)
 
   def router do
     quote do
