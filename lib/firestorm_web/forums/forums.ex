@@ -130,7 +130,7 @@ defmodule FirestormWeb.Forums do
       attrs
       |> Map.put(:api_token, generate_api_token())
 
-    # Accounts created directly (admin, legacy GitHub logins) are trusted.
+    # Accounts created directly (by admins, scripts) are trusted.
     %User{confirmed_at: DateTime.utc_now(:second)}
     |> User.changeset(attrs)
     |> Repo.insert()
@@ -1604,77 +1604,8 @@ defmodule FirestormWeb.Forums do
   end
 
   @doc """
-  Logs in (or registers) a GitHub user, identified by GitHub's immutable user
-  id (`uid`). Accounts are never matched by username alone: anyone can take a
-  GitHub username that matches a local account.
-
-  For accounts created by GitHub logins before ids were stored, the account is
-  linked only if it has no password and the GitHub email matches its email.
-  New accounts get the GitHub username, or a suffixed one if it is taken.
-  """
-  def login_or_register_from_github(%{uid: uid} = info) when not is_nil(uid) do
-    uid = to_string(uid)
-    nickname = info[:nickname]
-    name = info[:name] || nickname
-    email = info[:email] || "#{nickname}@users.noreply.github.com"
-
-    case Repo.get_by(User, github_uid: uid) do
-      %User{} = user -> {:ok, user}
-      nil -> link_or_register_github_user(uid, nickname, name, email)
-    end
-  end
-
-  def login_or_register_from_github(_info), do: {:error, "GitHub did not return an account id."}
-
-  # Links a legacy GitHub-created account (no password, no stored id) only when
-  # its email matches GitHub's; anything else gets a new account.
-  defp link_or_register_github_user(uid, nickname, name, email) do
-    case get_user_by_username(nickname) do
-      %User{github_uid: nil, password_hash: nil, email: user_email} = user
-      when is_binary(user_email) ->
-        if String.downcase(user_email) == String.downcase(email),
-          do: user |> User.github_changeset(%{github_uid: uid}) |> Repo.update(),
-          else: register_github_user(uid, nickname, name, email)
-
-      _taken_or_free ->
-        register_github_user(uid, nickname, name, email)
-    end
-  end
-
-  defp register_github_user(uid, nickname, name, email) do
-    if registration_open?(),
-      do: insert_github_user(uid, nickname, name, email),
-      else: {:error, "New registrations are closed."}
-  end
-
-  defp insert_github_user(uid, nickname, name, email) do
-    # GitHub vouches for the account; its email is not used to log in.
-    %User{confirmed_at: DateTime.utc_now(:second)}
-    |> User.github_changeset(%{
-      github_uid: uid,
-      username: available_username(nickname),
-      name: name,
-      email: email,
-      api_token: generate_api_token()
-    })
-    |> Repo.insert()
-  end
-
-  # A GitHub login named like a deleted account's placeholder gets a prefix
-  # (see `User.reserved_username?/1`).
-  defp available_username(nickname, attempt \\ 0) do
-    candidate = if attempt == 0, do: nickname, else: "#{nickname}-#{attempt}"
-
-    cond do
-      User.reserved_username?(nickname) -> available_username("gh-" <> nickname)
-      get_user_by_username(candidate) -> available_username(nickname, attempt + 1)
-      true -> candidate
-    end
-  end
-
-  @doc """
   Logs in with a username and password. Unknown usernames and accounts
-  without a password (e.g. GitHub logins) fail the same way as a wrong
+  without a password (social logins) fail the same way as a wrong
   password.
   """
   def authenticate_by_password(username, password)

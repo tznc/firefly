@@ -4,7 +4,7 @@ defmodule FirestormWeb.AccountDeletion do
 
   Forum content isn't deleted with the account: the user row is anonymized
   in place into a placeholder (`deleted-user-<id>`, no name, email, password,
-  GitHub link or profile), so posts, threads, revisions and private messages
+  linked login accounts or profile), so posts, threads, revisions and private messages
   keep an author without saying who it was. So do poll votes (see
   `FirestormWeb.Polls`): closed polls' results don't change, and public
   polls list the placeholder. Everything else personal goes:
@@ -32,7 +32,7 @@ defmodule FirestormWeb.AccountDeletion do
 
   @doc """
   Checks the confirmation: the password for password accounts, the username
-  (any case) for accounts without one (GitHub logins).
+  (any case) for accounts without one (social logins).
   """
   def confirmed?(%User{password_hash: hash}, password)
       when is_binary(hash) and is_binary(password),
@@ -93,7 +93,7 @@ defmodule FirestormWeb.AccountDeletion do
         for table <- ~w(forums_role_memberships forums_thread_reads forums_threads_watches
                         forums_categories_watches forums_tags_watches forums_post_likes
                         forums_posts_views forums_drafts forums_bookmarks user_ignores
-                        user_visits directory_items),
+                        user_visits directory_items user_identities),
             do: Repo.delete_all(from(r in table, where: r.user_id == ^id))
 
         Repo.delete_all(from(n in Notification, where: n.user_id == ^id))
@@ -109,7 +109,6 @@ defmodule FirestormWeb.AccountDeletion do
           name: "Deleted user",
           email: nil,
           password_hash: nil,
-          github_uid: nil,
           api_token: Ecto.UUID.generate(),
           confirmed_at: nil,
           bio: nil,

@@ -13,10 +13,11 @@ defmodule FirestormWeb.Web.Router do
   end
 
   pipeline :browser do
-    plug(Ueberauth)
     plug(:accepts, ["html"])
     plug(:fetch_session)
     plug(:fetch_live_flash)
+    plug(FirestormWeb.Web.Plugs.LoginProviders)
+    plug(Ueberauth)
     plug(:put_root_layout, html: {FirestormWeb.Web.Layouts, :root})
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
@@ -103,6 +104,7 @@ defmodule FirestormWeb.Web.Router do
       live("/settings/notifications", SettingsLive.Index, :notifications)
       live("/settings/privacy", SettingsLive.Index, :privacy)
       live("/settings/users", SettingsLive.Index, :users)
+      live("/settings/logins", SettingsLive.Index, :logins)
       live("/settings/account", SettingsLive.Index, :account)
       live("/unread", ThreadLive.Unread, :index)
       live("/drafts", DraftLive.Index, :index)

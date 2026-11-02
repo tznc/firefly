@@ -47,7 +47,8 @@ defmodule FirestormWeb.Web.PasswordResetTest do
 
   test "accounts without a password (GitHub) get no reset email", %{conn: conn} do
     {:ok, _} =
-      Forums.login_or_register_from_github(%{
+      FirestormWeb.Auth.login(%{
+        provider: :github,
         uid: 1,
         nickname: "octo",
         name: "Octo",

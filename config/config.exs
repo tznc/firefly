@@ -36,9 +36,19 @@ config :logger, :default_formatter,
 config :phoenix, :json_library, Jason
 
 # Configures Ueberauth for OAuth stuff
+# Every social login is listed; each only works once its client id and
+# secret are set (see config/runtime.exs and FirestormWeb.Auth).
 config :ueberauth, Ueberauth,
   providers: [
     github: {Ueberauth.Strategy.Github, [default_scope: ""]},
+    google: {Ueberauth.Strategy.Google, [default_scope: "openid email profile"]},
+    discord: {Ueberauth.Strategy.Discord, [default_scope: "identify email"]},
+    # No scopes: Apple then answers with a GET (scopes need a cross-site
+    # form POST, which carries no session or CSRF token). It gives no email.
+    apple: {Ueberauth.Strategy.Apple, [default_scope: ""]},
+    x: {FirestormWeb.Auth.Strategies.X, []},
+    facebook: {Ueberauth.Strategy.Facebook, []},
+    slack: {FirestormWeb.Auth.Strategies.Slack, []},
     identity: {Ueberauth.Strategy.Identity, [callback_methods: ["POST"]]}
   ]
 

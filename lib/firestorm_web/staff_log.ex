@@ -82,7 +82,7 @@ defmodule FirestormWeb.StaffLog do
 
   # The user fields an entry about a user may hold (Kaffy snapshots and
   # edits, role changes) that would say who a deleted account was.
-  @personal_fields ~w(username name email github_uid bio website location)
+  @personal_fields ~w(username name email bio website location)
 
   @doc """
   Removes what the log says about who `user` was, for account deletion:

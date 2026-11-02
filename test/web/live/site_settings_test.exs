@@ -161,16 +161,23 @@ defmodule FirestormWeb.Web.SiteSettingsTest do
       assert {:error, :registration_closed} = register("newbie")
 
       assert {:error, "New registrations are closed."} =
-               Forums.login_or_register_from_github(%{uid: 42, nickname: "octo", name: "Octo"})
+               FirestormWeb.Auth.login(%{
+                 provider: :github,
+                 uid: 42,
+                 nickname: "octo",
+                 name: "Octo"
+               })
 
       # Existing accounts still log in.
       set(admin, %{"allow_registrations" => "true"})
 
       {:ok, octo} =
-        Forums.login_or_register_from_github(%{uid: 42, nickname: "octo", name: "Octo"})
+        FirestormWeb.Auth.login(%{provider: :github, uid: 42, nickname: "octo", name: "Octo"})
 
       set(admin, %{"allow_registrations" => "false"})
-      assert {:ok, ^octo} = Forums.login_or_register_from_github(%{uid: 42, nickname: "octo"})
+
+      assert {:ok, ^octo} =
+               FirestormWeb.Auth.login(%{provider: :github, uid: 42, nickname: "octo"})
     end
 
     test "without required confirmation, new accounts can post at once", %{admin: admin} do

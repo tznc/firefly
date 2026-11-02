@@ -50,8 +50,14 @@ defmodule FirestormWeb.Mixfile do
       {:bandit, "~> 1.14"},
       {:jason, "~> 1.4"},
       {:gettext, "~> 1.0"},
-      {:ueberauth, "~> 0.11"},
+      # ueberauth_google 0.12 pins `ueberauth ~> 0.10.0`; 0.11 only signs the
+      # state cookie, inside Ueberauth's own helpers, which strategies just call.
+      {:ueberauth, "~> 0.11", override: true},
       {:ueberauth_github, "~> 0.8"},
+      {:ueberauth_google, "~> 0.12"},
+      {:ueberauth_discord, "~> 0.7"},
+      {:ueberauth_facebook, "~> 0.10"},
+      {:ueberauth_apple, "~> 0.7"},
       {:ueberauth_identity, "~> 0.4"},
       {:mdex, "~> 0.14"},
       {:scrivener_ecto, "~> 3.1"},

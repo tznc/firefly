@@ -6,7 +6,7 @@ defmodule FirestormWeb.Forums.User do
   use Ecto.Schema
 
   import Ecto.Changeset, warn: false
-  alias FirestormWeb.Forums.{Post, RoleMembership, Role}
+  alias FirestormWeb.Forums.{Post, RoleMembership, Role, UserIdentity}
 
   schema "forums_users" do
     field(:email, :string)
@@ -15,7 +15,6 @@ defmodule FirestormWeb.Forums.User do
     field(:password_hash, :string)
     field(:password, :string, virtual: true)
     field(:api_token, :string)
-    field(:github_uid, :string)
     field(:confirmed_at, :utc_datetime)
     field(:email_notifications, :boolean, default: true)
     field(:allow_private_messages, :boolean, default: true)
@@ -44,6 +43,7 @@ defmodule FirestormWeb.Forums.User do
     field(:plugin_bot, :string)
 
     has_many(:posts, Post)
+    has_many(:identities, UserIdentity)
     has_many(:role_memberships, RoleMembership)
     many_to_many(:roles, Role, join_through: RoleMembership, on_replace: :delete)
 
@@ -168,15 +168,6 @@ defmodule FirestormWeb.Forums.User do
       _ ->
         [website: "must be a web address starting with http:// or https://"]
     end
-  end
-
-  @doc "Links a user to a GitHub account (by GitHub's immutable user id)."
-  def github_changeset(%__MODULE__{} = user, attrs) do
-    user
-    |> changeset(attrs)
-    |> cast(attrs, [:github_uid])
-    |> validate_required([:github_uid])
-    |> unique_constraint(:github_uid)
   end
 
   def admin_changeset(%__MODULE__{} = user, attrs \\ %{}) do

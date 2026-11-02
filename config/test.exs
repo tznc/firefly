@@ -114,3 +114,17 @@ config :firestorm_web, FirestormWeb.LinkPreviews, enabled: false
 
 # Tests deliver plugin events and run plugin jobs themselves.
 config :firestorm_web, FirestormWeb.Plugins.Queue, enabled: false
+
+# Every social login is enabled, with made-up credentials (tests fake the
+# providers' callbacks).
+for config_key <- [
+      Ueberauth.Strategy.Github.OAuth,
+      Ueberauth.Strategy.Google.OAuth,
+      Ueberauth.Strategy.Discord.OAuth,
+      Ueberauth.Strategy.Apple.OAuth,
+      Ueberauth.Strategy.Facebook.OAuth,
+      FirestormWeb.Auth.Strategies.X,
+      FirestormWeb.Auth.Strategies.Slack
+    ] do
+  config :ueberauth, config_key, client_id: "test-client", client_secret: "test-secret"
+end

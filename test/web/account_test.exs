@@ -177,7 +177,7 @@ defmodule FirestormWeb.Web.AccountTest do
 
       gone = Forums.get_user!(ada.id)
       assert gone.username == "deleted-user-#{ada.id}"
-      assert %{email: nil, password_hash: nil, github_uid: nil, bio: nil} = gone
+      assert %{email: nil, password_hash: nil, bio: nil} = gone
       assert gone.api_token != ada.api_token
 
       # Content stays, credited to the placeholder.
@@ -248,7 +248,7 @@ defmodule FirestormWeb.Web.AccountTest do
       assert "is reserved" in errors_on(changeset).username
 
       assert {:ok, %{username: "gh-deleted-user-7"}} =
-               Forums.login_or_register_from_github(%{uid: 7, nickname: "deleted-user-7"})
+               FirestormWeb.Auth.login(%{provider: :github, uid: 7, nickname: "deleted-user-7"})
 
       # A legacy account that already has the name.
       Repo.insert!(%User{username: "deleted-user-#{ada.id}", name: "x", api_token: "t"})
@@ -259,7 +259,7 @@ defmodule FirestormWeb.Web.AccountTest do
 
     test "GitHub accounts confirm with their username", %{conn: conn} do
       {:ok, octo} =
-        Forums.login_or_register_from_github(%{uid: 42, nickname: "Octo", name: "Octo Cat"})
+        FirestormWeb.Auth.login(%{provider: :github, uid: 42, nickname: "Octo", name: "Octo Cat"})
 
       conn
       |> log_in_as(octo)
@@ -275,10 +275,13 @@ defmodule FirestormWeb.Web.AccountTest do
       |> click_button("Delete my account")
       |> assert_has("#flash-info", text: "Your account was deleted.")
 
-      assert %{github_uid: nil, deleted_at: %DateTime{}} = Forums.get_user!(octo.id)
+      assert %{deleted_at: %DateTime{}} = Forums.get_user!(octo.id)
+      assert FirestormWeb.Auth.identities(octo) == %{}
 
       # The GitHub account can sign up afresh.
-      assert {:ok, again} = Forums.login_or_register_from_github(%{uid: 42, nickname: "Octo"})
+      assert {:ok, again} =
+               FirestormWeb.Auth.login(%{provider: :github, uid: 42, nickname: "Octo"})
+
       assert again.id != octo.id
     end
 
