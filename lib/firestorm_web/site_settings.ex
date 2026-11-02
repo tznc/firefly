@@ -174,6 +174,30 @@ defmodule FirestormWeb.SiteSettings do
           "Posts may use BBCode ([b], [quote], [url], [list], [spoiler]...) as well as Markdown."
       },
       %{
+        key: "spoilers",
+        section: "Content",
+        type: :boolean,
+        label: "Spoilers",
+        default: true,
+        help: "Text in >!...!< or [spoiler] is hidden until clicked."
+      },
+      %{
+        key: "math",
+        section: "Content",
+        type: :boolean,
+        label: "Math",
+        default: true,
+        help: "$...$ and $$...$$ are typeset as math (KaTeX)."
+      },
+      %{
+        key: "footnotes",
+        section: "Content",
+        type: :boolean,
+        label: "Footnotes",
+        default: true,
+        help: "[^1] references and [^1]: footnote text."
+      },
+      %{
         key: "max_upload_kb",
         section: "Uploads",
         type: :integer,
