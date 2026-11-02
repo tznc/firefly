@@ -34,6 +34,7 @@ defmodule FirestormWeb.Forums.Policy do
       users who aren't admins
     * `:lift_penalty` (params: the user) - admins, on anyone (a penalized
       member may have been made an admin since)
+    * `:reset_two_factor` (params: the user) - admins, on anyone
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
     * `:flag_post` (same params) - members, on other people's posts that
@@ -96,6 +97,8 @@ defmodule FirestormWeb.Forums.Policy do
     do: if(Forums.admin?(target), do: {:error, :unauthorized}, else: admin(user))
 
   def authorize(:lift_penalty, %User{} = user, %User{}), do: admin(user)
+
+  def authorize(:reset_two_factor, %User{} = user, %User{}), do: admin(user)
 
   # A plugin's bot (see FirestormWeb.Plugins.Bots) moderates and tags as its
   # plugin's permissions allow, and only threads anyone can read.

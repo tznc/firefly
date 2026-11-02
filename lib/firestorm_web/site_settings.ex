@@ -76,6 +76,23 @@ defmodule FirestormWeb.SiteSettings do
           "Off: members can post without confirming their email. Email notifications still go only to confirmed addresses."
       },
       %{
+        key: "two_factor_sso_logins",
+        section: "Logins",
+        type: :boolean,
+        label: "Two-factor after social and SSO logins",
+        default: true,
+        help:
+          "On: members with two-factor authentication give their second factor after social and single sign-on logins too. Off: only after passwords and email links."
+      },
+      %{
+        key: "enforce_two_factor_staff",
+        section: "Logins",
+        type: :boolean,
+        label: "Require two-factor for staff",
+        default: false,
+        help: "Admins must set up two-factor authentication before they can use the site."
+      },
+      %{
         key: "discourse_connect_overrides_email",
         section: "Logins",
         type: :boolean,

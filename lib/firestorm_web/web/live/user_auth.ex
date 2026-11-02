@@ -12,6 +12,8 @@ defmodule FirestormWeb.Web.UserAuth do
     * `:require_user` - redirects to the categories page when nobody is
       logged in. Used by individual LiveViews, after the live session's
       `:mount_current_user`.
+      Staff who must set up two-factor authentication first are sent to
+      their security settings from any other page.
     * `:password_login` - redirects to the login page when passwords are off
       (single sign-on only, see `FirestormWeb.Auth.sso_only?/0`). Used by
       the password login, registration and reset pages.
@@ -26,7 +28,19 @@ defmodule FirestormWeb.Web.UserAuth do
   alias FirestormWeb.Web.Session
 
   def on_mount(:mount_current_user, _params, session, socket) do
-    {:cont, mount_current_user(socket, session)}
+    socket = mount_current_user(socket, session)
+
+    # Staff who must set up two-factor (see FirestormWeb.TwoFactor.must_enroll?/1)
+    # can only use their settings until they have.
+    if socket.view != FirestormWeb.Web.SettingsLive.Index and
+         FirestormWeb.TwoFactor.must_enroll?(socket.assigns.current_user) do
+      {:halt,
+       socket
+       |> put_flash(:error, "Set up two-factor authentication to go on.")
+       |> redirect(to: ~p"/settings/security")}
+    else
+      {:cont, socket}
+    end
   end
 
   def on_mount(:require_user, params, session, socket) do

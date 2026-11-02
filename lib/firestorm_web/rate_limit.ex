@@ -11,6 +11,7 @@ defmodule FirestormWeb.RateLimit do
     * `:post` - new threads and posts per user (web, API and email). Its
       count per minute is the `posts_per_minute` site setting, which
       defaults to the configured count.
+    * `:two_factor` - second-factor attempts (codes, security keys) per user
     * `:email` - account emails (confirmation, password reset) per user
     * `:password_reset` - password reset requests per client IP
     * `:upload` - upload signatures per user
@@ -39,6 +40,7 @@ defmodule FirestormWeb.RateLimit do
     message: {10, :timer.hours(1)},
     export: {3, :timer.hours(1)},
     email: {3, :timer.hours(1)},
+    two_factor: {6, :timer.minutes(5)},
     password_reset: {10, :timer.hours(1)},
     search: {60, :timer.minutes(1)},
     flag: {20, :timer.hours(1)},
@@ -69,6 +71,7 @@ defmodule FirestormWeb.RateLimit do
   def check_post(%{id: user_id}), do: check(:post, user_id)
   def check_password_reset(remote_ip), do: check(:password_reset, format_ip(remote_ip))
   def check_email(%{id: user_id}), do: check(:email, user_id)
+  def check_two_factor(%{id: user_id}), do: check(:two_factor, user_id)
   def check_upload(%{id: user_id}), do: check(:upload, user_id)
   def check_like(%{id: user_id}), do: check(:like, user_id)
   def check_message(%{id: user_id}), do: check(:message, user_id)

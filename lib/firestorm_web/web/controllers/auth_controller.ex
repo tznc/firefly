@@ -62,7 +62,7 @@ defmodule FirestormWeb.Web.AuthController do
 
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
     case Auth.login(Auth.from_ueberauth(auth)) do
-      {:ok, user} -> Login.complete(conn, user, ~p"/login")
+      {:ok, user} -> Login.complete(conn, user, ~p"/login", :sso)
       {:error, reason} -> Login.fail(conn, ~p"/login", reason)
     end
   end
@@ -73,7 +73,7 @@ defmodule FirestormWeb.Web.AuthController do
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-
            Forums.authenticate_by_password(user_params["username"], user_params["password"]) do
-      Login.complete(conn, user, ~p"/auth/identity")
+      Login.complete(conn, user, ~p"/auth/identity", :password)
     else
       {:error, :rate_limited} -> Login.fail(conn, ~p"/auth/identity", RateLimit.message())
       {:error, reason} -> Login.fail(conn, ~p"/auth/identity", reason)
