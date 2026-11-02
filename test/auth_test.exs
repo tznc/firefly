@@ -161,6 +161,8 @@ defmodule FirestormWeb.AuthTest do
     end
 
     test "the last way to log in can't be disconnected", %{conn: conn} do
+      # Email login links would be another way in (see FirestormWeb.MagicLinks).
+      {:ok, _} = FirestormWeb.SiteSettings.update(%{"magic_links" => "false"}, admin_fixture())
       {:ok, user} = Auth.login(@github)
 
       assert {:error, "Connect another account first: this is your only way to log in."} =

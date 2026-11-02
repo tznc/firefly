@@ -76,6 +76,33 @@ defmodule FirestormWeb.SiteSettings do
           "Off: members can post without confirming their email. Email notifications still go only to confirmed addresses."
       },
       %{
+        key: "passkeys",
+        section: "Logins",
+        type: :boolean,
+        label: "Passkeys",
+        default: true,
+        help:
+          "Members can add passkeys and log in with them alone (the device checks it's them, so no second factor is asked)."
+      },
+      %{
+        key: "magic_links",
+        section: "Logins",
+        type: :boolean,
+        label: "Email login links",
+        default: true,
+        help:
+          "Members can log in with a one-time link emailed to their confirmed address (then their second factor, if they have one)."
+      },
+      %{
+        key: "magic_link_signup",
+        section: "Logins",
+        type: :boolean,
+        label: "Sign up by email link",
+        default: false,
+        help:
+          "An address without an account gets a link that creates one (while registrations are open)."
+      },
+      %{
         key: "two_factor_sso_logins",
         section: "Logins",
         type: :boolean,

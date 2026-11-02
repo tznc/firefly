@@ -242,6 +242,12 @@ defmodule FirestormWeb.Auth do
     end
   end
 
+  @doc """
+  A free username for a new account described by `info` (`nickname`,
+  `email`, `name`); `source` prefixes it if it looks like a reserved name.
+  """
+  def free_username(info, source), do: available_username(source, base_username(info))
+
   # A username from the account's nickname, else its email or name, made
   # of the characters usernames allow.
   defp base_username(info) do
@@ -309,7 +315,7 @@ defmodule FirestormWeb.Auth do
       not Map.has_key?(identities, provider) ->
         {:error, "That account isn't connected."}
 
-      not other_way_in?(user, Map.delete(identities, provider)) ->
+      not other_way_in?(user, {:identity, provider}) ->
         {:error, "Connect another account first: this is your only way to log in."}
 
       true ->
@@ -318,11 +324,24 @@ defmodule FirestormWeb.Auth do
     end
   end
 
-  # A password (while passwords work) or another account at an enabled provider.
-  defp other_way_in?(user, other_identities) do
+  @doc """
+  Whether `user` could still log in without `except` (`{:identity,
+  provider}` or `{:passkey, id}`): a password (while passwords work),
+  another account at an enabled provider, another passkey, or email links
+  to a confirmed address (see `FirestormWeb.MagicLinks`).
+  """
+  def other_way_in?(%User{} = user, except) do
     (is_binary(user.password_hash) and password_login?()) or
-      Enum.any?(Map.keys(other_identities), &enabled?/1)
+      Enum.any?(
+        Map.keys(identities(user)),
+        &(&1 != elem_or_nil(except, :identity) and enabled?(&1))
+      ) or
+      FirestormWeb.Passkeys.other?(user, elem_or_nil(except, :passkey)) or
+      (FirestormWeb.MagicLinks.enabled?() and User.confirmed?(user) and is_binary(user.email))
   end
+
+  defp elem_or_nil({kind, value}, kind), do: value
+  defp elem_or_nil(_except, _kind), do: nil
 
   @doc "The export of `user`'s connected accounts (see `FirestormWeb.AccountExport`)."
   def export(%User{} = user) do

@@ -169,6 +169,34 @@ defmodule FirestormWeb.Emails do
     """)
   end
 
+  @doc "A one-time login link (`user`), or a sign-up link for `email` (no user yet)."
+  def magic_link(user_or_email, url) do
+    {address, greeting, action} =
+      case user_or_email do
+        %User{} = user -> {user.email, "Hi #{user.username},", "log in to"}
+        email -> {email, "Hi,", "create your account on"}
+      end
+
+    new_email()
+    |> to(address)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("Your #{site()} login link")
+    |> html_body("""
+    <p>#{escape(greeting)}</p>
+    <p>Use this link to #{action} #{escape(site())}: #{link("log me in", url)}</p>
+    <p>It expires in 15 minutes and works once. If you didn't ask for it, ignore this email.</p>
+    """)
+    |> text_body("""
+    #{greeting}
+
+    Use this link to #{action} #{site()}:
+
+    #{url}
+
+    It expires in 15 minutes and works once. If you didn't ask for it, ignore this email.
+    """)
+  end
+
   defdelegate thread_url(thread), to: FirestormWeb.Web.Paths
 
   def post_url(thread, post) do

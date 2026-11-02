@@ -2,7 +2,8 @@ defmodule FirestormWeb.Web.AuthLive.Login do
   @moduledoc """
   Choose how to log in: single sign-on or a social login (one button per
   enabled provider; see `FirestormWeb.Auth`) or a username and password
-  (unless single sign-on is the only way in).
+  (unless single sign-on is the only way in), a passkey or an emailed
+  link.
   """
   use FirestormWeb.Web, :live_view
 
@@ -12,7 +13,40 @@ defmodule FirestormWeb.Web.AuthLive.Login do
      socket
      |> assign(:page_title, "Log in")
      |> assign(:providers, FirestormWeb.Auth.enabled_providers())
-     |> assign(:password_login, FirestormWeb.Auth.password_login?())}
+     |> assign(:password_login, FirestormWeb.Auth.password_login?())
+     |> assign(:passkeys, FirestormWeb.Passkeys.enabled?())
+     |> assign(:magic_links, FirestormWeb.MagicLinks.enabled?())}
+  end
+
+  attr :conditional, :boolean, default: false
+
+  @doc """
+  The passkey login (see `FirestormWeb.Passkeys`): a button, and with
+  `conditional` the browser's passkey autofill on the page's username
+  field (`autocomplete="username webauthn"`). The `PasskeyLogin` hook
+  fills the hidden fields with the browser's answer and posts the form.
+  """
+  def passkey_form(assigns) do
+    ~H"""
+    <.form for={%{}} as={:passkey} id="passkey-login-form" action={~p"/login/passkey"} method="post">
+      <input
+        :for={field <- ~w(id authenticator_data signature client_data_json user_handle)}
+        type="hidden"
+        name={"passkey[#{field}]"}
+        data-field={field}
+      />
+      <button
+        type="button"
+        id="passkey-login"
+        phx-hook="PasskeyLogin"
+        data-challenge-url={~p"/login/passkey/challenge"}
+        data-conditional={to_string(@conditional)}
+        class="btn btn-outline w-full"
+      >
+        <.icon name="hero-finger-print" class="size-5" /> Use a passkey
+      </button>
+    </.form>
+    """
   end
 
   @impl true
@@ -41,8 +75,12 @@ defmodule FirestormWeb.Web.AuthLive.Login do
             >
               Create Account
             </.link>
+            <.passkey_form :if={@passkeys} />
             <.link :if={@password_login} navigate={~p"/auth/identity"} class="link text-sm">
               Sign In
+            </.link>
+            <.link :if={@magic_links} navigate={~p"/login/email"} class="link text-sm">
+              Email me a login link
             </.link>
           </div>
         </div>

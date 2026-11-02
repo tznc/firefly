@@ -88,6 +88,9 @@ defmodule FirestormWeb.Web.Router do
     get("/settings/export", AccountController, :export)
     post("/login/two-factor", TwoFactorController, :create)
     post("/login/two-factor/key", TwoFactorController, :key)
+    get("/login/passkey/challenge", PasskeyController, :challenge)
+    post("/login/passkey", PasskeyController, :create)
+    post("/login/email/:token", MagicLinkController, :create)
     delete("/settings/account", AccountController, :delete)
 
     live_session :default,
@@ -138,6 +141,8 @@ defmodule FirestormWeb.Web.Router do
       live("/top", ThreadLive.Top, :index)
       live("/login", AuthLive.Login, :login)
       live("/login/two-factor", AuthLive.TwoFactor, :show)
+      live("/login/email", AuthLive.MagicLink, :new)
+      live("/login/email/:token", AuthLive.MagicLinkConfirm, :show)
       live("/auth/identity", AuthLive.Identity, :new)
       live("/register", AuthLive.Registration, :new)
       live("/reset-password", AuthLive.ForgotPassword, :new)
