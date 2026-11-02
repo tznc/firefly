@@ -44,6 +44,10 @@ defmodule FirestormWeb.Forums.User do
     field(:trust_level, :integer, default: 0)
     field(:manual_locked_trust_level, :integer)
     field(:trust_level_changed_at, :utc_datetime)
+    # How often they get a digest email (nil: the site's default), and when
+    # they last got one (see FirestormWeb.Digests).
+    field(:digest_frequency, :string)
+    field(:last_digest_at, :utc_datetime)
     # The badge shown as their title, if it allows that (see FirestormWeb.Badges).
     belongs_to(:title_badge, FirestormWeb.Forums.Badge)
     # The plugin this account acts for (see FirestormWeb.Plugins.Bots), if any.
@@ -98,12 +102,14 @@ defmodule FirestormWeb.Forums.User do
       :new_thread_level,
       :hide_profile_activity,
       :hide_from_directory,
-      :hide_profile
+      :hide_profile,
+      :digest_frequency
     ])
     |> validate_required([:theme, :reply_level, :new_thread_level])
     |> validate_inclusion(:theme, themes())
     |> validate_inclusion(:reply_level, reply_levels())
     |> validate_inclusion(:new_thread_level, new_thread_levels())
+    |> validate_inclusion(:digest_frequency, FirestormWeb.Digests.frequencies())
   end
 
   @doc "The profile or user card background's URL (`image`: `:profile_background` or `:card_background`), or nil."

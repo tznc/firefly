@@ -8,8 +8,9 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       `FirestormWeb.Uploads.set_profile_image/4`), and a title: one of
       their badges that allows it (see `FirestormWeb.Badges`)
     * Interface: the theme
-    * Notifications (`/settings/notifications`): email, private messages and
-      the levels threads get when you reply or start one
+    * Notifications (`/settings/notifications`): email, private messages,
+      the levels threads get when you reply or start one, and how often
+      digest emails come (see `FirestormWeb.Digests`)
     * Privacy: hiding your profile and presence (see `FirestormWeb.Profiles`),
       your activity from your profile, and yourself from the users directory
     * Muted & ignored (`/settings/users`): the members you mute or ignore
@@ -30,12 +31,14 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   alias FirestormWeb.{
     Auth,
     Badges,
+    Digests,
     EmailConfirmation,
     Forums,
     Ignores,
     Passkeys,
     Posting,
     RateLimit,
+    SiteSettings,
     TwoFactor,
     Uploads,
     WebAuthn
@@ -58,7 +61,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
   @preference_fields %{
     "interface" => ~w(theme),
     "notifications" =>
-      ~w(email_notifications allow_private_messages reply_level new_thread_level),
+      ~w(email_notifications allow_private_messages reply_level new_thread_level digest_frequency),
     "privacy" => ~w(hide_profile hide_profile_activity hide_from_directory)
   }
 
@@ -644,6 +647,14 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
             type="select"
             label="When I reply to a thread"
             options={level_options(User.reply_levels())}
+          />
+          <.input
+            :if={SiteSettings.get("digests_enabled")}
+            field={@form[:digest_frequency]}
+            type="select"
+            label="When I haven't visited in a while, email me a summary"
+            prompt={"Site default (#{Digests.label(SiteSettings.get("default_digest_frequency"))})"}
+            options={Digests.frequency_options()}
           />
           <.button variant="primary" phx-disable-with="Saving...">Save</.button>
         </.form>

@@ -25,6 +25,8 @@ defmodule FirestormWeb.Web.Paths do
 
   def badge_url(badge), do: url(~p"/badges/#{badge.id}")
 
+  def digest_unsubscribe_url(token), do: url(~p"/email/unsubscribe/#{token}")
+
   def category_url(category), do: url(~p"/categories/#{category.id}")
 
   def conversation_url(conversation), do: url(~p"/messages/#{conversation.id}")

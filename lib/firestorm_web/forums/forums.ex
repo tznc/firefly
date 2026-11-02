@@ -877,6 +877,17 @@ defmodule FirestormWeb.Forums do
         days -> NaiveDateTime.add(NaiveDateTime.utc_now(), -days, :day)
       end
 
+    user_or_nil
+    |> ranked_threads(since)
+    |> limit(50)
+    |> preload(:category)
+    |> Repo.all()
+    |> decorate_threads(user_or_nil)
+  end
+
+  # The threads `user` sees in lists, ranked as `top_threads/2` does by
+  # their activity since `since`.
+  defp ranked_threads(user, since) do
     ranked =
       Post
       |> Post.visible()
@@ -892,14 +903,68 @@ defmodule FirestormWeb.Forums do
       |> select([l, p], %{thread_id: p.thread_id, likes: count(l.id)})
 
     threads_query()
-    |> listed(user_or_nil)
+    |> listed(user)
     |> join(:inner, [t], r in subquery(ranked), on: r.thread_id == t.id)
     |> join(:left, [t], l in subquery(liked), on: l.thread_id == t.id)
     |> order_by([t, r, l], desc: r.posts, desc: coalesce(l.likes, 0), desc: r.last_at)
-    |> limit(50)
+  end
+
+  @doc """
+  For digest emails (see `FirestormWeb.Digests`): the most active threads
+  started since `since` that `user` sees in lists (readable, not muted,
+  not by someone they ignore), at most `count`, with their category.
+  """
+  def popular_new_threads(%User{} = user, since, count) do
+    user
+    |> ranked_threads(since)
+    |> where([t], t.inserted_at > ^since)
+    |> limit(^count)
     |> preload(:category)
     |> Repo.all()
-    |> decorate_threads(user_or_nil)
+  end
+
+  @doc """
+  For digest emails: how many posts others made since `since` in threads
+  `user` sees in lists, leaving out people they ignore.
+  """
+  def new_posts_count(%User{} = user, since) do
+    user
+    |> digest_posts(since)
+    |> Repo.aggregate(:count)
+  end
+
+  @doc """
+  For digest emails: the replies since `since` with the most likes (at
+  least one) in threads `user` sees in lists, at most `count`, with their
+  thread and author.
+  """
+  def top_replies(%User{} = user, since, count) do
+    firsts =
+      from(p in Post,
+        distinct: p.thread_id,
+        order_by: [p.thread_id, p.inserted_at, p.id],
+        select: p.id
+      )
+
+    user
+    |> digest_posts(since)
+    |> where([p], p.id not in subquery(firsts))
+    |> join(:inner, [p], l in PostLike, on: l.post_id == p.id)
+    |> group_by([p], p.id)
+    |> order_by([p, l], desc: count(l.id), desc: p.inserted_at)
+    |> limit(^count)
+    |> preload([:user, thread: :category])
+    |> Repo.all()
+  end
+
+  defp digest_posts(user, since) do
+    threads = threads_query() |> listed(user) |> select([t], t.id)
+
+    Post
+    |> Post.visible()
+    |> where([p], p.inserted_at > ^since and is_nil(p.hidden_at) and p.user_id != ^user.id)
+    |> where([p], p.thread_id in subquery(threads))
+    |> where([p], p.user_id not in ^Ignores.ignored_ids(user))
   end
 
   # Reading a thread reads its notifications.

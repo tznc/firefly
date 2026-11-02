@@ -29,8 +29,9 @@ defmodule FirestormWeb.SiteSettings do
 
   @doc """
   Every setting, in display order: `key`, `section`, `type` (`:string`,
-  `:text`, `:email`, `:boolean` or `:integer`), `label`, `help`, `default`,
-  and for integers `min`/`max`.
+  `:text`, `:email`, `:boolean`, `:integer` or `:select`), `label`, `help`,
+  `default`, for integers `min`/`max`, and for selects `options` (`{label,
+  value}` pairs).
   """
   def definitions do
     [
@@ -439,6 +440,24 @@ defmodule FirestormWeb.SiteSettings do
   defp content_definitions do
     [
       %{
+        key: "digests_enabled",
+        section: "Email",
+        type: :boolean,
+        label: "Digest emails",
+        default: true,
+        help:
+          "Members who haven't visited in a while get a summary of popular threads, as often as they choose."
+      },
+      %{
+        key: "default_digest_frequency",
+        section: "Email",
+        type: :select,
+        options: FirestormWeb.Digests.frequency_options(),
+        label: "Default digest frequency",
+        default: "weekly",
+        help: "For members who haven't chosen."
+      },
+      %{
         key: "max_tags_per_thread",
         section: "Content",
         type: :integer,
@@ -728,6 +747,12 @@ defmodule FirestormWeb.SiteSettings do
           do: {:ok, value},
           else: {:error, "must be a valid email"}
     end
+  end
+
+  def cast(%{type: :select, options: options}, value) when is_binary(value) do
+    if Enum.any?(options, fn {_label, option} -> option == value end),
+      do: {:ok, value},
+      else: {:error, "is invalid"}
   end
 
   def cast(_definition, _value), do: {:error, "is invalid"}

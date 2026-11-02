@@ -63,6 +63,7 @@ defmodule FirestormWeb.Web.StaffLive.Settings do
   defp input_type(:text), do: "textarea"
   defp input_type(:email), do: "email"
   defp input_type(:string), do: "text"
+  defp input_type(:select), do: "select"
 
   @impl true
   def render(assigns) do
@@ -108,6 +109,7 @@ defmodule FirestormWeb.Web.StaffLive.Settings do
                 checked={definition.type == :boolean && @form.params[definition.key] == "true"}
                 min={definition[:min]}
                 max={definition[:max]}
+                options={definition[:options]}
               />
               <p class="-mt-1 text-xs text-base-content/60">{definition.help}</p>
             </div>

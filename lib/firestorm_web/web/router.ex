@@ -43,6 +43,12 @@ defmodule FirestormWeb.Web.Router do
     plug(FirestormWeb.Web.Plugs.CurrentUser)
   end
 
+  # One-click unsubscribe (RFC 8058): mail clients POST without a session
+  # or CSRF token; the signed token in the URL is the authorization.
+  pipeline :one_click do
+    plug(:accepts, ["html", "text"])
+  end
+
   pipeline :plugin_api do
     plug(FirestormWeb.Web.Plugs.ApiCurrentUser)
   end
@@ -141,6 +147,7 @@ defmodule FirestormWeb.Web.Router do
       live("/", ThreadLive.Recent, :index)
       live("/top", ThreadLive.Top, :index)
       live("/login", AuthLive.Login, :login)
+      live("/email/unsubscribe/:token", DigestLive.Unsubscribe, :show)
       live("/login/two-factor", AuthLive.TwoFactor, :show)
       live("/login/email", AuthLive.MagicLink, :new)
       live("/login/email/:token", AuthLive.MagicLinkConfirm, :show)
@@ -173,6 +180,12 @@ defmodule FirestormWeb.Web.Router do
         :show
       )
     end
+  end
+
+  scope "/email", FirestormWeb.Web do
+    pipe_through(:one_click)
+
+    post("/unsubscribe/:token", DigestController, :unsubscribe)
   end
 
   scope "/confirm", FirestormWeb.Web do
