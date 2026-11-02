@@ -12,7 +12,6 @@ const liveSocket = new LiveSocket("/live", Socket, {
   // times picked on the server (bookmark reminders) mean local time.
   params: {_csrf_token: csrfToken, tz_offset: new Date().getTimezoneOffset()},
   hooks: Hooks,
-  uploaders: Hooks.Uploaders,
 })
 
 // Show progress bar on live navigation and form submits

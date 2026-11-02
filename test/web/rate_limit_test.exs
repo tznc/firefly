@@ -113,13 +113,15 @@ defmodule FirestormWeb.RateLimitTest do
              3
   end
 
-  test "limits upload signatures through the API", %{conn: conn} do
+  @tag :tmp_dir
+  test "limits uploads through the API", %{conn: conn, tmp_dir: tmp_dir} do
     user = user_fixture()
     conn = put_req_header(conn, "authorization", "Bearer #{user.api_token}")
-    upload = %{"filename" => "a.png", "mimetype" => "image/png"}
+    path = FirestormWeb.UploadHelpers.file(tmp_dir, "a.txt", "hello")
+    file = %Plug.Upload{path: path, filename: "a.txt", content_type: "text/plain"}
 
-    assert conn |> post("/api/v1/upload_signature", upload: upload) |> json_response(201)
-    assert conn |> post("/api/v1/upload_signature", upload: upload) |> json_response(429)
+    assert conn |> post("/api/v1/uploads", file: file) |> json_response(201)
+    assert conn |> post("/api/v1/uploads", file: file) |> json_response(429)
   end
 
   test "limits liking and unliking", %{conn: conn} do

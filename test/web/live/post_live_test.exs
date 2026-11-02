@@ -45,21 +45,31 @@ defmodule FirestormWeb.Web.PostLiveTest do
     thread: thread,
     tmp_dir: tmp_dir
   } do
-    path = Path.join(tmp_dir, "cat.png")
-    File.write!(path, "fake png")
+    path = FirestormWeb.UploadHelpers.image_file(tmp_dir, "cat.png")
 
-    session =
-      conn
-      |> visit(~p"/categories/#{category}/threads/#{thread}/posts/new")
-      |> fill_in("Body", with: "Look:")
-      |> upload("Attach a file", path)
-
-    session
+    conn
+    |> visit(~p"/categories/#{category}/threads/#{thread}/posts/new")
+    |> fill_in("Body", with: "Look:")
+    |> upload("Attach files", path)
     |> assert_has("textarea", text: "Look:")
-    |> assert_has("textarea",
-      text: "![cat.png](https://firestorm-test.s3.us-east-1.amazonaws.com/uploads/"
-    )
+    |> assert_has("textarea", text: "![cat.png](/uploads/")
     |> assert_has("textarea", text: "/cat.png)")
+  end
+
+  @tag :tmp_dir
+  test "a file that isn't what it claims is refused", %{
+    conn: conn,
+    category: category,
+    thread: thread,
+    tmp_dir: tmp_dir
+  } do
+    path = FirestormWeb.UploadHelpers.file(tmp_dir, "cat.png", "<script>alert(1)</script>")
+
+    conn
+    |> visit(~p"/categories/#{category}/threads/#{thread}/posts/new")
+    |> upload("Attach files", path)
+    |> assert_has("#flash-error", text: "That file type isn't allowed.")
+    |> refute_has("textarea", text: "/uploads/")
   end
 
   test "sends visitors away with an error", %{category: category, thread: thread} do

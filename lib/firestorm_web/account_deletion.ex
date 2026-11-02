@@ -9,9 +9,12 @@ defmodule FirestormWeb.AccountDeletion do
   `FirestormWeb.Polls`): closed polls' results don't change, and public
   polls list the placeholder. Everything else personal goes:
   roles, read positions, notification levels, notifications, likes, post
-  views, drafts, bookmarks, conversation memberships, and what plugins keep
-  for the user (their storage entries and custom fields on the user; fields
-  on their posts stay with the posts). Other users' notifications that named
+  views, drafts, bookmarks, conversation memberships, the avatar and
+  uploads not used in any post or message (see
+  `FirestormWeb.Uploads.delete_account_uploads/1`; files in posts and
+  messages stay with them), and what plugins keep for the user (their
+  storage entries and custom fields on the user; fields on their posts stay
+  with the posts). Other users' notifications that named
   the user ("@ada replied in ...") and the staff log name the placeholder
   instead (see `FirestormWeb.StaffLog.scrub_user/2`).
 
@@ -111,6 +114,7 @@ defmodule FirestormWeb.AccountDeletion do
           bio: nil,
           website: nil,
           location: nil,
+          avatar_upload_id: nil,
           email_notifications: false,
           allow_private_messages: false,
           hide_from_directory: true,
@@ -121,6 +125,8 @@ defmodule FirestormWeb.AccountDeletion do
       end)
 
     with {:ok, deleted} <- result do
+      FirestormWeb.Uploads.delete_account_uploads(deleted)
+
       # The likes are gone: their authors' unread "liked" notifications are
       # recounted (or removed when no likes remain).
       Forums.refresh_like_notifications(liked_post_ids)

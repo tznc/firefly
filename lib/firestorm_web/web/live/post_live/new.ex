@@ -148,14 +148,11 @@ defmodule FirestormWeb.Web.PostLive.New do
   defp quote_body(_category, _thread, _params), do: nil
 
   defp handle_progress(:attachment, entry, socket) do
-    if entry.done? do
-      markdown = Editor.consume_attachment(socket, entry)
+    Editor.attachment_progress(socket, entry, fn socket, markdown ->
       body = Editor.append(socket.assigns.form[:body].value, markdown)
       changeset = Post.changeset(%Post{}, post_attrs(socket, %{"body" => body}))
       {:noreply, socket |> assign(:form, to_form(changeset)) |> autosave(%{body: body})}
-    else
-      {:noreply, socket}
-    end
+    end)
   end
 
   defp post_attrs(socket, params) do

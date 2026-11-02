@@ -1095,6 +1095,7 @@ defmodule FirestormWeb.Forums do
 
     case thread_result do
       {:ok, thread} ->
+        for post <- thread.posts, do: FirestormWeb.Uploads.attach(post.body, user, post)
         {:ok, _} = mark_thread_read(user, thread)
         {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.new_thread_level)
 
@@ -1698,6 +1699,7 @@ defmodule FirestormWeb.Forums do
       |> Moderation.validate(user, %{kind: "post", thread: thread})
 
     with {:ok, post} <- Repo.insert(changeset) do
+      :ok = FirestormWeb.Uploads.attach(post.body, user, post)
       {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.reply_level)
       # Authors have read what they wrote, whichever way they posted it.
       {:ok, _} = advance_read(user.id, thread.id, post.id)
@@ -1804,7 +1806,16 @@ defmodule FirestormWeb.Forums do
     else
       Repo.insert!(%PostRevision{post_id: current.id, user_id: editor.id, body: current.body})
       changeset = put_change(changeset, :edited_at, NaiveDateTime.utc_now())
-      logged(fn -> Repo.update(changeset) end, &log_post_edit(editor, current, &1))
+
+      logged(fn -> update_body(changeset, editor) end, &log_post_edit(editor, current, &1))
+    end
+  end
+
+  # Uploads the new body links are attached to the post.
+  defp update_body(changeset, editor) do
+    with {:ok, post} <- Repo.update(changeset) do
+      :ok = FirestormWeb.Uploads.attach(post.body, editor, post)
+      {:ok, post}
     end
   end
 

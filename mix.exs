@@ -73,6 +73,8 @@ defmodule FirestormWeb.Mixfile do
       {:hackney, "~> 4.9"},
       # Runs uploaded plugins: QuickJS compiled to WebAssembly, on wasmtime.
       {:wasmex, "~> 0.15.1"},
+      # Uploaded images: auto-orient, strip metadata, downscale, thumbnails (libvips).
+      {:image, "~> 0.72"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
       {:heroicons,

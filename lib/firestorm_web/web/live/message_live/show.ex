@@ -113,13 +113,10 @@ defmodule FirestormWeb.Web.MessageLive.Show do
   end
 
   defp handle_progress(:attachment, entry, socket) do
-    if entry.done? do
-      markdown = Editor.consume_attachment(socket, entry)
+    Editor.attachment_progress(socket, entry, fn socket, markdown ->
       body = Editor.append(socket.assigns.form[:body].value, markdown)
       {:noreply, assign_reply_form(socket, %{"body" => body})}
-    else
-      {:noreply, socket}
-    end
+    end)
   end
 
   defp assign_reply_form(socket, params),

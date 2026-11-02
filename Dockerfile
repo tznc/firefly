@@ -29,10 +29,14 @@ ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 
 FROM ${BUILDER_IMAGE} AS builder
 
-# install build dependencies (git for git-sourced deps, npm for JS packages)
+# install build dependencies (git for git-sourced deps, npm for JS packages,
+# libvips for image uploads: Vix is built against the system's libvips)
 RUN apt-get update \
   && apt-get install -y --no-install-recommends build-essential git ca-certificates nodejs npm \
+    pkg-config libvips-dev \
   && rm -rf /var/lib/apt/lists/*
+
+ENV VIX_COMPILATION_MODE=PLATFORM_PROVIDED_LIBVIPS
 
 # prepare build dir
 WORKDIR /app
@@ -85,6 +89,7 @@ FROM ${RUNNER_IMAGE} AS final
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates tini \
+    libvips42t64 \
   && rm -rf /var/lib/apt/lists/*
 
 # Set the locale
@@ -117,5 +122,7 @@ EXPOSE 4000
 # tini reaps zombie processes and forwards signals for a clean shutdown
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
+# Uploads are kept in /app/uploads (FIREFLY_UPLOAD_DIR) unless
+# FIREFLY_UPLOAD_STORAGE=s3: mount a volume there to keep them.
 # Run migrations first with: docker run ... firefly /app/bin/migrate
 CMD ["/app/bin/server"]

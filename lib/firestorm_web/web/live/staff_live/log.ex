@@ -68,7 +68,8 @@ defmodule FirestormWeb.Web.StaffLive.Log do
     "plugin.auto_disable" => "Turned off failing plugin",
     "plugin.suspend" => "Suspended plugin",
     "plugin.resume" => "Resumed plugin",
-    "plugin.secret" => "Changed plugin endpoint secret"
+    "plugin.secret" => "Changed plugin endpoint secret",
+    "upload.delete" => "Deleted upload"
   }
 
   @impl true
@@ -129,6 +130,9 @@ defmodule FirestormWeb.Web.StaffLive.Log do
 
   defp target_link(%{target_type: "plugin", details: %{"plugin" => id}}, _target),
     do: {id, ~p"/staff/plugins/#{id}"}
+
+  defp target_link(%{target_type: "upload", details: %{"filename" => name}}, _target),
+    do: {name, ~p"/staff/uploads"}
 
   defp target_link(_entry, nil), do: nil
 

@@ -19,7 +19,13 @@ end
 config :firestorm_web, FirestormWeb.Web.ClientIP,
   trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
 
+# Where uploads are stored: `local` (a directory, FIREFLY_UPLOAD_DIR) or
+# `s3` (the FIREFLY_AWS_* bucket). See FirestormWeb.Uploads.Storage.
 if config_env() != :test do
+  config :firestorm_web, FirestormWeb.Uploads,
+    storage: if(System.get_env("FIREFLY_UPLOAD_STORAGE") == "s3", do: :s3, else: :local),
+    local_dir: System.get_env("FIREFLY_UPLOAD_DIR", "uploads")
+
   config :ueberauth, Ueberauth.Strategy.Github.OAuth,
     client_id: System.get_env("FIREFLY_GITHUB_CLIENT_ID"),
     client_secret: System.get_env("FIREFLY_GITHUB_CLIENT_SECRET")

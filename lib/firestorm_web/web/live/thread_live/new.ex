@@ -120,16 +120,12 @@ defmodule FirestormWeb.Web.ThreadLive.New do
   defp with_poll(_socket, attrs), do: attrs
 
   defp handle_progress(:attachment, entry, socket) do
-    if entry.done? do
-      markdown = Editor.consume_attachment(socket, entry)
-
+    Editor.attachment_progress(socket, entry, fn socket, markdown ->
       params =
         Map.update(socket.assigns.form.params, "body", markdown, &Editor.append(&1, markdown))
 
       {:noreply, socket |> assign_form(params, socket.assigns.form.errors) |> save_draft(params)}
-    else
-      {:noreply, socket}
-    end
+    end)
   end
 
   defp save_draft(socket, params),
