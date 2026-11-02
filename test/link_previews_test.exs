@@ -146,6 +146,13 @@ defmodule FirestormWeb.LinkPreviewsTest do
                Fetcher.get("file:///etc/passwd", types: ["text/html"], max_bytes: 100)
     end
 
+    test "aren't plugin traffic, so stay out of the plugin egress log", %{base: base} do
+      assert {:ok, _page} = Fetcher.get(base <> "/page", types: ["text/html"], max_bytes: 100_000)
+      Application.put_env(:firestorm_web, HTTP, allow_private: false)
+      assert {:error, _} = Fetcher.get(base <> "/page", types: ["text/html"], max_bytes: 100_000)
+      assert Repo.aggregate(FirestormWeb.Plugins.EgressEntry, :count) == 0
+    end
+
     test "only HTML, and not too much of it", %{base: base} do
       assert {:error, {:content_type, "application/json"}} =
                Fetcher.get(base <> "/json", types: ["text/html"], max_bytes: 100_000)
