@@ -1,6 +1,7 @@
 defmodule FirestormWeb.Uploads do
   @moduledoc """
-  File uploads: attachments in posts and private messages, and avatars.
+  File uploads: attachments in posts and private messages, avatars and
+  custom emoji.
 
   A file goes through the server (the composer's LiveView upload, or
   `POST /api/v1/uploads`): its type is checked from its content and images
@@ -29,6 +30,8 @@ defmodule FirestormWeb.Uploads do
   alias FirestormWeb.Forums.{Draft, Message, Post, User}
   alias FirestormWeb.Uploads.{Processor, Storage, Upload}
 
+  # Uploads stored processed their own way, attached as soon as they're made.
+  @variants ~w(avatar emoji)
   @token_pattern ~r"/uploads/([A-Za-z0-9_-]{22})/"
 
   @doc "The largest file accepted, in bytes (the `max_upload_kb` setting)."
@@ -39,7 +42,8 @@ defmodule FirestormWeb.Uploads do
 
   @doc """
   Stores the file at `path` (named `filename` by its uploader) as `user`'s.
-  `avatar: true` makes it the square avatar variant, attached to the user.
+  `variant: "avatar"` makes it the square avatar variant, attached to the
+  user; `variant: "emoji"` a custom emoji (see `FirestormWeb.Emoji`).
   Returns `{:ok, upload}`, `{:error, :rate_limited}` or `{:error, message}`.
   """
   def create(%User{} = user, path, filename, opts \\ []) do
@@ -49,11 +53,11 @@ defmodule FirestormWeb.Uploads do
          {:ok, data} <- read(path),
          {:ok, content_type} <- Processor.detect(data, filename) do
       sha256 = Base.encode16(:crypto.hash(:sha256, data), case: :lower)
-      avatar? = Keyword.get(opts, :avatar, false)
+      variant = opts[:variant]
 
-      if avatar? and not String.starts_with?(content_type, "image/"),
-        do: {:error, "An avatar must be an image."},
-        else: store(user, data, filename, content_type, sha256, avatar?)
+      if variant && not String.starts_with?(content_type, "image/"),
+        do: {:error, "An #{variant} must be an image."},
+        else: store(user, data, filename, content_type, sha256, variant)
     end
   end
 
@@ -69,12 +73,12 @@ defmodule FirestormWeb.Uploads do
 
   # Under a lock on the content's hash, so a file being removed (see
   # `remove/1`) can't vanish under an upload that reuses it.
-  defp store(user, data, filename, content_type, sha256, avatar?) do
+  defp store(user, data, filename, content_type, sha256, variant) do
     Repo.transact(fn ->
       lock(sha256)
 
-      with nil <- reusable(user, sha256, avatar?),
-           {:ok, stored} <- stored(data, content_type, sha256, avatar?),
+      with nil <- reusable(user, sha256, variant),
+           {:ok, stored} <- stored(data, content_type, sha256, variant),
            :ok <- check_quota(user, sha256, stored.size) do
         %Upload{
           token: token(),
@@ -82,8 +86,8 @@ defmodule FirestormWeb.Uploads do
           filename: filename,
           content_type: content_type,
           sha256: sha256,
-          attached_to: if(avatar?, do: "avatar"),
-          attached_at: if(avatar?, do: DateTime.utc_now(:second))
+          attached_to: variant,
+          attached_at: if(variant, do: DateTime.utc_now(:second))
         }
         |> Map.merge(stored)
         |> Repo.insert()
@@ -97,35 +101,30 @@ defmodule FirestormWeb.Uploads do
   defp lock(sha256), do: Repo.query!("SELECT pg_advisory_xact_lock(hashtext($1))", [sha256])
 
   # The uploader's own unused copy of the same file, to hand back again.
-  defp reusable(_user, _sha256, true = _avatar?), do: nil
-
-  defp reusable(user, sha256, false) do
+  defp reusable(user, sha256, nil = _variant) do
     Upload
     |> where([u], u.user_id == ^user.id and u.sha256 == ^sha256 and is_nil(u.attached_to))
     |> limit(1)
     |> Repo.one()
   end
 
+  defp reusable(_user, _sha256, _variant), do: nil
+
   # The stored file's details: from another upload of the same content
   # (nothing to process or store), or processed and stored now.
-  defp stored(data, content_type, sha256, avatar?) do
-    case Repo.one(limit(same_file(sha256, avatar?), 1)) do
+  defp stored(data, content_type, sha256, variant) do
+    case Repo.one(limit(same_file(sha256, variant), 1)) do
       %Upload{} = existing ->
         {:ok, Map.take(existing, [:content_type, :size, :width, :height, :thumbnail])}
 
       nil ->
-        process_and_put(data, content_type, sha256, avatar?)
+        process_and_put(data, content_type, sha256, variant)
     end
   end
 
-  defp process_and_put(data, content_type, sha256, avatar?) do
-    opts = [avatar: avatar?, max_dimension: SiteSettings.get("max_image_dimension")]
-
-    upload = %Upload{
-      sha256: sha256,
-      content_type: content_type,
-      attached_to: avatar_kind(avatar?)
-    }
+  defp process_and_put(data, content_type, sha256, variant) do
+    opts = [variant: variant, max_dimension: SiteSettings.get("max_image_dimension")]
+    upload = %Upload{sha256: sha256, content_type: content_type, attached_to: variant}
 
     with {:ok, processed} <- Processor.process(data, content_type, opts),
          :ok <- put(key(upload), processed.data, content_type),
@@ -157,16 +156,14 @@ defmodule FirestormWeb.Uploads do
     end
   end
 
-  defp avatar_kind(true), do: "avatar"
-  defp avatar_kind(false), do: nil
-
   # Uploads sharing a stored file: the same content and variant (avatars
-  # are stored cropped, apart from the rest).
-  defp same_file(sha256, true = _avatar?),
-    do: where(Upload, [u], u.sha256 == ^sha256 and u.attached_to == "avatar")
+  # and emoji are stored resized, apart from the rest).
+  defp same_file(sha256, nil = _variant) do
+    where(Upload, [u], u.sha256 == ^sha256 and coalesce(u.attached_to, "") not in ^@variants)
+  end
 
-  defp same_file(sha256, false),
-    do: where(Upload, [u], u.sha256 == ^sha256 and coalesce(u.attached_to, "") != "avatar")
+  defp same_file(sha256, variant),
+    do: where(Upload, [u], u.sha256 == ^sha256 and u.attached_to == ^variant)
 
   defp check_quota(user, sha256, size) do
     quota = SiteSettings.get("upload_quota_mb") * 1024 * 1024
@@ -213,11 +210,14 @@ defmodule FirestormWeb.Uploads do
   @doc "The thumbnail's key in the storage backend."
   def thumbnail_key(%Upload{} = upload), do: blob_key("thumb", upload)
 
-  defp variant(%Upload{attached_to: "avatar"}), do: "avatar"
+  defp variant(%Upload{attached_to: variant}) when variant in @variants, do: variant
   defp variant(%Upload{}), do: "original"
 
   defp blob_key(prefix, %Upload{sha256: sha256, content_type: type}),
     do: "#{prefix}/#{String.slice(sha256, 0, 2)}/#{sha256}#{Processor.extension(type)}"
+
+  defp variant_of(%Upload{attached_to: variant}) when variant in @variants, do: variant
+  defp variant_of(%Upload{}), do: nil
 
   defp keys(%Upload{thumbnail: true} = upload), do: [key(upload), thumbnail_key(upload)]
   defp keys(upload), do: [key(upload)]
@@ -252,7 +252,7 @@ defmodule FirestormWeb.Uploads do
   """
   def readable?(%Upload{} = upload, viewer) do
     cond do
-      upload.attached_to == "avatar" -> true
+      upload.attached_to in @variants -> true
       viewer && Forums.admin?(viewer) -> true
       true -> attachment_readable?(upload, viewer)
     end
@@ -326,7 +326,7 @@ defmodule FirestormWeb.Uploads do
 
   @doc "Makes the image at `path` `user`'s avatar, replacing any previous one."
   def set_avatar(%User{} = user, path, filename) do
-    with {:ok, upload} <- create(user, path, filename, avatar: true) do
+    with {:ok, upload} <- create(user, path, filename, variant: "avatar") do
       previous = user.avatar_upload_id
 
       {:ok, user} =
@@ -363,13 +363,13 @@ defmodule FirestormWeb.Uploads do
     end
   end
 
-  # Deletes the row, and the stored file once no other upload shares it.
-  defp remove(%Upload{} = upload) do
+  @doc "Deletes the upload, and its stored file once no other upload shares it."
+  def remove(%Upload{} = upload) do
     {:ok, delete_file?} =
       Repo.transact(fn ->
         lock(upload.sha256)
         Repo.delete!(upload, allow_stale: true)
-        {:ok, not Repo.exists?(same_file(upload.sha256, upload.attached_to == "avatar"))}
+        {:ok, not Repo.exists?(same_file(upload.sha256, variant_of(upload)))}
       end)
 
     if delete_file?, do: Enum.each(keys(upload), &Storage.delete/1)
@@ -440,6 +440,9 @@ defmodule FirestormWeb.Uploads do
     end
 
     remove(upload)
+    # Its emoji went with it (the foreign key cascades).
+    if upload.attached_to == "emoji", do: FirestormWeb.Emoji.image_deleted()
+    :ok
   end
 
   ## Account data
