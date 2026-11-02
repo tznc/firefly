@@ -197,6 +197,57 @@ defmodule FirestormWeb.Emails do
     """)
   end
 
+  @doc """
+  `user`'s digest (see `FirestormWeb.Digests.build/1`), with a one-click
+  `unsubscribe` URL in the footer and the `List-Unsubscribe` headers.
+  """
+  def digest(%User{} = user, digest, unsubscribe) do
+    %{threads: threads, new_posts: new_posts, replies: replies} = digest
+    {unread, notifications} = digest.notifications
+    since = Calendar.strftime(digest.since, "%b %-d")
+
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firestorm_web, :email)[:from])
+    |> subject("[#{site()}] Summary since #{since}")
+    |> put_header("List-Unsubscribe", "<#{unsubscribe}>")
+    |> put_header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
+    |> html_body("""
+    <p>Hi #{escape(user.username)}, here's what you missed on #{link(site(), FirestormWeb.Web.Endpoint.url())} since #{since}.</p>
+    #{digest_counts_html(new_posts, unread)}
+    #{digest_section_html("Popular new threads", threads, fn t -> link(t.title, thread_url(t)) <> " <small>in #{escape(t.category.title)}</small>" end)}
+    #{digest_section_html("Popular replies", replies, fn p -> "#{link(p.thread.title, post_url(p.thread, p))} <small>by @#{escape(p.user.username)}</small>" end)}
+    #{digest_section_html("Your unread notifications", notifications, &escape(&1.subject))}
+    <hr />
+    <p><small>You're getting this because you haven't visited in a while. #{link("Change how often", settings_url())} or #{link("unsubscribe from digests", unsubscribe)}.</small></p>
+    """)
+    |> text_body("""
+    Hi #{user.username}, here's what you missed on #{site()} since #{since}.
+
+    #{new_posts} new posts, #{unread} unread notifications.
+    #{digest_section_text("Popular new threads", threads, &"#{&1.title} [#{thread_url(&1)}]")}#{digest_section_text("Popular replies", replies, &"#{&1.thread.title}, by @#{&1.user.username} [#{post_url(&1.thread, &1)}]")}#{digest_section_text("Your unread notifications", notifications, & &1.subject)}
+    --
+    You're getting this because you haven't visited in a while.
+    Change how often: #{settings_url()}
+    Unsubscribe from digests: #{unsubscribe}
+    """)
+  end
+
+  defp digest_counts_html(new_posts, unread),
+    do:
+      "<p><strong>#{new_posts}</strong> new posts · <strong>#{unread}</strong> unread notifications</p>"
+
+  defp digest_section_html(_title, [], _item), do: ""
+
+  defp digest_section_html(title, items, item) do
+    "<h3>#{escape(title)}</h3><ul>" <> Enum.map_join(items, &"<li>#{item.(&1)}</li>") <> "</ul>"
+  end
+
+  defp digest_section_text(_title, [], _item), do: ""
+
+  defp digest_section_text(title, items, item),
+    do: "\n#{title}:\n" <> Enum.map_join(items, &"- #{item.(&1)}\n")
+
   defdelegate thread_url(thread), to: FirestormWeb.Web.Paths
 
   def post_url(thread, post) do
