@@ -64,10 +64,14 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :size, :string, default: "size-10"
 
   def avatar(assigns) do
+    # Small avatars (in lists and posts) load the small file.
+    pixels = if assigns.size in ~w(size-6 size-8 size-9 size-10), do: 96, else: 256
+    assigns = assign(assigns, :src, avatar_url(assigns.user, pixels))
+
     ~H"""
     <div class="avatar">
       <div class={["rounded-full", @size]}>
-        <img src={avatar_url(@user)} alt={"#{@user.username}'s avatar"} />
+        <img src={@src} alt={"#{@user.username}'s avatar"} />
       </div>
     </div>
     """
@@ -384,6 +388,11 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :accepted, :boolean, default: false, doc: "the thread's accepted answer"
   attr :viewer, :any, default: nil, doc: "the current user, to link categories they may read"
   attr :refs, :map, default: nil, doc: "`FirestormWeb.Mentions.refs/2` of the page's posts"
+
+  attr :card_target, :string,
+    default: nil,
+    doc: "the page's `FirestormWeb.Web.UserCard`: clicking the author opens their card"
+
   slot :actions
   slot :poll, doc: "the post's poll, under its body"
 
@@ -395,7 +404,18 @@ defmodule FirestormWeb.Web.ForumComponents do
     >
       <div class="card-body gap-4 p-5">
         <header class="flex items-center gap-3">
-          <.avatar user={@post.user} size="size-9" />
+          <button
+            :if={@card_target}
+            type="button"
+            phx-click="open"
+            phx-value-user-id={@post.user.id}
+            phx-target={@card_target}
+            class="cursor-pointer"
+            aria-label={"Show @#{@post.user.username}'s card"}
+          >
+            <.avatar user={@post.user} size="size-9" />
+          </button>
+          <.avatar :if={!@card_target} user={@post.user} size="size-9" />
           <div class="min-w-0 flex-1 text-sm">
             <.link
               :if={@headline}
@@ -405,12 +425,22 @@ defmodule FirestormWeb.Web.ForumComponents do
               {@thread.title}
             </.link>
             <.link
-              :if={!@headline}
+              :if={!@headline and !@card_target}
               navigate={~p"/users/#{@post.user}"}
               class="username font-semibold hover:text-primary"
             >
               @{@post.user.username}
             </.link>
+            <button
+              :if={!@headline and @card_target}
+              type="button"
+              phx-click="open"
+              phx-value-user-id={@post.user.id}
+              phx-target={@card_target}
+              class="username cursor-pointer font-semibold hover:text-primary"
+            >
+              @{@post.user.username}
+            </button>
             <div class="text-xs text-base-content/60">
               <.link navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}>
                 <.time_ago id={"post-#{@post.id}-time"} at={@post.inserted_at} />
@@ -618,6 +648,7 @@ defmodule FirestormWeb.Web.ForumComponents do
   attr :id, :string, required: true
   attr :user, :any, required: true, doc: "the member to mute or ignore"
   attr :level, :string, default: nil, doc: "the viewer's current choice, or nil"
+  attr :target, :any, default: nil, doc: "the component handling `set_ignore`, if any"
 
   def ignore_form(assigns) do
     assigns =
@@ -631,7 +662,13 @@ defmodule FirestormWeb.Web.ForumComponents do
       )
 
     ~H"""
-    <.form for={@form} id={@id} phx-submit="set_ignore" class="ignore-form flex flex-wrap items-end gap-2">
+    <.form
+      for={@form}
+      id={@id}
+      phx-submit="set_ignore"
+      phx-target={@target}
+      class="ignore-form flex flex-wrap items-end gap-2"
+    >
       <input type="hidden" name="ignore[user_id]" value={@user.id} />
       <div class="w-56">
         <.input

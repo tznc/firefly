@@ -10,8 +10,8 @@ defmodule FirestormWeb.Directory do
   for everyone into `directory_items` (one row per user and period), and
   the scheduler (`FirestormWeb.TopicTimers.Scheduler`) runs it through
   `run_due/0` once the last refresh is over an hour old. Only published
-  posts count, and likes on them. Members who left the directory (a
-  privacy setting) or deleted their account aren't listed; new members
+  posts count, and likes on them. Members who left the directory or hid
+  their profile (privacy settings) or deleted their account aren't listed; new members
   are, with no stats until the next refresh.
   """
 
@@ -62,7 +62,7 @@ defmodule FirestormWeb.Directory do
 
     page =
       User
-      |> where([u], is_nil(u.deleted_at) and not u.hide_from_directory)
+      |> where([u], is_nil(u.deleted_at) and not u.hide_from_directory and not u.hide_profile)
       |> join(:left, [u], d in DirectoryItem, on: d.user_id == u.id and d.period == ^period)
       |> search(params["name"])
       |> order_by([u, d], [{^direction, coalesce(field(d, ^field), 0)}, asc: u.username])
@@ -75,6 +75,12 @@ defmodule FirestormWeb.Directory do
       end)
 
     %{page | entries: entries}
+  end
+
+  @doc "`user`'s all-time stats as of the last refresh (zeros before the first)."
+  def user_stats(%User{id: user_id}) do
+    Repo.get_by(DirectoryItem, user_id: user_id, period: "all") ||
+      %DirectoryItem{period: "all", user_id: user_id}
   end
 
   defp search(query, name) when is_binary(name) and name != "" do

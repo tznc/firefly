@@ -40,7 +40,7 @@ defmodule FirestormWeb.Web.UploadsLiveTest do
       conn
       |> log_in_as(user)
       |> visit(~p"/settings/profile")
-      |> upload("Avatar picture", image_file(dir, "me.png", 300, 200))
+      |> upload("Avatar", image_file(dir, "me.png", 300, 200))
       |> assert_has("#flash-info", text: "Avatar updated.")
 
     user = Repo.reload!(user)
@@ -48,9 +48,13 @@ defmodule FirestormWeb.Web.UploadsLiveTest do
     assert_has(session, ~s{#avatar-form img[src="/avatars/#{user.avatar_upload_id}"]})
 
     session
-    |> click_button("Remove")
+    |> click_button("Remove Avatar")
     |> assert_has("#flash-info", text: "Avatar removed.")
+    |> upload("User card background", image_file(dir, "bg.png", 600, 200))
+    |> assert_has("#flash-info", text: "User card background updated.")
 
-    refute Repo.reload!(user).avatar_upload_id
+    user = Repo.reload!(user)
+    refute user.avatar_upload_id
+    assert user.card_background_upload_id
   end
 end

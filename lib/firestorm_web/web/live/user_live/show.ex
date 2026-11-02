@@ -1,14 +1,19 @@
 defmodule FirestormWeb.Web.UserLive.Show do
   @moduledoc """
-  A user's profile (bio, website, location) and their posts, paginated. Users
-  can hide their posts and activity from others here; admins still see them.
+  A user's profile (bio, website, location, profile background), with two
+  tabs: the summary (`/users/:id/summary`: stats and most liked threads and
+  replies) and the activity stream (`/users/:id`, filtered by `?filter=`:
+  all posts, topics, replies, likes given, solved; see
+  `FirestormWeb.Profiles.activity_filters/0`), paginated. What others see
+  follows the user's privacy preferences (see `FirestormWeb.Profiles`);
+  admins see everything.
   Admins see a member's penalties here, and silence or suspend them (see
   `FirestormWeb.Penalties`). Members mute or ignore others here (see
   `FirestormWeb.Ignores`).
   """
   use FirestormWeb.Web, :live_view
 
-  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties}
+  alias FirestormWeb.{Forums, Ignores, Mentions, Penalties, Profiles}
   alias FirestormWeb.Forums.User
 
   @impl true
@@ -21,7 +26,8 @@ defmodule FirestormWeb.Web.UserLive.Show do
      |> assign(:user, user)
      |> assign(:staff?, staff?(socket.assigns.current_user))
      |> assign(:penalty_form, penalty_form())
-     |> assign(:activity?, activity_visible?(user, socket.assigns.current_user))
+     |> assign(:visible?, Profiles.visible?(user, socket.assigns.current_user))
+     |> assign(:activity?, Profiles.activity_visible?(user, socket.assigns.current_user))
      |> assign(:last_post, Forums.user_last_post(user, socket.assigns.current_user))
      |> assign(:last_seen, Forums.user_last_seen(user))
      |> assign_ignore()}
@@ -40,18 +46,24 @@ defmodule FirestormWeb.Web.UserLive.Show do
   defp staff?(nil), do: false
   defp staff?(viewer), do: Forums.admin?(viewer)
 
-  defp activity_visible?(%{hide_profile_activity: false}, _viewer), do: true
-  defp activity_visible?(_user, nil), do: false
-  defp activity_visible?(%{id: id}, %{id: id}), do: true
-  defp activity_visible?(_user, viewer), do: Forums.admin?(viewer)
+  @filters Enum.map(Profiles.activity_filters(), &elem(&1, 0))
 
   @impl true
+  def handle_params(_params, _uri, %{assigns: %{visible?: false}} = socket),
+    do: {:noreply, assign(socket, :filter, "all")}
+
+  def handle_params(_params, _uri, %{assigns: %{live_action: :summary}} = socket) do
+    %{user: user, current_user: viewer} = socket.assigns
+    {:noreply, socket |> assign(:filter, nil) |> assign(:summary, Profiles.summary(user, viewer))}
+  end
+
   def handle_params(_params, _uri, %{assigns: %{activity?: false}} = socket),
-    do: {:noreply, socket}
+    do: {:noreply, assign(socket, :filter, "all")}
 
   def handle_params(params, _uri, socket) do
     %{user: user, current_user: viewer} = socket.assigns
-    posts_page = Forums.user_posts(user, viewer, %{page: params["page"]})
+    filter = if params["filter"] in @filters, do: params["filter"], else: "all"
+    posts_page = Forums.user_posts(user, viewer, %{page: params["page"], filter: filter})
 
     posts_page = %{
       posts_page
@@ -63,6 +75,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
 
     {:noreply,
      socket
+     |> assign(:filter, filter)
      |> assign(:posts_page, posts_page)
      |> assign(
        :refs,
@@ -127,13 +140,26 @@ defmodule FirestormWeb.Web.UserLive.Show do
   def render(assigns) do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
-      <section class="card border border-base-300 bg-base-100">
+      <section class="card overflow-hidden border border-base-300 bg-base-100">
+        <div
+          :if={@visible? && User.background_url(@user, :profile_background)}
+          id="profile-background"
+          class="h-40 bg-cover bg-center"
+          style={"background-image: url('#{User.background_url(@user, :profile_background)}')"}
+        >
+        </div>
         <div class="card-body flex-row flex-wrap items-center gap-6">
           <.avatar user={@user} size="size-24" />
           <div class="min-w-0 flex-1 space-y-1">
             <h1 class="text-2xl font-bold">{@user.username}</h1>
-            <p :if={@user.name} class="text-base-content/70">{@user.name}</p>
-            <p :if={@user.location || @user.website} class="flex flex-wrap gap-x-4 text-sm">
+            <p :if={@visible? && @user.name} class="text-base-content/70">{@user.name}</p>
+            <p :if={!@visible?} id="profile-hidden" class="text-base-content/60">
+              This profile is private.
+            </p>
+            <p
+              :if={@visible? && (@user.location || @user.website)}
+              class="flex flex-wrap gap-x-4 text-sm"
+            >
               <span :if={@user.location} id="user-location">
                 <.icon name="hero-map-pin" class="size-4 opacity-60" /> {@user.location}
               </span>
@@ -147,7 +173,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
                 <.icon name="hero-link" class="size-4 opacity-60" /> {URI.parse(@user.website).host}
               </a>
             </p>
-            <dl class="flex flex-wrap gap-x-6 gap-y-1 pt-2 text-sm">
+            <dl :if={@visible?} class="flex flex-wrap gap-x-6 gap-y-1 pt-2 text-sm">
               <div><dt class="inline font-semibold">Joined</dt> <dd class="inline">{short_date(@user.inserted_at)}</dd></div>
               <div :if={@activity? && @last_post}>
                 <dt class="inline font-semibold">Last post</dt>
@@ -247,7 +273,7 @@ defmodule FirestormWeb.Web.UserLive.Show do
         </details>
       </div>
 
-      <.markdown :if={@user.bio} id="user-bio" body={@user.bio} />
+      <.markdown :if={@visible? && @user.bio} id="user-bio" body={@user.bio} />
 
       <FirestormWeb.Web.PluginComponents.plugin_outlet
         outlet="user_profile"
@@ -256,20 +282,93 @@ defmodule FirestormWeb.Web.UserLive.Show do
         user={@current_user}
       />
 
-      <p :if={!@activity?} id="activity-hidden" class="text-base-content/60">
+      <div :if={@visible?} role="tablist" id="profile-tabs" class="tabs tabs-border">
+        <.link
+          patch={~p"/users/#{@user}/summary"}
+          role="tab"
+          class={["tab", @live_action == :summary && "tab-active"]}
+        >
+          Summary
+        </.link>
+        <.link
+          patch={~p"/users/#{@user}"}
+          role="tab"
+          class={["tab", @live_action == :show && "tab-active"]}
+        >
+          Activity
+        </.link>
+      </div>
+
+      <div :if={@visible? && @live_action == :summary} id="user-summary" class="space-y-6">
+        <dl class="stats stats-vertical w-full border border-base-300 bg-base-100 sm:stats-horizontal">
+          <div :for={column <- FirestormWeb.Directory.columns()} class="stat px-4 py-3">
+            <dt class="stat-title">{FirestormWeb.Directory.label(column)}</dt>
+            <dd class={["stat-value text-2xl", "summary-#{column}"]}>
+              {Map.fetch!(@summary.stats, String.to_existing_atom(column))}
+            </dd>
+          </div>
+        </dl>
+        <div :if={@activity?} class="grid gap-6 md:grid-cols-2">
+          <.top_posts id="top-topics" title="Top topics" posts={@summary.top_topics} />
+          <.top_posts id="top-replies" title="Top replies" posts={@summary.top_replies} />
+        </div>
+      </div>
+
+      <p :if={@visible? && !@activity?} id="activity-hidden" class="text-base-content/60">
         {@user.username} keeps their activity private.
       </p>
 
-      <div :if={@activity?} class="space-y-6">
+      <div :if={@visible? && @activity? && @live_action == :show} class="space-y-6">
+        <div role="tablist" id="activity-filters" class="tabs tabs-box tabs-sm w-fit">
+          <.link
+            :for={{filter, label} <- Profiles.activity_filters()}
+            patch={if filter == "all", do: ~p"/users/#{@user}", else: ~p"/users/#{@user}?#{[filter: filter]}"}
+            role="tab"
+            class={["tab", @filter == filter && "tab-active"]}
+          >
+            {label}
+          </.link>
+        </div>
+        <p :if={@posts_page.entries == []} class="text-base-content/60">Nothing here yet.</p>
         <ol id="user-posts" class="space-y-4">
           <li :for={post <- @posts_page.entries}>
             <.post post={post} thread={post.thread} viewer={@current_user} refs={@refs} headline />
           </li>
         </ol>
 
-        <.pagination page={@posts_page} path={~p"/users/#{@user}"} />
+        <.pagination
+          page={@posts_page}
+          path={~p"/users/#{@user}"}
+          params={if @filter == "all", do: %{}, else: %{"filter" => @filter}}
+        />
       </div>
     </Layouts.app>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :posts, :list, required: true
+
+  defp top_posts(assigns) do
+    ~H"""
+    <section id={@id} class="space-y-2">
+      <h2 class="font-semibold">{@title}</h2>
+      <p :if={@posts == []} class="text-sm text-base-content/60">None liked yet.</p>
+      <ol class="list rounded-box border border-base-300 bg-base-100">
+        <li :for={{post, likes} <- @posts} class="list-row items-center">
+          <span class="badge badge-ghost gap-1" title="Likes">
+            <.icon name="hero-heart" class="size-3" />{likes}
+          </span>
+          <.link
+            navigate={~p"/categories/#{post.thread.category_id}/threads/#{post.thread}" <> "#post-#{post.id}"}
+            class="list-col-grow truncate hover:text-primary"
+          >
+            {post.thread.title}
+          </.link>
+        </li>
+      </ol>
+    </section>
     """
   end
 end

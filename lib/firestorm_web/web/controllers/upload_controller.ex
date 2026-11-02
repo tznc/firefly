@@ -21,8 +21,20 @@ defmodule FirestormWeb.Web.UploadController do
   def thumbnail(conn, %{"token" => token}), do: serve(conn, token, :thumbnail)
 
   @doc "An avatar, by its upload id (avatars are public; see `User.avatar_url/2`)."
-  def avatar(conn, %{"id" => id}) do
-    case Uploads.get_avatar(id) do
+  def avatar(conn, %{"id" => id} = params) do
+    case Uploads.get_profile_image("avatar", id) do
+      %Upload{} = upload ->
+        # Avatars from before small ones were made have only the full size.
+        {:ok, key} = key(upload, if(params["size"] == "small", do: :thumbnail, else: :original))
+        send_upload(conn, upload, key)
+
+      nil ->
+        not_found(conn)
+    end
+  end
+
+  def background(conn, %{"id" => id}) do
+    case Uploads.get_profile_image("background", id) do
       %Upload{} = upload -> send_upload(conn, upload, Uploads.key(upload))
       nil -> not_found(conn)
     end
