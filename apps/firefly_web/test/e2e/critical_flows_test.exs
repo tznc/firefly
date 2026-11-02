@@ -187,6 +187,8 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     conn
     |> log_in("bob")
     |> visit("/categories/#{category.id}/threads/#{thread.id}/posts/new")
+    # The autocomplete hook only listens once the LiveView has connected.
+    |> assert_has("[data-phx-main].phx-connected")
     |> PhoenixTest.Playwright.type("#post_body", "Thanks @ali")
     |> assert_has("#post_body-mentions [role=option]", text: "@alice")
     |> PhoenixTest.Playwright.press("#post_body", "Enter")
@@ -227,6 +229,8 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     conn
     |> log_in("alice")
     |> visit("/categories/#{category.id}/threads/#{thread.id}/posts/new")
+    # The autocomplete hook only listens once the LiveView has connected.
+    |> assert_has("[data-phx-main].phx-connected")
     |> PhoenixTest.Playwright.type("#post_body", "Hot :fir")
     |> assert_has("#post_body-mentions [role=option]", text: ":fire:")
     |> PhoenixTest.Playwright.press("#post_body", "Enter")
