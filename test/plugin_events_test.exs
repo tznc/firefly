@@ -348,6 +348,67 @@ defmodule FirestormWeb.PluginEventsTest do
         Application.delete_env(:firestorm_web, Storage)
       end
     end
+
+    test "user_id picks a member's own namespace", %{admin: admin, member: member} do
+      other = user_fixture()
+
+      actor(admin, %{}, """
+      const u = args.user, o = args.other;
+      firefly.call('kv.set', {key: 'k', value: 'global'});
+      firefly.call('kv.set', {key: 'k', value: 'mine', user_id: u});
+      firefly.call('kv.set', {key: 'k2', value: 2, user_id: u});
+      firefly.call('kv.set', {key: 'k', value: 'theirs', user_id: o});
+      firefly.call('kv.delete', {key: 'k2', user_id: o});
+      const errors = [];
+      for (const id of [999999999, 'x']) {
+        try { firefly.call('kv.get', {key: 'k', user_id: id}) } catch (e) { errors.push(e.message) }
+      }
+      return [
+        firefly.call('kv.get', {key: 'k'}),
+        firefly.call('kv.get', {key: 'k', user_id: u}),
+        firefly.call('kv.get', {key: 'k', user_id: o}),
+        firefly.call('kv.list', {}),
+        firefly.call('kv.list', {user_id: u}),
+        errors
+      ];
+      """)
+
+      assert {:ok,
+              [
+                "global",
+                "mine",
+                "theirs",
+                ["k"],
+                ["k", "k2"],
+                ["user not found", "user_id must be a user's id"]
+              ]} = call(%{"user" => member.id, "other" => other.id})
+
+      assert Storage.get({"actor", member.id}, "k") == "mine"
+      assert Storage.usage("actor") == %{keys: 1, bytes: 8}
+    end
+
+    test "each member's store has its own quota", %{member: member} do
+      other = user_fixture()
+      Application.put_env(:firestorm_web, Storage, user_max_keys: 2, user_max_bytes: 10)
+
+      try do
+        assert :ok = Storage.put({"p", member.id}, "a", 1)
+        assert :ok = Storage.put({"p", member.id}, "b", 1)
+
+        assert {:error, "storage quota exceeded: too many keys"} =
+                 Storage.put({"p", member.id}, "c", 1)
+
+        assert {:error, "storage quota exceeded: too much data"} =
+                 Storage.put({"p", member.id}, "a", "0123456789")
+
+        # Other members, other plugins and the global store aren't affected.
+        assert :ok = Storage.put({"p", other.id}, "c", 1)
+        assert :ok = Storage.put({"q", member.id}, "c", 1)
+        assert :ok = Storage.put("p", "c", "a long global value")
+      after
+        Application.delete_env(:firestorm_web, Storage)
+      end
+    end
   end
 
   describe "custom fields" do
@@ -519,14 +580,83 @@ defmodule FirestormWeb.PluginEventsTest do
     )
 
     :ok = Storage.put("keeper", "k", 1)
+    :ok = Storage.put({"keeper", member.id}, "k", 1)
     :ok = Fields.put(Plugins.get_active("keeper"), "thread", thread.id, "x", 1)
     {:ok, _} = Forums.create_post(thread, member, %{body: "x"})
 
     :ok = Plugins.uninstall("keeper", admin)
 
     assert Storage.usage("keeper") == %{keys: 0, bytes: 0}
+    assert Storage.usage({"keeper", member.id}) == %{keys: 0, bytes: 0}
     assert Fields.get("keeper", "thread", thread.id) == %{}
     assert queued() == []
     assert Repo.get_by(User, plugin_bot: "keeper")
+  end
+
+  describe "a member's plugin data" do
+    setup %{admin: admin} do
+      install_plugin!(
+        admin,
+        %{
+          "id" => "keeper",
+          "name" => "K",
+          "permissions" => ["fields"],
+          "fields" => [%{"type" => "user", "key" => "badge"}, %{"type" => "post", "key" => "x"}]
+        },
+        %{"index.js" => ""},
+        enable: true
+      )
+
+      %{plugin: Plugins.get_active("keeper")}
+    end
+
+    test "is in their account export, by plugin", %{plugin: plugin, member: member} do
+      other = user_fixture()
+      :ok = Storage.put({"keeper", member.id}, "seen", [1, 2])
+      :ok = Storage.put({"other", member.id}, "theme", "dark")
+      :ok = Storage.put({"keeper", other.id}, "seen", [3])
+      :ok = Storage.put("keeper", "global", true)
+      :ok = Fields.put(plugin, "user", member.id, "badge", "gold")
+      :ok = Fields.put(plugin, "user", other.id, "badge", "tin")
+
+      export = FirestormWeb.AccountExport.build(member)
+
+      assert export.plugin_storage == %{
+               "keeper" => %{"seen" => [1, 2]},
+               "other" => %{"theme" => "dark"}
+             }
+
+      assert export.plugin_fields == %{"keeper" => %{"badge" => "gold"}}
+    end
+
+    test "is deleted with their account; fields on their posts stay", %{
+      admin: admin,
+      plugin: plugin,
+      member: member,
+      thread: thread
+    } do
+      other = user_fixture()
+      [post] = Repo.preload(thread, :posts).posts
+      :ok = Storage.put({"keeper", member.id}, "seen", 1)
+      :ok = Storage.put({"keeper", other.id}, "seen", 1)
+      :ok = Fields.put(plugin, "user", member.id, "badge", "gold")
+      :ok = Fields.put(plugin, "user", other.id, "badge", "tin")
+      :ok = Fields.put(plugin, "post", post.id, "x", 1)
+
+      {:ok, _} = FirestormWeb.AccountDeletion.delete_account(member, member.username)
+
+      assert Storage.usage({"keeper", member.id}) == %{keys: 0, bytes: 0}
+      assert Storage.get({"keeper", other.id}, "seen") == 1
+      assert Fields.get("keeper", "user", member.id) == %{}
+      assert Fields.get("keeper", "user", other.id) == %{"badge" => "tin"}
+      assert Fields.get("keeper", "post", post.id) == %{"x" => 1}
+
+      # The placeholder account is no one to keep data for.
+      actor(admin, %{}, """
+      try { firefly.call('kv.set', {key: 'k', value: 1, user_id: args}) } catch (e) { return e.message }
+      """)
+
+      assert {:ok, "user not found"} = call(member.id)
+    end
   end
 end

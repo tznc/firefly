@@ -6,8 +6,9 @@ defmodule FirestormWeb.PluginUITest do
   import Ecto.Query
   import FirestormWeb.DataCase, only: [errors_on: 1]
   import FirestormWeb.PluginHelpers
+  import Phoenix.LiveViewTest, only: [live: 2, render_hook: 3, assert_reply: 2]
 
-  alias FirestormWeb.{Forums, Plugins, Repo}
+  alias FirestormWeb.{Forums, Plugins, RateLimit, Repo}
   alias FirestormWeb.Forums.{Post, StaffAction}
   alias FirestormWeb.Plugins.{Events, Fields, Jobs, Storage, UI}
 
@@ -118,6 +119,95 @@ defmodule FirestormWeb.PluginUITest do
                UI.call_widget("hello", "nope", nil, %{}, nil, "ip:1")
 
       assert {:error, "no such plugin"} = UI.call_widget("missing", "view", nil, %{}, nil, "ip:1")
+    end
+  end
+
+  describe "widget storage" do
+    test "is the viewer's own, within limits", %{member: member} do
+      other = user_fixture()
+      store = &UI.widget_storage("hello", &1, &2, &3)
+
+      assert {:ok, nil} = store.("set", %{"key" => "n", "value" => %{"a" => [1]}}, member)
+      assert {:ok, nil} = store.("set", %{"key" => "m", "value" => 2}, member)
+      assert {:ok, %{"a" => [1]}} = store.("get", %{"key" => "n"}, member)
+      assert {:ok, ["m", "n"]} = store.("list", %{"prefix" => ""}, member)
+      assert {:ok, nil} = store.("delete", %{"key" => "m"}, member)
+      assert {:ok, ["n"]} = store.("list", %{}, member)
+      assert {:ok, nil} = store.("get", %{"key" => "n"}, other)
+      assert Storage.get({"hello", member.id}, "n") == %{"a" => [1]}
+      assert Storage.get("hello", "n") == nil
+
+      assert {:error, "sign in to save data"} = store.("get", %{"key" => "n"}, nil)
+      assert {:error, "sign in to save data"} = store.("set", %{"key" => "n", "value" => 1}, nil)
+
+      assert {:error, "no such plugin"} =
+               UI.widget_storage("missing", "get", %{"key" => "n"}, member)
+
+      assert {:error, "invalid storage request"} = store.("drop", %{}, member)
+
+      assert {:error, "values must be at most 8 KB"} =
+               store.("set", %{"key" => "big", "value" => String.duplicate("x", 9_000)}, member)
+
+      Application.put_env(:firestorm_web, Storage, user_max_keys: 1)
+
+      try do
+        assert {:error, "storage quota exceeded: too many keys"} =
+                 store.("set", %{"key" => "m", "value" => 1}, member)
+      after
+        Application.delete_env(:firestorm_web, Storage)
+      end
+    end
+
+    test "writes are rate limited per plugin and member", %{member: member} do
+      config = Application.get_env(:firestorm_web, RateLimit)
+      Application.put_env(:firestorm_web, RateLimit, limits: [plugin_storage: {2, 60_000}])
+      on_exit(fn -> Application.put_env(:firestorm_web, RateLimit, config) end)
+
+      assert {:ok, nil} = UI.widget_storage("hello", "set", %{"key" => "a", "value" => 1}, member)
+      assert {:ok, nil} = UI.widget_storage("hello", "delete", %{"key" => "a"}, member)
+
+      assert {:error, "too many writes: slow down"} =
+               UI.widget_storage("hello", "set", %{"key" => "a", "value" => 1}, member)
+
+      # Reads aren't writes; another member has their own allowance.
+      assert {:ok, nil} = UI.widget_storage("hello", "get", %{"key" => "a"}, member)
+
+      assert {:ok, nil} =
+               UI.widget_storage("hello", "set", %{"key" => "a", "value" => 1}, user_fixture())
+    end
+
+    test "a widget can't reach another member's data, whatever it sends", %{
+      conn: conn,
+      member: member,
+      thread: thread
+    } do
+      other = user_fixture()
+      :ok = Storage.put({"hello", other.id}, "secret", "theirs")
+      path = ~p"/categories/#{thread.category_id}/threads/#{thread}"
+
+      {:ok, view, _html} = live(log_in_as(conn, member), path)
+      forged = %{"plugin" => "hello", "key" => "secret", "user_id" => other.id}
+
+      render_hook(view, "plugin_widget_storage", Map.put(forged, "op", "get"))
+      assert_reply(view, %{ok: nil})
+
+      render_hook(
+        view,
+        "plugin_widget_storage",
+        Map.merge(forged, %{"op" => "set", "value" => 1})
+      )
+
+      assert_reply(view, %{ok: nil})
+
+      render_hook(view, "plugin_widget_storage", Map.put(forged, "op", "delete"))
+      assert_reply(view, %{ok: nil})
+
+      assert Storage.get({"hello", other.id}, "secret") == "theirs"
+      assert Storage.list({"hello", member.id}) == []
+
+      {:ok, anonymous, _html} = live(conn, path)
+      render_hook(anonymous, "plugin_widget_storage", Map.put(forged, "op", "get"))
+      assert_reply(anonymous, %{error: "sign in to save data"})
     end
   end
 
