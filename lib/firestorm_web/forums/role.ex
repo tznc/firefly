@@ -3,19 +3,46 @@ defmodule FirestormWeb.Forums.Role do
   Schema for forum roles. Roles double as groups: "admin" makes a user
   staff, and any role can be given access to restricted categories (see
   `FirestormWeb.Forums.Policy`). Admins manage them at `/staff/groups`.
+
+  Group settings (see `FirestormWeb.Groups`):
+
+    * `visibility` - who sees the group, its page and members: `public`
+      (everyone), `members` (its members) or `staff`
+    * `membership` - how people join: `closed` (owners and staff add
+      them), `open` (anyone joins), `request` (anyone asks; owners
+      approve) or `invite` (owners invite; the invitee accepts)
+    * `mentionable` - who may @mention it (notifying its members), and
+      `messageable` - who may message its inbox: `nobody` (staff only),
+      `owners`, `members` or `everyone`
+    * `description` - the About tab
+
+  The "admin" group stays closed and staff-only: its members are staff.
   """
 
   use Ecto.Schema
   import Ecto.Changeset, warn: false
   alias FirestormWeb.Forums.{User, RoleMembership}
 
+  @visibilities ~w(public members staff)
+  @memberships ~w(closed open request invite)
+  @levels ~w(nobody owners members everyone)
+
   schema "forums_roles" do
     field(:name, :string)
+    field(:description, :string)
+    field(:visibility, :string, default: "staff")
+    field(:membership, :string, default: "closed")
+    field(:mentionable, :string, default: "nobody")
+    field(:messageable, :string, default: "nobody")
     has_many(:role_memberships, RoleMembership)
     many_to_many(:users, User, join_through: RoleMembership)
 
     timestamps(type: :naive_datetime_usec)
   end
+
+  def visibilities, do: @visibilities
+  def memberships, do: @memberships
+  def levels, do: @levels
 
   def changeset(%__MODULE__{} = role, attrs \\ %{}) do
     role
@@ -24,5 +51,33 @@ defmodule FirestormWeb.Forums.Role do
     |> validate_required([:name])
     |> validate_length(:name, max: 40)
     |> unique_constraint(:name)
+    |> unique_constraint(:name, name: :forums_roles_lower_name_index)
   end
+
+  @doc "A group's settings (admins)."
+  def settings_changeset(%__MODULE__{} = role, attrs) do
+    role
+    |> cast(attrs, [:description, :visibility, :membership, :mentionable, :messageable])
+    |> validate_length(:description, max: 2_000)
+    |> validate_inclusion(:visibility, @visibilities)
+    |> validate_inclusion(:membership, @memberships)
+    |> validate_inclusion(:mentionable, @levels)
+    |> validate_inclusion(:messageable, @levels)
+    |> validate_staff_group()
+  end
+
+  @doc "The About text, which owners edit too."
+  def description_changeset(%__MODULE__{} = role, attrs) do
+    role
+    |> cast(attrs, [:description])
+    |> validate_length(:description, max: 2_000)
+  end
+
+  defp validate_staff_group(%{data: %{name: "admin"}} = changeset) do
+    changeset
+    |> validate_inclusion(:membership, ["closed"], message: "must be closed for the admin group")
+    |> validate_inclusion(:visibility, ["staff"], message: "must be staff for the admin group")
+  end
+
+  defp validate_staff_group(changeset), do: changeset
 end

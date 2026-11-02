@@ -13,9 +13,16 @@ defmodule FirestormWeb.Notifications do
       newly mentions. Not the author, users who can't see the thread (the
       `:view_thread` policy) or users who muted it. A mentioned user gets the
       mention instead of the new thread/post notification.
+    * a post @mentioning a group notifies its members (those who may read
+      the thread and didn't mute it), if the author may mention the group
+      (see `FirestormWeb.Groups.notify_mentions/5`); once per post, like
+      user mentions
     * a private message notifies the conversation's other participants, and
       adding people to a conversation notifies them (see
-      `FirestormWeb.Messages`)
+      `FirestormWeb.Messages`). A message to a group's inbox also notifies
+      the group's other members by their group notification level:
+      `watching` (every message, emailed), `tracking` (every message),
+      `normal` (new conversations) or `muted` (nothing)
 
   Nobody is notified of what a user they mute or ignore did (see
   `FirestormWeb.Ignores`).
@@ -30,7 +37,7 @@ defmodule FirestormWeb.Notifications do
 
   import Ecto.Query, only: [where: 2, order_by: 2, first: 1, select: 3]
 
-  alias FirestormWeb.{Emails, Forums, Ignores, Mailer, Mentions, Messages, Repo}
+  alias FirestormWeb.{Emails, Forums, Groups, Ignores, Mailer, Mentions, Messages, Repo}
 
   alias FirestormWeb.Forums.{
     Conversation,
@@ -123,6 +130,11 @@ defmodule FirestormWeb.Notifications do
       notify_message(user, conversation, message, subject)
     end
 
+    if conversation.role_id do
+      skip = [author_id | Enum.map(recipients, & &1.id)]
+      notify_group(conversation, message, author, first?, skip)
+    end
+
     {:noreply, state}
   end
 
@@ -134,11 +146,29 @@ defmodule FirestormWeb.Notifications do
     {:noreply, state}
   end
 
-  defp notify_message(user, conversation, message, subject) do
-    {:ok, notification} =
-      Forums.notify(user, Notification.for_message(conversation, message, subject))
+  # The group's members who aren't in the conversation, by their level.
+  defp notify_group(conversation, message, author, first?, skip) do
+    group = Repo.get!(Forums.Role, conversation.role_id)
+    memberships = Enum.reject(Groups.memberships(group), &(&1.user_id in skip))
+    muters = Ignores.muters(message.user_id, Enum.map(memberships, & &1.user_id))
 
-    if email?(user, notification) do
+    subject =
+      if first?,
+        do: "#{author} messaged @#{group.name}: \"#{conversation.title}\"",
+        else: "#{author} replied to \"#{conversation.title}\" (@#{group.name})"
+
+    for %{user: user, notification_level: level} <- memberships,
+        not MapSet.member?(muters, user.id),
+        level in ["watching", "tracking"] or (level == "normal" and first?) do
+      notify_message(user, conversation, message, subject, "group_message", level == "watching")
+    end
+  end
+
+  defp notify_message(user, conversation, message, subject, kind \\ "message", email \\ true) do
+    attrs = %{Notification.for_message(conversation, message, subject) | kind: kind}
+    {:ok, notification} = Forums.notify(user, attrs)
+
+    if email and email?(user, notification) do
       Mailer.deliver_now(Emails.message_notification(user, conversation, message, subject))
       Forums.notification_emailed(notification)
     end
@@ -201,7 +231,23 @@ defmodule FirestormWeb.Notifications do
         user.id
       end
 
-    already ++ new
+    users = already ++ new
+
+    users ++
+      Groups.notify_mentions(thread, post, post.user, users, &group_readers(thread, post, &1))
+  end
+
+  # Those of a mentioned group's `members` to notify: who may read the
+  # thread, doesn't mute the author and hasn't muted the thread.
+  defp group_readers(thread, post, members) do
+    readers = readers(thread, members)
+    muters = Ignores.muters(post.user_id, Enum.map(members, & &1.id))
+
+    for user <- members,
+        MapSet.member?(readers, user.id) and not MapSet.member?(muters, user.id),
+        Subscriptions.effective_thread_level(user, thread) != "muted",
+        into: MapSet.new(),
+        do: user.id
   end
 
   # The ids of those of `users` who may read the thread, decided for all of

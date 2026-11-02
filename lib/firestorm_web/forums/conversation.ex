@@ -20,6 +20,8 @@ defmodule FirestormWeb.Forums.Conversation do
     field(:body, :string, virtual: true)
     field(:unread_count, :integer, virtual: true, default: 0)
     belongs_to(:user, User)
+    # The group it was sent to, if any (see FirestormWeb.Messages).
+    belongs_to(:role, FirestormWeb.Forums.Role)
     has_many(:participants, ConversationParticipant)
     has_many(:messages, Message, preload_order: [asc: :id])
 

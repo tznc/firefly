@@ -12,17 +12,24 @@ defmodule FirestormWeb.Messages do
   admins. Conversations started by someone you ignore are left out of your
   inbox. Each recipient gets a `"message"` notification and an
   email (see `FirestormWeb.Notifications.message_created/1`).
+
+  A conversation can also be addressed to a group (`@name` among the
+  recipients, if the sender may message it; see
+  `FirestormWeb.Groups.can_message?/2`): its members read and reply to it
+  from the group's inbox, as long as they're in the group, and hear about
+  it as their group notification level says.
   """
 
   import Ecto.{Query, Changeset}
 
-  alias FirestormWeb.{Forums, Ignores, Notifications, RateLimit, Repo}
+  alias FirestormWeb.{Forums, Groups, Ignores, Notifications, RateLimit, Repo}
 
   alias FirestormWeb.Forums.{
     Conversation,
     ConversationParticipant,
     Message,
     Notification,
+    RoleMembership,
     SpamGuard,
     User
   }
@@ -48,9 +55,9 @@ defmodule FirestormWeb.Messages do
 
     {changeset, recipients} =
       with nil <- changeset.errors[:recipients],
-           {:ok, users} <-
-             resolve_users(get_change(changeset, :recipients), sender, MapSet.new([sender.id])) do
-        {changeset, users}
+           {:ok, group, input} <- group_recipient(get_change(changeset, :recipients), sender),
+           {:ok, users} <- resolve_recipients(input, sender, group) do
+        {put_change(changeset, :role_id, group && group.id), users}
       else
         {:error, message} -> {add_error(changeset, :recipients, message), []}
         _blank -> {changeset, []}
@@ -91,6 +98,42 @@ defmodule FirestormWeb.Messages do
     end
   end
 
+  # A recipient that names no user but a group the sender sees: the group
+  # (one per conversation), if they may message it. Returns `{:ok, group or
+  # nil, the other recipients}`.
+  defp group_recipient(input, sender) do
+    names = parse_usernames(input)
+    users = Forums.users_by_username(names)
+
+    groups =
+      names
+      |> Enum.reject(&Map.has_key?(users, &1))
+      |> Groups.by_names()
+      |> Map.values()
+      |> Enum.filter(&Groups.visible?(&1, sender))
+
+    case groups do
+      [] ->
+        {:ok, nil, input}
+
+      [group] ->
+        if Groups.can_message?(group, sender),
+          do: {:ok, group, Enum.reject(names, &(&1 == String.downcase(group.name)))},
+          else: {:error, "you can't message @#{group.name}"}
+
+      _several ->
+        {:error, "a conversation can go to one group"}
+    end
+  end
+
+  defp resolve_recipients([], _sender, %{} = _group), do: {:ok, []}
+
+  defp resolve_recipients(names, sender, _group) when is_list(names),
+    do: resolve_users(Enum.join(names, " "), sender, MapSet.new([sender.id]))
+
+  defp resolve_recipients(input, sender, _group),
+    do: resolve_users(input, sender, MapSet.new([sender.id]))
+
   defp new_message(conversation, user, body),
     do: %Message{conversation_id: conversation.id, user_id: user.id, body: body}
 
@@ -103,7 +146,7 @@ defmodule FirestormWeb.Messages do
       |> SpamGuard.validate_post(user)
 
     cond do
-      not participant?(conversation, user) ->
+      not reader?(conversation, user) ->
         {:error, :unauthorized}
 
       not changeset.valid? ->
@@ -112,6 +155,7 @@ defmodule FirestormWeb.Messages do
       true ->
         {:ok, message} =
           Repo.transact(fn ->
+            join_in(conversation, user)
             message = Repo.insert!(changeset)
             :ok = FirestormWeb.Uploads.attach(message.body, user, message)
 
@@ -154,6 +198,11 @@ defmodule FirestormWeb.Messages do
       broadcast(conversation, {:participants_changed, conversation})
       {:ok, users}
     end
+  end
+
+  # A group member replying from the group's inbox joins in.
+  defp join_in(conversation, user) do
+    if not participant?(conversation, user), do: insert_participant(conversation, user)
   end
 
   defp insert_participant(conversation, user),
@@ -256,6 +305,31 @@ defmodule FirestormWeb.Messages do
   end
 
   def participant?(_conversation, nil), do: false
+
+  @doc """
+  Whether `user` may read and reply to the conversation: a participant,
+  or a member of the group it was sent to.
+  """
+  def reader?(%Conversation{role_id: role_id} = conversation, %User{} = user) do
+    participant?(conversation, user) or
+      (role_id != nil and
+         Repo.exists?(
+           from(m in RoleMembership, where: m.role_id == ^role_id and m.user_id == ^user.id)
+         ))
+  end
+
+  def reader?(_conversation, nil), do: false
+
+  @doc "The conversations sent to the group, most recently active first (paginated)."
+  def group_inbox(%{id: role_id}, page) do
+    Conversation
+    |> where([c], c.role_id == ^role_id)
+    |> order_by([c], desc: c.last_message_at, desc: c.id)
+    |> preload(
+      participants: ^from(p in ConversationParticipant, where: is_nil(p.left_at), preload: :user)
+    )
+    |> Repo.paginate(page: page)
+  end
 
   defp active_participant_ids(%Conversation{id: id}) do
     ConversationParticipant

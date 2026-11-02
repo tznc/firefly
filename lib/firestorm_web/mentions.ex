@@ -11,6 +11,10 @@ defmodule FirestormWeb.Mentions do
   Mentions inside block quotes are linked but don't notify: quoting a post
   shouldn't ping everyone that post mentioned.
 
+  An `@name` that names no user but a group links to the group's page (if
+  the viewer may see it); who it notifies is up to
+  `FirestormWeb.Groups.notify_mentions/5`.
+
   Names are looked up in the database, so a page showing many posts resolves
   them once for all of them (`refs/1`) and renders each with those.
   """
@@ -30,8 +34,8 @@ defmodule FirestormWeb.Mentions do
   @doc "How many users a post may mention (the `max_mentions` site setting)."
   def max_mentions, do: FirestormWeb.SiteSettings.get("max_mentions")
 
-  @typedoc "Users and categories by the names posts use for them."
-  @type refs :: %{users: map, categories: map}
+  @typedoc "Users, groups and categories by the names posts use for them."
+  @type refs :: %{users: map, categories: map, groups: map}
 
   @doc """
   The usernames a post mentions (as written, unique, in order), leaving out
@@ -90,12 +94,19 @@ defmodule FirestormWeb.Mentions do
   @spec link(MDEx.Document.t(), refs | term) :: MDEx.Document.t()
   def link(document, refs_or_viewer \\ nil)
 
-  def link(%MDEx.Document{} = document, %{users: users, categories: categories}) do
-    if users == %{} and categories == %{} do
+  def link(%MDEx.Document{} = document, %{users: users, categories: categories} = refs) do
+    groups = Map.get(refs, :groups, %{})
+
+    if users == %{} and categories == %{} and groups == %{} do
       document
     else
       # Absolute, so the links also work in notification emails.
-      targets = %{"@" => {users, &Paths.user_url/1}, "#" => {categories, &Paths.category_url/1}}
+      targets = %{
+        "@" => {users, &Paths.user_url/1},
+        "@group" => {groups, &Paths.group_url/1},
+        "#" => {categories, &Paths.category_url/1}
+      }
+
       link_node(document, targets)
     end
   end
@@ -104,8 +115,16 @@ defmodule FirestormWeb.Mentions do
     do: link(document, document |> texts(@unscanned) |> texts_refs(viewer))
 
   defp texts_refs(texts, viewer) do
+    mentioned = names(texts, "@")
+    users = Forums.users_by_username(mentioned)
+
     %{
-      users: texts |> names("@") |> Forums.users_by_username(),
+      users: users,
+      groups:
+        mentioned
+        |> Enum.reject(&Map.has_key?(users, &1))
+        |> FirestormWeb.Groups.by_names()
+        |> Map.filter(fn {_name, group} -> FirestormWeb.Groups.visible?(group, viewer) end),
       categories:
         texts |> names("#") |> Enum.map(&String.downcase/1) |> Forums.categories_by_slug(viewer)
     }
@@ -150,8 +169,19 @@ defmodule FirestormWeb.Mentions do
     key = if sigil == "@", do: name, else: String.downcase(name)
 
     case Map.fetch(found, key) do
-      {:ok, target} -> %MDEx.Link{url: path.(target), nodes: [%MDEx.Text{literal: text}]}
-      :error -> %MDEx.Text{literal: text}
+      {:ok, target} ->
+        %MDEx.Link{url: path.(target), nodes: [%MDEx.Text{literal: text}]}
+
+      :error when sigil == "@" ->
+        {groups, group_path} = targets["@group"]
+
+        case Map.fetch(groups, String.downcase(name)) do
+          {:ok, group} -> %MDEx.Link{url: group_path.(group), nodes: [%MDEx.Text{literal: text}]}
+          :error -> %MDEx.Text{literal: text}
+        end
+
+      :error ->
+        %MDEx.Text{literal: text}
     end
   end
 
