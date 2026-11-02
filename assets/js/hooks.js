@@ -513,4 +513,36 @@ const SecurityKeyRegister = {
   },
 }
 
-export default {ComposerButtons, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}
+// Logging in with a passkey: the button asks the browser for one; with
+// data-conditional="true" the browser also offers passkeys in the username
+// field's autofill, where it can. Each attempt gets a fresh challenge from
+// data-challenge-url (kept in the session), and the answer is posted with
+// the hook's form.
+const PasskeyLogin = {
+  mounted() {
+    if (!window.PublicKeyCredential) { this.el.hidden = true; return }
+    this.el.addEventListener("click", () => this.start(undefined))
+    const conditional = PublicKeyCredential.isConditionalMediationAvailable
+    if (this.el.dataset.conditional === "true" && conditional) {
+      conditional.call(PublicKeyCredential).then(available => available && this.start("conditional"))
+    }
+  },
+  destroyed() { if (this.abort) { this.abort.abort() } },
+  async start(mediation) {
+    if (this.abort) { this.abort.abort() }
+    const abort = this.abort = new AbortController()
+    try {
+      const response = await fetch(this.el.dataset.challengeUrl, {credentials: "same-origin"})
+      if (!response.ok) { return }
+      const options = await response.json()
+      const credential = await navigator.credentials.get({publicKey: requestOptions(options), mediation, signal: abort.signal})
+      const params = assertionParams(credential)
+      this.el.form.querySelectorAll("input[data-field]").forEach(input => { input.value = params[input.dataset.field] })
+      this.el.form.submit()
+    } catch (_error) {
+      // Cancelled, or replaced by a newer attempt: nothing to do.
+    }
+  },
+}
+
+export default {ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

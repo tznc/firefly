@@ -33,7 +33,7 @@ defmodule FirestormWeb.TwoFactor do
   @doc "Whether `user` has two-factor on (an authenticator app or a security key)."
   def enabled?(%User{id: id}) do
     Repo.exists?(from(t in Totp, where: t.user_id == ^id)) or
-      Repo.exists?(from(c in Credential, where: c.user_id == ^id))
+      Repo.exists?(from(c in Credential, where: c.user_id == ^id and not c.passkey))
   end
 
   @doc "Whether `user` has an authenticator app set up."
@@ -229,9 +229,9 @@ defmodule FirestormWeb.TwoFactor do
 
   ## Security keys
 
-  @doc "`user`'s security keys, oldest first."
+  @doc "`user`'s security keys (not passkeys, see `FirestormWeb.Passkeys`), oldest first."
   def credentials(%User{id: id}) do
-    Repo.all(from(c in Credential, where: c.user_id == ^id, order_by: c.id))
+    Repo.all(from(c in Credential, where: c.user_id == ^id and not c.passkey, order_by: c.id))
   end
 
   @doc "Saves a registered security key (attrs from `FirestormWeb.WebAuthn.register/2`) as `name`."
@@ -252,7 +252,7 @@ defmodule FirestormWeb.TwoFactor do
 
   @doc "Renames one of `user`'s security keys."
   def rename_credential(%User{} = user, id, name) do
-    case Repo.get_by(Credential, id: id, user_id: user.id) do
+    case Repo.get_by(Credential, id: id, user_id: user.id, passkey: false) do
       nil -> {:error, :not_found}
       credential -> credential |> Credential.name_changeset(%{name: name}) |> Repo.update()
     end
@@ -261,7 +261,10 @@ defmodule FirestormWeb.TwoFactor do
   @doc "Removes one of `user`'s security keys, confirmed like `disable_totp/2`."
   def delete_credential(%User{} = user, id, confirmation) do
     with :ok <- confirm(user, confirmation) do
-      Repo.delete_all(from(c in Credential, where: c.id == ^id and c.user_id == ^user.id))
+      Repo.delete_all(
+        from(c in Credential, where: c.id == ^id and c.user_id == ^user.id and not c.passkey)
+      )
+
       unless enabled?(user), do: delete_backup_codes(user)
       :ok
     end
@@ -272,8 +275,11 @@ defmodule FirestormWeb.TwoFactor do
   @doc "Turns off every second factor of `user`, as `admin` (staff-logged)."
   def reset(%User{} = user, %User{} = admin) do
     Repo.transact(fn ->
-      for schema <- [Totp, BackupCode, Credential],
+      for schema <- [Totp, BackupCode],
           do: Repo.delete_all(from(r in schema, where: r.user_id == ^user.id))
+
+      # Passkeys stay: they're a way in of their own, not a second factor.
+      Repo.delete_all(from(c in Credential, where: c.user_id == ^user.id and not c.passkey))
 
       StaffLog.record(admin, "user.reset_two_factor", user, %{username: user.username})
       {:ok, user}

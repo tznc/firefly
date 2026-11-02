@@ -1,6 +1,7 @@
 defmodule FirestormWeb.WebAuthn do
   @moduledoc """
-  WebAuthn plumbing (on the `wax_` library) for security keys: making the
+  WebAuthn plumbing (on the `wax_` library) for security keys (see
+  `FirestormWeb.TwoFactor`) and passkeys (`FirestormWeb.Passkeys`): making the
   options the browser's `navigator.credentials.create/get` take, and
   checking what the authenticator answers.
 
@@ -39,9 +40,16 @@ defmodule FirestormWeb.WebAuthn do
   @doc """
   A registration challenge, and the options for
   `navigator.credentials.create` (as JSON-ready maps) to register a new
-  credential for `user` (`existing` credentials are excluded).
+  credential for `user` (`existing` credentials are excluded). A passkey
+  (`passkey: true`) must be discoverable (stored on the authenticator,
+  found without a username) and verify the user (PIN, biometrics); a
+  security key needn't be either.
   """
-  def registration(%User{} = user, existing, user_verification \\ "discouraged") do
+  def registration(%User{} = user, existing, opts \\ []) do
+    passkey? = Keyword.get(opts, :passkey, false)
+    user_verification = if passkey?, do: "required", else: "discouraged"
+    resident_key = if passkey?, do: "required", else: "discouraged"
+
     challenge =
       Wax.new_registration_challenge([attestation: "none"] ++ base_opts(user_verification))
 
@@ -54,7 +62,11 @@ defmodule FirestormWeb.WebAuthn do
       attestation: "none",
       excludeCredentials:
         Enum.map(existing, &%{type: "public-key", id: encode(&1.credential_id)}),
-      authenticatorSelection: %{userVerification: user_verification}
+      authenticatorSelection: %{
+        residentKey: resident_key,
+        requireResidentKey: passkey?,
+        userVerification: user_verification
+      }
     }
 
     {challenge, options}

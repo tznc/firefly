@@ -11,6 +11,7 @@ defmodule FirestormWeb.RateLimit do
     * `:post` - new threads and posts per user (web, API and email). Its
       count per minute is the `posts_per_minute` site setting, which
       defaults to the configured count.
+    * `:magic_link` - email login link requests, per client IP and per address
     * `:two_factor` - second-factor attempts (codes, security keys) per user
     * `:email` - account emails (confirmation, password reset) per user
     * `:password_reset` - password reset requests per client IP
@@ -41,6 +42,7 @@ defmodule FirestormWeb.RateLimit do
     export: {3, :timer.hours(1)},
     email: {3, :timer.hours(1)},
     two_factor: {6, :timer.minutes(5)},
+    magic_link: {10, :timer.hours(1)},
     password_reset: {10, :timer.hours(1)},
     search: {60, :timer.minutes(1)},
     flag: {20, :timer.hours(1)},

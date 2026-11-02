@@ -12,6 +12,8 @@ defmodule FirestormWeb.Web.Paths do
 
   def password_reset_url(token), do: url(~p"/reset-password/#{token}")
 
+  def magic_link_url(token), do: url(~p"/login/email/#{token}")
+
   def notification_settings_url, do: url(~p"/settings/notifications")
 
   def user_url(user), do: url(~p"/users/#{user.id}")

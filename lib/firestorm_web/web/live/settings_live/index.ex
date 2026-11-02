@@ -15,7 +15,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       (see `FirestormWeb.Ignores`), to add or remove
     * Logins (`/settings/logins`): connecting and disconnecting social
       login accounts (see `FirestormWeb.Auth`)
-    * Security (`/settings/security`): two-factor authentication (see
+    * Security (`/settings/security`): passkeys (see `FirestormWeb.Passkeys`),
+      and two-factor authentication (see
       `FirestormWeb.TwoFactor`): an authenticator app, security keys
       (registered through the `SecurityKeyRegister` hook) and backup codes
     * Account: downloading your data and deleting your account (both handled
@@ -30,6 +31,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
     EmailConfirmation,
     Forums,
     Ignores,
+    Passkeys,
     Posting,
     RateLimit,
     TwoFactor,
@@ -80,6 +82,7 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
         image_labels: @image_labels,
         totp_secret: nil,
         key_challenge: nil,
+        passkey_challenge: nil,
         new_backup_codes: []
       )
 
@@ -148,7 +151,8 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
       two_factor?: TwoFactor.enabled?(user),
       totp?: TwoFactor.totp?(user),
       credentials: TwoFactor.credentials(user),
-      backup_codes_left: TwoFactor.backup_codes_left(user)
+      backup_codes_left: TwoFactor.backup_codes_left(user),
+      passkeys: Passkeys.list(user)
     )
   end
 
@@ -326,6 +330,50 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
 
   def handle_event("security_key_error", _params, socket),
     do: {:noreply, put_flash(socket, :error, "The browser didn't create a security key.")}
+
+  def handle_event("passkey_options", _params, socket) do
+    {challenge, options} = Passkeys.registration(socket.assigns.current_user)
+    {:reply, %{options: options}, assign(socket, :passkey_challenge, challenge)}
+  end
+
+  def handle_event("passkey_register", params, %{assigns: %{passkey_challenge: %{}}} = socket) do
+    %{current_user: user, passkey_challenge: challenge} = socket.assigns
+    socket = assign(socket, :passkey_challenge, nil)
+
+    with true <- Passkeys.enabled?() || {:error, :disabled},
+         {:ok, attrs} <- WebAuthn.register(challenge, params),
+         {:ok, _passkey} <- Passkeys.add(user, attrs, params["name"]) do
+      {:noreply, socket |> assign_forms() |> put_flash(:info, "Passkey added.")}
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, put_flash(socket, :error, changeset_message(changeset))}
+
+      {:error, _reason} ->
+        {:noreply, put_flash(socket, :error, "That passkey couldn't be added.")}
+    end
+  end
+
+  def handle_event("passkey_register", _params, socket), do: {:noreply, socket}
+
+  def handle_event("rename_passkey", %{"key_id" => id, "name" => name}, socket) do
+    case Passkeys.rename(socket.assigns.current_user, id, name) do
+      {:ok, _passkey} ->
+        {:noreply, socket |> assign_forms() |> put_flash(:info, "Renamed.")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, put_flash(socket, :error, changeset_message(changeset))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Passkeys.message(reason))}
+    end
+  end
+
+  def handle_event("delete_passkey", %{"key_id" => id}, socket) do
+    case Passkeys.delete(socket.assigns.current_user, id) do
+      :ok -> {:noreply, socket |> assign_forms() |> put_flash(:info, "Passkey removed.")}
+      {:error, reason} -> {:noreply, put_flash(socket, :error, Passkeys.message(reason))}
+    end
+  end
 
   def handle_event("rename_key", %{"key_id" => id, "name" => name}, socket) do
     case TwoFactor.rename_credential(socket.assigns.current_user, id, name) do
@@ -720,6 +768,54 @@ defmodule FirestormWeb.Web.SettingsLive.Index do
           Two-factor authentication is <strong>{if @two_factor?, do: "on", else: "off"}</strong>.
           With it on, logging in also asks for a code from your authenticator app or one of your security keys.
         </p>
+
+        <section :if={Passkeys.enabled?()} class="card border border-base-300 bg-base-100" id="passkeys">
+          <div class="card-body gap-3">
+            <h2 class="card-title text-base">Passkeys</h2>
+            <p class="text-sm text-base-content/70">
+              Log in with your fingerprint, face or device PIN instead of a password. A passkey login needs no second factor.
+            </p>
+            <ul class="list rounded-box border border-base-300">
+              <li :if={@passkeys == []} class="list-row text-base-content/60">No passkeys.</li>
+              <li :for={passkey <- @passkeys} id={"passkey-#{passkey.id}"} class="list-row items-end">
+                <.form
+                  for={%{}}
+                  id={"rename-passkey-#{passkey.id}"}
+                  phx-submit="rename_passkey"
+                  class="list-col-grow flex items-end gap-2"
+                >
+                  <input type="hidden" name="key_id" value={passkey.id} />
+                  <.input name="name" value={passkey.name} label="Name" />
+                  <button class="btn btn-ghost btn-sm mb-2">Rename</button>
+                </.form>
+                <button
+                  type="button"
+                  phx-click="delete_passkey"
+                  phx-value-key_id={passkey.id}
+                  data-confirm={"Remove the passkey #{passkey.name}?"}
+                  class="btn btn-ghost btn-sm mb-2"
+                  aria-label={"Remove passkey #{passkey.name}"}
+                >
+                  Remove
+                </button>
+              </li>
+            </ul>
+            <div class="flex items-end gap-2">
+              <.input id="new-passkey-name" name="new_passkey_name" value="" label="New passkey's name" />
+              <button
+                type="button"
+                id="add-passkey"
+                phx-hook="SecurityKeyRegister"
+                data-options-event="passkey_options"
+                data-register-event="passkey_register"
+                data-name-input="new-passkey-name"
+                class="btn btn-sm mb-2"
+              >
+                <.icon name="hero-finger-print" class="size-4" /> Add a passkey
+              </button>
+            </div>
+          </div>
+        </section>
 
         <section class="card border border-base-300 bg-base-100" id="authenticator-app">
           <div class="card-body gap-3">

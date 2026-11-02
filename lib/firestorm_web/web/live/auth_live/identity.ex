@@ -2,7 +2,8 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
   @moduledoc """
   Username and password login. On submit the form posts to the Ueberauth
   identity callback, which writes the session. New accounts register at
-  `/register`.
+  `/register`. Passkeys work here too, also through the browser's autofill
+  on the username field (see `AuthLive.Login.passkey_form/1`).
   """
   use FirestormWeb.Web, :live_view
 
@@ -14,6 +15,8 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
      socket
      |> assign(:page_title, "Log In")
      |> assign(:trigger_submit, false)
+     |> assign(:passkeys, FirestormWeb.Passkeys.enabled?())
+     |> assign(:magic_links, FirestormWeb.MagicLinks.enabled?())
      |> assign(:form, to_form(%{"username" => "", "password" => ""}, as: :user))}
   end
 
@@ -58,7 +61,12 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
           phx-trigger-action={@trigger_submit}
           class="space-y-2"
         >
-          <.input field={@form[:username]} type="text" label="Username" autocomplete="username" />
+          <.input
+            field={@form[:username]}
+            type="text"
+            label="Username"
+            autocomplete={if @passkeys, do: "username webauthn", else: "username"}
+          />
           <.input
             field={@form[:password]}
             type="password"
@@ -68,8 +76,13 @@ defmodule FirestormWeb.Web.AuthLive.Identity do
           <.button variant="primary" class="btn btn-primary w-full">Log in</.button>
           <p class="text-center text-sm">
             <.link navigate={~p"/reset-password"} class="link">Forgot your password?</.link>
+            <span :if={@magic_links}>
+              · <.link navigate={~p"/login/email"} class="link">Email me a login link</.link>
+            </span>
           </p>
         </.form>
+        <div :if={@passkeys} class="divider text-xs">or</div>
+        <FirestormWeb.Web.AuthLive.Login.passkey_form :if={@passkeys} conditional />
       </section>
     </Layouts.app>
     """

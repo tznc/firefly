@@ -1,6 +1,7 @@
 defmodule FirestormWeb.TwoFactor.Credential do
   @moduledoc """
-  A WebAuthn credential (a security key; see `FirestormWeb.WebAuthn`): the
+  A WebAuthn credential (a security key or a passkey; see
+  `FirestormWeb.WebAuthn`): the
   authenticator's credential id, its public key (a COSE key, stored as an
   Erlang term), the signature counter it last reported and the name its
   owner gave it.
@@ -14,6 +15,8 @@ defmodule FirestormWeb.TwoFactor.Credential do
     field(:public_key, :binary, redact: true)
     field(:sign_count, :integer, default: 0)
     field(:name, :string)
+    # A discoverable credential that logs in on its own (see FirestormWeb.Passkeys).
+    field(:passkey, :boolean, default: false)
     field(:last_used_at, :utc_datetime)
     belongs_to(:user, FirestormWeb.Forums.User)
 
