@@ -12,12 +12,18 @@ defmodule FirestormWeb.Plugin.Runner do
   `FirestormWeb.Plugin.Sandboxed.Runtime`) or `:crash` (a core plugin
   raised or exited). Failures go to the plugin's error log and statistics
   and count towards its circuit breaker (see `FirestormWeb.Plugins.Health`).
+
+  The call's process knows which hook it runs for (`context/0`), so host
+  functions can depend on it (see `FirestormWeb.Plugin.Host`). An export
+  called from another plugin's hook (`plugins.call`) runs in its caller's
+  context, so a chain of calls is judged by the hook it started from.
   """
 
   alias FirestormWeb.Plugin
   alias FirestormWeb.Plugins.Health
 
   @default_timeout 2_000
+  @context_key :firefly_plugin_context
 
   @doc "The time limit when a call doesn't give one, in milliseconds."
   def default_timeout,
@@ -41,11 +47,22 @@ defmodule FirestormWeb.Plugin.Runner do
     end
   end
 
+  @doc """
+  The hook the current process runs a plugin call for (`"call_export"` for
+  an export called from Elixir rather than from a hook), or nil outside one.
+  """
+  def context, do: Process.get(@context_key)
+
+  @doc "Makes the current process run in `context` (see `context/0`)."
+  def put_context(context), do: Process.put(@context_key, context)
+
   defp run(plugin, hook, name, args, timeout) do
     started = System.monotonic_time(:microsecond)
+    context = if hook == "call_export", do: context() || hook, else: hook
 
     task =
       Task.Supervisor.async_nolink(FirestormWeb.Plugin.TaskSupervisor, fn ->
+        put_context(context)
         Process.put(:firefly_plugin_timeout, timeout)
         apply(plugin.module, name, [plugin | args])
       end)

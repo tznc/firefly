@@ -43,7 +43,9 @@ defmodule FirestormWeb.Web.PluginsLiveTest do
       |> upload("Bundle", write_zip(zip))
       |> click_button("Upload")
       |> assert_has("#plugin-preview h2", text: "Install Hello 1.0.0")
-      |> assert_has("#preview-permissions", text: "Read public posts, threads and user profiles")
+      |> assert_has("#preview-permissions",
+        text: "Can read public posts, threads and member profiles"
+      )
       |> click_button("#install-plugin", "Install")
       |> assert_has("#plugin-hello", text: "disabled")
       |> assert_has("#plugin-hello", text: "base ~> 1.0: inactive")
@@ -70,6 +72,65 @@ defmodule FirestormWeb.Web.PluginsLiveTest do
       text: "It needs plugin gone ~> 1.0, which isn't installed."
     )
     |> assert_has("#install-plugin[disabled]")
+  end
+
+  test "network access is named in plain words, and an upgrade highlights what's new", %{
+    conn: conn,
+    admin: admin
+  } do
+    install_plugin!(admin, %{
+      "id" => "hook",
+      "name" => "Hook",
+      "permissions" => ["http"],
+      "http_hosts" => ["api.example.com"]
+    })
+
+    conn
+    |> visit(~p"/staff/plugins/hook")
+    |> assert_has("#plugin-permissions", text: "Can send forum content to: api.example.com")
+
+    zip =
+      bundle_zip(%{
+        "id" => "hook",
+        "name" => "Hook",
+        "version" => "1.1.0",
+        "permissions" => ["http", "notify"],
+        "http_hosts" => ["api.example.com", "hooks.slack.com"]
+      })
+
+    conn
+    |> visit(~p"/staff/plugins")
+    |> upload("Bundle", write_zip(zip))
+    |> click_button("Upload")
+    |> assert_has("#plugin-preview h2", text: "Upgrade Hook 1.1.0")
+    |> assert_has("#preview-more-access", text: "asks for more than version 1.0.0")
+    |> assert_has("#preview-permissions-http",
+      text: "Can send forum content to: api.example.com, hooks.slack.com"
+    )
+    |> assert_has("#preview-permissions-http .badge-warning", text: "new: hooks.slack.com")
+    |> refute_has("#preview-permissions-http .badge-warning", text: "api.example.com")
+    |> assert_has("#preview-permissions-notify .badge", text: "new")
+    |> assert_has("#preview-permissions-notify", text: "Can send members notifications")
+  end
+
+  test "an upgrade asking for nothing more isn't flagged", %{conn: conn, admin: admin} do
+    install_plugin!(admin, %{"id" => "same", "name" => "Same", "permissions" => ["read"]})
+
+    zip =
+      bundle_zip(%{
+        "id" => "same",
+        "name" => "Same",
+        "version" => "1.0.1",
+        "permissions" => ["read"]
+      })
+
+    conn
+    |> visit(~p"/staff/plugins")
+    |> upload("Bundle", write_zip(zip))
+    |> click_button("Upload")
+    |> assert_has("#plugin-preview h2", text: "Upgrade Same 1.0.1")
+    |> refute_has("#preview-more-access")
+    |> refute_has("#preview-permissions .badge")
   end
 
   test "a malformed bundle says what's wrong", %{conn: conn} do
@@ -137,7 +198,7 @@ defmodule FirestormWeb.Web.PluginsLiveTest do
 
     conn
     |> visit(~p"/staff/plugins/#{id}")
-    |> assert_has("#plugin-permissions", text: "read")
+    |> assert_has("#plugin-permissions", text: "Can read public posts")
     |> assert_has("#plugin-errors", text: "it broke")
     |> fill_in("Times", with: "0")
     |> click_button("Save settings")
