@@ -545,4 +545,57 @@ const PasskeyLogin = {
   },
 }
 
-export default {ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}
+// Browser push notifications (Settings > Notifications): reports whether this
+// browser is subscribed (`push_state`), and turns pushes on or off for it
+// from the buttons inside (data-push="on"/"off"), with the site's VAPID key
+// from data-public-key. The service worker (/service-worker.js) shows them.
+const base64UrlBytes = text => {
+  const padded = (text + "=".repeat((4 - text.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")
+  return Uint8Array.from(atob(padded), c => c.charCodeAt(0))
+}
+
+const PushNotifications = {
+  async mounted() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      this.pushEvent("push_state", {state: "unsupported"})
+      return
+    }
+    this.el.addEventListener("click", event => {
+      const button = event.target.closest("[data-push]")
+      if (button) { button.dataset.push === "on" ? this.subscribe() : this.unsubscribe() }
+    })
+    const registration = await navigator.serviceWorker.register("/service-worker.js")
+    const subscription = await registration.pushManager.getSubscription()
+    this.report(subscription)
+  },
+  report(subscription) {
+    const denied = window.Notification && Notification.permission === "denied"
+    const state = subscription ? "on" : (denied ? "denied" : "off")
+    this.pushEvent("push_state", {state, endpoint: subscription && subscription.endpoint})
+  },
+  async subscribe() {
+    try {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64UrlBytes(this.el.dataset.publicKey),
+      })
+      this.pushEvent("push_subscribe", {subscription: subscription.toJSON(), user_agent: navigator.userAgent})
+      this.report(subscription)
+    } catch (_error) {
+      // Permission refused or no push service: say so.
+      this.report(null)
+    }
+  },
+  async unsubscribe() {
+    const registration = await navigator.serviceWorker.ready
+    const subscription = await registration.pushManager.getSubscription()
+    if (subscription) {
+      this.pushEvent("push_unsubscribe", {endpoint: subscription.endpoint})
+      await subscription.unsubscribe()
+    }
+    this.report(null)
+  },
+}
+
+export default {PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

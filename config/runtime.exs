@@ -73,6 +73,13 @@ if config_env() != :test do
   config :firestorm_web, FirestormWeb.Auth,
     sso_only: System.get_env("FIREFLY_SSO_ONLY") in ~w(true 1)
 
+  # Browser push notifications (FirestormWeb.WebPush): off unless all three
+  # are set. `mix firefly.gen.vapid_keys` makes a key pair.
+  config :firestorm_web, FirestormWeb.WebPush,
+    public_key: System.get_env("FIREFLY_VAPID_PUBLIC_KEY"),
+    private_key: System.get_env("FIREFLY_VAPID_PRIVATE_KEY"),
+    subject: System.get_env("FIREFLY_VAPID_SUBJECT")
+
   # Configuration for AWS integration
   config :firestorm_web, :aws,
     access_key_id: System.get_env("FIREFLY_AWS_ACCESS_KEY_ID"),

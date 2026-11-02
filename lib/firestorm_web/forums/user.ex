@@ -48,6 +48,8 @@ defmodule FirestormWeb.Forums.User do
     # they last got one (see FirestormWeb.Digests).
     field(:digest_frequency, :string)
     field(:last_digest_at, :utc_datetime)
+    # Browser pushes only while they're away (see FirestormWeb.WebPush).
+    field(:push_only_when_away, :boolean, default: true)
     # The badge shown as their title, if it allows that (see FirestormWeb.Badges).
     belongs_to(:title_badge, FirestormWeb.Forums.Badge)
     # The plugin this account acts for (see FirestormWeb.Plugins.Bots), if any.
@@ -103,7 +105,8 @@ defmodule FirestormWeb.Forums.User do
       :hide_profile_activity,
       :hide_from_directory,
       :hide_profile,
-      :digest_frequency
+      :digest_frequency,
+      :push_only_when_away
     ])
     |> validate_required([:theme, :reply_level, :new_thread_level])
     |> validate_inclusion(:theme, themes())
