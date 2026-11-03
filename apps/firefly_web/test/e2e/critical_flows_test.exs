@@ -157,6 +157,8 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     |> log_in("bob")
     |> visit(thread_path)
     |> assert_has("#post-#{post.id}-body", text: "Supervisors restart")
+    # The quote button's hook reads the selection: wait until it's mounted.
+    |> assert_has("[data-phx-main].phx-connected")
     |> PhoenixTest.Playwright.evaluate("""
     (() => {
       const text = document.querySelector("#post-#{post.id}-body p").firstChild
