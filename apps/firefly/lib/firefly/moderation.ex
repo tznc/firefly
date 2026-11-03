@@ -11,7 +11,9 @@ defmodule Firefly.Moderation do
     * `Firefly.Moderation.StaffLog` - the audit trail of staff actions
     * `Firefly.Moderation.TopicTimers` and `TopicTools` - timed thread
       changes, and moving posts between threads
-    * the schemas `Flag`, `StaffAction` and `ThreadTimer`
+    * `Firefly.Moderation.WatchedWords` - words that block, censor, queue,
+      flag, replace, tag, silence or link
+    * the schemas `Flag`, `StaffAction`, `ThreadTimer` and `WatchedWord`
 
   Its other modules (`SpamGuard`) are internal.
   """
@@ -29,6 +31,8 @@ defmodule Firefly.Moderation do
       TopicTools,
       Flag,
       ThreadTimer,
-      SpamGuard
+      SpamGuard,
+      WatchedWords,
+      WatchedWord
     ]
 end

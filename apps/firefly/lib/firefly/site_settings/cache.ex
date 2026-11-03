@@ -1,9 +1,10 @@
 defmodule Firefly.SiteSettings.Cache do
   @moduledoc """
   Clears this node's cached site settings when another node changes them,
-  and reloads custom emoji (loaded here at start too) when another node
-  changes those: `Firefly.SiteSettings` and `Firefly.Rendering.Emoji`
-  broadcast on the site settings PubSub topic.
+  and reloads custom emoji and watched words (both loaded here at start
+  too) when another node changes them: `Firefly.SiteSettings`,
+  `Firefly.Rendering.Emoji` and `Firefly.Moderation.WatchedWords` broadcast
+  on the site settings PubSub topic.
   """
   use GenServer
   require Logger
@@ -16,6 +17,7 @@ defmodule Firefly.SiteSettings.Cache do
   def init(nil) do
     :ok = Phoenix.PubSub.subscribe(Firefly.PubSub, SiteSettings.topic())
     load_emoji()
+    load_watched_words()
     {:ok, nil}
   end
 
@@ -31,11 +33,23 @@ defmodule Firefly.SiteSettings.Cache do
     {:noreply, state}
   end
 
+  def handle_info({:watched_words_changed, from}, state) do
+    if from != node(), do: Firefly.Moderation.WatchedWords.reload()
+    {:noreply, state}
+  end
+
   # Without the database (yet), the first render loads them instead.
   defp load_emoji do
     Firefly.Rendering.Emoji.reload()
   rescue
     error in [DBConnection.ConnectionError, Postgrex.Error] ->
       Logger.warning("Custom emoji not loaded: " <> Exception.message(error))
+  end
+
+  defp load_watched_words do
+    Firefly.Moderation.WatchedWords.reload()
+  rescue
+    error in [DBConnection.ConnectionError, Postgrex.Error] ->
+      Logger.warning("Watched words not loaded: " <> Exception.message(error))
   end
 end

@@ -38,6 +38,9 @@ defmodule Firefly.Rendering.Markdown do
   Custom emoji (see `Firefly.Rendering.Emoji`) written `:name:` become
   `<img class="emoji">` (not in code).
 
+  Watched words (see `Firefly.Moderation.WatchedWords`) are replaced,
+  censored and linked in text (not in code).
+
   Raw HTML is allowed in the input, but the output is always run through an
   allow-list sanitizer (`sanitize_options/0`: MDEx's defaults plus only what
   the steps above need: the `emoji` class on images, `data-math-style`
@@ -52,6 +55,7 @@ defmodule Firefly.Rendering.Markdown do
 
   alias Firefly.SiteSettings
   alias Firefly.Discussion.Mentions
+  alias Firefly.Moderation.WatchedWords
   alias Firefly.Rendering.{BBCode, Emoji}
 
   @sanitize MDEx.Document.default_sanitize_options()
@@ -114,6 +118,7 @@ defmodule Firefly.Rendering.Markdown do
     |> spoilers(spoilers?)
     |> Mentions.parse()
     |> Mentions.link(refs_or_viewer)
+    |> watched_words(WatchedWords.matchers())
     |> custom_emoji(Emoji.custom())
     |> footnotes(opts[:post])
     |> MDEx.to_html!(options)
@@ -126,6 +131,30 @@ defmodule Firefly.Rendering.Markdown do
       ~s(<blockquote class="quote">\n<p class="quote-attribution">\\1</p>)
     )
   end
+
+  # Only replace, censor and link words change how text renders.
+  defp watched_words(document, matchers) do
+    if Enum.any?(~w(replace censor link), &Map.has_key?(matchers, &1)),
+      do: watched_in(document, true, matchers),
+      else: document
+  end
+
+  # No links inside links (or image descriptions).
+  defp watched_in(%{nodes: nodes} = node, links?, matchers) do
+    links? = links? and not is_struct(node, MDEx.Link) and not is_struct(node, MDEx.Image)
+    %{node | nodes: Enum.flat_map(nodes, &watched_nodes(&1, links?, matchers))}
+  end
+
+  defp watched_in(node, _links?, _matchers), do: node
+
+  defp watched_nodes(%MDEx.Text{literal: text}, links?, matchers) do
+    Enum.map(WatchedWords.render_text(text, links?, matchers), fn
+      {:text, text} -> %MDEx.Text{literal: text}
+      {:link, text, url} -> %MDEx.Link{url: url, title: "", nodes: [%MDEx.Text{literal: text}]}
+    end)
+  end
+
+  defp watched_nodes(node, links?, matchers), do: [watched_in(node, links?, matchers)]
 
   @emoji_name ~r/:([a-z0-9_]{2,32}):/
 

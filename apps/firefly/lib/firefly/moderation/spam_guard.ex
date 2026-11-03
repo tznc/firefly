@@ -9,13 +9,15 @@ defmodule Firefly.Moderation.SpamGuard do
 
   Every post, whoever writes it, may mention at most
   `Firefly.Discussion.Mentions.max_mentions/0` users, so mentions can't be used to
-  ping crowds.
+  ping crowds, and is checked for watched words (see
+  `Firefly.Moderation.WatchedWords.validate/3`; `opts` are passed on).
   """
   import Ecto.Changeset
 
   alias Firefly.{SiteSettings, TrustLevels}
   alias Firefly.Discussion.Mentions
   alias Firefly.Accounts.User
+  alias Firefly.Moderation.WatchedWords
 
   @link_regex ~r{\bhttps?://|\bwww\.}i
   @image_regex ~r{!\[[^\]]*\]\(|<img\b}i
@@ -23,16 +25,19 @@ defmodule Firefly.Moderation.SpamGuard do
   @attachment_regex ~r{(?<!!)\[[^\]]*\]\([^)\s]*/uploads/}
 
   @doc "Adds body errors when a post breaks a limit that applies to its author."
-  def validate_post(%Ecto.Changeset{} = changeset, %User{} = user) do
-    if TrustLevels.new_user?(user) do
-      max_mentions = min(SiteSettings.get("new_user_max_mentions"), Mentions.max_mentions())
+  def validate_post(%Ecto.Changeset{} = changeset, %User{} = user, opts \\ []) do
+    changeset =
+      if TrustLevels.new_user?(user) do
+        max_mentions = min(SiteSettings.get("new_user_max_mentions"), Mentions.max_mentions())
 
-      changeset
-      |> Mentions.validate_count(max_mentions)
-      |> validate_change(:body, &new_user_limits/2)
-    else
-      Mentions.validate_count(changeset, Mentions.max_mentions())
-    end
+        changeset
+        |> Mentions.validate_count(max_mentions)
+        |> validate_change(:body, &new_user_limits/2)
+      else
+        Mentions.validate_count(changeset, Mentions.max_mentions())
+      end
+
+    WatchedWords.validate(changeset, user, opts)
   end
 
   defp new_user_limits(:body, body) do

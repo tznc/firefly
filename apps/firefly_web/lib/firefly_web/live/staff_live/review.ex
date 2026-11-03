@@ -101,7 +101,10 @@ defmodule FireflyWeb.StaffLive.Review do
             <ul class="space-y-1 text-sm">
               <li :for={flag <- post.flags} class="flag">
                 <.icon name="hero-flag" class="size-4 text-warning" />
-                <.link navigate={~p"/users/#{flag.user}"} class="font-medium">@{flag.user.username}</.link>:
+                <.link :if={flag.user} navigate={~p"/users/#{flag.user}"} class="font-medium">@{flag.user.username}</.link><span
+                  :if={!flag.user}
+                  class="font-medium"
+                >System</span>:
                 {Flag.reason_label(flag.reason)}<span :if={flag.note}> ({flag.note})</span>
                 · <.time_ago id={"flag-#{flag.id}-at"} at={flag.inserted_at} />
               </li>

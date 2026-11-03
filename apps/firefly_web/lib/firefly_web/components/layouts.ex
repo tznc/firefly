@@ -193,6 +193,13 @@ defmodule FireflyWeb.Layouts do
               <.nav_item path={~p"/staff/badges"} current_path={@current_path} icon="hero-trophy">
                 Badges
               </.nav_item>
+              <.nav_item
+                path={~p"/staff/watched-words"}
+                current_path={@current_path}
+                icon="hero-eye"
+              >
+                Watched words
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>

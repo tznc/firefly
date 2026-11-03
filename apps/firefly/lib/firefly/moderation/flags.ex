@@ -59,6 +59,24 @@ defmodule Firefly.Moderation.Flags do
     end
   end
 
+  @doc """
+  Flags `post` as the system, with no flagging member (e.g. for a watched
+  word, see `Firefly.Moderation.WatchedWords`): `note` says why. Staff
+  review it like any flag; on its own it doesn't hide the post.
+  """
+  def flag_by_system(%Post{} = post, note) do
+    post = Repo.preload(post, [:thread, :user])
+
+    {:ok, flag} =
+      %Flag{post_id: post.id}
+      |> Flag.changeset(%{reason: "other", note: note})
+      |> Repo.insert()
+
+    notify_admins(post, nil)
+    Firefly.Moderation.Review.changed()
+    {:ok, flag}
+  end
+
   # A concurrent flag by the same user (a double submit) loses on the
   # unique index; that's the same as having flagged already.
   defp insert(post, user, attrs) do
@@ -210,7 +228,7 @@ defmodule Firefly.Moderation.Flags do
       post_id: post.id
     }
 
-    for admin <- admins(), admin.id != flagger.id do
+    for admin <- admins(), is_nil(flagger) or admin.id != flagger.id do
       unread =
         Notification
         |> where([n], n.user_id == ^admin.id and n.post_id == ^post.id and n.kind == "flagged")
@@ -230,9 +248,13 @@ defmodule Firefly.Moderation.Flags do
   end
 
   defp flag_line(flag) do
-    "@#{flag.user.username}: #{Flag.reason_label(flag.reason)}" <>
+    "#{flagger_name(flag)}: #{Flag.reason_label(flag.reason)}" <>
       if(flag.note, do: " (#{flag.note})", else: "")
   end
+
+  @doc "Who raised `flag`, for staff: `@username`, or System."
+  def flagger_name(%Flag{user: %User{username: username}}), do: "@" <> username
+  def flagger_name(%Flag{}), do: "System"
 
   defp admins do
     User

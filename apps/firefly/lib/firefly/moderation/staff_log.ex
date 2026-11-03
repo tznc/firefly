@@ -37,6 +37,7 @@ defmodule Firefly.Moderation.StaffLog do
     plugin.auto_disable plugin.suspend plugin.resume plugin.secret
     upload.delete emoji.create emoji.delete
     badge.create badge.update badge.delete badge.grant badge.revoke
+    watched_word.create watched_word.delete
   )
 
   @doc "Every action the log records, in display order."

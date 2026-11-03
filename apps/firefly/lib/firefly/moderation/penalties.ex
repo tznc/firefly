@@ -40,11 +40,12 @@ defmodule Firefly.Moderation.Penalties do
   end
 
   @doc """
-  Silences or suspends (`kind`) `user` as `admin`. `params` (string keys):
-  `"duration"` (see `durations/0`), `"until"` (an ISO date, for `"date"`) and
-  `"reason"` (required).
+  Silences or suspends (`kind`) `user` as `admin`, or as `:system` (an
+  automatic penalty, e.g. for a watched word; logged as the system's).
+  `params` (string keys): `"duration"` (see `durations/0`), `"until"` (an
+  ISO date, for `"date"`) and `"reason"` (required).
   """
-  def penalize(kind, %User{} = user, %User{} = admin, params) when is_map_key(@fields, kind) do
+  def penalize(kind, %User{} = user, admin, params) when is_map_key(@fields, kind) do
     with {:ok, user, announce} <- penalize_unannounced(kind, user, admin, params) do
       announce.()
       {:ok, user}
@@ -57,8 +58,8 @@ defmodule Firefly.Moderation.Penalties do
   For callers running it inside a larger transaction, to announce once that
   commits (an email can't be taken back if the transaction rolls back).
   """
-  def penalize_unannounced(kind, %User{} = user, %User{} = admin, params)
-      when is_map_key(@fields, kind) do
+  def penalize_unannounced(kind, %User{} = user, admin, params)
+      when is_map_key(@fields, kind) and (is_struct(admin, User) or admin == :system) do
     with :ok <- penalizable(user),
          {:ok, until} <- ends_at(params["duration"], params["until"]),
          {:ok, reason} <- reason(params["reason"]) do
@@ -71,7 +72,7 @@ defmodule Firefly.Moderation.Penalties do
             |> Ecto.Changeset.change([{until_field, until}, {reason_field, reason}])
             |> Repo.update()
 
-          StaffLog.record(admin, "user.#{kind}", user, %{
+          log(admin, "user.#{kind}", user, %{
             username: user.username,
             reason: reason,
             ends: ends_text(until)
@@ -108,6 +109,9 @@ defmodule Firefly.Moderation.Penalties do
     reload_pages(user)
     {:ok, user}
   end
+
+  defp log(:system, action, user, details), do: StaffLog.record_system(action, user, details)
+  defp log(admin, action, user, details), do: StaffLog.record(admin, action, user, details)
 
   defp penalizable(user), do: if(Accounts.admin?(user), do: {:error, :admin}, else: :ok)
 

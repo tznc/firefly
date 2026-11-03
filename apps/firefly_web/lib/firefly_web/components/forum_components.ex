@@ -13,6 +13,7 @@ defmodule FireflyWeb.ForumComponents do
   import FireflyWeb.CoreComponents, only: [icon: 1, input: 1]
 
   alias Firefly.Accounts.User
+  alias Firefly.Moderation.WatchedWords
   alias Firefly.Rendering.Markdown
 
   ## Helpers
@@ -239,7 +240,7 @@ defmodule FireflyWeb.ForumComponents do
               navigate={~p"/categories/#{thread.category_id}/threads/#{thread}"}
               class="thread-title font-semibold hover:text-primary"
             >
-              {thread.title}
+              {WatchedWords.censor(thread.title)}
             </.link>
             <span :if={thread.accepted_post_id} class="solved-badge badge badge-sm badge-success">
               <.icon name="hero-check-circle" class="size-3" /> Solved
@@ -444,7 +445,7 @@ defmodule FireflyWeb.ForumComponents do
               navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}"}
               class="font-semibold hover:text-primary"
             >
-              {@thread.title}
+              {WatchedWords.censor(@thread.title)}
             </.link>
             <.link
               :if={!@headline and !@card_target}

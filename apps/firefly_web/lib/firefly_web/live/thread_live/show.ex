@@ -42,7 +42,7 @@ defmodule FireflyWeb.ThreadLive.Show do
   alias Firefly.Discussion
   alias Firefly.Accounts.Ignores
   alias Firefly.Discussion.{Bookmarks, Mentions, Polls}
-  alias Firefly.Moderation.{Flags, Posting}
+  alias Firefly.Moderation.{Flags, Posting, WatchedWords}
   alias Firefly.Rendering.LinkPreviews
   alias Firefly.{RateLimit, Repo}
   alias Firefly.Discussion.Solved
@@ -494,7 +494,10 @@ defmodule FireflyWeb.ThreadLive.Show do
     if user && connected?(socket), do: Discussion.mark_thread_read(user, thread)
 
     socket
-    |> assign(:page_title, "#{thread.title} - #{socket.assigns.category.title}")
+    |> assign(
+      :page_title,
+      "#{WatchedWords.censor(thread.title)} - #{socket.assigns.category.title}"
+    )
     |> assign(:thread, thread)
     |> assign(:first_post, first_post)
     |> assign(:replies, replies)
@@ -620,7 +623,7 @@ defmodule FireflyWeb.ThreadLive.Show do
         <.category_badge category={@category} />
         <h1 class="flex items-center gap-2 text-2xl font-bold tracking-tight">
           <.thread_status thread={@thread} />
-          <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"}>{@thread.title}</.link>
+          <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"}>{WatchedWords.censor(@thread.title)}</.link>
           <span :if={Thread.solved?(@thread)} class="solved-badge badge badge-success">
             <.icon name="hero-check-circle" class="size-4" /> Solved
           </span>
