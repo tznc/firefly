@@ -34,6 +34,36 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # The importers' source databases (see apps/firefly_import's tests
+      # tagged import_mysql, import_mongo and import_redis).
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      # MongoDB 7: 8.0 refuses to start on the runners' Linux 6.19 kernels
+      # (SERVER-121912).
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+        options: >-
+          --health-cmd "mongosh --quiet --eval db.hello"
+          --health-interval 5s
+          --health-timeout 10s
+          --health-retries 20
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v7
@@ -93,8 +123,9 @@ jobs:
         run: npx --prefix apps/firefly_web/assets playwright install chromium --with-deps
 
       # Every app's tests: unit, LiveView (PhoenixTest) and end-to-end browser
-      # (PhoenixTest.Playwright) tests
-      - run: mix test
+      # (PhoenixTest.Playwright) tests, and the importers' against the
+      # source databases above
+      - run: mix test --include import_mysql --include import_mongo --include import_redis
 
   dialyzer:
     name: Dialyzer

@@ -150,6 +150,9 @@ would do. In the Docker image: `bin/firefly eval
 | Source | Reads |
 | --- | --- |
 | `discourse` | its PostgreSQL database (`--source-url`, a running site's or a backup's restored dump) and uploads directory (`--uploads-dir`) |
+| `phpbb` | phpBB 3.x's MySQL/MariaDB database (`--source-url mysql://...`, `--table-prefix`) and `files/` directory (`--files-dir`) |
+| `vbulletin` | vBulletin 4's or 5's MySQL/MariaDB database (`--source-url`, `--table-prefix`), attachments from it or `--attachments-dir` |
+| `nodebb` | NodeBB's MongoDB (`--mongo-url`) or Redis (`--redis-url`) database and `public/uploads` (`--uploads-dir`) |
 
 ### AI
 
@@ -207,6 +210,19 @@ mix precommit              # compile --warnings-as-errors, format, credo, test
 
 Set `FIREFLY_CHROMIUM_PATH` to use an already-installed Chromium, and
 `FIREFLY_PW_TRACE=true` to record Playwright traces.
+
+The phpBB, vBulletin and NodeBB importers' tests read MySQL, MongoDB and
+Redis databases, so they're left out unless included (CI runs them):
+
+```sh
+docker run -d -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root mariadb:11
+docker run -d -p 27017:27017 mongo:7
+docker run -d -p 6379:6379 redis:7
+mix test --include import_mysql --include import_mongo --include import_redis
+```
+
+`FIREFLY_IMPORT_MYSQL_URL`, `FIREFLY_IMPORT_MONGO_URL` and
+`FIREFLY_IMPORT_REDIS_URL` point them elsewhere.
 
 ## Patrons
 

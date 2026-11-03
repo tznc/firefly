@@ -12,10 +12,13 @@ defmodule FireflyImport do
   use Boundary,
     top_level?: true,
     deps: [Firefly, Firefly.Import, Firefly.Rendering],
-    exports: [Source, Pipeline, Markdown, SQL, CLI]
+    exports: [Source, Pipeline, Markdown, SQL, MySQL, CLI]
 
   @sources %{
-    "discourse" => FireflyImport.Sources.Discourse
+    "discourse" => FireflyImport.Sources.Discourse,
+    "nodebb" => FireflyImport.Sources.NodeBB,
+    "phpbb" => FireflyImport.Sources.PhpBB,
+    "vbulletin" => FireflyImport.Sources.VBulletin
   }
 
   @doc "The importers, by name."
