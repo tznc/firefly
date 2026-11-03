@@ -94,7 +94,7 @@ defmodule FireflyWeb.StaffLive.Emoji do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Emoji" navigate={~p"/staff/emoji"}>
         <:subtitle>Custom emoji members can use as <code>:name:</code> in posts.</:subtitle>
       </.page_header>

@@ -68,7 +68,7 @@ defmodule FireflyWeb.StaffLive.Settings do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Site settings" navigate={~p"/staff/settings"}>
         <:subtitle>Changes apply at once and are recorded in the staff log.</:subtitle>
       </.page_header>

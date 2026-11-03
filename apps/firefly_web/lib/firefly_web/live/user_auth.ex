@@ -4,11 +4,15 @@ defmodule FireflyWeb.UserAuth do
 
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
       the unread notification and conversation counts, whether they may
-      chat (`:chat`, for the navigation), for admins the review
+      chat (`:chat`, for the navigation), for staff the review
       queue's count (kept live; views can export `review_changed/1` to react
-      too) and whether a newer Firefly is out, and the current path. It records the user's visit (see
-      `Firefly.Accounts.Visits`) and counts a page view (see
-      `Firefly.Analytics`) once the page connects.
+      too) and whether a newer Firefly is out, the admin impersonating the
+      user (`:impersonator`, see `FireflyWeb.StaffController`), and the
+      current path. It records the user's visit (see
+      `Firefly.Accounts.Visits`) and IP address (see
+      `Firefly.Accounts.UserIPs`), unless an admin is impersonating them,
+      and counts a page view (see `Firefly.Analytics`) once the page
+      connects.
       For a user, it also handles the theme toggle's `"set_theme"` event on
       every page, saving their theme.
       It keeps `:read_only` (see `Firefly.Backups`) live for the banner, and
@@ -32,7 +36,7 @@ defmodule FireflyWeb.UserAuth do
   import Phoenix.LiveView
 
   alias Firefly.{Accounts, Analytics, Backups, Chat, Messaging, Notifications}
-  alias Firefly.Accounts.{User, Visits}
+  alias Firefly.Accounts.{User, UserIPs, Visits}
   alias Firefly.Moderation.{Posting, Review}
   alias FireflyWeb.Session
 
@@ -86,6 +90,7 @@ defmodule FireflyWeb.UserAuth do
   defp mount_current_user(socket, session) do
     socket
     |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
+    |> assign_impersonator(session)
     |> record_visit()
     |> record_client()
     |> count_page_view()
@@ -101,11 +106,28 @@ defmodule FireflyWeb.UserAuth do
     end)
   end
 
-  # Once the page is live, not for the static render before it.
-  defp record_visit(socket) do
-    if connected?(socket), do: Visits.seen(socket.assigns.current_user)
+  # An admin seeing the site as this user (see
+  # FireflyWeb.StaffController), for the banner that ends it.
+  defp assign_impersonator(socket, session) do
+    assign_new(socket, :impersonator, fn ->
+      session["impersonator_id"] && Session.user_from_id(session["impersonator_id"])
+    end)
+  end
+
+  # Once the page is live, not for the static render before it. An admin
+  # impersonating the user isn't the user visiting.
+  defp record_visit(%{assigns: %{impersonator: nil}} = socket) do
+    if connected?(socket) do
+      user = socket.assigns.current_user
+      Visits.seen(user)
+      ip = FireflyWeb.ClientIP.from_socket(socket)
+      if user && ip != "unknown", do: UserIPs.record(user, ip)
+    end
+
     socket
   end
+
+  defp record_visit(socket), do: socket
 
   # Who's on the other end, for the Akismet checks of what this LiveView
   # posts (see Firefly.Moderation.Akismet).
@@ -178,7 +200,7 @@ defmodule FireflyWeb.UserAuth do
 
   defp assign_shortcuts(socket), do: assign(socket, :shortcuts, true)
 
-  defp staff?(%{assigns: %{current_user: %{} = user}}), do: Accounts.admin?(user)
+  defp staff?(%{assigns: %{current_user: %{} = user}}), do: Accounts.staff?(user)
   defp staff?(_socket), do: false
 
   defp subscribe_to_review(socket) do

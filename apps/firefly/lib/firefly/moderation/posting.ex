@@ -16,7 +16,10 @@ defmodule Firefly.Moderation.Posting do
   (`check(user, :chat)`, see `Firefly.Chat`) checks what a post does but
   against the `:chat` rate limit. Replying also needs the user to be able to
   read the thread (`:not_found` otherwise, as if it didn't exist): a
-  reply-to address or API call outlives access to a category. A thread in
+  reply-to address or API call outlives access to a category; and its
+  category's group permissions must allow replies (`:read_only_category`,
+  see `Firefly.Discussion.Policy`). Accounts waiting for staff approval
+  (`:pending_approval`, see `Firefly.Accounts.UserAdmin`) can't post. A thread in
   slow mode (see `Firefly.Moderation.TopicTools.set_slow_mode/3`) takes one reply
   per member per interval; admins are exempt.
   """
@@ -29,7 +32,11 @@ defmodule Firefly.Moderation.Posting do
 
   def check(%User{} = user) do
     with :ok <- check(user, :like) do
-      if confirmed_enough?(user), do: RateLimit.check_post(user), else: {:error, :unconfirmed}
+      cond do
+        not confirmed_enough?(user) -> {:error, :unconfirmed}
+        User.pending_approval?(current(user)) -> {:error, :pending_approval}
+        true -> RateLimit.check_post(user)
+      end
     end
   end
 
@@ -78,6 +85,9 @@ defmodule Firefly.Moderation.Posting do
     cond do
       not Bodyguard.permit?(Discussion, :view_thread, user, thread) ->
         {:error, :not_found}
+
+      not Bodyguard.permit?(Discussion, :reply_thread, user, thread) ->
+        {:error, :read_only_category}
 
       Discussion.thread_closed?(thread_id) ->
         {:error, :closed}
@@ -130,7 +140,8 @@ defmodule Firefly.Moderation.Posting do
           select: %{
             silenced_until: u.silenced_until,
             suspended_until: u.suspended_until,
-            trust_level: u.trust_level
+            trust_level: u.trust_level,
+            approved: u.approved
           }
         )
       )
@@ -159,6 +170,11 @@ defmodule Firefly.Moderation.Posting do
       "You can start private conversations once you're a #{TrustLevels.title(level)}: keep reading and taking part."
 
   def message(:unconfirmed), do: "Please confirm your email address before posting."
+
+  def message(:pending_approval),
+    do: "Your account is waiting for a staff member to approve it. You can post once they have."
+
+  def message(:read_only_category), do: "You can read this category, but not post in it."
   def message(:rate_limited), do: RateLimit.message()
 
   @doc ~S'A duration for people, in its two largest units: "45 seconds", "1 hour 5 minutes".'

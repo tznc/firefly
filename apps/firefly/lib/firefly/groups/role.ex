@@ -16,7 +16,8 @@ defmodule Firefly.Groups.Role do
       `owners`, `members` or `everyone`
     * `description` - the About tab
 
-  The "admin" group stays closed and staff-only: its members are staff.
+  The "admin" and "moderator" groups stay closed and staff-only: their
+  members are staff (see `staff?/1`).
   The trust level groups (`trust_level_0` to `trust_level_4`, see
   `Firefly.TrustLevels`) stay closed: their members follow their
   trust level.
@@ -77,10 +78,11 @@ defmodule Firefly.Groups.Role do
     |> validate_length(:description, max: 2_000)
   end
 
-  defp validate_staff_group(%{data: %{name: "admin"}} = changeset) do
+  defp validate_staff_group(%{data: %{name: name}} = changeset)
+       when name in ~w(admin moderator) do
     changeset
-    |> validate_inclusion(:membership, ["closed"], message: "must be closed for the admin group")
-    |> validate_inclusion(:visibility, ["staff"], message: "must be staff for the admin group")
+    |> validate_inclusion(:membership, ["closed"], message: "must be closed for a staff group")
+    |> validate_inclusion(:visibility, ["staff"], message: "must be staff for a staff group")
   end
 
   defp validate_staff_group(%{data: %{name: name}} = changeset) do
@@ -91,6 +93,9 @@ defmodule Firefly.Groups.Role do
         ),
       else: changeset
   end
+
+  @doc "Whether the group is a staff group (\"admin\" or \"moderator\")."
+  def staff?(%__MODULE__{name: name}), do: name in ~w(admin moderator)
 
   @doc "Whether the group is a trust level's, whose members are set automatically."
   def automatic?(%__MODULE__{name: name}), do: Firefly.TrustLevels.group?(name)

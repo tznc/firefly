@@ -19,6 +19,8 @@ defmodule Firefly.URLs do
 
   def notification_settings_url, do: url(["settings", "notifications"])
 
+  def notifications_url, do: url(["notifications"])
+
   def user_url(user), do: url(["users", user.id])
 
   def invite_url(key), do: url(["invites", key])

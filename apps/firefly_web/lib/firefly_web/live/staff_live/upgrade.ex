@@ -46,7 +46,7 @@ defmodule FireflyWeb.StaffLive.Upgrade do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Upgrade" navigate={~p"/staff/upgrade"}>
         <:subtitle>Keep Firefly up to date.</:subtitle>
       </.page_header>

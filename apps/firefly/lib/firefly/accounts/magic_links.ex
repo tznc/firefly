@@ -158,18 +158,30 @@ defmodule Firefly.Accounts.MagicLinks do
   end
 
   defp create_account(email) do
-    result =
-      %User{confirmed_at: DateTime.utc_now(:second)}
-      |> User.changeset(%{
-        username: Auth.free_username(%{email: email}, "email"),
-        name: email |> String.split("@") |> hd(),
-        email: email
-      })
-      |> Repo.insert()
-
-    with {:ok, user} <- result do
+    with :ok <- screened(email),
+         {:ok, user} <-
+           %User{
+             confirmed_at: DateTime.utc_now(:second),
+             approved: Firefly.Accounts.approved_on_signup?(false)
+           }
+           |> User.changeset(%{
+             username: Auth.free_username(%{email: email}, "email"),
+             name: email |> String.split("@") |> hd(),
+             email: email
+           })
+           |> Repo.insert() do
+      :ok = Firefly.Notifications.Subscriptions.apply_category_defaults(user)
       Events.emit("user_registered", %{user: %{id: user.id, username: user.username}})
       {:ok, user}
+    end
+  end
+
+  # A screened address or network (see Firefly.Moderation.Screening) gets
+  # no account: the link just doesn't work.
+  defp screened(email) do
+    case Firefly.Moderation.Screening.check_signup(email) do
+      :ok -> :ok
+      {:error, _screened} -> {:error, :invalid}
     end
   end
 end

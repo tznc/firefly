@@ -55,7 +55,7 @@ defmodule FireflyWeb.StaffLive.Embedding do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Embedding" navigate={~p"/staff/embedding"}>
         <:subtitle>Use topics as the comments of blog posts and other pages.</:subtitle>
       </.page_header>

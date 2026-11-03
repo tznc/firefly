@@ -271,7 +271,7 @@ defmodule Firefly.MessagesTest do
   test "a deleted author's messages still show and notify", %{alice: alice, bob: bob} do
     conversation = start(alice, "bob")
     message = reply(conversation, bob, "Bye")
-    # As Kaffy's user delete would, once nothing else references bob.
+    # As a hard delete of the account would, once nothing else references bob.
     Firefly.Repo.delete_all(
       Ecto.Query.where(Firefly.Notifications.Notification, user_id: ^bob.id)
     )

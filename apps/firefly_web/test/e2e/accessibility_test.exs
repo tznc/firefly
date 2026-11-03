@@ -68,7 +68,14 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
           {"interface settings", "/settings/interface"},
           {"staff dashboard", "/staff/dashboard"},
           {"review queue", "/staff/review"},
-          {"site settings", "/staff/settings"}
+          {"site settings", "/staff/settings"},
+          {"admin home", "/staff?q=users"},
+          {"users admin", "/staff/users"},
+          {"user admin", "/staff/users/#{context.member.id}"},
+          {"categories admin", "/staff/categories"},
+          {"emails admin", "/staff/emails"},
+          {"email previews", "/staff/emails?tab=previews"},
+          {"screening", "/staff/screening"}
         ] do
       session
       |> visit(path)

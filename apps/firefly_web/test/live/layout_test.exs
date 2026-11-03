@@ -36,7 +36,7 @@ defmodule FireflyWeb.LayoutTest do
     |> visit(~p"/categories")
     |> assert_has(~s(nav a[href="/login"]), text: "Log in")
     |> assert_has(~s(nav a[href="/users"]), text: "Users")
-    |> refute_has(~s(nav a[href="/admin"]))
+    |> refute_has(~s(nav a[href="/staff"]))
   end
 
   test "users see their links; admins also see the admin link", %{conn: conn} do
@@ -47,7 +47,7 @@ defmodule FireflyWeb.LayoutTest do
     |> visit(~p"/categories")
     |> assert_has(~s(nav a[href="/threads/watching"]), text: "Watching")
     |> assert_has(~s(nav a[href="/users/#{user.id}"]), text: "Your profile")
-    |> refute_has(~s(nav a[href="/admin"]))
+    |> refute_has(~s(nav a[href="/staff"]))
 
     {:ok, role} = Groups.create_role("admin")
     {:ok, _} = Groups.add_role(user, role)
@@ -55,7 +55,7 @@ defmodule FireflyWeb.LayoutTest do
     conn
     |> log_in_as(user)
     |> visit(~p"/categories")
-    |> assert_has(~s(nav a[href="/admin"]), text: "Admin")
+    |> assert_has(~s(nav a[href="/staff"]), text: "Admin")
   end
 
   test "highlights the current page", %{conn: conn} do

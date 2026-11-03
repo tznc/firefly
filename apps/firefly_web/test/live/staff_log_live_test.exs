@@ -3,7 +3,8 @@ defmodule FireflyWeb.StaffLogLiveTest do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Firefly.{Accounts, Discussion, Groups, Repo}
+  alias Firefly.{Accounts, Discussion, Repo}
+  alias Firefly.Accounts.UserAdmin
   alias Firefly.Discussion.Category
   alias Firefly.Moderation.StaffAction
 
@@ -22,7 +23,10 @@ defmodule FireflyWeb.StaffLogLiveTest do
     |> assert_path(~p"/")
     |> assert_has("#flash-error", text: "You are not allowed to do that.")
 
-    conn |> log_in_as(admin_fixture()) |> visit(~p"/") |> assert_has("nav a", text: "Staff log")
+    conn
+    |> log_in_as(admin_fixture())
+    |> visit(~p"/staff")
+    |> assert_has("#staff-nav a", text: "Staff log")
   end
 
   test "moderating from the thread page shows in the log, linking to the thread", ctx do
@@ -97,43 +101,35 @@ defmodule FireflyWeb.StaffLogLiveTest do
     |> assert_has("#staff-log tbody tr", count: 1)
   end
 
-  describe "Kaffy admin edits" do
-    test "are logged with what changed", %{conn: conn, admin: admin, category: category} do
-      conn = log_in_as(conn, admin)
+  describe "users admin edits" do
+    test "are logged with what changed", %{conn: conn, admin: admin, author: author} do
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/users/#{author.id}")
+      |> within("#account-form", fn session ->
+        session
+        |> fill_in("Name", with: "Writer")
+        |> click_button("Save account")
+      end)
 
-      put(conn, "/admin/forums/category/#{category.id}", %{"category" => %{"title" => "Erlang"}})
-      assert Repo.get!(Category, category.id).title == "Erlang"
-
-      assert [%{action: "admin.update", target_type: "category", details: details}] =
+      assert [%{action: "user.edit", target_type: "user", details: details}] =
                Repo.all(StaffAction)
 
-      assert details["title"] == %{"before" => "Elixir", "after" => "Erlang"}
-
-      {:ok, role} = Groups.create_role("moderator")
-      put(conn, "/admin/accounts/role/#{role.id}", %{"role" => %{"name" => "mod"}})
-
-      conn
-      |> visit(~p"/staff/log")
-      |> assert_has("td.target", text: "role ##{role.id}")
-      |> refute_has("td.target", text: "Deleted role")
+      assert details["name"] == %{"before" => author.name, "after" => "Writer"}
     end
 
     test "granting and revoking roles is logged on the user", %{conn: conn, admin: admin} do
       member = user_fixture(%{username: "promoted"})
-      role = Repo.get_by!(Firefly.Groups.Role, name: "admin")
-      conn = log_in_as(conn, admin)
 
-      post(conn, "/admin/accounts/role_membership", %{
-        "role_membership" => %{"user_id" => member.id, "role_id" => role.id}
-      })
+      session =
+        conn
+        |> log_in_as(admin)
+        |> visit(~p"/staff/users/#{member.id}")
+        |> click_button("Grant moderator")
 
-      assert Accounts.admin?(member)
-
-      membership =
-        Repo.get_by!(Firefly.Groups.RoleMembership, user_id: member.id, role_id: role.id)
-
-      delete(conn, "/admin/accounts/role_membership/#{membership.id}")
-      refute Accounts.admin?(member)
+      assert Accounts.moderator?(member)
+      session |> click_button("Revoke moderator")
+      refute Accounts.moderator?(member)
 
       assert [grant, revoke] = Repo.all(from(a in StaffAction, order_by: a.id))
 
@@ -141,33 +137,7 @@ defmodule FireflyWeb.StaffLogLiveTest do
                {"role.grant", "user", member.id}
 
       assert revoke.action == "role.revoke"
-      assert revoke.details == %{"role" => "admin", "username" => "promoted"}
-    end
-
-    test "role memberships can't be edited in place", %{conn: conn, admin: admin} do
-      member = user_fixture(%{username: "member"})
-      role = Repo.get_by!(Firefly.Groups.Role, name: "admin")
-      conn = log_in_as(conn, admin)
-
-      post(conn, "/admin/accounts/role_membership", %{
-        "role_membership" => %{"user_id" => member.id, "role_id" => role.id}
-      })
-
-      membership =
-        Repo.get_by!(Firefly.Groups.RoleMembership, user_id: member.id, role_id: role.id)
-
-      other = user_fixture(%{username: "mallory"})
-
-      form = get(conn, "/admin/accounts/role_membership/#{membership.id}")
-      assert html_response(form, 200) =~ ~r/<select[^>]* disabled [^>]*role_membership_user_id/
-
-      put(conn, "/admin/accounts/role_membership/#{membership.id}", %{
-        "role_membership" => %{"user_id" => other.id, "role_id" => role.id}
-      })
-
-      assert Repo.get!(Firefly.Groups.RoleMembership, membership.id).user_id == member.id
-      refute Accounts.admin?(other)
-      assert ["role.grant"] = Repo.all(from(a in StaffAction, select: a.action))
+      assert revoke.details == %{"role" => "moderator", "username" => "promoted"}
     end
   end
 
@@ -193,17 +163,9 @@ defmodule FireflyWeb.StaffLogLiveTest do
     {:ok, post} = Discussion.create_post(thread, ada, %{body: "Ada's reply"})
     {:ok, _} = Discussion.delete_post(post, admin)
 
-    conn = log_in_as(conn, admin)
-    role = Repo.get_by!(Firefly.Groups.Role, name: "admin")
-
-    put(conn, "/admin/accounts/user/#{ada.id}", %{"user" => %{"email" => "ada@new.example"}})
-
-    post(conn, "/admin/accounts/role_membership", %{
-      "role_membership" => %{"user_id" => ada.id, "role_id" => role.id}
-    })
-
-    membership = Repo.get_by!(Firefly.Groups.RoleMembership, user_id: ada.id, role_id: role.id)
-    delete(conn, "/admin/accounts/role_membership/#{membership.id}")
+    {:ok, ada} = UserAdmin.update(ada, %{"email" => "ada@new.example"}, admin)
+    {:ok, _} = UserAdmin.set_staff_role(ada, "moderator", true, admin)
+    {:ok, _} = UserAdmin.set_staff_role(ada, "moderator", false, admin)
 
     log = fn -> Repo.all(from(a in StaffAction, select: a.details)) |> Jason.encode!() end
     assert log.() =~ "ada@example.com"

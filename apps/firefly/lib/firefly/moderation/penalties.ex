@@ -9,7 +9,7 @@ defmodule Firefly.Moderation.Penalties do
 
   A penalty is in force while its end date is in the future
   (`User.silenced?/1`, `User.suspended?/1`), so it lapses on its own; no job
-  is needed. Admins can't be penalized. Each penalty and lift goes to the
+  is needed. Staff (admins and moderators) can't be penalized. Each penalty and lift goes to the
   staff log, and the user is told by email and in-app notification.
   """
 
@@ -113,7 +113,7 @@ defmodule Firefly.Moderation.Penalties do
   defp log(:system, action, user, details), do: StaffLog.record_system(action, user, details)
   defp log(admin, action, user, details), do: StaffLog.record(admin, action, user, details)
 
-  defp penalizable(user), do: if(Accounts.admin?(user), do: {:error, :admin}, else: :ok)
+  defp penalizable(user), do: if(Accounts.staff?(user), do: {:error, :admin}, else: :ok)
 
   defp ends_at("1d", _date), do: {:ok, from_now(1)}
   defp ends_at("1w", _date), do: {:ok, from_now(7)}
@@ -143,7 +143,7 @@ defmodule Firefly.Moderation.Penalties do
 
   defp reason(_reason), do: {:error, :no_reason}
 
-  def message(:admin), do: "Admins can't be silenced or suspended."
+  def message(:admin), do: "Staff can't be silenced or suspended."
   def message(:invalid_date), do: "Pick a duration, or a date in the future."
   def message(:no_reason), do: "Give a reason: the user will see it."
 

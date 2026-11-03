@@ -35,6 +35,7 @@ defmodule FireflyWeb.StaffLive.Log do
     "post.reject" => "Rejected post",
     "post.wiki" => "Made post a wiki",
     "post.unwiki" => "Made wiki a normal post",
+    "post.change_owner" => "Changed post author",
     "poll.close" => "Closed poll",
     "poll.open" => "Reopened poll",
     "flag.agree" => "Agreed with flags",
@@ -52,6 +53,7 @@ defmodule FireflyWeb.StaffLive.Log do
     "role.grant" => "Granted role",
     "role.revoke" => "Revoked role",
     "role.update" => "Changed group settings",
+    "role.delete" => "Deleted group",
     "role.owner" => "Made group owner",
     "role.unowner" => "Removed group owner",
     "user.silence" => "Silenced user",
@@ -60,6 +62,23 @@ defmodule FireflyWeb.StaffLive.Log do
     "user.unsuspend" => "Lifted suspension",
     "user.reset_two_factor" => "Reset two-factor authentication",
     "user.trust_level" => "Changed trust level",
+    "user.edit" => "Edited account",
+    "user.approve" => "Approved account",
+    "user.reject" => "Rejected account",
+    "user.anonymize" => "Anonymized account",
+    "user.delete" => "Deleted account and posts",
+    "user.merge" => "Merged accounts",
+    "user.impersonate" => "Started impersonating",
+    "user.impersonate_stop" => "Stopped impersonating",
+    "user.password_reset" => "Sent password reset",
+    "notification.send" => "Sent a notice",
+    "notification.delete" => "Deleted a notification",
+    "email.test" => "Sent a test email",
+    "screening.create" => "Screened",
+    "screening.delete" => "Stopped screening",
+    "screening.block" => "Screening blocked",
+    "category.permissions" => "Changed category permissions",
+    "category.defaults" => "Applied category default",
     "setting.update" => "Changed setting",
     "admin.create" => "Created in admin",
     "admin.update" => "Updated in admin",
@@ -203,6 +222,12 @@ defmodule FireflyWeb.StaffLive.Log do
   defp target_link(%{target_type: "api_key", details: %{"name" => name}}, _target),
     do: {name, ~p"/staff/api-keys"}
 
+  defp target_link(%{target_type: "screened_item", details: %{"value" => value}}, _target),
+    do: {value, ~p"/staff/screening"}
+
+  defp target_link(%{target_type: "email", details: %{"to" => to}}, _target),
+    do: {to, ~p"/staff/emails"}
+
   defp target_link(%{target_type: "badge", details: %{"badge" => name}}, _target),
     do: {name, ~p"/staff/badges"}
 
@@ -221,7 +246,8 @@ defmodule FireflyWeb.StaffLive.Log do
   defp target_link(%{target_type: "category"}, category),
     do: {category.title, ~p"/categories/#{category}"}
 
-  defp target_link(%{target_type: "user"}, user), do: {"@#{user.username}", ~p"/users/#{user}"}
+  defp target_link(%{target_type: "user"}, user),
+    do: {"@#{user.username}", ~p"/staff/users/#{user.id}"}
 
   defp query_params(filters),
     do: for({k, v} <- filters, v, into: %{}, do: {k, to_string(v)})
@@ -229,7 +255,7 @@ defmodule FireflyWeb.StaffLive.Log do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Staff log" navigate={~p"/staff/log"}>
         <:subtitle>Every action staff took, newest first.</:subtitle>
       </.page_header>

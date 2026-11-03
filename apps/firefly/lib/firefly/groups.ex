@@ -1,7 +1,7 @@
 defmodule Firefly.Groups do
   @moduledoc """
   Groups are roles (`Firefly.Groups.Role`): admins create them and set
-  them up at `/staff/groups` (or in the Kaffy admin), and can restrict
+  them up at `/staff/groups`, and can restrict
   categories to them (see `Firefly.Discussion.Policy`).
 
   Each group has a page (`/groups/:name`: about, members, its members'
@@ -134,8 +134,8 @@ defmodule Firefly.Groups do
 
   def visible?(%Role{}, viewer), do: admin?(viewer)
 
-  @doc "Whether `user` manages the group's members: its owners and admins (only admins for \"admin\")."
-  def manager?(%Role{name: "admin"}, user), do: admin?(user)
+  @doc "Whether `user` manages the group's members: its owners and admins (only admins for the staff groups)."
+  def manager?(%Role{name: name}, user) when name in ~w(admin moderator), do: admin?(user)
   def manager?(role, user), do: admin?(user) or owner?(role, user)
 
   @doc "Whether `user` may @mention the group (see the moduledoc)."
@@ -207,6 +207,77 @@ defmodule Firefly.Groups do
         {:ok, updated}
       end
     end)
+  end
+
+  @doc """
+  Renames the group as `admin` (staff-logged as `role.update`). The staff
+  and trust level groups keep their names (`{:error, :reserved}`): the
+  site finds them by name.
+  """
+  def rename_group(%Role{} = role, name, %User{} = admin) do
+    if Role.staff?(role) or Role.automatic?(role),
+      do: {:error, :reserved},
+      else: Repo.transact(fn -> rename(role, name, admin) end)
+  end
+
+  defp rename(role, name, admin) do
+    with {:ok, renamed} <- role |> Role.changeset(%{name: name}) |> Repo.update(),
+         do: {:ok, log_rename(role, renamed, admin)}
+  end
+
+  defp log_rename(%Role{name: same}, %Role{name: same} = renamed, _admin), do: renamed
+
+  defp log_rename(role, renamed, admin) do
+    StaffLog.record(admin, "role.update", {"role", role.id}, %{
+      role: renamed.name,
+      name: %{before: role.name, after: renamed.name}
+    })
+
+    renamed
+  end
+
+  @doc """
+  Deletes the group and its memberships as `admin` (staff-logged). The
+  staff and trust level groups can't be deleted (`{:error, :reserved}`),
+  nor a group a category is restricted to (`{:error, :in_use}`): lifting
+  that restriction is a decision to make on the category.
+  """
+  def delete_group(%Role{} = role, %User{} = admin) do
+    cond do
+      Role.staff?(role) or Role.automatic?(role) ->
+        {:error, :reserved}
+
+      Repo.exists?(from(cr in "forums_category_roles", where: cr.role_id == ^role.id)) ->
+        {:error, :in_use}
+
+      true ->
+        Repo.transact(fn ->
+          {members, _} = Repo.delete_all(from(m in RoleMembership, where: m.role_id == ^role.id))
+          Repo.delete!(role)
+
+          StaffLog.record(admin, "role.delete", {"role", role.id}, %{
+            role: role.name,
+            members: members
+          })
+
+          {:ok, role}
+        end)
+    end
+  end
+
+  @doc """
+  The staff group named `name` (`"admin"` or `"moderator"`), created
+  closed and staff-only the first time it's needed.
+  """
+  def staff_group(name) when name in ~w(admin moderator) do
+    case get_by_name(name) do
+      %Role{} = role ->
+        role
+
+      nil ->
+        {:ok, role} = create_role(name)
+        role
+    end
   end
 
   @doc "Changes the About text, as an owner or admin."
@@ -344,7 +415,7 @@ defmodule Firefly.Groups do
   """
   def join(%Role{} = role, %User{} = user, message \\ nil) do
     cond do
-      role.name == "admin" or Role.automatic?(role) or not visible?(role, user) ->
+      Role.staff?(role) or Role.automatic?(role) or not visible?(role, user) ->
         {:error, :closed}
 
       member?(role, user) ->
@@ -615,6 +686,10 @@ defmodule Firefly.Groups do
   def message(:not_member), do: "They're not in that group."
   def message(:invalid_level), do: "Pick a notification level."
   def message(:automatic), do: "Trust level groups' members follow their trust level."
+  def message(:reserved), do: "The staff and trust level groups can't be renamed or deleted."
+
+  def message(:in_use),
+    do: "A category is restricted to this group: change the category's groups first."
 
   def create_role(name) do
     %Role{}

@@ -21,7 +21,7 @@ defmodule FireflyWeb.StaffLive.Reports do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Reports" navigate={~p"/staff/reports"}>
         <:subtitle>Activity, traffic and moderation over any period, as charts or CSV.</:subtitle>
         <:actions>

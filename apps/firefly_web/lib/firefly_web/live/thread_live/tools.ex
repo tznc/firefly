@@ -1,8 +1,9 @@
 defmodule FireflyWeb.ThreadLive.Tools do
   @moduledoc """
   A thread's admin tools (the `:moderate_thread` policy): merge it into
-  another thread, split replies off (see `Firefly.Moderation.TopicTools`), set or
-  cancel its timer (see `Firefly.Moderation.TopicTimers`) and its slow mode.
+  another thread, split replies off or give posts another author (see
+  `Firefly.Moderation.TopicTools`), set or cancel its timer (see
+  `Firefly.Moderation.TopicTimers`) and its slow mode.
   Other threads are picked by their URL or id.
   """
   use FireflyWeb, :live_view
@@ -99,6 +100,24 @@ defmodule FireflyWeb.ThreadLive.Tools do
          socket
          |> put_flash(:error, TopicTools.message(reason))
          |> assign(:split_form, to_form(params, as: :split))}
+    end
+  end
+
+  def handle_event("change_owner", %{"owner" => params}, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+    username = (params["username"] || "") |> String.trim() |> String.trim_leading("@")
+
+    with %{} = owner <- Firefly.Accounts.get_user_by_username(username) || {:error, :no_such_user},
+         {:ok, count} <- TopicTools.change_owner(thread, params["post_ids"] || [], owner, user) do
+      {:noreply,
+       socket
+       |> put_flash(
+         :info,
+         gettext("%{count} posts now by @%{username}.", count: count, username: owner.username)
+       )
+       |> load(thread)}
+    else
+      {:error, reason} -> {:noreply, put_flash(socket, :error, TopicTools.message(reason))}
     end
   end
 
@@ -236,6 +255,34 @@ defmodule FireflyWeb.ThreadLive.Tools do
               <.button>Move posts</.button>
             </div>
           </.form>
+        </div>
+      </section>
+
+      <section id="change-owner" class="card border border-base-300 bg-base-100">
+        <div class="card-body space-y-2">
+          <h2 class="card-title">{gettext("Change the author")}</h2>
+          <form id="owner-form" phx-submit="change_owner" class="space-y-3">
+            <fieldset class="max-h-96 space-y-1 overflow-y-auto">
+              <legend class="mb-1 font-medium">{gettext("Posts to give another author")}</legend>
+              <label :for={post <- @thread.posts} class="flex items-start gap-2 text-sm" for={"owner-post-#{post.id}"}>
+                <input
+                  type="checkbox"
+                  id={"owner-post-#{post.id}"}
+                  name="owner[post_ids][]"
+                  value={post.id}
+                  class="checkbox checkbox-sm"
+                />
+                <span>
+                  <span class="font-medium">@{post.user.username}</span>
+                  {String.slice(post.body, 0, 120)}
+                </span>
+              </label>
+            </fieldset>
+            <div class="flex flex-wrap items-end gap-2">
+              <.input id="owner-username" name="owner[username]" value="" label={gettext("New author's username")} />
+              <.button data-confirm={gettext("Give these posts to that member?")}>{gettext("Change author")}</.button>
+            </div>
+          </form>
         </div>
       </section>
 

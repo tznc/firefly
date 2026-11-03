@@ -122,7 +122,7 @@ defmodule FireflyWeb.StaffLive.WatchedWords do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Watched words" navigate={~p"/staff/watched-words"}>
         <:subtitle>
           Words to watch for in titles, posts and messages: case-insensitive whole words, <code>*</code>

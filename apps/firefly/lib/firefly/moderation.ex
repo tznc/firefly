@@ -15,8 +15,10 @@ defmodule Firefly.Moderation do
     * `Firefly.Moderation.WatchedWords` - words that block, censor, queue,
       flag, replace, tag, silence or link
     * `Firefly.Moderation.Akismet` - spam checks of new content with Akismet
+    * `Firefly.Moderation.Screening` - screened emails, IPs and URLs that
+      block sign-ups and posts
     * the schemas `Flag`, `StaffAction`, `ThreadTimer`, `WatchedWord` and
-      `AkismetCheck`
+      `AkismetCheck`, `ScreenedItem`
 
   Its other modules (`SpamGuard`) are internal.
   """
@@ -39,6 +41,8 @@ defmodule Firefly.Moderation do
       WatchedWords,
       WatchedWord,
       Akismet,
-      AkismetCheck
+      AkismetCheck,
+      Screening,
+      ScreenedItem
     ]
 end

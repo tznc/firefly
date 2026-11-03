@@ -280,8 +280,12 @@ defmodule Firefly.Accounts.Auth do
 
     result =
       Repo.transact(fn ->
-        with {:ok, user} <-
-               %User{confirmed_at: if(verified?(info), do: DateTime.utc_now(:second))}
+        with :ok <- screened(info[:email]),
+             {:ok, user} <-
+               %User{
+                 confirmed_at: if(verified?(info), do: DateTime.utc_now(:second)),
+                 approved: Accounts.approved_on_signup?(info[:invite] != nil)
+               }
                |> User.changeset(%{
                  username: username,
                  name: info[:name] || username,
@@ -295,8 +299,18 @@ defmodule Firefly.Accounts.Auth do
       end)
 
     with {:ok, user} <- result do
+      :ok = Firefly.Notifications.Subscriptions.apply_category_defaults(user)
       Events.emit("user_registered", %{user: %{id: user.id, username: user.username}})
       {:ok, user}
+    end
+  end
+
+  # Screened addresses and networks (see Firefly.Moderation.Screening)
+  # can't sign up this way either.
+  defp screened(email) do
+    case Firefly.Moderation.Screening.check_signup(email) do
+      :ok -> :ok
+      {:error, reason} -> {:error, Firefly.Moderation.Screening.message(reason)}
     end
   end
 

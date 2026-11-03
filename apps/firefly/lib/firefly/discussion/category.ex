@@ -5,7 +5,8 @@ defmodule Firefly.Discussion.Category do
   ordered by `position`, then title.
 
   A category can be restricted to members of one or more roles (`roles`, the
-  `forums_category_roles` join table); a subcategory also inherits its
+  `forums_category_roles` join table, where each also has a `permission`:
+  `full`, `create_post` or `readonly`); a subcategory also inherits its
   parent's restriction. See `Firefly.Discussion.Policy`. `restricted` is set
   by `Firefly.Discussion.mark_restricted/1`, to show a lock.
   """
@@ -26,6 +27,9 @@ defmodule Firefly.Discussion.Category do
     # Q&A: thread authors (and staff) may mark a reply as the accepted
     # answer (see `Firefly.Discussion.Solved`).
     field(:allow_accepted_answers, :boolean, default: false)
+    # The notification level new members start at for it (nil: none; see
+    # `Firefly.Notifications.Subscriptions.apply_category_defaults/1`).
+    field(:default_notification_level, :string)
     belongs_to(:parent, __MODULE__)
     has_many(:children, __MODULE__, foreign_key: :parent_id)
     has_many(:threads, Thread)
@@ -41,13 +45,22 @@ defmodule Firefly.Discussion.Category do
     category
     |> cast(
       attrs,
-      [:title, :description, :color, :position, :parent_id, :allow_accepted_answers],
+      [
+        :title,
+        :description,
+        :color,
+        :position,
+        :parent_id,
+        :allow_accepted_answers,
+        :default_notification_level
+      ],
       empty_values: [""]
     )
     |> validate_required([:title])
     |> validate_length(:description, max: 1000)
     |> validate_format(:color, ~r/^#[0-9a-fA-F]{6}$/, message: "must be a hex color like #3b82f6")
     |> validate_number(:position, greater_than_or_equal_to: 0)
+    |> validate_inclusion(:default_notification_level, ~w(watching tracking normal muted))
     |> validate_parent()
     |> foreign_key_constraint(:parent_id)
     |> CategoryTitleSlug.maybe_generate_slug()

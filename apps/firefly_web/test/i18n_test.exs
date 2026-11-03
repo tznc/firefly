@@ -210,7 +210,14 @@ defmodule FireflyWeb.I18nTest do
       "lib/firefly_web/live/auth_live/login.ex",
       "lib/firefly_web/live/auth_live/magic_link.ex",
       "lib/firefly_web/live/auth_live/registration.ex",
-      "lib/firefly_web/live/auth_live/reset_password.ex"
+      "lib/firefly_web/live/auth_live/reset_password.ex",
+      "lib/firefly_web/live/staff_live/categories.ex",
+      "lib/firefly_web/live/staff_live/emails.ex",
+      "lib/firefly_web/live/staff_live/groups.ex",
+      "lib/firefly_web/live/staff_live/index.ex",
+      "lib/firefly_web/live/staff_live/screening.ex",
+      "lib/firefly_web/live/staff_live/user.ex",
+      "lib/firefly_web/live/staff_live/users.ex"
     ]
 
     @attributes ~w(label placeholder aria-label title prompt)

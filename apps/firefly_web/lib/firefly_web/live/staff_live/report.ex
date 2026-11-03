@@ -53,7 +53,7 @@ defmodule FireflyWeb.StaffLive.Report do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title={@report.title()} navigate={~p"/staff/reports/#{@report.id()}"}>
         <:subtitle>{@report.description()}</:subtitle>
         <:actions>

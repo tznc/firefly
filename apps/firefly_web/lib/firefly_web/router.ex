@@ -5,9 +5,6 @@ defmodule FireflyWeb.Router do
   import Phoenix.Controller
   import Phoenix.LiveView.Router
 
-  # Kaffy generates admin routes under /admin, behind the :admin pipeline.
-  use Kaffy.Routes, scope: "/admin", pipe_through: [:admin]
-
   pipeline :webhook do
     plug(:accepts, ["json"])
   end
@@ -152,6 +149,12 @@ defmodule FireflyWeb.Router do
       live("/chat/new-message", ChatLive, :new_dm)
       live("/chat/c/:slug/:id", ChatLive, :channel)
       live("/chat/c/:slug/:id/t/:message_id", ChatLive, :thread)
+      live("/staff", StaffLive.Index, :index)
+      live("/staff/users", StaffLive.Users, :index)
+      live("/staff/users/:id", StaffLive.User, :show)
+      live("/staff/categories", StaffLive.Categories, :index)
+      live("/staff/emails", StaffLive.Emails, :index)
+      live("/staff/screening", StaffLive.Screening, :index)
       live("/staff/dashboard", StaffLive.Dashboard, :index)
       live("/staff/reports", StaffLive.Reports, :index)
       live("/staff/reports/:id", StaffLive.Report, :show)
@@ -244,12 +247,24 @@ defmodule FireflyWeb.Router do
     post("/click", AnalyticsController, :click)
   end
 
-  # Reports as CSV and backup downloads, for admins.
+  # Reports as CSV, backup downloads and starting to impersonate, for admins.
   scope "/staff", FireflyWeb do
     pipe_through([:browser, :admin])
 
     get("/reports/:id/export", ReportController, :export)
     get("/backups/download/:token", BackupController, :download)
+    post("/users/:id/impersonate", StaffController, :impersonate)
+  end
+
+  scope "/", FireflyWeb do
+    pipe_through(:browser)
+
+    # Ending an impersonation: the session's user is the member then, so
+    # the impersonating admin is checked from the session instead.
+    delete("/impersonate", StaffController, :stop_impersonating)
+    # The admin used to be at /admin (Kaffy); it's the staff admin now.
+    get("/admin", StaffController, :admin_moved)
+    get("/admin/*path", StaffController, :admin_moved)
   end
 
   scope "/email", FireflyWeb do

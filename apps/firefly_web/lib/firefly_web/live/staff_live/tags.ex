@@ -103,7 +103,7 @@ defmodule FireflyWeb.StaffLive.Tags do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Tag groups and synonyms" navigate={~p"/staff/tags"}>
         <:subtitle>Changes apply at once and are recorded in the staff log.</:subtitle>
       </.page_header>

@@ -2,22 +2,33 @@ defmodule Firefly.Discussion.Policy do
   @moduledoc """
   Authorization rules for the Discussion context (see `Bodyguard.Policy`).
 
+  Staff are admins and moderators (see `Firefly.Accounts.staff?/1`).
+  Moderators look after members and content (the review queue, flags,
+  penalties, new accounts, thread moderation, others' posts); admins also
+  run the site (settings, groups, categories, plugins and the rest).
+
     * `:manage_category` (create, edit, delete) - admins
+    * `:create_thread` (params: the category), `:reply_thread` (params:
+      the thread) - in a restricted category, members of a group whose
+      permission there allows it (`full` starts threads and replies,
+      `create_post` only replies, `readonly` neither; a subcategory
+      without groups of its own follows its parent's), and staff; in an
+      open category, everyone (reading is `:view_category`'s business)
     * `:update_thread` (rename, retag), `:delete_thread` - the thread's
-      author (unless it's archived) and admins; renaming and retagging
+      author (unless it's archived) and staff; renaming and retagging
       also regulars (trust level 3, see `Firefly.TrustLevels`), on
       threads that aren't archived
-    * `:move_thread` (to another category) - admins, and regulars on
+    * `:move_thread` (to another category) - staff, and regulars on
       threads that aren't archived
-    * `:close_thread` (pin, close; params: the thread) - admins and leaders
+    * `:close_thread` (pin, close; params: the thread) - staff and leaders
       (trust level 4)
-    * `:moderate_thread` (pin, close, archive, move) - admins; a plugin's bot
+    * `:moderate_thread` (pin, close, archive, move) - staff; a plugin's bot
       with the `moderate` permission, on a thread anyone can read
     * `:tag_thread` (a plugin changing a thread's tags) - a plugin's bot with
       the `tags` permission, on a thread anyone can read
     * `:edit_post`, `:delete_post` (params `%{post: post, thread: thread}`) -
       the post's author while the thread is open (editing, also only within
-      the `edit_grace_minutes` site setting; 0: forever), and admins; not
+      the `edit_grace_minutes` site setting; 0: forever), and staff; not
       once the post is deleted. Leaders (trust level 4) edit others' posts
       too. Authors can't edit a post while it awaits
       approval. A wiki post (`Post.wiki?/1`) can also be edited, with no
@@ -25,7 +36,7 @@ defmodule Firefly.Discussion.Policy do
       it and its thread while the thread is open; saving still goes through `Posting.check/2` (penalties,
       slow mode). (`Discussion.delete_post/2` also refuses a thread's first
       post: delete the thread instead.)
-    * `:toggle_wiki` (make a post a wiki or not) - admins and leaders
+    * `:toggle_wiki` (make a post a wiki or not) - staff and leaders
     * `:accept_answer` (mark a reply as the accepted answer, or unmark it;
       params: the thread) - in a category that allows accepted answers, the
       thread's author unless it's archived, and admins; never on a merged
@@ -36,27 +47,34 @@ defmodule Firefly.Discussion.Policy do
       poll is open and the voter may read the thread.)
     * `:manage_poll` (close and reopen; same params) - the post's author,
       unless it's deleted or the thread archived, and admins
-    * `:restore_post`, `:view_deleted_posts` - admins
-    * `:penalize_user` (silence or suspend; params: the user) - admins, on
-      users who aren't admins
-    * `:lift_penalty` (params: the user) - admins, on anyone (a penalized
-      member may have been made an admin since)
+    * `:penalize_user` (silence or suspend; params: the user) - staff, on
+      users who aren't staff
+    * `:lift_penalty` (params: the user) - staff, on anyone (a penalized
+      member may have been made staff since)
+    * `:impersonate` (params: the user) - admins, on members who aren't
+      staff, deleted or suspended, and not themselves
     * `:reset_two_factor`, `:set_trust_level` (params: the user) - admins,
       on anyone
     * `:like_post` (params `%{post: post, thread: thread}`) - members, on other
       people's posts that aren't deleted, unless the thread is archived
     * `:flag_post` (same params) - members at `min_trust_to_flag`, on other
       people's posts that aren't deleted or already hidden
-    * `:view_hidden_post` (params: the post) - its author and admins
+    * `:view_hidden_post` (params: the post) - its author and staff
     * `:view_flags` (flag counts and reasons), `:unhide_post`, `:review` (the
-      review queue) - admins
+      review queue), `:restore_post`, `:view_deleted_posts`,
+      `:view_staff_log`, `:view_admin` (the staff admin at `/staff`),
+      `:view_users` (the users admin), `:approve_user` (approve or reject
+      accounts waiting for approval), `:manage_screening` (screened emails,
+      IPs and URLs) - staff
     * `:edit_user` - the user themselves
     * `:view_conversation` (a private conversation: read and reply) - its
       participants, until they leave, and the members of the group it was
       sent to. Nobody else, admins included.
     * `:add_participants` - participants who started the conversation, and
       admin participants
-    * `:view_staff_log`, `:manage_site_settings`, `:manage_groups`,
+    * `:manage_site_settings`, `:manage_users` (edit, anonymize, delete,
+      merge, roles, password resets, notifications), `:manage_emails` (the
+      email log, test emails and previews), `:manage_groups`,
       `:manage_tags` (tag groups and synonyms), `:manage_badges`, `:manage_plugins`,
       `:manage_uploads` (list and delete any upload), `:manage_emoji`
       (custom emoji), `:manage_watched_words`, `:manage_webhooks`,
@@ -69,10 +87,10 @@ defmodule Firefly.Discussion.Policy do
       and features, see `Firefly.AI`) - admins
     * `:view_category`, `:view_thread` (in its category) - everyone, members
       or not, unless the category is restricted to roles (groups): then
-      members of one of those roles, and admins. A subcategory also needs its
+      members of one of those roles, and staff. A subcategory also needs its
       parent's roles, if the parent is restricted. A thread awaiting
       approval (see `Firefly.Moderation.Review`) is only for its author and
-      admins. Every way of reading a
+      staff. Every way of reading a
       thread (pages, lists, search, notifications, email, the API) goes
       through these rules or their query counterparts, `readable_threads/2`
       and `readable_categories/2`: keep them in step.
@@ -99,6 +117,12 @@ defmodule Firefly.Discussion.Policy do
 
   def authorize(:edit_user, %User{id: id}, %{user: %{id: id}}), do: :ok
 
+  def authorize(:create_thread, %User{} = user, %Category{id: id}),
+    do: category_permission(user, id, ~w(full))
+
+  def authorize(:reply_thread, %User{} = user, %Thread{category_id: id}),
+    do: category_permission(user, id, ~w(full create_post))
+
   def authorize(:view_conversation, %User{} = user, %Conversation{} = conversation),
     do: if(Messaging.reader?(conversation, user), do: :ok, else: {:error, :unauthorized})
 
@@ -113,9 +137,19 @@ defmodule Firefly.Discussion.Policy do
   def authorize(:manage_category, %User{} = user, _params), do: admin(user)
 
   def authorize(:penalize_user, %User{} = user, %User{} = target),
-    do: if(Accounts.admin?(target), do: {:error, :unauthorized}, else: admin(user))
+    do: if(Accounts.staff?(target), do: {:error, :unauthorized}, else: staff(user))
 
-  def authorize(:lift_penalty, %User{} = user, %User{}), do: admin(user)
+  def authorize(:lift_penalty, %User{} = user, %User{}), do: staff(user)
+
+  # Seeing the site as someone else: admins, as members who aren't staff
+  # (and whose account is usable).
+  def authorize(:impersonate, %User{id: id}, %User{id: id}), do: {:error, :unauthorized}
+
+  def authorize(:impersonate, %User{} = user, %User{} = target) do
+    if Accounts.staff?(target) or User.deleted?(target) or User.suspended?(target),
+      do: {:error, :unauthorized},
+      else: admin(user)
+  end
 
   def authorize(:reset_two_factor, %User{} = user, %User{}), do: admin(user)
 
@@ -131,21 +165,21 @@ defmodule Firefly.Discussion.Policy do
        else: {:error, :unauthorized}
   end
 
-  def authorize(:moderate_thread, %User{} = user, _params), do: admin(user)
+  def authorize(:moderate_thread, %User{} = user, _params), do: staff(user)
 
-  # Archived threads are read-only, except to admins.
+  # Archived threads are read-only, except to staff.
   def authorize(action, %User{} = user, %Thread{} = thread)
       when action in [:update_thread, :delete_thread] do
     cond do
-      Thread.archived?(thread) -> admin(user)
+      Thread.archived?(thread) -> staff(user)
       Discussion.thread_author_id(thread) == user.id -> :ok
       action == :update_thread -> trusted(user, 3)
-      true -> admin(user)
+      true -> staff(user)
     end
   end
 
   def authorize(:move_thread, %User{} = user, %Thread{} = thread),
-    do: if(Thread.archived?(thread), do: admin(user), else: trusted(user, 3))
+    do: if(Thread.archived?(thread), do: staff(user), else: trusted(user, 3))
 
   def authorize(:close_thread, %User{} = user, %Thread{}), do: trusted(user, 4)
   def authorize(:toggle_wiki, %User{} = user, _params), do: trusted(user, 4)
@@ -156,7 +190,7 @@ defmodule Firefly.Discussion.Policy do
       Post.deleted?(post) -> {:error, :unauthorized}
       action == :edit_post -> may_edit(user, post, thread)
       post.user_id == user.id and not Thread.closed?(thread) -> :ok
-      true -> admin(user)
+      true -> staff(user)
     end
   end
 
@@ -205,7 +239,18 @@ defmodule Firefly.Discussion.Policy do
              :restore_post,
              :view_deleted_posts,
              :view_staff_log,
+             :view_admin,
+             :view_users,
+             :approve_user,
+             :manage_screening
+           ],
+      do: staff(user)
+
+  def authorize(action, %User{} = user, _params)
+      when action in [
              :manage_site_settings,
+             :manage_users,
+             :manage_emails,
              :manage_groups,
              :manage_tags,
              :manage_plugins,
@@ -238,7 +283,7 @@ defmodule Firefly.Discussion.Policy do
   defp may_edit(user, post, thread) do
     cond do
       # Staff approve what they saw: no author edits while it's queued.
-      Post.queued?(post) -> admin(user)
+      Post.queued?(post) -> staff(user)
       post.user_id == user.id and not Thread.closed?(thread) and in_window?(post) -> :ok
       wiki_editable?(user, post, thread) -> :ok
       true -> trusted(user, 4)
@@ -258,12 +303,50 @@ defmodule Firefly.Discussion.Policy do
   end
 
   defp admin(user), do: if(Accounts.admin?(user), do: :ok, else: {:error, :unauthorized})
+  defp staff(user), do: if(Accounts.staff?(user), do: :ok, else: {:error, :unauthorized})
+
+  # Posting in a restricted category: its groups' permissions (or, for a
+  # subcategory without groups of its own, its parent's) must allow it for
+  # one of the user's groups. Open categories and staff: always.
+  defp category_permission(user, category_id, allowed) do
+    grants = category_grants(category_id)
+    role_ids = for {role_id, permission} <- grants, permission in allowed, do: role_id
+
+    if grants == [] or staff?(user) or in_any_role?(user, role_ids),
+      do: :ok,
+      else: {:error, :unauthorized}
+  end
+
+  # `{role_id, permission}` of the category's own groups, else its parent's.
+  defp category_grants(category_id) do
+    rows =
+      Repo.all(
+        from(cr in "forums_category_roles",
+          join: c in Category,
+          on: c.id == ^category_id and (cr.category_id == c.id or cr.category_id == c.parent_id),
+          select: {cr.category_id == c.id, cr.role_id, cr.permission}
+        )
+      )
+
+    case for({true, role_id, permission} <- rows, do: {role_id, permission}) do
+      [] -> for {false, role_id, permission} <- rows, do: {role_id, permission}
+      own -> own
+    end
+  end
+
+  defp in_any_role?(_user, []), do: false
+
+  defp in_any_role?(user, role_ids),
+    do:
+      Repo.exists?(
+        from(m in RoleMembership, where: m.user_id == ^user.id and m.role_id in ^role_ids)
+      )
 
   # Admins, and members at `level` or above.
   defp trusted(user, level),
     do: if(TrustLevels.at_least?(user, level), do: :ok, else: {:error, :unauthorized})
 
-  # A thread awaiting approval is for its author and admins.
+  # A thread awaiting approval is for its author and staff.
   defp approved_or_own(user, thread) do
     case Discussion.queued_thread_author_id(thread) do
       nil -> :ok
@@ -282,20 +365,20 @@ defmodule Firefly.Discussion.Policy do
   end
 
   defp staff?(nil), do: false
-  defp staff?(%User{} = user), do: Accounts.admin?(user)
+  defp staff?(%User{} = user), do: Accounts.staff?(user)
 
   @doc """
   The `users` who may read `thread`, as the `:view_thread` rule decides for
   each, in a query or two however many users there are (for the
   notification fan-out). A thread in an unrestricted category: all of them
-  (unless it awaits approval: then its author and admins).
+  (unless it awaits approval: then its author and staff).
   """
   def thread_readers(%Thread{} = thread, users) do
     readers = category_readers(thread, users)
 
     case Discussion.queued_thread_author_id(thread) do
       nil -> readers
-      author_id -> Enum.filter(readers, &(&1.id == author_id or Accounts.admin?(&1)))
+      author_id -> Enum.filter(readers, &(&1.id == author_id or Accounts.staff?(&1)))
     end
   end
 
@@ -336,7 +419,7 @@ defmodule Firefly.Discussion.Policy do
       from(m in RoleMembership,
         join: r in Role,
         on: r.id == m.role_id,
-        where: m.user_id == parent_as(:user).id and r.name == "admin",
+        where: m.user_id == parent_as(:user).id and r.name in ["admin", "moderator"],
         select: 1
       )
 
@@ -378,7 +461,7 @@ defmodule Firefly.Discussion.Policy do
   end
 
   @doc """
-  The ids of the categories closed to `user` (ignoring that admins see
+  The ids of the categories closed to `user` (ignoring that staff see
   everything), as a query: those restricted to roles the user isn't in,
   and their subcategories. For a visitor (nil), every restricted category.
   """

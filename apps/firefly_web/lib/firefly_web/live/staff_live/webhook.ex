@@ -164,7 +164,7 @@ defmodule FireflyWeb.StaffLive.Webhook do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Webhook" navigate={~p"/staff/webhooks"}>
         <:subtitle><span class="break-all">{@webhook.payload_url}</span></:subtitle>
         <:actions>

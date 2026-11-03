@@ -88,11 +88,11 @@ defmodule Firefly.TrustLevels do
   def group?(name) when is_binary(name), do: name =~ ~r/^trust_level_[0-4]$/
   def group?(_name), do: false
 
-  @doc "Whether `user` is at `level` or above (admins always are)."
+  @doc "Whether `user` is at `level` or above (staff always are)."
   def at_least?(nil, _level), do: false
 
   def at_least?(%User{trust_level: trust_level} = user, level),
-    do: trust_level >= level or Accounts.admin?(user)
+    do: trust_level >= level or Accounts.staff?(user)
 
   @doc "Whether `user` reaches the trust level a site setting (`key`) asks for."
   def allowed?(user, key), do: at_least?(user, SiteSettings.get(key))

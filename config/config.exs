@@ -80,19 +80,6 @@ config :firefly, :email,
   reply_domain: "reply.firefly.tznc.dev",
   inbound_token: nil
 
-# Kaffy admin UI, mounted at /admin for users with the "admin" role
-config :kaffy,
-  otp_app: :firefly_web,
-  ecto_repo: Firefly.Repo,
-  router: FireflyWeb.Router,
-  admin_title: "Firefly Admin",
-  admin_footer: {:safe, ~s(Firefly by <a href="https://tznc.dev">tznc.dev</a>)},
-  admin_logo: [url: "/images/firefly-icon.svg", style: "max-height: 40px"],
-  admin_logo_mini: "/images/firefly-icon.svg",
-  home_page: [schema: [:forums, :category]],
-  resources: &FireflyWeb.Admin.resources/1,
-  extensions: [FireflyWeb.Admin.Theme]
-
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.28.2",
@@ -113,14 +100,6 @@ config :tailwind,
     ),
     cd: Path.expand("../apps/firefly_web", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
-  ],
-  # The Firefly skin for the Kaffy admin
-  admin: [
-    args: ~w(
-      --input=assets/css/admin.css
-      --output=priv/static/assets/css/admin.css
-    ),
-    cd: Path.expand("../apps/firefly_web", __DIR__)
   ]
 
 # Import environment specific config. This must remain at the bottom

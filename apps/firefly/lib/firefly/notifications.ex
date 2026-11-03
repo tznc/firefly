@@ -44,7 +44,8 @@ defmodule Firefly.Notifications do
 
   Its public modules besides this one: `Firefly.Notifications.Notification`
   (the schema), `Subscriptions` (watching, tracking and muting threads,
-  categories and tags), `Emails`, `Digests`, `WebPush` and `ReplyAddress`.
+  categories and tags), `Emails`, `Digests`, `WebPush`, `ReplyAddress`
+  and `EmailLog` (every email sent, for staff).
   """
 
   use Boundary,
@@ -60,7 +61,8 @@ defmodule Firefly.Notifications do
       Digests,
       WebPush,
       ReplyAddress,
-      MailingList
+      MailingList,
+      EmailLog
     ]
 
   import Ecto.Query, warn: false

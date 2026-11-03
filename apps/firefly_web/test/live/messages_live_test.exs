@@ -153,7 +153,7 @@ defmodule FireflyWeb.MessagesLiveTest do
   } do
     conversation = start(alice, "bob")
     {:ok, _} = Messaging.reply(conversation, bob, %{body: "Bye now"})
-    # As Kaffy's user delete would, once nothing else references bob.
+    # As a hard delete of the account would, once nothing else references bob.
     Firefly.Repo.delete_all(
       Ecto.Query.where(Firefly.Notifications.Notification, user_id: ^bob.id)
     )
