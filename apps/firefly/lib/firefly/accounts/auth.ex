@@ -24,7 +24,8 @@ defmodule Firefly.Accounts.Auth do
   settings; the last way to log in (with no password) can't be removed.
 
   Single sign-on works the same way: an OpenID Connect provider
-  (`Firefly.Accounts.Auth.OIDC`, provider `"oidc"`) and a DiscourseConnect
+  (`Firefly.Accounts.Auth.OIDC`, provider `"oidc"`), a SAML identity provider
+  (`Firefly.Accounts.Auth.SAML`, provider `"saml"`) and a DiscourseConnect
   provider (`Firefly.Accounts.Auth.DiscourseConnect`), each enabled by its own
   configuration. With `FIREFLY_SSO_ONLY` set (see `sso_only?/0`), they're
   the only ways in: social logins, passwords and the registration form are
@@ -47,10 +48,11 @@ defmodule Firefly.Accounts.Auth do
     slack: {"Slack", Firefly.Accounts.Auth.Strategies.Slack},
     # Single sign-on: enabled and named by their own configuration.
     oidc: {nil, Firefly.Accounts.Auth.OIDC},
+    saml: {nil, Firefly.Accounts.Auth.SAML},
     discourse_connect: {nil, Firefly.Accounts.Auth.DiscourseConnect}
   ]
 
-  @sso [:oidc, :discourse_connect]
+  @sso [:oidc, :saml, :discourse_connect]
 
   @names Enum.map(@providers, fn {provider, _} -> to_string(provider) end)
 

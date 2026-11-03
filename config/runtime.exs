@@ -77,6 +77,12 @@ if config_env() != :test do
       private_key: System.get_env("FIREFLY_APPLE_PRIVATE_KEY")
   end
 
+  # The key and certificate (PEM) SAML login requests are signed with, when
+  # the saml_sign_requests setting is on (see Firefly.Accounts.Auth.SAML).
+  config :firefly, Firefly.Accounts.Auth.SAML,
+    sp_key: System.get_env("FIREFLY_SAML_SP_KEY"),
+    sp_cert: System.get_env("FIREFLY_SAML_SP_CERT")
+
   # Single sign-on (see Firefly.Accounts.Auth.OIDC and
   # Firefly.Accounts.Auth.DiscourseConnect); FIREFLY_SSO_ONLY makes it the only
   # way to log in.

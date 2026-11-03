@@ -23,6 +23,12 @@ defmodule Firefly.URLs do
 
   def invite_url(key), do: url(["invites", key])
 
+  @doc "Where SAML identity providers post their responses (see `Firefly.Accounts.Auth.SAML`)."
+  def saml_acs_url, do: url(["auth", "saml", "acs"])
+
+  @doc "This site's SAML service provider metadata."
+  def saml_metadata_url, do: url(["saml", "metadata"])
+
   @doc "A group's page (`tab`: e.g. `\"members\"`, `\"requests\"`)."
   def group_url(group, tab \\ nil)
   def group_url(group, nil), do: url(["groups", group.name])

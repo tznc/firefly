@@ -197,6 +197,145 @@ defmodule Firefly.SiteSettings do
           "The provider's groups, add_groups and remove_groups set the member's groups (only groups that exist here)."
       },
       %{
+        key: "saml_enabled",
+        section: "SAML",
+        type: :boolean,
+        label: "SAML login",
+        default: false,
+        help:
+          "Log in with a SAML 2.0 identity provider (configured below). Give it this site's metadata, at /saml/metadata."
+      },
+      %{
+        key: "saml_name",
+        section: "SAML",
+        type: :string,
+        label: "Login button name",
+        default: "SAML",
+        help: "What the login button says: \"Log in with ...\"."
+      },
+      %{
+        key: "saml_idp_metadata_url",
+        section: "SAML",
+        type: :text,
+        label: "Identity provider metadata URL",
+        default: "",
+        help:
+          "Where the identity provider publishes its metadata (fetched hourly). Or paste the metadata below, or fill in its entity id, login URL and certificate."
+      },
+      %{
+        key: "saml_idp_metadata_xml",
+        section: "SAML",
+        type: :text,
+        max_length: 100_000,
+        label: "Identity provider metadata",
+        default: "",
+        help: "The identity provider's metadata XML, if it isn't published at a URL."
+      },
+      %{
+        key: "saml_idp_entity_id",
+        section: "SAML",
+        type: :text,
+        label: "Identity provider entity id",
+        default: "",
+        help: "Its issuer name. Blank: the metadata's."
+      },
+      %{
+        key: "saml_idp_sso_url",
+        section: "SAML",
+        type: :text,
+        label: "Identity provider login URL",
+        default: "",
+        help: "Its single sign-on service (HTTP-Redirect binding). Blank: the metadata's."
+      },
+      %{
+        key: "saml_idp_certificate",
+        section: "SAML",
+        type: :text,
+        max_length: 20_000,
+        label: "Identity provider certificate",
+        default: "",
+        help:
+          "Its signing certificate (PEM), trusted along with the metadata's (for a key rollover)."
+      },
+      %{
+        key: "saml_sp_entity_id",
+        section: "SAML",
+        type: :text,
+        label: "This site's entity id",
+        default: "",
+        help: "Blank: the metadata URL (/saml/metadata). Assertions must be for this audience."
+      },
+      %{
+        key: "saml_uid_attribute",
+        section: "SAML",
+        type: :text,
+        label: "Account id attribute",
+        default: "",
+        help:
+          "The attribute that identifies the account for good. Blank: the NameID (ask for a persistent one)."
+      },
+      %{
+        key: "saml_email_attributes",
+        section: "SAML",
+        type: :text,
+        label: "Email attributes",
+        default:
+          "email, mail, urn:oid:0.9.2342.19200300.100.1.3, http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+        help: "Attribute names (or friendly names) for the email address, the first present wins."
+      },
+      %{
+        key: "saml_username_attributes",
+        section: "SAML",
+        type: :text,
+        label: "Username attributes",
+        default: "username, uid, urn:oid:0.9.2342.19200300.100.1.1",
+        help: "For a new account's username (made unique)."
+      },
+      %{
+        key: "saml_name_attributes",
+        section: "SAML",
+        type: :text,
+        label: "Name attributes",
+        default:
+          "name, displayName, cn, urn:oid:2.16.840.1.113730.3.1.241, http://schemas.microsoft.com/identity/claims/displayname",
+        help: "For the member's full name."
+      },
+      %{
+        key: "saml_groups_attributes",
+        section: "SAML",
+        type: :text,
+        label: "Groups attributes",
+        default: "",
+        help:
+          "When set, each login makes the member's groups those listed there (only groups that exist here; admin and moderator aren't touched). Blank: groups aren't synced."
+      },
+      %{
+        key: "saml_trust_email",
+        section: "SAML",
+        type: :boolean,
+        label: "Trust SAML email addresses",
+        default: true,
+        help: "New accounts' addresses count as confirmed (the identity provider verified them)."
+      },
+      %{
+        key: "saml_sign_requests",
+        section: "SAML",
+        type: :boolean,
+        label: "Sign login requests",
+        default: false,
+        help:
+          "Sign AuthnRequests with the key and certificate in FIREFLY_SAML_SP_KEY and FIREFLY_SAML_SP_CERT."
+      },
+      %{
+        key: "saml_idp_initiated",
+        section: "SAML",
+        type: :boolean,
+        label: "Allow logins started at the identity provider",
+        default: false,
+        help:
+          "Accept responses that answer no request of ours (from the identity provider's app list). Such logins can't be tied to the browser, so they're off unless needed."
+      },
+      %{
         key: "new_user_max_links",
         section: "Spam and new users",
         type: :integer,
