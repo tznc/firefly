@@ -1,0 +1,19 @@
+{
+  "guild": {"id": "900", "name": "Firefly fans"},
+  "channel": {"id": "100", "type": "GuildTextChat", "categoryId": "50", "category": "Community",
+              "name": "general", "topic": "Say hi"},
+  "messages": [
+    {"id": "1001", "type": "Default", "timestamp": "2021-05-01T10:00:00+00:00", "timestampEdited": null,
+     "content": "Hello **all**", "author": {"id": "7", "name": "ann", "nickname": "Ann", "isBot": false},
+     "attachments": [{"id": "a1", "url": "media/logo.png", "fileName": "logo.png"}],
+     "reactions": [{"emoji": {"id": null, "name": "👍", "code": "thumbsup"}, "count": 1,
+                    "users": [{"id": "8", "name": "ben"}]}]},
+    {"id": "1002", "type": "GuildMemberJoin", "timestamp": "2021-05-01T10:01:00+00:00",
+     "content": "", "author": {"id": "8", "name": "ben", "isBot": false}, "attachments": [], "reactions": []},
+    {"id": "1003", "type": "Reply", "timestamp": "2021-05-01T10:02:00+00:00", "timestampEdited": "2021-05-01T10:03:00+00:00",
+     "content": "Hi Ann", "author": {"id": "8", "name": "ben", "isBot": false}, "attachments": [], "reactions": [],
+     "reference": {"messageId": "1001", "channelId": "100"}},
+    {"id": "1004", "type": "Default", "timestamp": "2021-05-01T11:00:00+00:00",
+     "content": "Beep", "author": {"id": "9", "name": "botty", "isBot": true}, "attachments": [], "reactions": []}
+  ]
+}

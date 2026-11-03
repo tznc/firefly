@@ -1,0 +1,6 @@
+[
+  {"id": "C01", "name": "general", "created": 1577836800, "creator": "U01", "members": ["U01", "U02"],
+   "purpose": {"value": "Company-wide"}, "topic": {"value": ""}},
+  {"id": "C02", "name": "random", "created": 1577836800, "creator": "U02", "members": ["U02"],
+   "purpose": {"value": ""}, "topic": {"value": "Anything goes"}}
+]

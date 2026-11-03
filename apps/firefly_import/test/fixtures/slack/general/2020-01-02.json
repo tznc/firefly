@@ -1,0 +1,3 @@
+[
+  {"type": "message", "subtype": "bot_message", "bot_id": "B01", "username": "deploybot", "text": "Deployed ~v1~ v2", "ts": "1577962800.000100"}
+]
