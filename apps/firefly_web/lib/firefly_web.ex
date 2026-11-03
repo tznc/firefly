@@ -19,6 +19,7 @@ defmodule FireflyWeb do
     deps: [
       Firefly,
       Firefly.Accounts,
+      Firefly.Analytics,
       Firefly.Badges,
       Firefly.Directory,
       Firefly.Discussion,

@@ -16,6 +16,9 @@ defmodule FireflyWeb.ThreadLive.Show do
   are shown above the reply button; admins manage them, and merge and
   split, from the thread's tools page (`ThreadLive.Tools`).
 
+  Opening the page counts a topic view, and following a link in a post a
+  click, shown next to the link (see `Firefly.Analytics`).
+
   Members can bookmark posts (see `Firefly.Discussion.Bookmarks`): bookmarking
   one opens a form for an optional note and reminder.
 
@@ -39,7 +42,7 @@ defmodule FireflyWeb.ThreadLive.Show do
   import FireflyWeb.BookmarkComponents
   import FireflyWeb.PollComponents, only: [poll: 1]
 
-  alias Firefly.Discussion
+  alias Firefly.{Analytics, Discussion}
   alias Firefly.Accounts.Ignores
   alias Firefly.Discussion.{Bookmarks, Mentions, Polls}
   alias Firefly.Moderation.{Flags, Posting, WatchedWords}
@@ -52,7 +55,7 @@ defmodule FireflyWeb.ThreadLive.Show do
   alias Firefly.Notifications.Subscriptions
 
   @impl true
-  def mount(%{"category_id" => category_id, "id" => id}, _session, socket) do
+  def mount(%{"category_id" => category_id, "id" => id}, session, socket) do
     viewer = socket.assigns.current_user
     thread = Discussion.get_thread!(id)
     # Raises (404) unless the viewer may read the thread where it is now.
@@ -63,9 +66,31 @@ defmodule FireflyWeb.ThreadLive.Show do
     # the old category, and those to a merged thread its old id: send them to
     # the thread where it lives now.
     cond do
-      Thread.merged?(thread) -> {:ok, push_navigate(socket, to: merged_path(thread))}
-      to_string(thread.category_id) == category_id -> mount_thread(category, thread, socket)
-      true -> {:ok, push_navigate(socket, to: thread_path(thread))}
+      Thread.merged?(thread) ->
+        {:ok, push_navigate(socket, to: merged_path(thread))}
+
+      to_string(thread.category_id) == category_id ->
+        mount_thread(category, thread, session, socket)
+
+      true ->
+        {:ok, push_navigate(socket, to: thread_path(thread))}
+    end
+  end
+
+  # Once the page is live (crawlers, which don't run it, aren't counted).
+  defp count_view(thread, session, socket) do
+    if Analytics.enabled?() and session["analytics_dnt"] != true do
+      viewer =
+        case socket.assigns.current_user do
+          %{id: id} ->
+            {:user, id}
+
+          nil ->
+            {:anonymous, FireflyWeb.ClientIP.from_socket(socket),
+             get_connect_info(socket, :user_agent)}
+        end
+
+      Analytics.topic_view(thread.id, viewer)
     end
   end
 
@@ -79,8 +104,11 @@ defmodule FireflyWeb.ThreadLive.Show do
     end
   end
 
-  defp mount_thread(category, thread, socket) do
-    if connected?(socket), do: Discussion.subscribe("forums:thread:#{thread.id}")
+  defp mount_thread(category, thread, session, socket) do
+    if connected?(socket) do
+      Discussion.subscribe("forums:thread:#{thread.id}")
+      count_view(thread, session, socket)
+    end
 
     # Where the user had read up to before this visit (nil: never opened).
     read = Discussion.thread_read(socket.assigns.current_user, thread)
@@ -91,6 +119,7 @@ defmodule FireflyWeb.ThreadLive.Show do
      |> assign(:last_read_post_id, read && read.last_read_post_id)
      |> assign(:tz_offset, FireflyWeb.LocalTime.offset(socket))
      |> assign(:bookmarking, nil)
+     |> assign(:analytics_dnt, session["analytics_dnt"] == true)
      |> assign(:ignored_user_ids, MapSet.new(Ignores.ignored_ids(socket.assigns.current_user)))
      |> assign(:revealed_ids, MapSet.new())
      |> load_thread(thread)}
@@ -508,6 +537,8 @@ defmodule FireflyWeb.ThreadLive.Show do
     |> assign(:deletable_ids, permitted_ids(user, thread, :delete_post))
     |> assign(:admin?, can?(user, :view_deleted_posts))
     |> assign(:likers, Discussion.likers(thread.posts))
+    |> assign(:link_clicks, Analytics.link_clicks(thread.posts))
+    |> assign(:track_clicks?, Analytics.enabled?() and not socket.assigns.analytics_dnt)
     |> assign(:likeable_ids, permitted_ids(user, thread, :like_post))
     |> assign(:flaggable_ids, permitted_ids(user, thread, :flag_post))
     |> assign(:flagged_ids, Flags.flagged_ids(thread.posts, user))
@@ -643,6 +674,7 @@ defmodule FireflyWeb.ThreadLive.Show do
           </.link>
           · <.time_ago id="thread-time" at={@thread.inserted_at} />
           · <span id="reply-count">{ngettext("1 reply", "%{count} replies", reply_count(@replies))}</span>
+          · <span id="view-count">{ngettext("1 view", "%{count} views", @thread.views)}</span>
           <span :if={@can_manage? or @can_close? or @can_move?} class="ml-auto flex gap-1">
             <div :if={@can_close? or @can_move?} id="moderation" class="dropdown dropdown-end">
               <div tabindex="0" role="button" class="btn btn-ghost btn-xs">
@@ -751,6 +783,8 @@ defmodule FireflyWeb.ThreadLive.Show do
             refs={@refs}
             card_target="#user-card"
             can_edit={MapSet.member?(@editable_ids, @first_post.id)}
+            link_clicks={@link_clicks[@first_post.id] || %{}}
+            track_clicks={@track_clicks?}
           >
             <:poll :if={@polls[@first_post.id]}>
               <.poll
@@ -827,6 +861,8 @@ defmodule FireflyWeb.ThreadLive.Show do
             refs={@refs}
             card_target="#user-card"
             can_edit={MapSet.member?(@editable_ids, post.id)}
+            link_clicks={@link_clicks[post.id] || %{}}
+            track_clicks={@track_clicks?}
             accepted={post.id == @thread.accepted_post_id}
           >
             <:poll :if={@polls[post.id]}>

@@ -34,7 +34,9 @@ defmodule Firefly.Application do
       {Task.Supervisor, name: Firefly.Rendering.LinkPreviews.supervisor()},
       {Task.Supervisor, name: Firefly.Notifications.WebPush.TaskSupervisor},
       # Posts as plugins transformed them
-      Firefly.Plugins.Content.cache_spec()
+      Firefly.Plugins.Content.cache_spec(),
+      # Counts traffic in memory and writes it in batches
+      Firefly.Analytics.Buffer
     ] ++ topic_timers() ++ plugin_queue()
   end
 

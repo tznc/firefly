@@ -162,8 +162,9 @@ defmodule Firefly.Moderation.TopicTimers do
     `Firefly.Plugins.Egress`), refreshing the user directory's stats
     (see `Firefly.Directory`), reviewing trust levels (see
     `Firefly.TrustLevels`), granting badges (see
-    `Firefly.Badges`) and sending digest emails (see
-    `Firefly.Notifications.Digests`). At start (so nothing that fell due while the
+    `Firefly.Badges`), sending digest emails (see
+    `Firefly.Notifications.Digests`) and pruning a day's analytics
+    viewers (see `Firefly.Analytics`). At start (so nothing that fell due while the
     app was down is lost), then every `:interval` milliseconds (the
     `Firefly.Moderation.TopicTimers` config; 30 seconds by default), so each runs
     at most that late. Every job takes its due rows one locked transaction
@@ -183,7 +184,8 @@ defmodule Firefly.Moderation.TopicTimers do
       Firefly.Directory,
       Firefly.TrustLevels,
       Firefly.Badges,
-      Firefly.Notifications.Digests
+      Firefly.Notifications.Digests,
+      Firefly.Analytics
     ]
 
     def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
