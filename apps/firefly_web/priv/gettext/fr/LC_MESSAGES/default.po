@@ -83,10 +83,10 @@ msgstr "Vous en avez déjà un ?"
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr "S'applique partout où vous êtes connecté. Le bouton de la barre du haut le change aussi."
 
-#: lib/firefly_web/components/layouts.ex:501
-#: lib/firefly_web/components/layouts.ex:501
-#: lib/firefly_web/components/layouts.ex:516
-#: lib/firefly_web/components/layouts.ex:516
+#: lib/firefly_web/components/layouts.ex:502
+#: lib/firefly_web/components/layouts.ex:502
+#: lib/firefly_web/components/layouts.ex:517
+#: lib/firefly_web/components/layouts.ex:517
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "Tentative de reconnexion"
@@ -135,6 +135,8 @@ msgstr "Catégories"
 
 #: lib/firefly_web/components/layouts.ex:146
 #: lib/firefly_web/components/layouts.ex:146
+#: lib/firefly_web/components/layouts.ex:353
+#: lib/firefly_web/components/layouts.ex:353
 #, elixir-autogen, elixir-format
 msgid "Chat"
 msgstr "Discussion"
@@ -159,8 +161,8 @@ msgstr "Fermer le menu"
 msgid "Confirm new password"
 msgstr "Confirmez le nouveau mot de passe"
 
-#: lib/firefly_web/components/layouts.ex:399
-#: lib/firefly_web/components/layouts.ex:399
+#: lib/firefly_web/components/layouts.ex:400
+#: lib/firefly_web/components/layouts.ex:400
 #, elixir-autogen, elixir-format
 msgid "Confirm your email address to start posting. We sent a link to %{email}."
 msgstr "Confirmez votre adresse e-mail pour commencer à publier. Nous avons envoyé un lien à %{email}."
@@ -455,8 +457,8 @@ msgstr "Mot de passe réinitialisé. Connectez-vous avec le nouveau."
 msgid "Plugins"
 msgstr "Extensions"
 
-#: lib/firefly_web/components/layouts.ex:422
-#: lib/firefly_web/components/layouts.ex:422
+#: lib/firefly_web/components/layouts.ex:423
+#: lib/firefly_web/components/layouts.ex:423
 #, elixir-autogen, elixir-format
 msgid "Reason: %{reason}"
 msgstr "Motif : %{reason}"
@@ -467,8 +469,8 @@ msgstr "Motif : %{reason}"
 msgid "Registration failed. Please try again."
 msgstr "L'inscription a échoué. Veuillez réessayer."
 
-#: lib/firefly_web/components/layouts.ex:402
-#: lib/firefly_web/components/layouts.ex:402
+#: lib/firefly_web/components/layouts.ex:403
+#: lib/firefly_web/components/layouts.ex:403
 #, elixir-autogen, elixir-format
 msgid "Resend link"
 msgstr "Renvoyer le lien"
@@ -505,8 +507,8 @@ msgstr "Enregistrement..."
 #: lib/firefly_web/components/layouts.ex:55
 #: lib/firefly_web/components/layouts.ex:61
 #: lib/firefly_web/components/layouts.ex:61
-#: lib/firefly_web/components/layouts.ex:356
-#: lib/firefly_web/components/layouts.ex:356
+#: lib/firefly_web/components/layouts.ex:357
+#: lib/firefly_web/components/layouts.ex:357
 #, elixir-autogen, elixir-format
 msgid "Search"
 msgstr "Rechercher"
@@ -549,8 +551,8 @@ msgstr "Se connecter avec un mot de passe"
 msgid "Site settings"
 msgstr "Paramètres du site"
 
-#: lib/firefly_web/components/layouts.ex:508
-#: lib/firefly_web/components/layouts.ex:508
+#: lib/firefly_web/components/layouts.ex:509
+#: lib/firefly_web/components/layouts.ex:509
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr "Une erreur est survenue !"
@@ -641,8 +643,8 @@ msgstr "Mots surveillés"
 msgid "Watching"
 msgstr "Suivis"
 
-#: lib/firefly_web/components/layouts.ex:493
-#: lib/firefly_web/components/layouts.ex:493
+#: lib/firefly_web/components/layouts.ex:494
+#: lib/firefly_web/components/layouts.ex:494
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr "Connexion introuvable"
@@ -735,32 +737,32 @@ msgstr "Réinitialiser le mot de passe"
 msgid "Send reset link"
 msgstr "Envoyer le lien"
 
-#: lib/firefly_web/components/layouts.ex:559
-#: lib/firefly_web/components/layouts.ex:559
+#: lib/firefly_web/components/layouts.ex:560
+#: lib/firefly_web/components/layouts.ex:560
 #, elixir-autogen, elixir-format
 msgid "Use dark theme"
 msgstr "Utiliser le thème sombre"
 
-#: lib/firefly_web/components/layouts.ex:551
-#: lib/firefly_web/components/layouts.ex:551
+#: lib/firefly_web/components/layouts.ex:552
+#: lib/firefly_web/components/layouts.ex:552
 #, elixir-autogen, elixir-format
 msgid "Use light theme"
 msgstr "Utiliser le thème clair"
 
-#: lib/firefly_web/components/layouts.ex:543
-#: lib/firefly_web/components/layouts.ex:543
+#: lib/firefly_web/components/layouts.ex:544
+#: lib/firefly_web/components/layouts.ex:544
 #, elixir-autogen, elixir-format
 msgid "Use system theme"
 msgstr "Utiliser le thème du système"
 
-#: lib/firefly_web/components/layouts.ex:355
-#: lib/firefly_web/components/layouts.ex:355
+#: lib/firefly_web/components/layouts.ex:356
+#: lib/firefly_web/components/layouts.ex:356
 #, elixir-autogen, elixir-format
 msgid "Bookmark the post in hand"
 msgstr "Mettre en signet le message en cours"
 
-#: lib/firefly_web/components/layouts.ex:357
-#: lib/firefly_web/components/layouts.ex:357
+#: lib/firefly_web/components/layouts.ex:358
+#: lib/firefly_web/components/layouts.ex:358
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "Fermer"
@@ -777,8 +779,8 @@ msgstr "Navigation du forum"
 msgid "Home"
 msgstr "Accueil"
 
-#: lib/firefly_web/components/layouts.ex:363
-#: lib/firefly_web/components/layouts.ex:363
+#: lib/firefly_web/components/layouts.ex:364
+#: lib/firefly_web/components/layouts.ex:364
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "Raccourcis clavier"
@@ -789,8 +791,8 @@ msgstr "Raccourcis clavier"
 msgid "Keyboard shortcuts (press ? for the list)"
 msgstr "Raccourcis clavier (appuyez sur ? pour la liste)"
 
-#: lib/firefly_web/components/layouts.ex:354
-#: lib/firefly_web/components/layouts.ex:354
+#: lib/firefly_web/components/layouts.ex:355
+#: lib/firefly_web/components/layouts.ex:355
 #, elixir-autogen, elixir-format
 msgid "Like the post in hand"
 msgstr "Aimer le message en cours"
@@ -807,8 +809,8 @@ msgstr "Nouveaux sujets"
 msgid "Next / previous topic or post"
 msgstr "Sujet ou message suivant / précédent"
 
-#: lib/firefly_web/components/layouts.ex:353
-#: lib/firefly_web/components/layouts.ex:353
+#: lib/firefly_web/components/layouts.ex:354
+#: lib/firefly_web/components/layouts.ex:354
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "Répondre"
@@ -831,8 +833,8 @@ msgstr "Aller au contenu"
 msgid "Top topics"
 msgstr "Sujets populaires"
 
-#: lib/firefly_web/components/layouts.ex:371
-#: lib/firefly_web/components/layouts.ex:371
+#: lib/firefly_web/components/layouts.ex:372
+#: lib/firefly_web/components/layouts.ex:372
 #, elixir-autogen, elixir-format
 msgid "Turn these off in your interface settings."
 msgstr "Vous pouvez les désactiver dans vos paramètres d'interface."
@@ -843,10 +845,10 @@ msgstr "Vous pouvez les désactiver dans vos paramètres d'interface."
 msgid "Unread topics"
 msgstr "Sujets non lus"
 
-#: lib/firefly_web/components/layouts.ex:375
-#: lib/firefly_web/components/layouts.ex:375
-#: lib/firefly_web/components/layouts.ex:380
-#: lib/firefly_web/components/layouts.ex:380
+#: lib/firefly_web/components/layouts.ex:376
+#: lib/firefly_web/components/layouts.ex:376
+#: lib/firefly_web/components/layouts.ex:381
+#: lib/firefly_web/components/layouts.ex:381
 #, elixir-autogen, elixir-format
 msgid "Got it"
 msgstr "Compris"

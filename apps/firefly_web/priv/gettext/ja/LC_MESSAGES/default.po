@@ -80,10 +80,10 @@ msgstr "すでにアカウントをお持ちですか？"
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr "ログインしているすべての環境に適用されます。上部バーの切り替えでも変更できます。"
 
-#: lib/firefly_web/components/layouts.ex:501
-#: lib/firefly_web/components/layouts.ex:501
-#: lib/firefly_web/components/layouts.ex:516
-#: lib/firefly_web/components/layouts.ex:516
+#: lib/firefly_web/components/layouts.ex:502
+#: lib/firefly_web/components/layouts.ex:502
+#: lib/firefly_web/components/layouts.ex:517
+#: lib/firefly_web/components/layouts.ex:517
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "再接続しています"
@@ -132,6 +132,8 @@ msgstr "カテゴリ"
 
 #: lib/firefly_web/components/layouts.ex:146
 #: lib/firefly_web/components/layouts.ex:146
+#: lib/firefly_web/components/layouts.ex:353
+#: lib/firefly_web/components/layouts.ex:353
 #, elixir-autogen, elixir-format
 msgid "Chat"
 msgstr "チャット"
@@ -156,8 +158,8 @@ msgstr "メニューを閉じる"
 msgid "Confirm new password"
 msgstr "新しいパスワード（確認）"
 
-#: lib/firefly_web/components/layouts.ex:399
-#: lib/firefly_web/components/layouts.ex:399
+#: lib/firefly_web/components/layouts.ex:400
+#: lib/firefly_web/components/layouts.ex:400
 #, elixir-autogen, elixir-format
 msgid "Confirm your email address to start posting. We sent a link to %{email}."
 msgstr "投稿を始めるにはメールアドレスを確認してください。%{email} にリンクを送りました。"
@@ -452,8 +454,8 @@ msgstr "パスワードを再設定しました。新しいパスワードでロ
 msgid "Plugins"
 msgstr "プラグイン"
 
-#: lib/firefly_web/components/layouts.ex:422
-#: lib/firefly_web/components/layouts.ex:422
+#: lib/firefly_web/components/layouts.ex:423
+#: lib/firefly_web/components/layouts.ex:423
 #, elixir-autogen, elixir-format
 msgid "Reason: %{reason}"
 msgstr "理由: %{reason}"
@@ -464,8 +466,8 @@ msgstr "理由: %{reason}"
 msgid "Registration failed. Please try again."
 msgstr "登録できませんでした。もう一度お試しください。"
 
-#: lib/firefly_web/components/layouts.ex:402
-#: lib/firefly_web/components/layouts.ex:402
+#: lib/firefly_web/components/layouts.ex:403
+#: lib/firefly_web/components/layouts.ex:403
 #, elixir-autogen, elixir-format
 msgid "Resend link"
 msgstr "リンクを再送する"
@@ -502,8 +504,8 @@ msgstr "保存中..."
 #: lib/firefly_web/components/layouts.ex:55
 #: lib/firefly_web/components/layouts.ex:61
 #: lib/firefly_web/components/layouts.ex:61
-#: lib/firefly_web/components/layouts.ex:356
-#: lib/firefly_web/components/layouts.ex:356
+#: lib/firefly_web/components/layouts.ex:357
+#: lib/firefly_web/components/layouts.ex:357
 #, elixir-autogen, elixir-format
 msgid "Search"
 msgstr "検索"
@@ -546,8 +548,8 @@ msgstr "パスワードでログイン"
 msgid "Site settings"
 msgstr "サイト設定"
 
-#: lib/firefly_web/components/layouts.ex:508
-#: lib/firefly_web/components/layouts.ex:508
+#: lib/firefly_web/components/layouts.ex:509
+#: lib/firefly_web/components/layouts.ex:509
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr "問題が発生しました"
@@ -638,8 +640,8 @@ msgstr "監視ワード"
 msgid "Watching"
 msgstr "ウォッチ中"
 
-#: lib/firefly_web/components/layouts.ex:493
-#: lib/firefly_web/components/layouts.ex:493
+#: lib/firefly_web/components/layouts.ex:494
+#: lib/firefly_web/components/layouts.ex:494
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr "インターネットに接続できません"
@@ -732,32 +734,32 @@ msgstr "パスワードを再設定する"
 msgid "Send reset link"
 msgstr "再設定リンクを送る"
 
-#: lib/firefly_web/components/layouts.ex:559
-#: lib/firefly_web/components/layouts.ex:559
+#: lib/firefly_web/components/layouts.ex:560
+#: lib/firefly_web/components/layouts.ex:560
 #, elixir-autogen, elixir-format
 msgid "Use dark theme"
 msgstr "ダークテーマを使う"
 
-#: lib/firefly_web/components/layouts.ex:551
-#: lib/firefly_web/components/layouts.ex:551
+#: lib/firefly_web/components/layouts.ex:552
+#: lib/firefly_web/components/layouts.ex:552
 #, elixir-autogen, elixir-format
 msgid "Use light theme"
 msgstr "ライトテーマを使う"
 
-#: lib/firefly_web/components/layouts.ex:543
-#: lib/firefly_web/components/layouts.ex:543
+#: lib/firefly_web/components/layouts.ex:544
+#: lib/firefly_web/components/layouts.ex:544
 #, elixir-autogen, elixir-format
 msgid "Use system theme"
 msgstr "システムのテーマを使う"
 
-#: lib/firefly_web/components/layouts.ex:355
-#: lib/firefly_web/components/layouts.ex:355
+#: lib/firefly_web/components/layouts.ex:356
+#: lib/firefly_web/components/layouts.ex:356
 #, elixir-autogen, elixir-format
 msgid "Bookmark the post in hand"
 msgstr "選択中の投稿をブックマーク"
 
-#: lib/firefly_web/components/layouts.ex:357
-#: lib/firefly_web/components/layouts.ex:357
+#: lib/firefly_web/components/layouts.ex:358
+#: lib/firefly_web/components/layouts.ex:358
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "閉じる"
@@ -774,8 +776,8 @@ msgstr "フォーラムのナビゲーション"
 msgid "Home"
 msgstr "ホーム"
 
-#: lib/firefly_web/components/layouts.ex:363
-#: lib/firefly_web/components/layouts.ex:363
+#: lib/firefly_web/components/layouts.ex:364
+#: lib/firefly_web/components/layouts.ex:364
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "キーボードショートカット"
@@ -786,8 +788,8 @@ msgstr "キーボードショートカット"
 msgid "Keyboard shortcuts (press ? for the list)"
 msgstr "キーボードショートカット（? で一覧）"
 
-#: lib/firefly_web/components/layouts.ex:354
-#: lib/firefly_web/components/layouts.ex:354
+#: lib/firefly_web/components/layouts.ex:355
+#: lib/firefly_web/components/layouts.ex:355
 #, elixir-autogen, elixir-format
 msgid "Like the post in hand"
 msgstr "選択中の投稿にいいね"
@@ -804,8 +806,8 @@ msgstr "新着トピック"
 msgid "Next / previous topic or post"
 msgstr "次 / 前のトピックまたは投稿"
 
-#: lib/firefly_web/components/layouts.ex:353
-#: lib/firefly_web/components/layouts.ex:353
+#: lib/firefly_web/components/layouts.ex:354
+#: lib/firefly_web/components/layouts.ex:354
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "返信"
@@ -828,8 +830,8 @@ msgstr "本文へスキップ"
 msgid "Top topics"
 msgstr "人気のトピック"
 
-#: lib/firefly_web/components/layouts.ex:371
-#: lib/firefly_web/components/layouts.ex:371
+#: lib/firefly_web/components/layouts.ex:372
+#: lib/firefly_web/components/layouts.ex:372
 #, elixir-autogen, elixir-format
 msgid "Turn these off in your interface settings."
 msgstr "インターフェース設定でオフにできます。"
@@ -840,10 +842,10 @@ msgstr "インターフェース設定でオフにできます。"
 msgid "Unread topics"
 msgstr "未読トピック"
 
-#: lib/firefly_web/components/layouts.ex:375
-#: lib/firefly_web/components/layouts.ex:375
-#: lib/firefly_web/components/layouts.ex:380
-#: lib/firefly_web/components/layouts.ex:380
+#: lib/firefly_web/components/layouts.ex:376
+#: lib/firefly_web/components/layouts.ex:376
+#: lib/firefly_web/components/layouts.ex:381
+#: lib/firefly_web/components/layouts.ex:381
 #, elixir-autogen, elixir-format
 msgid "Got it"
 msgstr "わかりました"

@@ -80,10 +80,10 @@ msgstr "已经有账户了？"
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr "在你登录的所有地方生效。顶部栏的切换按钮也能更改。"
 
-#: lib/firefly_web/components/layouts.ex:501
-#: lib/firefly_web/components/layouts.ex:501
-#: lib/firefly_web/components/layouts.ex:516
-#: lib/firefly_web/components/layouts.ex:516
+#: lib/firefly_web/components/layouts.ex:502
+#: lib/firefly_web/components/layouts.ex:502
+#: lib/firefly_web/components/layouts.ex:517
+#: lib/firefly_web/components/layouts.ex:517
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "正在尝试重新连接"
@@ -132,6 +132,8 @@ msgstr "分类"
 
 #: lib/firefly_web/components/layouts.ex:146
 #: lib/firefly_web/components/layouts.ex:146
+#: lib/firefly_web/components/layouts.ex:353
+#: lib/firefly_web/components/layouts.ex:353
 #, elixir-autogen, elixir-format
 msgid "Chat"
 msgstr "聊天"
@@ -156,8 +158,8 @@ msgstr "关闭菜单"
 msgid "Confirm new password"
 msgstr "确认新密码"
 
-#: lib/firefly_web/components/layouts.ex:399
-#: lib/firefly_web/components/layouts.ex:399
+#: lib/firefly_web/components/layouts.ex:400
+#: lib/firefly_web/components/layouts.ex:400
 #, elixir-autogen, elixir-format
 msgid "Confirm your email address to start posting. We sent a link to %{email}."
 msgstr "确认你的邮箱后即可发帖。我们已向 %{email} 发送了链接。"
@@ -452,8 +454,8 @@ msgstr "密码已重置，请用新密码登录。"
 msgid "Plugins"
 msgstr "插件"
 
-#: lib/firefly_web/components/layouts.ex:422
-#: lib/firefly_web/components/layouts.ex:422
+#: lib/firefly_web/components/layouts.ex:423
+#: lib/firefly_web/components/layouts.ex:423
 #, elixir-autogen, elixir-format
 msgid "Reason: %{reason}"
 msgstr "原因：%{reason}"
@@ -464,8 +466,8 @@ msgstr "原因：%{reason}"
 msgid "Registration failed. Please try again."
 msgstr "注册失败，请重试。"
 
-#: lib/firefly_web/components/layouts.ex:402
-#: lib/firefly_web/components/layouts.ex:402
+#: lib/firefly_web/components/layouts.ex:403
+#: lib/firefly_web/components/layouts.ex:403
 #, elixir-autogen, elixir-format
 msgid "Resend link"
 msgstr "重新发送链接"
@@ -502,8 +504,8 @@ msgstr "正在保存..."
 #: lib/firefly_web/components/layouts.ex:55
 #: lib/firefly_web/components/layouts.ex:61
 #: lib/firefly_web/components/layouts.ex:61
-#: lib/firefly_web/components/layouts.ex:356
-#: lib/firefly_web/components/layouts.ex:356
+#: lib/firefly_web/components/layouts.ex:357
+#: lib/firefly_web/components/layouts.ex:357
 #, elixir-autogen, elixir-format
 msgid "Search"
 msgstr "搜索"
@@ -546,8 +548,8 @@ msgstr "使用密码登录"
 msgid "Site settings"
 msgstr "站点设置"
 
-#: lib/firefly_web/components/layouts.ex:508
-#: lib/firefly_web/components/layouts.ex:508
+#: lib/firefly_web/components/layouts.ex:509
+#: lib/firefly_web/components/layouts.ex:509
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr "出错了！"
@@ -638,8 +640,8 @@ msgstr "监控词"
 msgid "Watching"
 msgstr "关注中"
 
-#: lib/firefly_web/components/layouts.ex:493
-#: lib/firefly_web/components/layouts.ex:493
+#: lib/firefly_web/components/layouts.ex:494
+#: lib/firefly_web/components/layouts.ex:494
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr "找不到网络连接"
@@ -732,32 +734,32 @@ msgstr "重置密码"
 msgid "Send reset link"
 msgstr "发送重置链接"
 
-#: lib/firefly_web/components/layouts.ex:559
-#: lib/firefly_web/components/layouts.ex:559
+#: lib/firefly_web/components/layouts.ex:560
+#: lib/firefly_web/components/layouts.ex:560
 #, elixir-autogen, elixir-format
 msgid "Use dark theme"
 msgstr "使用深色主题"
 
-#: lib/firefly_web/components/layouts.ex:551
-#: lib/firefly_web/components/layouts.ex:551
+#: lib/firefly_web/components/layouts.ex:552
+#: lib/firefly_web/components/layouts.ex:552
 #, elixir-autogen, elixir-format
 msgid "Use light theme"
 msgstr "使用浅色主题"
 
-#: lib/firefly_web/components/layouts.ex:543
-#: lib/firefly_web/components/layouts.ex:543
+#: lib/firefly_web/components/layouts.ex:544
+#: lib/firefly_web/components/layouts.ex:544
 #, elixir-autogen, elixir-format
 msgid "Use system theme"
 msgstr "使用系统主题"
 
-#: lib/firefly_web/components/layouts.ex:355
-#: lib/firefly_web/components/layouts.ex:355
+#: lib/firefly_web/components/layouts.ex:356
+#: lib/firefly_web/components/layouts.ex:356
 #, elixir-autogen, elixir-format
 msgid "Bookmark the post in hand"
 msgstr "收藏当前帖子"
 
-#: lib/firefly_web/components/layouts.ex:357
-#: lib/firefly_web/components/layouts.ex:357
+#: lib/firefly_web/components/layouts.ex:358
+#: lib/firefly_web/components/layouts.ex:358
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr "关闭"
@@ -774,8 +776,8 @@ msgstr "论坛导航"
 msgid "Home"
 msgstr "首页"
 
-#: lib/firefly_web/components/layouts.ex:363
-#: lib/firefly_web/components/layouts.ex:363
+#: lib/firefly_web/components/layouts.ex:364
+#: lib/firefly_web/components/layouts.ex:364
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts"
 msgstr "键盘快捷键"
@@ -786,8 +788,8 @@ msgstr "键盘快捷键"
 msgid "Keyboard shortcuts (press ? for the list)"
 msgstr "键盘快捷键（按 ? 查看列表）"
 
-#: lib/firefly_web/components/layouts.ex:354
-#: lib/firefly_web/components/layouts.ex:354
+#: lib/firefly_web/components/layouts.ex:355
+#: lib/firefly_web/components/layouts.ex:355
 #, elixir-autogen, elixir-format
 msgid "Like the post in hand"
 msgstr "点赞当前帖子"
@@ -804,8 +806,8 @@ msgstr "新主题"
 msgid "Next / previous topic or post"
 msgstr "下一个 / 上一个主题或帖子"
 
-#: lib/firefly_web/components/layouts.ex:353
-#: lib/firefly_web/components/layouts.ex:353
+#: lib/firefly_web/components/layouts.ex:354
+#: lib/firefly_web/components/layouts.ex:354
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "回复"
@@ -828,8 +830,8 @@ msgstr "跳到主要内容"
 msgid "Top topics"
 msgstr "热门主题"
 
-#: lib/firefly_web/components/layouts.ex:371
-#: lib/firefly_web/components/layouts.ex:371
+#: lib/firefly_web/components/layouts.ex:372
+#: lib/firefly_web/components/layouts.ex:372
 #, elixir-autogen, elixir-format
 msgid "Turn these off in your interface settings."
 msgstr "可在界面设置中关闭。"
@@ -840,10 +842,10 @@ msgstr "可在界面设置中关闭。"
 msgid "Unread topics"
 msgstr "未读主题"
 
-#: lib/firefly_web/components/layouts.ex:375
-#: lib/firefly_web/components/layouts.ex:375
-#: lib/firefly_web/components/layouts.ex:380
-#: lib/firefly_web/components/layouts.ex:380
+#: lib/firefly_web/components/layouts.ex:376
+#: lib/firefly_web/components/layouts.ex:376
+#: lib/firefly_web/components/layouts.ex:381
+#: lib/firefly_web/components/layouts.ex:381
 #, elixir-autogen, elixir-format
 msgid "Got it"
 msgstr "知道了"

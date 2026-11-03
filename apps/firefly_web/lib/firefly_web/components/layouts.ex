@@ -350,6 +350,7 @@ defmodule FireflyWeb.Layouts do
         {"g t", gettext("Top topics")},
         {"g b", gettext("Bookmarks")},
         {"g m", gettext("Messages")},
+        {"g p", gettext("Chat")},
         {"r", gettext("Reply")},
         {"l", gettext("Like the post in hand")},
         {"b", gettext("Bookmark the post in hand")},
