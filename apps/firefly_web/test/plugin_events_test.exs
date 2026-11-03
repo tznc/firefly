@@ -137,6 +137,17 @@ defmodule FireflyWeb.PluginEventsTest do
       {:ok, _} = Review.approve(waiting, admin)
       {:ok, _} = Review.reject(refused, admin, "Off-topic")
 
+      {:ok, channel} = Firefly.Chat.create_channel(%{"name" => "Lobby"}, admin)
+      {:ok, chat} = Firefly.Chat.send_message(channel, member, %{"body" => "hi"})
+      {:ok, _} = Firefly.Chat.edit_message(chat, member, %{"body" => "hi!"})
+      {:ok, _} = Firefly.Chat.delete_message(chat, member)
+
+      # Direct messages never reach plugins.
+      created = Enum.count(queued_events(), &(&1 == "chat_message_created"))
+      {:ok, dm} = Firefly.Chat.direct_channel(admin, [member.username])
+      {:ok, _} = Firefly.Chat.send_message(dm, admin, %{"body" => "private"})
+      assert Enum.count(queued_events(), &(&1 == "chat_message_created")) == created
+
       assert Enum.sort(Enum.uniq(queued_events())) == Enum.sort(Events.names())
     end
 

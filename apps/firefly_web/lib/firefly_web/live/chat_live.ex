@@ -28,7 +28,7 @@ defmodule FireflyWeb.ChatLive do
 
   alias Firefly.{Chat, Discussion, RateLimit}
   alias Firefly.Chat.Channel
-  alias Firefly.Moderation.Posting
+  alias Firefly.Moderation.{Flag, Posting}
   alias FireflyWeb.{ChatComponents, Editor, Presence}
 
   @typing_seconds 4
@@ -545,6 +545,43 @@ defmodule FireflyWeb.ChatLive do
     end
   end
 
+  def handle_event("flag_form", %{"id" => id}, socket) do
+    case channel_message(socket, id) do
+      nil -> {:noreply, socket}
+      message -> {:noreply, assign(socket, pane: :flag, flagging: Chat.display(message))}
+    end
+  end
+
+  def handle_event("flag", %{"flag" => params}, socket) do
+    with %{} = message <- channel_message(socket, params["message_id"]),
+         {:ok, _flag} <- Chat.flag_message(message, socket.assigns.current_user, params) do
+      {:noreply,
+       socket |> assign(:pane, nil) |> put_flash(:info, "Thanks: staff will take a look.")}
+    else
+      nil ->
+        {:noreply, socket}
+
+      {:error, :already_flagged} ->
+        {:noreply, put_flash(socket, :error, "You already flagged this message.")}
+
+      error ->
+        {:noreply, refused(socket, error)}
+    end
+  end
+
+  def handle_event("remove_member", %{"id" => id}, socket) do
+    admin = socket.assigns.current_user
+
+    with %{} = member <- Firefly.Accounts.get_user(id),
+         :ok <- Chat.remove_member(socket.assigns.channel, member, admin) do
+      {:noreply,
+       socket |> load_pane(:settings) |> put_flash(:info, "Removed @#{member.username}.")}
+    else
+      nil -> {:noreply, socket}
+      error -> {:noreply, refused(socket, error)}
+    end
+  end
+
   def handle_event("search", %{"q" => q} = params, socket) do
     user = socket.assigns.current_user
 
@@ -1030,7 +1067,7 @@ defmodule FireflyWeb.ChatLive do
     <aside id="chat-pane" class="flex w-full shrink-0 flex-col border-l border-base-300 bg-base-100 md:w-96">
       <header class="flex items-center gap-2 border-b border-base-300 px-4 py-2">
         <h2 class="flex-1 font-semibold">
-          {%{thread: "Thread", threads: "Threads", pinned: "Pinned messages", search: "Search", settings: "Settings", history: "Edit history"}[@pane]}
+          {%{thread: "Thread", threads: "Threads", pinned: "Pinned messages", search: "Search", settings: "Settings", history: "Edit history", flag: "Flag message"}[@pane]}
         </h2>
         <button type="button" phx-click="close_pane" class="btn btn-ghost btn-xs" aria-label="Close">
           <.icon name="hero-x-mark" class="size-4" />
@@ -1043,6 +1080,7 @@ defmodule FireflyWeb.ChatLive do
         <.search_pane :if={@pane == :search} {assigns} />
         <.settings_pane :if={@pane == :settings} {assigns} />
         <.history_pane :if={@pane == :history} {assigns} />
+        <.flag_pane :if={@pane == :flag} {assigns} />
       </div>
     </aside>
     """
@@ -1151,6 +1189,24 @@ defmodule FireflyWeb.ChatLive do
     """
   end
 
+  defp flag_pane(assigns) do
+    ~H"""
+    <blockquote class="border-l-2 border-base-300 pl-2 text-sm">{ChatComponents.excerpt(@flagging)}</blockquote>
+    <.form for={%{}} as={:flag} id="flag-form" phx-submit="flag" class="space-y-2">
+      <input type="hidden" name="flag[message_id]" value={@flagging.id} />
+      <.input
+        name="flag[reason]"
+        value="inappropriate"
+        type="select"
+        label="What's wrong?"
+        options={Enum.map(Flag.reasons(), &{Flag.reason_label(&1), &1})}
+      />
+      <.input name="flag[note]" value="" type="textarea" label="Note for staff (optional)" rows="2" />
+      <.button variant="primary">Flag</.button>
+    </.form>
+    """
+  end
+
   defp settings_pane(assigns) do
     ~H"""
     <section class="space-y-2">
@@ -1180,8 +1236,18 @@ defmodule FireflyWeb.ChatLive do
     <section class="space-y-1">
       <h3 class="text-sm font-semibold">Members ({length(@members)})</h3>
       <ul id="channel-members" class="flex flex-wrap gap-1">
-        <li :for={member <- @members} class="badge badge-ghost gap-1">
+        <li :for={member <- @members} id={"member-#{member.id}"} class="badge badge-ghost gap-1">
           <.avatar user={member} size="size-4" /> @{member.username}
+          <button
+            :if={@admin? && !Channel.direct?(@channel) && member.id != @current_user.id}
+            type="button"
+            phx-click="remove_member"
+            phx-value-id={member.id}
+            data-confirm={"Remove @#{member.username} from this channel?"}
+            aria-label={"Remove @#{member.username}"}
+          >
+            <.icon name="hero-x-mark-micro" class="size-3" />
+          </button>
         </li>
       </ul>
     </section>

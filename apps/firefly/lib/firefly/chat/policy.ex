@@ -24,8 +24,10 @@ defmodule Firefly.Chat.Policy do
       it's deleted
     * `:pin_message` (the message) - in a category channel admins; in a
       direct message its members. Not deleted messages
+    * `:flag_message` (the message) - those who may view its channel, at
+      `min_trust_to_flag`, on others' messages that aren't deleted
     * `:manage_channel` (create, edit, open, close and archive channels) -
-      admins
+      admins; also reviewing chat flags and removing members
 
   Being able to post doesn't mean posting now: `Firefly.Moderation.Posting`
   (penalties, read-only mode, confirmation, the chat rate limit) decides
@@ -36,7 +38,7 @@ defmodule Firefly.Chat.Policy do
 
   import Ecto.Query
 
-  alias Firefly.{Accounts, Repo, SiteSettings}
+  alias Firefly.{Accounts, Repo, SiteSettings, TrustLevels}
   alias Firefly.Accounts.User
   alias Firefly.Chat.{Channel, Membership, Message}
   alias Firefly.Discussion.Policy, as: DiscussionPolicy
@@ -117,6 +119,15 @@ defmodule Firefly.Chat.Policy do
       message.channel.kind == "direct" -> authorize(:view_channel, user, message.channel)
       true -> ok(Accounts.admin?(user))
     end
+  end
+
+  def authorize(:flag_message, %User{} = user, %Message{} = message) do
+    message = Repo.preload(message, :channel)
+
+    if Message.deleted?(message) or message.user_id == user.id or
+         not TrustLevels.allowed?(user, "min_trust_to_flag"),
+       do: {:error, :unauthorized},
+       else: authorize(:view_channel, user, message.channel)
   end
 
   def authorize(_action, _user, _params), do: {:error, :unauthorized}

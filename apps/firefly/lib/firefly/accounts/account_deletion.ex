@@ -9,7 +9,7 @@ defmodule Firefly.Accounts.AccountDeletion do
   `Firefly.Discussion.Polls`): closed polls' results don't change, and public
   polls list the placeholder. Everything else personal goes:
   roles, read positions, notification levels, notifications, likes, post
-  views, drafts, bookmarks, mutes and ignores, visits and directory stats, second factors and passkeys, login links, group memberships and requests, badges, push subscriptions, conversation memberships, the avatar, backgrounds and
+  views, drafts, bookmarks, mutes and ignores, visits and directory stats, second factors and passkeys, login links, group memberships and requests, badges, push subscriptions, conversation memberships, chat memberships, mentions and reactions (chat messages stay, like private messages), the avatar, backgrounds and
   uploads not used in any post or message (see
   `Firefly.Uploads.delete_account_uploads/1`; files in posts and
   messages stay with them), and what plugins keep for the user (their
@@ -103,6 +103,7 @@ defmodule Firefly.Accounts.AccountDeletion do
 
         Repo.delete_all(from(n in Notification, where: n.user_id == ^id))
         Repo.delete_all(from(p in ConversationParticipant, where: p.user_id == ^id))
+        Firefly.Chat.delete_user(user)
         Plugins.Storage.delete_user(user)
         Plugins.Fields.delete_user(user)
         rename_in_notifications(user.username, User.deleted_username(id))

@@ -41,8 +41,8 @@ defmodule Firefly.Moderation.StaffLog do
     webhook.create webhook.update webhook.delete webhook.auto_disable
     backup.create backup.delete backup.download backup.restore backup.read_only
     embed_host.create embed_host.delete
-    chat_channel.create chat_channel.update chat_channel.status
-    chat_message.delete chat_message.restore chat_message.pin chat_message.unpin
+    chat_channel.create chat_channel.update chat_channel.status chat_channel.remove_member
+    chat_message.delete chat_message.restore chat_message.pin chat_message.unpin chat_flag.agree chat_flag.disagree
   )
 
   @doc "Every action the log records, in display order."

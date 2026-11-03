@@ -1,9 +1,10 @@
 defmodule Firefly.Moderation.Review do
   @moduledoc """
   The staff review queue (`/staff/review`): posts with pending flags (see
-  `Firefly.Moderation.Flags`), grouped per post, and posts awaiting approval (a
+  `Firefly.Moderation.Flags`), grouped per post, posts awaiting approval (a
   new user's first `approve_new_user_posts` posts; see
-  `Firefly.Discussion.approval_required?/1`).
+  `Firefly.Discussion.approval_required?/1`), and flagged chat messages
+  (decided by `Firefly.Chat.review_flags/3`).
 
   Flag decisions settle every pending flag on the post:
 
@@ -39,10 +40,10 @@ defmodule Firefly.Moderation.Review do
   @doc "Tells open review pages and staff badges that the queue changed."
   def changed, do: Phoenix.PubSub.broadcast(Firefly.PubSub, @topic, :review_changed)
 
-  @doc "How many items wait for review: flagged posts plus queued posts."
+  @doc "How many items wait for review: flagged posts, queued posts and flagged chat messages."
   def pending_count do
     flagged = from(f in Flag, where: f.status == "pending", select: count(f.post_id, :distinct))
-    Repo.one(flagged) + Repo.aggregate(queued_query(), :count)
+    Repo.one(flagged) + Repo.aggregate(queued_query(), :count) + Firefly.Chat.pending_flag_count()
   end
 
   @doc """

@@ -43,14 +43,19 @@ defmodule FireflyWeb.ChatComponents do
     [
       own?: own?,
       deleted?: not live?,
-      hidden?: not (live? or perms.admin? or own?),
+      hidden?: hidden?(message, own?, perms),
       can_edit?: own? and live? and perms.post?,
       can_delete?: live? and (own? or perms.admin?),
       can_restore?: restorable?(message, user, perms),
       can_react?: live? and perms.post?,
-      can_pin?: live? and perms.pin?
+      can_pin?: live? and perms.pin?,
+      can_flag?: live? and not own?
     ]
   end
+
+  # A deleted message shows as such, except to its author and staff.
+  defp hidden?(%Message{deleted_at: nil}, _own?, _perms), do: false
+  defp hidden?(_message, own?, perms), do: not (own? or perms.admin?)
 
   defp restorable?(%Message{deleted_at: nil}, _user, _perms), do: false
   defp restorable?(_message, _user, %{admin?: true}), do: true
@@ -213,6 +218,11 @@ defmodule FireflyWeb.ChatComponents do
             >
               <.icon name="hero-bookmark" class="size-4" />
               {if @message.pinned_at, do: "Unpin", else: "Pin"}
+            </button>
+          </li>
+          <li :if={@can_flag?}>
+            <button type="button" phx-click="flag_form" phx-value-id={@message.id}>
+              <.icon name="hero-flag" class="size-4" /> Flag
             </button>
           </li>
           <li :if={@can_delete?}>

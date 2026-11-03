@@ -32,6 +32,31 @@ defmodule Firefly.Chat do
   author). Messages from users the reader ignores are left out (see
   `Firefly.Accounts.Ignores`).
 
+  ## Notifications and moderation
+
+  A message notifies (`notify/2`, through `Firefly.Notifications`: in-app,
+  browser push, and email for members away for 10 minutes) the users it
+  mentions: `@username`, `@group` (if the author may mention the group),
+  and, where the channel allows them and the author has the
+  `chat_channel_wide_mentions_min_trust` trust level, `@all` (everyone
+  following the channel) and `@here` (those of them seen in the last 5
+  minutes). Members at the `always` level (direct messages' default) hear
+  of every message, one unread notification per channel at a time. Nobody
+  hears what a user they mute or ignore wrote, nor about a channel they
+  muted or set to `never`, nor what they've already read. Reading a
+  channel reads its notifications.
+
+  Members flag messages (`flag_message/3`) into the staff review queue
+  (see `Firefly.Moderation.Review`), as a `flag` watched word does; staff
+  agree (the message is deleted) or disagree, logged. Staff remove members
+  from channels. The `chat_channel_retention_days` and
+  `chat_dm_retention_days` settings delete old messages (`run_due/0`,
+  hourly).
+
+  Plugins and webhooks get `chat_message_created`, `_edited`, `_deleted`
+  and `chat_channel_created` (see `Firefly.Plugins.Events`; plugins only
+  for channels anyone may read).
+
   ## Live events
 
     * `"chat:channel:<id>"` (`subscribe/1`) - `{:message_created, message}`,
@@ -51,20 +76,41 @@ defmodule Firefly.Chat do
   use Boundary,
     top_level?: true,
     check: [out: false],
-    exports: [Channel, Message, MessageRevision, Membership, Reaction, Thread, ThreadMembership]
+    exports: [
+      Channel,
+      Flag,
+      Message,
+      MessageRevision,
+      Membership,
+      Reaction,
+      Thread,
+      ThreadMembership
+    ]
 
   import Ecto.Query
   import Ecto.Changeset, only: [change: 2, put_change: 3]
 
-  alias Firefly.{Accounts, RateLimit, Repo, SiteSettings}
+  alias Firefly.{
+    Accounts,
+    Groups,
+    JobRuns,
+    Notifications,
+    RateLimit,
+    Repo,
+    SiteSettings,
+    TrustLevels
+  }
+
   alias Firefly.Accounts.{Ignores, User}
 
   alias Firefly.Chat.{
     Channel,
+    Flag,
     Membership,
     Mention,
     Message,
     MessageRevision,
+    Notifier,
     Policy,
     Reaction,
     Thread,
@@ -72,7 +118,10 @@ defmodule Firefly.Chat do
   }
 
   alias Firefly.Discussion.Mentions
-  alias Firefly.Moderation.{Posting, StaffLog, WatchedWords}
+  alias Firefly.Moderation.{Posting, Review, StaffLog, WatchedWords}
+  alias Firefly.Notifications.Notification
+  alias Firefly.Plugins.Events
+  alias Firefly.Uploads.Upload
   alias Firefly.Rendering.Emoji
 
   @page 50
@@ -114,6 +163,7 @@ defmodule Firefly.Chat do
       Repo.insert!(%Membership{channel_id: channel.id, user_id: admin.id}, on_conflict: :nothing)
       channels_changed()
       user_changed(admin.id)
+      emit("chat_channel_created", channel, fn -> %{channel: channel_data(channel)} end, admin)
       {:ok, channel}
     end
   end
@@ -599,11 +649,12 @@ defmodule Firefly.Chat do
          :ok <- Posting.check(user, :chat),
          {:ok, reply_to} <- in_channel(channel, param(attrs, :in_reply_to_id)),
          {:ok, thread_of} <- in_channel(channel, param(attrs, :thread_of)),
-         {:ok, {message, refollowed}} <- insert_message(channel, user, attrs, reply_to, thread_of) do
+         {:ok, {message, refollowed, mentioned}} <-
+           insert_message(channel, user, attrs, reply_to, thread_of) do
       message = display(message)
       broadcast(channel.id, {:message_created, message})
       Enum.each(refollowed, &user_changed/1)
-      WatchedWords.written(message.body, user)
+      announce("chat_message_created", message, channel, user, mentioned)
       {:ok, message}
     end
   end
@@ -643,15 +694,15 @@ defmodule Firefly.Chat do
 
     Repo.update_all(where(Channel, id: ^channel.id), set: [last_message_at: at])
     :ok = Firefly.Uploads.attach(message.body, user, message)
-    mention(message, channel, user)
 
     if thread do
       Repo.update_all(where(Thread, id: ^thread.id), set: [last_reply_at: at])
       join_thread(thread, user.id, message.id, :replace)
     end
 
+    mentioned = mention(message, channel, user)
     read_own(channel, user, message, is_nil(thread))
-    {:ok, {message, refollow(channel)}}
+    {:ok, {message, refollow(channel), mentioned}}
   end
 
   # The message's thread, started if it has none yet (its author takes part).
@@ -721,22 +772,119 @@ defmodule Firefly.Chat do
   defp refollow(_channel), do: []
 
   # Records the users the message mentions who may read the channel (not
-  # its author). Returns them.
+  # its author; see the moduledoc). Returns the ids of those it didn't
+  # mention before (an edit can add some).
   defp mention(message, channel, author) do
-    users =
-      message.body
-      |> Mentions.users()
-      |> Enum.filter(&(&1.id != author.id and can?(&1, :view_channel, channel)))
+    users = Mentions.users(message.body)
+    taken = MapSet.new(users, &String.downcase(&1.username))
 
+    rest =
+      message.body
+      |> Mentions.usernames()
+      |> Enum.reject(&MapSet.member?(taken, String.downcase(&1)))
+
+    ids =
+      (users ++ group_members(rest, author) ++ channel_wide(rest, channel, author))
+      |> Enum.uniq_by(& &1.id)
+      |> Enum.filter(&(&1.id != author.id and can?(&1, :view_channel, channel)))
+      |> Enum.map(& &1.id)
+
+    before = Repo.all(from(x in Mention, where: x.message_id == ^message.id, select: x.user_id))
     now = NaiveDateTime.utc_now()
 
     Repo.insert_all(
       Mention,
-      Enum.map(users, &%{message_id: message.id, user_id: &1.id, inserted_at: now}),
+      Enum.map(ids, &%{message_id: message.id, user_id: &1, inserted_at: now}),
       on_conflict: :nothing
     )
 
-    users
+    ids -- before
+  end
+
+  defp group_members(names, author) do
+    names
+    |> Groups.by_names()
+    |> Map.values()
+    |> Enum.filter(&Groups.can_mention?(&1, author))
+    |> Enum.flat_map(&Groups.members/1)
+    |> Enum.map(fn {user, _owner?} -> user end)
+  end
+
+  @here_minutes 5
+
+  # @all: everyone following the channel; @here: those of them seen lately.
+  defp channel_wide(names, channel, author) do
+    wanted = names |> Enum.map(&String.downcase/1) |> Enum.filter(&(&1 in ~w(all here)))
+
+    if wanted == [] or not channel.allow_channel_wide_mentions or
+         not TrustLevels.allowed?(author, "chat_channel_wide_mentions_min_trust") do
+      []
+    else
+      followers =
+        from(u in User,
+          join: m in Membership,
+          on: m.user_id == u.id and m.channel_id == ^channel.id and m.following
+        )
+
+      since = DateTime.add(DateTime.utc_now(), -@here_minutes, :minute)
+
+      query =
+        if "all" in wanted, do: followers, else: where(followers, [u], u.last_seen_at >= ^since)
+
+      Repo.all(query)
+    end
+  end
+
+  # After a message is saved (or edited): notifications, plugins and
+  # webhooks, and the author's watched words (a `flag` word flags it).
+  defp announce(event, message, channel, author, mentioned) do
+    :ok = Notifications.chat_message_created(message, mentioned)
+
+    emit(
+      event,
+      channel,
+      fn -> %{message: message_data(message, channel), channel: channel_data(channel)} end,
+      author
+    )
+
+    case WatchedWords.written(message.body, author) do
+      [] -> :ok
+      words -> flag_by_system(message, "Watched words: " <> Enum.join(words, ", "))
+    end
+  end
+
+  defp emit(event, channel, data, actor) do
+    channel = Repo.preload(channel, :category)
+
+    Events.emit(event, data,
+      category: channel.category,
+      private: Channel.direct?(channel),
+      actor: actor
+    )
+  end
+
+  defp channel_data(channel),
+    do: %{
+      id: channel.id,
+      name: channel.name,
+      slug: channel.slug,
+      kind: channel.kind,
+      category_id: channel.category_id,
+      url: Firefly.URLs.chat_channel_url(channel)
+    }
+
+  defp message_data(message, channel) do
+    message = Repo.preload(message, :user)
+
+    %{
+      id: message.id,
+      channel_id: message.channel_id,
+      thread_id: message.thread_id,
+      user_id: message.user_id,
+      author: message.user && message.user.username,
+      body: message.body,
+      url: Firefly.URLs.chat_channel_url(channel) <> "?message=#{message.id}"
+    }
   end
 
   @doc """
@@ -762,10 +910,10 @@ defmodule Firefly.Chat do
   end
 
   defp edited(message, changeset, user) do
-    {:ok, edited} = Repo.transact(fn -> save_edit(message, changeset, user) end)
+    {:ok, {edited, mentioned}} = Repo.transact(fn -> save_edit(message, changeset, user) end)
     edited = display(edited)
     broadcast(edited.channel_id, {:message_updated, edited})
-    WatchedWords.written(edited.body, user)
+    announce("chat_message_edited", edited, message.channel, user, mentioned)
     {:ok, edited}
   end
 
@@ -780,8 +928,7 @@ defmodule Firefly.Chat do
       changeset |> put_change(:edited_at, DateTime.utc_now(:second)) |> Repo.update!()
 
     :ok = Firefly.Uploads.attach(edited.body, user, edited)
-    mention(edited, message.channel, user)
-    {:ok, edited}
+    {:ok, {edited, mention(edited, message.channel, user)}}
   end
 
   @doc """
@@ -806,6 +953,7 @@ defmodule Firefly.Chat do
 
       deleted = display(deleted)
       broadcast(deleted.channel_id, {:message_updated, deleted})
+      emit_deleted(deleted, message.channel, actor)
       {:ok, deleted}
     end
   end
@@ -1005,6 +1153,12 @@ defmodule Firefly.Chat do
       if moved > 0, do: broadcast_user(user_id, {:chat_read, id})
     end
 
+    {read, _} =
+      Notification
+      |> where([n], n.user_id == ^user_id and n.chat_channel_id == ^id and is_nil(n.read_at))
+      |> Repo.update_all(set: [read_at: DateTime.utc_now(:second)])
+
+    if read > 0, do: Notifications.notifications_changed(user_id)
     :ok
   end
 
@@ -1040,6 +1194,258 @@ defmodule Firefly.Chat do
     |> select([m], {m.thread_id, count(m.id)})
     |> Repo.all()
     |> Map.new()
+  end
+
+  ## Notifications
+
+  @doc """
+  Notifies about a new or edited message (run by `Firefly.Notifications`'
+  fan-out): the users with ids `mentioned_ids` (newly mentioned) and the
+  members at the `always` level, as the moduledoc says.
+  """
+  defdelegate notify(message, mentioned_ids), to: Notifier
+
+  ## Flags
+
+  @doc """
+  Flags a message as `user` (`reason`, `note`, as post flags), for the
+  staff review queue. Errors: `:unauthorized` (see `:flag_message`),
+  `:already_flagged`, the `Posting.check(user, :flag)` reasons, or an
+  invalid changeset.
+  """
+  def flag_message(%Message{} = message, %User{} = user, attrs) do
+    message = Repo.preload(Repo.get!(Message, message.id), [:channel, :user])
+
+    with :ok <- authorized(user, :flag_message, message),
+         :ok <- Posting.check(user, :flag),
+         {:ok, flag} <- insert_flag(%Flag{message_id: message.id, user_id: user.id}, attrs) do
+      Review.changed()
+      {:ok, flag}
+    end
+  end
+
+  # A concurrent flag by the same user loses on the unique index.
+  defp insert_flag(flag, attrs) do
+    case flag |> Flag.changeset(attrs) |> Repo.insert() do
+      {:error, %Ecto.Changeset{errors: errors}} = error ->
+        if Keyword.has_key?(errors, :message_id), do: {:error, :already_flagged}, else: error
+
+      result ->
+        result
+    end
+  end
+
+  @doc "Flags a message as the system (a watched word), `note` saying why."
+  def flag_by_system(%Message{} = message, note) do
+    {:ok, flag} = insert_flag(%Flag{message_id: message.id}, %{reason: "other", note: note})
+    Review.changed()
+    {:ok, flag}
+  end
+
+  @doc "How many chat messages have pending flags."
+  def pending_flag_count do
+    Repo.one(
+      from(f in Flag, where: f.status == "pending", select: count(f.message_id, :distinct))
+    )
+  end
+
+  @doc """
+  The messages with pending flags, longest-waiting first, with their
+  channel (direct messages' members loaded), author and pending flags.
+  """
+  def flagged_messages do
+    pending =
+      from(f in Flag, where: f.status == "pending", order_by: f.inserted_at, preload: :user)
+
+    Message
+    |> join(:inner, [m], f in Flag, on: f.message_id == m.id and f.status == "pending")
+    |> group_by([m], m.id)
+    |> order_by([m, f], asc: min(f.inserted_at))
+    |> preload([:user, :channel, flags: ^pending])
+    |> Repo.all()
+    |> Enum.map(&%{&1 | channel: hd(with_members([&1.channel]))})
+  end
+
+  @doc """
+  Settles a message's pending flags as `admin`: `:agree` deletes the
+  message, `:disagree` leaves it. Logged. `{:error, :no_pending_flags}`
+  if someone already did.
+  """
+  def review_flags(%Message{} = message, %User{} = admin, decision)
+      when decision in [:agree, :disagree] do
+    message = Repo.preload(Repo.get!(Message, message.id), [:channel, :user])
+
+    with :ok <- authorized(admin, :manage_channel, nil),
+         {:ok, settled} <- Repo.transact(fn -> settle(message, admin, decision) end) do
+      if decision == :agree do
+        {:ok, _} = updated(settled)
+        emit_deleted(settled, message.channel, admin)
+      end
+
+      Review.changed()
+      {:ok, settled}
+    end
+  end
+
+  defp settle(message, admin, decision) do
+    now = DateTime.utc_now(:second)
+    status = if decision == :agree, do: "agreed", else: "disagreed"
+
+    {count, _} =
+      Flag
+      |> where([f], f.message_id == ^message.id and f.status == "pending")
+      |> Repo.update_all(set: [status: status, reviewed_by_id: admin.id, reviewed_at: now])
+
+    cond do
+      count == 0 ->
+        {:error, :no_pending_flags}
+
+      decision == :agree ->
+        log(admin, "chat_flag.agree", message, :always)
+        {:ok, delete_now(message, admin, now)}
+
+      true ->
+        log(admin, "chat_flag.disagree", message, :always)
+        {:ok, message}
+    end
+  end
+
+  defp delete_now(%Message{deleted_at: nil} = message, admin, now),
+    do: message |> change(deleted_at: now, deleted_by_id: admin.id) |> Repo.update!()
+
+  defp delete_now(message, _admin, _now), do: message
+
+  defp emit_deleted(message, channel, actor),
+    do:
+      emit(
+        "chat_message_deleted",
+        channel,
+        %{message_id: message.id, channel_id: channel.id},
+        actor
+      )
+
+  ## Staff
+
+  @doc "Takes `member` out of a category channel, as `admin` (logged)."
+  def remove_member(%Channel{kind: "category"} = channel, %User{} = member, %User{} = admin) do
+    with :ok <- authorized(admin, :manage_channel, nil) do
+      {:ok, _} =
+        Repo.transact(fn ->
+          Repo.delete_all(where(Membership, channel_id: ^channel.id, user_id: ^member.id))
+
+          StaffLog.record(admin, "chat_channel.remove_member", {"chat_channel", channel.id}, %{
+            name: channel.name,
+            username: member.username
+          })
+
+          {:ok, channel}
+        end)
+
+      user_changed(member.id)
+      :ok
+    end
+  end
+
+  @doc """
+  Deletes messages older than the retention settings (once an hour across
+  nodes; run by `Firefly.Moderation.TopicTimers.Scheduler`). Their uploads
+  are left unattached, for the orphan cleanup.
+  """
+  def run_due(now \\ NaiveDateTime.utc_now()) do
+    if JobRuns.claim("chat.retention", 3600) do
+      prune("category", SiteSettings.get("chat_channel_retention_days"), now)
+      prune("direct", SiteSettings.get("chat_dm_retention_days"), now)
+    end
+
+    :ok
+  end
+
+  defp prune(_kind, 0, _now), do: 0
+
+  defp prune(kind, days, now) do
+    cutoff = NaiveDateTime.add(now, -days, :day)
+    channels = from(c in Channel, where: c.kind == ^kind, select: c.id)
+
+    old =
+      from(m in Message,
+        where: m.inserted_at < ^cutoff and m.channel_id in subquery(channels),
+        select: m.id
+      )
+
+    {:ok, count} = Repo.transact(fn -> delete_old(old) end)
+    count
+  end
+
+  defp delete_old(old) do
+    Upload
+    |> where([u], u.chat_message_id in subquery(old))
+    |> Repo.update_all(set: [attached_to: nil, chat_message_id: nil])
+
+    {count, _} = Repo.delete_all(from(m in Message, where: m.id in subquery(old)))
+    {:ok, count}
+  end
+
+  ## Accounts
+
+  @doc """
+  `user`'s chat data, for their account export: the messages they sent,
+  their channels (direct messages unnamed) and their reactions.
+  """
+  def export(%User{id: id}) do
+    %{
+      messages:
+        Repo.all(
+          from(m in Message,
+            join: c in Channel,
+            on: c.id == m.channel_id,
+            where: m.user_id == ^id,
+            order_by: m.id,
+            select: %{
+              id: m.id,
+              channel: coalesce(c.name, "direct message"),
+              body: m.body,
+              inserted_at: m.inserted_at,
+              edited_at: m.edited_at,
+              deleted_at: m.deleted_at
+            }
+          )
+        ),
+      channels:
+        Repo.all(
+          from(m in Membership,
+            join: c in Channel,
+            on: c.id == m.channel_id,
+            where: m.user_id == ^id,
+            order_by: m.id,
+            select: %{
+              channel: coalesce(c.name, "direct message"),
+              following: m.following,
+              muted: m.muted,
+              notification_level: m.notification_level
+            }
+          )
+        ),
+      reactions:
+        Repo.all(
+          from(r in Reaction,
+            where: r.user_id == ^id,
+            order_by: r.id,
+            select: %{message_id: r.message_id, emoji: r.emoji}
+          )
+        )
+    }
+  end
+
+  @doc """
+  Removes what's personal of `user`'s chat, for account deletion: their
+  memberships, read positions, mentions, reactions and flags. Their
+  messages stay, under the anonymized account.
+  """
+  def delete_user(%User{id: id}) do
+    for schema <- [Membership, ThreadMembership, Mention, Reaction, Flag],
+        do: Repo.delete_all(from(r in schema, where: r.user_id == ^id))
+
+    :ok
   end
 
   ## Live events

@@ -13,7 +13,7 @@ defmodule Firefly.Chat.Message do
   import Ecto.Changeset
 
   alias Firefly.Accounts.User
-  alias Firefly.Chat.{Channel, Reaction, Thread}
+  alias Firefly.Chat.{Channel, Flag, Reaction, Thread}
 
   @max_length 6000
 
@@ -29,6 +29,7 @@ defmodule Firefly.Chat.Message do
     belongs_to(:deleted_by, User)
     belongs_to(:pinned_by, User)
     has_many(:reactions, Reaction, preload_order: [asc: :id])
+    has_many(:flags, Flag)
 
     # How many replies its thread has (for a thread's original message),
     # when loaded for display.

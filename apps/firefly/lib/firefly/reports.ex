@@ -27,6 +27,7 @@ defmodule Firefly.Reports do
     Firefly.Reports.Likes,
     Firefly.Reports.Flags,
     Firefly.Reports.Messages,
+    Firefly.Reports.ChatMessages,
     Firefly.Reports.PageViews,
     Firefly.Reports.TopReferrers,
     Firefly.Reports.TopTrafficTopics,
