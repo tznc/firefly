@@ -12,6 +12,10 @@ defmodule Firefly.Plugins.Events do
     * `post_liked` - `%{post_id, thread_id, user_id}`
     * `solved` - `%{thread_id, post_id}` (an answer was accepted)
     * `poll_closed` - `%{poll_id, post_id, thread_id}`
+    * `category_created`, `category_updated` - `%{category}` (`id`, `title`,
+      `parent_id`, `url`); `category_deleted` - `%{category_id}`
+    * `post_approved` - `%{post, thread}` (staff approved a queued post);
+      `post_rejected` - `%{post_id, thread_id, reason}`
 
   where a post is `%{id, thread_id, user_id, author, body, url}` and a
   thread `%{id, title, category_id, url}`.
@@ -20,6 +24,9 @@ defmodule Firefly.Plugins.Events do
   visitors can read: nothing from private categories, nor about posts
   awaiting approval. A plugin isn't told about what its own bot did, so it
   can't loop on its own replies.
+
+  Every event also goes to the webhooks that want it (see
+  `Firefly.Webhooks.enqueue/3`), whatever plugins subscribe.
 
   Delivery is asynchronous and durable: `emit/3` queues a row per
   subscriber (`Firefly.Plugins.QueuedEvent`) in the caller's
@@ -39,7 +46,8 @@ defmodule Firefly.Plugins.Events do
   alias Firefly.URLs
 
   @names ~w(post_created post_edited post_deleted thread_created user_registered flag_raised
-            post_liked solved poll_closed)
+            post_liked solved poll_closed category_created category_updated category_deleted
+            post_approved post_rejected)
   @max_attempts 5
   # How long a delivery in progress holds its row before another node may
   # take it.
@@ -53,9 +61,10 @@ defmodule Firefly.Plugins.Events do
   a function building it (only called if anyone listens). Options:
   `:thread` (the content's thread, or a function loading it: nothing is
   sent unless anonymous visitors can read it), `:post` (likewise: not while it awaits approval),
-  `:actor` (the user who did it).
+  `:category` (likewise, for category events), `:actor` (the user who did it).
   """
   def emit(event, data, opts \\ []) when event in @names do
+    :ok = Firefly.Webhooks.enqueue(event, data, opts)
     actor = opts[:actor]
 
     subscribers =
@@ -64,7 +73,7 @@ defmodule Firefly.Plugins.Events do
           not bot_of?(actor, plugin.id),
           do: plugin
 
-    if subscribers != [] and public?(opts[:post], opts[:thread]) do
+    if subscribers != [] and public?(opts[:post], opts[:thread], opts[:category]) do
       payload = if is_function(data, 0), do: data.(), else: data
       now = DateTime.utc_now()
 
@@ -90,12 +99,22 @@ defmodule Firefly.Plugins.Events do
   defp bot_of?(%User{plugin_bot: id}, id) when is_binary(id), do: true
   defp bot_of?(_actor, _id), do: false
 
-  defp public?(post, thread) do
+  defp public?(post, thread, category) do
     thread = if is_function(thread, 0), do: thread.(), else: thread
 
     (is_nil(post) or Post.readable_by?(post, nil)) and
-      (is_nil(thread) or Bodyguard.permit?(Discussion, :view_thread, nil, thread))
+      (is_nil(thread) or Bodyguard.permit?(Discussion, :view_thread, nil, thread)) and
+      (is_nil(category) or Bodyguard.permit?(Discussion, :view_category, nil, category))
   end
+
+  @doc "A category as events describe it."
+  def category_data(%Firefly.Discussion.Category{} = category),
+    do: %{
+      id: category.id,
+      title: category.title,
+      parent_id: category.parent_id,
+      url: URLs.category_url(category)
+    }
 
   @doc "A post as events describe it."
   def post_data(%Post{} = post, %Thread{} = thread) do

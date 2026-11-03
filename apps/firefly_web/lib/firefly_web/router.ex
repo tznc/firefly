@@ -137,6 +137,8 @@ defmodule FireflyWeb.Router do
       live("/staff/uploads", StaffLive.Uploads, :index)
       live("/staff/emoji", StaffLive.Emoji, :index)
       live("/staff/watched-words", StaffLive.WatchedWords, :index)
+      live("/staff/webhooks", StaffLive.Webhooks, :index)
+      live("/staff/webhooks/:id", StaffLive.Webhook, :show)
       live("/staff/badges", StaffLive.Badges, :index)
       live("/staff/plugins/:id", StaffLive.Plugin, :show)
       live("/categories/new", CategoryLive.Form, :new)

@@ -23,7 +23,8 @@ defmodule Firefly.Notifications.Notification do
   `"promoted"` (you reached a higher trust level; see
   `Firefly.TrustLevels`) or `"badge_granted"` (you earned a badge;
   see `Firefly.Badges`) or `"invite_redeemed"` (someone accepted your
-  invitation; see `Firefly.Accounts.Invites`).
+  invitation; see `Firefly.Accounts.Invites`) or `"webhook_disabled"`
+  (for admins: a failing webhook was turned off; see `Firefly.Webhooks`).
   `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
@@ -37,14 +38,15 @@ defmodule Firefly.Notifications.Notification do
   @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved
              bookmark_reminder answer_accepted plugin_disabled plugin
              group_mentioned group_message group_request group_invite promoted badge_granted
-             invite_redeemed)
+             invite_redeemed webhook_disabled)
 
   # Kinds that may have no thread_id: penalties are about the user, and a
   # rejected thread is gone. Any other notification without a thread_id or
   # conversation_id predates thread_id and can't be checked against thread
   # visibility.
   @threadless_kinds ~w(silenced suspended post_rejected plugin_disabled plugin group_request
-                       group_invite promoted badge_granted invite_redeemed)
+                       group_invite promoted badge_granted invite_redeemed
+                       webhook_disabled)
 
   @doc "Kinds that are about the user rather than a thread or conversation."
   def threadless_kinds, do: @threadless_kinds

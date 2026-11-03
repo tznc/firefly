@@ -8,7 +8,7 @@ defmodule FireflyWeb.PluginEventsTest do
 
   alias Firefly.{Accounts, Discussion, Groups, Plugins, Repo}
   alias Firefly.Discussion.{Polls, Solved}
-  alias Firefly.Moderation.Flags
+  alias Firefly.Moderation.{Flags, Review}
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Poll, Post, Thread}
   alias Firefly.Notifications.Notification
@@ -125,6 +125,17 @@ defmodule FireflyWeb.PluginEventsTest do
       poll_attrs = Polls.attrs(%{"options_text" => "Yes\nNo"}, 0)
       {:ok, poll_post} = Discussion.create_post(thread, member, %{body: "vote", poll: poll_attrs})
       {:ok, _} = Polls.close(Repo.get_by!(Poll, post_id: poll_post.id), member)
+
+      {:ok, _} = Discussion.update_category(qa, %{title: "Questions"}, admin)
+      {:ok, doomed} = Discussion.create_category(%{title: "Doomed"})
+      {:ok, _} = Discussion.delete_category(doomed, admin)
+
+      Firefly.SiteSettings.update(%{"approve_new_user_posts" => "5"}, admin)
+      newcomer = user_fixture()
+      {:ok, waiting} = Discussion.create_post(thread, newcomer, %{body: "first"})
+      {:ok, refused} = Discussion.create_post(thread, newcomer, %{body: "second"})
+      {:ok, _} = Review.approve(waiting, admin)
+      {:ok, _} = Review.reject(refused, admin, "Off-topic")
 
       assert Enum.sort(Enum.uniq(queued_events())) == Enum.sort(Events.names())
     end

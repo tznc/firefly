@@ -55,7 +55,8 @@ defmodule Firefly.Plugins do
       Health,
       Bots,
       Registry,
-      InstalledPlugin
+      InstalledPlugin,
+      Queue
     ]
 
   import Ecto.Query
