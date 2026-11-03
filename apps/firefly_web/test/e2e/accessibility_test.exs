@@ -103,9 +103,23 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
     end
   end
 
-  # Injects axe (once per page) and fails with what it found.
+  # Injects axe (once per page) and fails with what it found. Transitions
+  # are switched off first: a sidebar or toast caught mid-fade blends its
+  # text into the background, which axe reads as a contrast failure that
+  # no reader would ever see (and which comes and goes with how fast the
+  # machine is).
+  @still """
+  if (!document.getElementById("axe-no-motion")) {
+    const style = document.createElement("style")
+    style.id = "axe-no-motion"
+    style.textContent = "*, *::before, *::after { transition: none !important; animation: none !important }"
+    document.head.appendChild(style)
+  }
+  """
+
   defp audit(session, axe, page) do
     session
+    |> evaluate(@still)
     |> evaluate("if (!window.axe) { #{axe} }")
     |> evaluate(
       """
