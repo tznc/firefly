@@ -25,7 +25,7 @@ defmodule Firefly.Uploads.Upload do
   alias Firefly.Chat
   alias Firefly.Messaging.Message
 
-  @kinds ~w(post message chat avatar background emoji preview)
+  @kinds ~w(post message chat avatar background emoji preview site theme)
 
   schema "uploads" do
     field(:token, :string)

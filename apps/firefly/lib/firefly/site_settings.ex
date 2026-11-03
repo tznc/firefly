@@ -1377,6 +1377,17 @@ defmodule Firefly.SiteSettings do
         help: "The color mobile browsers tint their toolbar with (the theme-color meta tag)."
       },
       %{
+        key: "default_theme_id",
+        section: "Appearance",
+        type: :integer,
+        label: "Default theme",
+        default: 0,
+        min: 0,
+        max: 2_147_483_647,
+        help:
+          "The id of the theme every page uses (set it with Make default at Staff, Themes). 0: the built-in look."
+      },
+      %{
         key: "logo_url",
         section: "Appearance",
         type: :upload,

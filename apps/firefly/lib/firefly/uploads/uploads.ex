@@ -39,8 +39,9 @@ defmodule Firefly.Uploads do
   alias Firefly.Uploads.{Processor, Storage, Upload}
 
   # Uploads stored processed their own way, attached as soon as they're made
-  # (`site`: an image a site setting uses, such as the logo).
-  @variants ~w(avatar background emoji preview site)
+  # (`site`: an image a site setting uses, such as the logo; `theme`: an
+  # image or font a theme uses, see Firefly.Themes).
+  @variants ~w(avatar background emoji preview site theme)
   @token_pattern ~r"/uploads/([A-Za-z0-9_-]{22})/"
 
   @doc "The largest file accepted, in bytes (the `max_upload_kb` setting)."
@@ -88,9 +89,10 @@ defmodule Firefly.Uploads do
       sha256 = Base.encode16(:crypto.hash(:sha256, data), case: :lower)
       variant = opts[:variant]
 
-      if variant && not String.starts_with?(content_type, "image/"),
-        do: {:error, "An #{variant} must be an image."},
-        else: store(user, data, filename, content_type, sha256, opts)
+      if variant != nil and not String.starts_with?(content_type, "image/") and
+           not (variant == "theme" and String.starts_with?(content_type, "font/")),
+         do: {:error, "An #{variant} must be an image."},
+         else: store(user, data, filename, content_type, sha256, opts)
     end
   end
 
@@ -277,6 +279,23 @@ defmodule Firefly.Uploads do
 
   @doc "The upload's URL."
   def url(%Upload{token: token, filename: filename}), do: "/uploads/#{token}/#{filename}"
+
+  @doc """
+  The stored file's bytes (for exporting a theme's assets, see
+  `Firefly.Themes`): `{:ok, data}` or `{:error, reason}`.
+  """
+  def contents(%Upload{} = upload) do
+    case Storage.locate(key(upload), upload.content_type, "attachment") do
+      {:file, path} ->
+        File.read(path)
+
+      {:redirect, url} ->
+        case Req.get(url, retry: false, decode_body: false) do
+          {:ok, %{status: 200, body: body}} -> {:ok, body}
+          _failed -> {:error, :unreadable}
+        end
+    end
+  end
 
   @doc "The thumbnail's URL (the file's own, for those without one)."
   def thumbnail_url(%Upload{thumbnail: true, token: token, filename: filename}),

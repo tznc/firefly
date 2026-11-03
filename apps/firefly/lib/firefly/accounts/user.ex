@@ -62,6 +62,8 @@ defmodule Firefly.Accounts.User do
     field(:mailing_list_no_echo, :boolean, default: true)
     field(:mailing_list_sent_on, :date)
     field(:mailing_list_sent_count, :integer, default: 0)
+    # The theme they picked among the selectable ones (see Firefly.Themes).
+    field(:theme_id, :id)
     # The badge shown as their title, if it allows that (see Firefly.Badges).
     belongs_to(:title_badge, Firefly.Badges.Badge)
     # The plugin this account acts for (see Firefly.Plugins.Bots), if any.

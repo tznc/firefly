@@ -19,9 +19,10 @@
     <FireflyWeb.SEO.tags seo={assigns[:seo]} />
     <.live_title default={site["title"]} suffix={" - " <> site["title"]} phx-no-format>{assigns[:page_title]}</.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <link :if={assigns[:site_theme]} id="theme-css" rel="stylesheet" href={Firefly.Themes.css_path(@site_theme)} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
-    <script>
+    <script nonce={assigns[:csp_nonce]}>
       (() => {
         const themes = {light: "firefly", dark: "firefly-dark"};
         const systemTheme = () => matchMedia("(prefers-color-scheme: dark)").matches ? themes.dark : themes.light;
@@ -55,6 +56,7 @@
         });
       })();
     </script>
+    {if assigns[:site_theme], do: raw(Firefly.Themes.html(@site_theme, :head, assigns[:csp_nonce]))}
   </head>
   <body class="bg-base-200 min-h-screen">
     <noscript>
@@ -62,6 +64,14 @@
         {gettext("Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it.")}
       </p>
     </noscript>
+    <div :if={assigns[:theme_preview]} id="theme-preview-banner" role="status" class="bg-info text-info-content flex items-center justify-center gap-3 p-2 text-sm">
+      {gettext("You're previewing the %{name} theme. Only you see it.", name: @site_theme.name)}
+      <.link href={~p"/staff/themes/preview"} method="delete" class="btn btn-xs">
+        {gettext("Stop previewing")}
+      </.link>
+    </div>
+    {if assigns[:site_theme], do: raw(Firefly.Themes.html(@site_theme, :header, assigns[:csp_nonce]))}
     {@inner_content}
+    {if assigns[:site_theme], do: raw(Firefly.Themes.html(@site_theme, :footer, assigns[:csp_nonce]))}
   </body>
 </html>

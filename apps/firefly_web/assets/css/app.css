@@ -39,7 +39,8 @@
   --color-accent-content: #3A2A0E;
   --color-neutral: #4A4A4A;
   --color-neutral-content: #F2EFEA;
-  --color-info: #2F7FD1;
+  /* Dark enough for white text to clear AA (see Firefly.Themes.Contrast). */
+  --color-info: #2B76C2;
   --color-info-content: #FFFFFF;
   /* Darker than the brand green so small success text clears AA on the
      page's background (see FireflyWeb.E2E.AccessibilityTest). */

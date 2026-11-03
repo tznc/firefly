@@ -38,6 +38,7 @@ defmodule Firefly.Moderation.StaffLog do
     screening.create screening.delete screening.block
     category.permissions category.defaults
     setting.update
+    theme.create theme.update theme.delete theme.allow_scripts theme.import
     admin.create admin.update admin.delete
     plugin.install plugin.upgrade plugin.enable plugin.disable plugin.uninstall plugin.settings
     plugin.auto_disable plugin.suspend plugin.resume plugin.secret

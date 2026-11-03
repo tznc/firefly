@@ -175,6 +175,13 @@ defmodule FireflyWeb.StaffNav do
            ~w(configuration options)
          ),
          page(
+           "/staff/themes",
+           gettext("Themes"),
+           "hero-paint-brush",
+           :manage_themes,
+           ~w(colors css appearance components look)
+         ),
+         page(
            "/staff/plugins",
            gettext("Plugins"),
            "hero-puzzle-piece",

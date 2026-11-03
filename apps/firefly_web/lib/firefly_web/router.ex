@@ -18,7 +18,9 @@ defmodule FireflyWeb.Router do
     plug(:put_root_layout, html: {FireflyWeb.Layouts, :root})
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
+    plug(FireflyWeb.Plugs.ContentSecurityPolicy)
     plug(FireflyWeb.Plugs.CurrentUser)
+    plug(FireflyWeb.Plugs.Theme)
     plug(FireflyWeb.Locale)
     plug(FireflyWeb.Plugs.AkismetClient)
     plug(FireflyWeb.Plugs.Analytics, :browser)
@@ -71,6 +73,10 @@ defmodule FireflyWeb.Router do
     get("/sdk.js", PluginController, :sdk)
     get("/:id/assets/*path", PluginController, :asset)
   end
+
+  # Themes' compiled stylesheets, named by version so browsers keep them
+  # (see Firefly.Themes); public, no session.
+  get("/theme-assets/:id/:version/theme.css", FireflyWeb.ThemeController, :css)
 
   scope "/uploads", FireflyWeb do
     pipe_through(:uploads)
@@ -155,6 +161,8 @@ defmodule FireflyWeb.Router do
       live("/staff/categories", StaffLive.Categories, :index)
       live("/staff/emails", StaffLive.Emails, :index)
       live("/staff/screening", StaffLive.Screening, :index)
+      live("/staff/themes", StaffLive.Themes, :index)
+      live("/staff/themes/:id", StaffLive.Theme, :show)
       live("/staff/dashboard", StaffLive.Dashboard, :index)
       live("/staff/reports", StaffLive.Reports, :index)
       live("/staff/reports/:id", StaffLive.Report, :show)
@@ -256,6 +264,9 @@ defmodule FireflyWeb.Router do
     get("/backups/download/:token", BackupController, :download)
     post("/users/:id/impersonate", StaffController, :impersonate)
     get("/settings/export/:format", SettingsController, :export)
+    post("/themes/:id/preview", ThemeController, :preview)
+    delete("/themes/preview", ThemeController, :stop_preview)
+    get("/themes/:id/export", ThemeController, :export)
   end
 
   scope "/", FireflyWeb do

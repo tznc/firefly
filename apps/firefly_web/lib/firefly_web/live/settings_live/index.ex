@@ -273,6 +273,23 @@ defmodule FireflyWeb.SettingsLive.Index do
     end
   end
 
+  # The page's look comes with the page itself (see FireflyWeb.Plugs.Theme):
+  # it's loaded again.
+  def handle_event("save_site_theme", %{"site_theme" => id}, socket) do
+    id = if id == "", do: nil, else: String.to_integer(id)
+
+    case Firefly.Themes.select_for_user(socket.assigns.current_user, id) do
+      {:ok, _user} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, gettext("Theme saved."))
+         |> redirect(to: ~p"/settings/interface")}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Firefly.Themes.message(reason))}
+    end
+  end
+
   def handle_event("add_ignore", %{"ignore" => params}, socket) do
     user = socket.assigns.current_user
     username = params |> Map.get("username", "") |> String.trim() |> String.trim_leading("@")
@@ -673,6 +690,18 @@ defmodule FireflyWeb.SettingsLive.Index do
         />
         <.button variant="primary" phx-disable-with={gettext("Saving...")}>{gettext("Save")}</.button>
       </.form>
+
+      <% site_themes = if @live_action == :interface, do: Firefly.Themes.selectable_themes(), else: [] %>
+      <form :if={site_themes != []} id="site-theme-form" phx-submit="save_site_theme" class="space-y-2">
+        <.input
+          name="site_theme"
+          type="select"
+          label={gettext("Site theme")}
+          value={@current_user.theme_id}
+          options={[{gettext("The site's default"), ""} | Enum.map(site_themes, &{&1.name, &1.id})]}
+        />
+        <.button variant="primary">{gettext("Use this theme")}</.button>
+      </form>
 
       <div :if={@live_action == :notifications} class="space-y-6">
         <.form for={@form} id="preferences-form" phx-submit="save_notifications" class="space-y-4">
