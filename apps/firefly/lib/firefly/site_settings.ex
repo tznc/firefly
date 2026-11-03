@@ -638,6 +638,15 @@ defmodule Firefly.SiteSettings do
         min: 1,
         max: 365,
         help: "How long each plugin's log of outgoing requests is kept."
+      },
+      %{
+        key: "analytics",
+        section: "Analytics",
+        type: :boolean,
+        label: "Count traffic",
+        default: true,
+        help:
+          "First-party counts of page views, topic views, referrers and link clicks (no cookies, no IP addresses kept, nothing sent to third parties)."
       }
     ]
   end

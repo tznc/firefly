@@ -65,12 +65,43 @@ const typesetMath = root => {
   })).catch(() => {})
 }
 
-// Syntax-highlight code blocks inside rendered markdown, typeset its math
-// and set up its spoilers.
+// A post's outbound links: the click count next to each (data-clicks, by
+// href), and, when data-post-id is set, a beacon to count a click (no
+// redirect: the link stays as written). The server only counts links the
+// post has.
+const outbound = a => a.host && a.host !== window.location.host && /^https?:$/.test(a.protocol)
+const trackLinks = el => {
+  const counts = el.dataset.clicks ? JSON.parse(el.dataset.clicks) : {}
+  el.querySelectorAll("a[href]").forEach(a => {
+    if (!outbound(a)) { return }
+    const href = a.getAttribute("href")
+    const count = counts[href]
+    if (count && !(a.nextElementSibling && a.nextElementSibling.classList.contains("link-clicks"))) {
+      const badge = document.createElement("span")
+      badge.className = "link-clicks badge badge-ghost badge-xs ml-1 align-middle"
+      badge.textContent = count >= 1000 ? `${(count / 1000).toFixed(1)}k` : String(count)
+      badge.title = `${count} ${count === 1 ? "click" : "clicks"}`
+      a.after(badge)
+    }
+  })
+  if (el.dataset.postId && !el.dataset.tracking) {
+    el.dataset.tracking = "true"
+    el.addEventListener("click", event => {
+      const a = event.target.closest("a[href]")
+      if (!a || !outbound(a) || !navigator.sendBeacon) { return }
+      const body = new URLSearchParams({post_id: el.dataset.postId, url: a.getAttribute("href")})
+      navigator.sendBeacon("/analytics/click", body)
+    })
+  }
+}
+
+// Syntax-highlight code blocks inside rendered markdown, typeset its math,
+// set up its spoilers and its links' click counts.
 const renderMarkdown = el => {
   Prism.highlightAllUnder(el)
   typesetMath(el)
   setUpSpoilers(el)
+  trackLinks(el)
 }
 const Highlight = {
   mounted() { renderMarkdown(this.el) },

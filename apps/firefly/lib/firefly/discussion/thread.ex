@@ -26,6 +26,8 @@ defmodule Firefly.Discussion.Thread do
     field(:closed_at, :utc_datetime)
     field(:archived_at, :utc_datetime)
     field(:slow_mode_seconds, :integer)
+    # Distinct viewers a day, added up (see `Firefly.Analytics`).
+    field(:views, :integer, default: 0)
     belongs_to(:category, Category)
     # Set once the thread's posts were merged into another (see
     # `Firefly.Moderation.TopicTools`): it's then a closed stub that redirects.

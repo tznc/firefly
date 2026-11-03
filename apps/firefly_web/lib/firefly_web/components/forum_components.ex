@@ -427,6 +427,9 @@ defmodule FireflyWeb.ForumComponents do
     default: nil,
     doc: "the page's `FireflyWeb.UserCard`: clicking the author opens their card"
 
+  attr :link_clicks, :map, default: nil, doc: "clicks on the post's links, by URL, shown by them"
+  attr :track_clicks, :boolean, default: false, doc: "count clicks on the post's links"
+
   slot :actions
   slot :poll, doc: "the post's poll, under its body"
 
@@ -516,6 +519,8 @@ defmodule FireflyWeb.ForumComponents do
           refs={@refs}
           post={@post}
           thread={@thread}
+          link_clicks={@link_clicks}
+          track_clicks={@track_clicks}
         />
         <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
         <.link_preview :for={preview <- @post.link_previews} preview={preview} />
@@ -786,9 +791,23 @@ defmodule FireflyWeb.ForumComponents do
   attr :post, :any, default: nil, doc: "the post this is the body of, for plugins' content hooks"
   attr :thread, :any, default: nil, doc: "the post's thread"
 
+  attr :link_clicks, :map,
+    default: nil,
+    doc: "clicks on the links, by URL: the hook shows them next to the links"
+
+  attr :track_clicks, :boolean,
+    default: false,
+    doc: "the hook reports clicks on outbound links (see `FireflyWeb.AnalyticsController`)"
+
   def markdown(assigns) do
     ~H"""
-    <div id={@id} phx-hook="Highlight" class="post-body prose prose-sm max-w-none">
+    <div
+      id={@id}
+      phx-hook="Highlight"
+      class="post-body prose prose-sm max-w-none"
+      data-post-id={@track_clicks && @post && @post.id}
+      data-clicks={@link_clicks && @link_clicks != %{} && Jason.encode!(@link_clicks)}
+    >
       {Phoenix.HTML.raw(Markdown.render(@body, @refs || @viewer, post: @post, thread: @thread))}
     </div>
     """

@@ -56,6 +56,9 @@ config :firefly, notifications_enabled: false
 # Tests run due thread timers and reminders themselves, inside their sandbox transaction.
 config :firefly, Firefly.Moderation.TopicTimers, enabled: false
 
+# Analytics are written when tests call Firefly.Analytics.flush/0.
+config :firefly, Firefly.Analytics, flush_interval: :manual
+
 # Each test reads its own (transactional) site settings: no shared cache.
 config :firefly, site_settings_cache: false
 

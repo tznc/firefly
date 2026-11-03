@@ -6,7 +6,8 @@ defmodule FireflyWeb.UserAuth do
       the unread notification and conversation counts, for admins the review
       queue's count (kept live; views can export `review_changed/1` to react
       too) and the current path. It records the user's visit (see
-      `Firefly.Accounts.Visits`) once the page connects.
+      `Firefly.Accounts.Visits`) and counts a page view (see
+      `Firefly.Analytics`) once the page connects.
       For a user, it also handles the theme toggle's `"set_theme"` event on
       every page, saving their theme.
     * `:require_user` - redirects to the categories page when nobody is
@@ -24,7 +25,7 @@ defmodule FireflyWeb.UserAuth do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
   import Phoenix.LiveView
 
-  alias Firefly.{Accounts, Messaging, Notifications}
+  alias Firefly.{Accounts, Analytics, Messaging, Notifications}
   alias Firefly.Accounts.Visits
   alias Firefly.Moderation.Review
   alias FireflyWeb.Session
@@ -80,6 +81,7 @@ defmodule FireflyWeb.UserAuth do
     socket
     |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
     |> record_visit()
+    |> count_page_view()
     |> assign_counts()
     |> subscribe_to_notifications()
     |> subscribe_to_review()
@@ -92,6 +94,21 @@ defmodule FireflyWeb.UserAuth do
   # Once the page is live, not for the static render before it.
   defp record_visit(socket) do
     if connected?(socket), do: Visits.seen(socket.assigns.current_user)
+    socket
+  end
+
+  # Each page load or live navigation, but not reconnects (`_mounts` counts
+  # those). Crawlers don't always connect: `FireflyWeb.Plugs.Analytics`
+  # counts them on the request.
+  defp count_page_view(socket) do
+    if connected?(socket) and get_connect_params(socket)["_mounts"] in [0, nil] and
+         Analytics.enabled?() do
+      kind =
+        Analytics.kind(socket.assigns.current_user, get_connect_info(socket, :user_agent))
+
+      if kind != "crawler", do: Analytics.page_view(kind)
+    end
+
     socket
   end
 

@@ -22,6 +22,7 @@ defmodule FireflyWeb.Router do
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
     plug(FireflyWeb.Plugs.CurrentUser)
+    plug(FireflyWeb.Plugs.Analytics, :browser)
   end
 
   pipeline :admin do
@@ -34,6 +35,7 @@ defmodule FireflyWeb.Router do
     # The API authenticates with bearer tokens (not cookies), so any origin may call it.
     plug(CORSPlug)
     plug(FireflyWeb.Plugs.ApiCurrentUser)
+    plug(FireflyWeb.Plugs.Analytics, :api)
   end
 
   # Uploads are fetched by <img> tags and downloads, so any Accept; the
@@ -101,6 +103,7 @@ defmodule FireflyWeb.Router do
     get("/invites/:key/login/:provider", InviteController, :login)
 
     live_session :default,
+      session: {FireflyWeb.Plugs.Analytics, :live_session, []},
       on_mount: [
         {FireflyWeb.UserAuth, :mount_current_user},
         FireflyWeb.PluginWidgets
@@ -186,6 +189,12 @@ defmodule FireflyWeb.Router do
         :show
       )
     end
+  end
+
+  # Link click beacons (navigator.sendBeacon): no session or CSRF token,
+  # they only add to a counter (see FireflyWeb.AnalyticsController).
+  scope "/analytics", FireflyWeb do
+    post("/click", AnalyticsController, :click)
   end
 
   scope "/email", FireflyWeb do
