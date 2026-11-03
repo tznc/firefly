@@ -97,7 +97,10 @@ defmodule Firefly.Discussion.Thread do
 
     post_changeset =
       if user,
-        do: Firefly.Moderation.SpamGuard.validate_post(post_changeset, user),
+        do:
+          Firefly.Moderation.SpamGuard.validate_post(post_changeset, user,
+            title: thread_attrs[:title]
+          ),
         else: post_changeset
 
     %__MODULE__{}

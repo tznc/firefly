@@ -81,7 +81,9 @@ defmodule FireflyWeb.StaffLive.Log do
     "badge.update" => "Updated badge",
     "badge.delete" => "Deleted badge",
     "badge.grant" => "Granted badge",
-    "badge.revoke" => "Revoked badge"
+    "badge.revoke" => "Revoked badge",
+    "watched_word.create" => "Added watched word",
+    "watched_word.delete" => "Removed watched word"
   }
 
   @impl true
@@ -145,6 +147,9 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "upload", details: %{"filename" => name}}, _target),
     do: {name, ~p"/staff/uploads"}
+
+  defp target_link(%{target_type: "watched_word", details: %{"word" => word}}, _target),
+    do: {word, ~p"/staff/watched-words"}
 
   defp target_link(%{target_type: "emoji", details: %{"name" => name}}, _target),
     do: {":#{name}:", ~p"/staff/emoji"}

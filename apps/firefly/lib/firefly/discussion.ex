@@ -59,7 +59,7 @@ defmodule Firefly.Discussion do
 
   alias Firefly.Discussion.Store.ReplenishResponse
   alias Firefly.Groups.Role
-  alias Firefly.Moderation.{SpamGuard, StaffLog}
+  alias Firefly.Moderation.{SpamGuard, StaffLog, WatchedWords}
   alias Firefly.Notifications.{Notification, Subscriptions}
   alias Firefly.Plugins.{Events, ModerationHooks}
   alias Firefly.Rendering.OembedExtractor
@@ -1005,14 +1005,18 @@ defmodule Firefly.Discussion do
       %{thread: thread_attrs, post: post_attrs}
       |> Thread.new_changeset(user)
       |> put_tags(attrs[:tags], user)
+      |> WatchedWords.validate(user)
       |> ModerationHooks.validate_thread(user, category)
       |> Repo.insert()
 
     case thread_result do
       {:ok, thread} ->
+        add_watched_tags(thread, attrs[:body])
+
         for post <- thread.posts do
           Firefly.Uploads.attach(post.body, user, post)
           Firefly.Rendering.LinkPreviews.resolve(post)
+          :ok = WatchedWords.posted(post, user, thread.title)
         end
 
         {:ok, _} = mark_thread_read(user, thread)
@@ -1035,6 +1039,19 @@ defmodule Firefly.Discussion do
 
       e ->
         e
+    end
+  end
+
+  # `tag` watched words tag a new thread, whatever tags its author may use.
+  defp add_watched_tags(thread, body) do
+    case WatchedWords.tags(thread.title, body) do
+      [] ->
+        :ok
+
+      names ->
+        rows = for tag <- ensure_tags(names), do: %{thread_id: thread.id, tag_id: tag.id}
+        Repo.insert_all("forums_threads_tags", rows, on_conflict: :nothing)
+        :ok
     end
   end
 
@@ -1147,6 +1164,7 @@ defmodule Firefly.Discussion do
       thread
       |> Thread.changeset(attrs)
       |> put_tags(attrs[:tags] || attrs["tags"], editor)
+      |> then(&if(editor, do: WatchedWords.validate(&1, editor), else: &1))
 
     staff? = staff_on_others?(editor, thread_author_id(thread))
 
@@ -1539,6 +1557,7 @@ defmodule Firefly.Discussion do
       {:ok, _} = Subscriptions.ensure_thread_level(user, thread, user.reply_level)
       # Authors have read what they wrote, whichever way they posted it.
       {:ok, _} = advance_read(user.id, thread.id, post.id)
+      :ok = WatchedWords.posted(post, user)
 
       if Post.queued?(post) do
         Firefly.Moderation.Review.changed()
