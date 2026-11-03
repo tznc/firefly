@@ -111,6 +111,10 @@ RUN chown nobody /app
 ENV MIX_ENV="prod"
 # Backups are kept here (mount a volume) unless FIREFLY_BACKUP_STORAGE=s3
 ENV FIREFLY_BACKUP_DIR="/app/backups"
+# The commit this image is built from, shown by the version check:
+# docker build --build-arg FIREFLY_GIT_SHA=$(git rev-parse HEAD) .
+ARG FIREFLY_GIT_SHA=""
+ENV FIREFLY_GIT_SHA=${FIREFLY_GIT_SHA}
 
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/firefly ./

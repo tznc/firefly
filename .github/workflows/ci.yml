@@ -142,6 +142,7 @@ jobs:
           push: false
           load: true
           tags: firefly:ci
+          build-args: FIREFLY_GIT_SHA=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

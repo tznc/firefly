@@ -22,6 +22,7 @@ defmodule Firefly do
   | `Firefly.Analytics` | first-party traffic counts: page views, topic views, referrers, link clicks |
   | `Firefly.Reports` | the admin dashboard's overview and reports |
   | `Firefly.Backups` | backups and restores, read-only mode |
+  | `Firefly.Upgrades` | the running version, the daily check for new releases, pending migrations |
   | `Firefly.Plugins` (with `Firefly.Plugin`) | the plugin API, hook runner, host functions and installed plugins |
 
   A context's public API is its root module plus the modules its `use

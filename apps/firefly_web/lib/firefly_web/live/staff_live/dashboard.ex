@@ -1,8 +1,9 @@
 defmodule FireflyWeb.StaffLive.Dashboard do
   @moduledoc """
   The admin dashboard (admins only; see `Firefly.Reports`): the period's
-  numbers compared with the period before, a few charts, and links to every
-  report. The period is in the URL (`?period=30`, or `?from=&to=`).
+  numbers compared with the period before, a few charts, links to every
+  report, and the running version against the latest release (see
+  `Firefly.Upgrades`). The period is in the URL (`?period=30`, or `?from=&to=`).
   Results are cached for the day; "Refresh" computes them again.
   """
   use FireflyWeb, :live_view
@@ -11,7 +12,7 @@ defmodule FireflyWeb.StaffLive.Dashboard do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.Reports
+  alias Firefly.{Reports, Upgrades}
 
   @charts ~w(page_views signups posts)
 
@@ -48,6 +49,8 @@ defmodule FireflyWeb.StaffLive.Dashboard do
 
     socket
     |> assign(:params, params)
+    |> assign(:version, Upgrades.status())
+    |> assign(:repo, Upgrades.repo())
     |> assign(:range, range)
     |> assign(:metrics, overview.result)
     |> assign(:computed_at, overview.computed_at)
@@ -69,10 +72,7 @@ defmodule FireflyWeb.StaffLive.Dashboard do
 
       <.period_picker path={~p"/staff/dashboard"} range={@range} params={@params} />
 
-      <section id="version" class="rounded-box border border-base-300 bg-base-100 p-4 text-sm">
-        <.icon name="hero-information-circle" class="size-4" />
-        Firefly {Application.spec(:firefly, :vsn)}
-      </section>
+      <FireflyWeb.UpgradeComponents.version_status status={@version} repo={@repo} />
 
       <section id="overview" class="grid grid-cols-2 gap-3 md:grid-cols-4">
         <.stat :for={metric <- @metrics} metric={metric} />
