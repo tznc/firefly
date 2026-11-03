@@ -22,14 +22,14 @@ defmodule FireflyWeb.AuthLive.Registration do
 
   defp closed(socket) do
     socket
-    |> put_flash(:error, "New registrations are closed.")
+    |> put_flash(:error, gettext("New registrations are closed."))
     |> push_navigate(to: ~p"/login")
   end
 
   defp mount_form(socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Create an account")
+     |> assign(:page_title, gettext("Create an account"))
      |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
      |> assign(:trigger_submit, false)
      |> assign_form(Accounts.change_registration())}
@@ -44,7 +44,7 @@ defmodule FireflyWeb.AuthLive.Registration do
   # Bots fill in every field; people never see this one.
   def handle_event("save", %{"user" => %{"website" => website}}, socket)
       when website != "" do
-    {:noreply, put_flash(socket, :error, "Registration failed. Please try again.")}
+    {:noreply, put_flash(socket, :error, gettext("Registration failed. Please try again."))}
   end
 
   def handle_event("save", %{"user" => params}, socket) do
@@ -76,9 +76,10 @@ defmodule FireflyWeb.AuthLive.Registration do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
-        <.page_header title="Create an account">
+        <.page_header title={gettext("Create an account")}>
           <:subtitle>
-            Already have one? <.link navigate={~p"/auth/identity"} class="link">Log in</.link>
+            {gettext("Already have one?")}
+            <.link navigate={~p"/auth/identity"} class="link">{gettext("Log in")}</.link>
           </:subtitle>
         </.page_header>
         <.form
@@ -91,21 +92,21 @@ defmodule FireflyWeb.AuthLive.Registration do
           phx-trigger-action={@trigger_submit}
           class="space-y-2"
         >
-          <.input field={@form[:username]} type="text" label="Username" autocomplete="username" />
-          <.input field={@form[:email]} type="email" label="Email" autocomplete="email" />
+          <.input field={@form[:username]} type="text" label={gettext("Username")} autocomplete="username" />
+          <.input field={@form[:email]} type="email" label={gettext("Email")} autocomplete="email" />
           <.input
             field={@form[:password]}
             type="password"
-            label="Password"
+            label={gettext("Password")}
             autocomplete="new-password"
             value={@form[:password].value}
           />
           <div class="hidden" aria-hidden="true">
-            <label for="user_website">Website</label>
+            <label for="user_website">{gettext("Website")}</label>
             <input type="text" id="user_website" name="user[website]" tabindex="-1" autocomplete="off" />
           </div>
-          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with="Creating...">
-            Create account
+          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with={gettext("Creating...")}>
+            {gettext("Create account")}
           </.button>
         </.form>
       </section>

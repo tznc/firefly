@@ -14,6 +14,12 @@ config :firefly_web,
   ecto_repos: [Firefly.Repo],
   generators: [context_app: :firefly, timestamp_type: :naive_datetime_usec]
 
+# The interface's languages (see FireflyWeb.Locale). Translations live in
+# apps/firefly_web/priv/gettext.
+config :firefly_web, FireflyWeb.Gettext,
+  default_locale: "en",
+  locales: ~w(en es fr de pt_BR ja zh_CN ar)
+
 # Ecto 2 stored microsecond timestamps; keep doing so for new migrations.
 config :firefly, Firefly.Repo,
   migration_timestamps: [type: :naive_datetime_usec],

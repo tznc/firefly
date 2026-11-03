@@ -13,11 +13,14 @@ defmodule FireflyWeb.AuthLive.MagicLink do
     if MagicLinks.enabled?() do
       {:ok,
        socket
-       |> assign(:page_title, "Log in by email")
+       |> assign(:page_title, gettext("Log in by email"))
        |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
        |> assign(:form, to_form(%{"email" => ""}, as: :login))}
     else
-      {:ok, socket |> put_flash(:error, "Email login links are off.") |> redirect(to: ~p"/login")}
+      {:ok,
+       socket
+       |> put_flash(:error, gettext("Email login links are off."))
+       |> redirect(to: ~p"/login")}
     end
   end
 
@@ -37,7 +40,7 @@ defmodule FireflyWeb.AuthLive.MagicLink do
         {:noreply, put_flash(socket, :error, RateLimit.message())}
 
       {:error, _disabled} ->
-        {:noreply, put_flash(socket, :error, "Email login links are off.")}
+        {:noreply, put_flash(socket, :error, gettext("Email login links are off."))}
     end
   end
 
@@ -46,13 +49,13 @@ defmodule FireflyWeb.AuthLive.MagicLink do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
-        <.page_header title="Log in by email">
-          <:subtitle>We'll email you a link that logs you in.</:subtitle>
+        <.page_header title={gettext("Log in by email")}>
+          <:subtitle>{gettext("We'll email you a link that logs you in.")}</:subtitle>
         </.page_header>
         <.form for={@form} id="magic-link-form" phx-submit="send" class="space-y-2">
-          <.input field={@form[:email]} type="email" label="Email" autocomplete="email" />
-          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with="Sending...">
-            Email me a link
+          <.input field={@form[:email]} type="email" label={gettext("Email")} autocomplete="email" />
+          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with={gettext("Sending...")}>
+            {gettext("Email me a link")}
           </.button>
         </.form>
       </section>

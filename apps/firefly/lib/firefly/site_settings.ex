@@ -56,6 +56,25 @@ defmodule Firefly.SiteSettings do
         help: "Shown on the home page and to search engines. Blank: none."
       },
       %{
+        key: "default_locale",
+        section: "Site",
+        type: :select,
+        label: "Language",
+        default: "en",
+        options: [
+          {"English", "en"},
+          {"Español", "es"},
+          {"Français", "fr"},
+          {"Deutsch", "de"},
+          {"Português (Brasil)", "pt_BR"},
+          {"日本語", "ja"},
+          {"简体中文", "zh_CN"},
+          {"العربية", "ar"}
+        ],
+        help:
+          "The interface's language for visitors whose browser asks for none Firefly has. Members pick their own in their settings."
+      },
+      %{
         key: "contact_email",
         section: "Site",
         type: :email,

@@ -7,24 +7,26 @@ defmodule FireflyWeb.Drafting do
   (which sends `discard_draft`).
 
   Every function here takes the composer's socket, with `:current_user`
-  (a `Firefly.Accounts.User`) and, after `assign_draft/2`, `:draft_context`
-  assigned.
+  (a `Firefly.Accounts.User`) and, after `assign_draft/2`,
+  `:draft_context` assigned; each matches the user's struct, so a change
+  to it recompiles this module along with the composers.
   """
   use FireflyWeb, :html
 
+  alias Firefly.Accounts.User
   alias Firefly.Discussion.Drafts
 
   @doc "Assigns the user's `:draft` for `context` (nil if none) for the composer to restore."
-  def assign_draft(socket, context) do
+  def assign_draft(%{assigns: %{current_user: %User{} = user}} = socket, context) do
     socket
     |> assign(:draft_context, context)
-    |> assign(:draft, Drafts.get(socket.assigns.current_user, context))
+    |> assign(:draft, Drafts.get(user, context))
     |> assign(:draft_error, nil)
   end
 
   @doc "Saves the form's content (`title`, `tags`, `body`) as the draft."
-  def autosave(socket, attrs) do
-    case Drafts.save(socket.assigns.current_user, socket.assigns.draft_context, attrs) do
+  def autosave(%{assigns: %{current_user: %User{} = user}} = socket, attrs) do
+    case Drafts.save(user, socket.assigns.draft_context, attrs) do
       {:ok, draft} -> assign(socket, draft: draft, draft_error: nil)
       {:error, :too_many} -> assign(socket, :draft_error, Drafts.message(:too_many))
       # Too long to keep: the form shows why.
@@ -33,8 +35,8 @@ defmodule FireflyWeb.Drafting do
   end
 
   @doc "Deletes the draft (sent, or discarded)."
-  def discard_draft(socket) do
-    :ok = Drafts.discard(socket.assigns.current_user, socket.assigns.draft_context)
+  def discard_draft(%{assigns: %{current_user: %User{} = user}} = socket) do
+    :ok = Drafts.discard(user, socket.assigns.draft_context)
     assign(socket, draft: nil, draft_error: nil)
   end
 

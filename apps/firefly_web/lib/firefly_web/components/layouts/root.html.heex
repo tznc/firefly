@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-user-theme={assigns[:current_user] && @current_user.theme}>
+<html
+  lang={assigns[:locale] || "en"}
+  dir={assigns[:text_dir] || "ltr"}
+  data-user-theme={assigns[:current_user] && @current_user.theme}
+>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -55,7 +59,7 @@
   <body class="bg-base-200 min-h-screen">
     <noscript>
       <p class="bg-warning text-warning-content p-2 text-center text-sm">
-        Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it.
+        {gettext("Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it.")}
       </p>
     </noscript>
     {@inner_content}

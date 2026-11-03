@@ -38,7 +38,7 @@ defmodule FireflyWeb.Layouts do
 
     ~H"""
     <div class="drawer lg:drawer-open">
-      <input id="nav-drawer" type="checkbox" class="drawer-toggle" aria-label="Toggle navigation" />
+      <input id="nav-drawer" type="checkbox" class="drawer-toggle" aria-label={gettext("Toggle navigation")} />
       <div class="drawer-content flex min-h-screen flex-col">
         <header class="navbar sticky top-0 z-30 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur sm:px-6">
           <div class="flex-1">
@@ -50,13 +50,13 @@ defmodule FireflyWeb.Layouts do
             <form action={~p"/search"} method="get" role="search" class="hidden sm:block">
               <label class="input input-sm w-48 lg:w-64">
                 <.icon name="hero-magnifying-glass" class="size-4 opacity-60" />
-                <input type="search" name="q" placeholder="Search" aria-label="Search the forum" />
+                <input type="search" name="q" placeholder={gettext("Search")} aria-label={gettext("Search the forum")} />
               </label>
             </form>
             <.link
               navigate={~p"/search"}
               class="btn btn-ghost btn-circle sm:hidden"
-              aria-label="Search"
+              aria-label={gettext("Search")}
             >
               <.icon name="hero-magnifying-glass" class="size-5" />
             </.link>
@@ -64,7 +64,7 @@ defmodule FireflyWeb.Layouts do
               :if={@current_user}
               navigate={~p"/notifications"}
               class="btn btn-ghost btn-circle"
-              aria-label={"Notifications (#{@notification_count})"}
+              aria-label={gettext("Notifications (%{count})", count: @notification_count)}
             >
               <div class="indicator">
                 <.icon name="hero-bell" class="size-5" />
@@ -77,7 +77,7 @@ defmodule FireflyWeb.Layouts do
               </div>
             </.link>
             <.theme_toggle persist={!!@current_user} />
-            <label for="nav-drawer" class="btn btn-ghost btn-square lg:hidden" aria-label="Open menu">
+            <label for="nav-drawer" class="btn btn-ghost btn-square lg:hidden" aria-label={gettext("Open menu")}>
               <.icon name="hero-bars-3" class="size-6" />
             </label>
           </div>
@@ -88,7 +88,7 @@ defmodule FireflyWeb.Layouts do
             <div :if={@read_only} id="read-only-banner" role="status" class="alert alert-warning">
               <.icon name="hero-lock-closed" class="size-5" />
               <span>
-                The forum is read-only for maintenance ({@read_only.reason}). You can read, but not post or change anything for now.
+                {gettext("The forum is read-only for maintenance (%{reason}). You can read, but not post or change anything for now.", reason: @read_only.reason)}
               </span>
             </div>
             <.confirm_email_notice current_user={@current_user} />
@@ -99,71 +99,71 @@ defmodule FireflyWeb.Layouts do
       </div>
 
       <div class="drawer-side z-40">
-        <label for="nav-drawer" aria-label="Close menu" class="drawer-overlay"></label>
+        <label for="nav-drawer" aria-label={gettext("Close menu")} class="drawer-overlay"></label>
         <nav class="menu min-h-full w-64 gap-1 border-r border-base-300 bg-base-100 p-4">
           <%= if @current_user do %>
-            <li class="menu-title">You</li>
+            <li class="menu-title">{gettext("You")}</li>
             <.nav_item path={~p"/threads/watching"} current_path={@current_path} icon="hero-eye">
-              Watching
+              {gettext("Watching")}
             </.nav_item>
             <.nav_item
               path={~p"/threads/participating"}
               current_path={@current_path}
               icon="hero-chat-bubble-left-right"
             >
-              Participating in
+              {gettext("Participating in")}
             </.nav_item>
             <.nav_item path={~p"/drafts"} current_path={@current_path} icon="hero-pencil-square">
-              Drafts
+              {gettext("Drafts")}
             </.nav_item>
             <.nav_item path={~p"/bookmarks"} current_path={@current_path} icon="hero-bookmark">
-              Bookmarks
+              {gettext("Bookmarks")}
             </.nav_item>
             <.nav_item path={~p"/notifications"} current_path={@current_path} icon="hero-bell">
-              Notifications
+              {gettext("Notifications")}
               <span :if={@notification_count > 0} class="badge badge-sm badge-primary">
                 {@notification_count}
               </span>
             </.nav_item>
             <.nav_item path={~p"/messages"} current_path={@current_path} icon="hero-envelope">
-              Messages
+              {gettext("Messages")}
               <span
                 :if={@message_count > 0}
                 id="message-count"
                 class="badge badge-sm badge-primary"
-                aria-label={"#{@message_count} unread"}
+                aria-label={gettext("%{count} unread", count: @message_count)}
               >
                 {@message_count}
               </span>
             </.nav_item>
             <.nav_item :if={@chat} path={~p"/chat"} current_path={@current_path} icon="hero-chat-bubble-oval-left-ellipsis">
-              Chat
+              {gettext("Chat")}
             </.nav_item>
           <% end %>
-          <li class="menu-title">Forum</li>
-          <.nav_item path={~p"/"} current_path={@current_path} icon="hero-fire">Latest</.nav_item>
+          <li class="menu-title">{gettext("Forum")}</li>
+          <.nav_item path={~p"/"} current_path={@current_path} icon="hero-fire">{gettext("Latest")}</.nav_item>
           <.nav_item path={~p"/categories"} current_path={@current_path} icon="hero-squares-2x2">
-            Categories
+            {gettext("Categories")}
           </.nav_item>
-          <.nav_item path={~p"/tags"} current_path={@current_path} icon="hero-tag">Tags</.nav_item>
-          <.nav_item path={~p"/users"} current_path={@current_path} icon="hero-users">Users</.nav_item>
+          <.nav_item path={~p"/tags"} current_path={@current_path} icon="hero-tag">{gettext("Tags")}</.nav_item>
+          <.nav_item path={~p"/users"} current_path={@current_path} icon="hero-users">{gettext("Users")}</.nav_item>
           <.nav_item path={~p"/groups"} current_path={@current_path} icon="hero-user-group">
-            Groups
+            {gettext("Groups")}
           </.nav_item>
           <.nav_item path={~p"/badges"} current_path={@current_path} icon="hero-trophy">
-            Badges
+            {gettext("Badges")}
           </.nav_item>
-          <li class="menu-title">Account</li>
+          <li class="menu-title">{gettext("Account")}</li>
           <%= if @current_user do %>
             <.nav_item
               path={~p"/users/#{@current_user}"}
               current_path={@current_path}
               icon="hero-user-circle"
             >
-              Your profile
+              {gettext("Your profile")}
             </.nav_item>
             <.nav_item path={~p"/settings/profile"} current_path={@current_path} icon="hero-cog-6-tooth">
-              Settings
+              {gettext("Settings")}
             </.nav_item>
             <.nav_item
               :if={Firefly.Accounts.Invites.may_invite?(@current_user)}
@@ -171,7 +171,7 @@ defmodule FireflyWeb.Layouts do
               current_path={@current_path}
               icon="hero-envelope"
             >
-              Invites
+              {gettext("Invites")}
             </.nav_item>
             <%= if Firefly.Accounts.admin?(@current_user) do %>
               <.nav_item
@@ -179,15 +179,15 @@ defmodule FireflyWeb.Layouts do
                 current_path={@current_path}
                 icon="hero-chart-bar"
               >
-                Dashboard
+                {gettext("Dashboard")}
               </.nav_item>
               <.nav_item path={~p"/staff/review"} current_path={@current_path} icon="hero-inbox-stack">
-                Review
+                {gettext("Review")}
                 <span
                   :if={@review_count > 0}
                   id="review-count"
                   class="badge badge-sm badge-warning"
-                  aria-label={"#{@review_count} to review"}
+                  aria-label={gettext("%{count} to review", count: @review_count)}
                 >
                   {@review_count}
                 </span>
@@ -197,53 +197,53 @@ defmodule FireflyWeb.Layouts do
                 current_path={@current_path}
                 icon="hero-clipboard-document-list"
               >
-                Staff log
+                {gettext("Staff log")}
               </.nav_item>
               <.nav_item
                 path={~p"/staff/settings"}
                 current_path={@current_path}
                 icon="hero-adjustments-horizontal"
               >
-                Site settings
+                {gettext("Site settings")}
               </.nav_item>
               <.nav_item path={~p"/staff/groups"} current_path={@current_path} icon="hero-user-group">
-                Groups
+                {gettext("Groups")}
               </.nav_item>
               <.nav_item path={~p"/staff/tags"} current_path={@current_path} icon="hero-tag">
-                Tag groups
+                {gettext("Tag groups")}
               </.nav_item>
               <.nav_item
                 path={~p"/staff/plugins"}
                 current_path={@current_path}
                 icon="hero-puzzle-piece"
               >
-                Plugins
+                {gettext("Plugins")}
               </.nav_item>
               <.nav_item path={~p"/staff/uploads"} current_path={@current_path} icon="hero-photo">
-                Uploads
+                {gettext("Uploads")}
               </.nav_item>
               <.nav_item path={~p"/staff/emoji"} current_path={@current_path} icon="hero-face-smile">
-                Emoji
+                {gettext("Emoji")}
               </.nav_item>
               <.nav_item path={~p"/staff/badges"} current_path={@current_path} icon="hero-trophy">
-                Badges
+                {gettext("Badges")}
               </.nav_item>
               <.nav_item
                 path={~p"/staff/watched-words"}
                 current_path={@current_path}
                 icon="hero-eye"
               >
-                Watched words
+                {gettext("Watched words")}
               </.nav_item>
               <.nav_item path={~p"/staff/webhooks"} current_path={@current_path} icon="hero-bolt">
-                Webhooks
+                {gettext("Webhooks")}
               </.nav_item>
               <.nav_item
                 path={~p"/staff/api-keys"}
                 current_path={@current_path}
                 icon="hero-command-line"
               >
-                API keys
+                {gettext("API keys")}
               </.nav_item>
               <.nav_item
                 path={~p"/staff/discourse-connect"}
@@ -253,7 +253,7 @@ defmodule FireflyWeb.Layouts do
                 DiscourseConnect
               </.nav_item>
               <.nav_item path={~p"/staff/embedding"} current_path={@current_path} icon="hero-code-bracket">
-                Embedding
+                {gettext("Embedding")}
               </.nav_item>
               <.nav_item path={~p"/staff/ai"} current_path={@current_path} icon="hero-sparkles">
                 AI
@@ -263,32 +263,32 @@ defmodule FireflyWeb.Layouts do
                 current_path={@current_path}
                 icon="hero-archive-box-arrow-down"
               >
-                Backups
+                {gettext("Backups")}
               </.nav_item>
               <.nav_item
                 path={~p"/staff/import"}
                 current_path={@current_path}
                 icon="hero-arrow-down-tray"
               >
-                Import
+                {gettext("Import")}
               </.nav_item>
               <.nav_item
                 path={~p"/staff/upgrade"}
                 current_path={@current_path}
                 icon="hero-arrow-up-circle"
               >
-                Upgrade
+                {gettext("Upgrade")}
                 <span :if={@update_available} id="update-badge" class="badge badge-sm badge-info">
-                  new
+                  {gettext("new")}
                 </span>
               </.nav_item>
               <li>
-                <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
+                <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> {gettext("Admin")}</a>
               </li>
             <% end %>
             <li>
               <.link href={~p"/auth/logout"} method="delete">
-                <.icon name="hero-arrow-right-start-on-rectangle" class="size-5" /> Log out
+                <.icon name="hero-arrow-right-start-on-rectangle" class="size-5" /> {gettext("Log out")}
               </.link>
             </li>
           <% else %>
@@ -297,7 +297,7 @@ defmodule FireflyWeb.Layouts do
               current_path={@current_path}
               icon="hero-arrow-right-end-on-rectangle"
             >
-              Log in
+              {gettext("Log in")}
             </.nav_item>
           <% end %>
           <li>
@@ -307,16 +307,16 @@ defmodule FireflyWeb.Layouts do
               user={@current_user}
             />
           </li>
-          <li class="menu-title">About</li>
+          <li class="menu-title">{gettext("About")}</li>
           <li :if={@contact_email != ""}>
             <a id="contact-email" href={"mailto:" <> @contact_email}>
-              <.icon name="hero-envelope" class="size-5" /> Contact us
+              <.icon name="hero-envelope" class="size-5" /> {gettext("Contact us")}
             </a>
           </li>
-          <li><a href="https://tznc.dev">Made by tznc.dev</a></li>
-          <li><a href="https://github.com/tznc/firefly">Firefly on GitHub</a></li>
-          <li><a href="http://www.firestormforum.org">Built on Firestorm</a></li>
-          <li><a href="http://www.firestormforum.org#patrons">Firestorm patrons</a></li>
+          <li><a href="https://tznc.dev">{gettext("Made by tznc.dev")}</a></li>
+          <li><a href="https://github.com/tznc/firefly">{gettext("Firefly on GitHub")}</a></li>
+          <li><a href="http://www.firestormforum.org">{gettext("Built on Firestorm")}</a></li>
+          <li><a href="http://www.firestormforum.org#patrons">{gettext("Firestorm patrons")}</a></li>
         </nav>
       </div>
     </div>
@@ -338,10 +338,10 @@ defmodule FireflyWeb.Layouts do
     >
       <.icon name="hero-envelope" class="size-5" />
       <span>
-        Confirm your email address to start posting. We sent a link to <strong>{@current_user.email}</strong>.
+        {gettext("Confirm your email address to start posting. We sent a link to %{email}.", email: @current_user.email)}
       </span>
       <.form for={%{}} action={~p"/confirm"} method="post">
-        <button class="btn btn-sm">Resend link</button>
+        <button class="btn btn-sm">{gettext("Resend link")}</button>
       </.form>
     </div>
     """
@@ -361,7 +361,7 @@ defmodule FireflyWeb.Layouts do
       <.icon name="hero-no-symbol" class="size-5" />
       <span>
         {Firefly.Moderation.Posting.message({:silenced, @current_user.silenced_until})}
-        Reason: {@current_user.silence_reason}
+        {gettext("Reason: %{reason}", reason: @current_user.silence_reason)}
       </span>
     </div>
     """
@@ -431,7 +431,7 @@ defmodule FireflyWeb.Layouts do
       <.flash
         id="client-error"
         kind={:error}
-        title="We can't find the internet"
+        title={gettext("We can't find the internet")}
         phx-disconnected={
           show(".phx-client-error #client-error")
           |> JS.remove_attribute("hidden", to: ".phx-client-error #client-error")
@@ -439,14 +439,14 @@ defmodule FireflyWeb.Layouts do
         phx-connected={hide("#client-error") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
-        Attempting to reconnect
+        {gettext("Attempting to reconnect")}
         <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
 
       <.flash
         id="server-error"
         kind={:error}
-        title="Something went wrong!"
+        title={gettext("Something went wrong!")}
         phx-disconnected={
           show(".phx-server-error #server-error")
           |> JS.remove_attribute("hidden", to: ".phx-server-error #server-error")
@@ -454,7 +454,7 @@ defmodule FireflyWeb.Layouts do
         phx-connected={hide("#server-error") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
-        Attempting to reconnect
+        {gettext("Attempting to reconnect")}
         <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
     </div>
@@ -481,7 +481,7 @@ defmodule FireflyWeb.Layouts do
         class="flex w-1/3 cursor-pointer p-2"
         phx-click={set_theme("system", @persist)}
         data-phx-theme="system"
-        aria-label="Use system theme"
+        aria-label={gettext("Use system theme")}
       >
         <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
@@ -489,7 +489,7 @@ defmodule FireflyWeb.Layouts do
         class="flex w-1/3 cursor-pointer p-2"
         phx-click={set_theme("light", @persist)}
         data-phx-theme="light"
-        aria-label="Use light theme"
+        aria-label={gettext("Use light theme")}
       >
         <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
@@ -497,7 +497,7 @@ defmodule FireflyWeb.Layouts do
         class="flex w-1/3 cursor-pointer p-2"
         phx-click={set_theme("dark", @persist)}
         data-phx-theme="dark"
-        aria-label="Use dark theme"
+        aria-label={gettext("Use dark theme")}
       >
         <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
