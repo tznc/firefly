@@ -299,6 +299,8 @@ defmodule Firefly.ChatTest do
     end
 
     test "watched words block or silence; validation", ctx do
+      # The matchers are cached for every test: leave none behind.
+      on_exit(fn -> WatchedWords.put_cache(%{}) end)
       {:ok, _} = WatchedWords.create(ctx.admin, %{"word" => "darn", "action" => "block"})
       {:ok, _} = WatchedWords.create(ctx.admin, %{"word" => "spamz", "action" => "silence"})
 

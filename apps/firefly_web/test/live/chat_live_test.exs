@@ -100,14 +100,15 @@ defmodule FireflyWeb.ChatLiveTest do
     assert has_element?(view, "#chat-message-#{question.id} a", "1 reply")
   end
 
-  test "watched words and penalties are refused with a message", ctx do
+  test "penalties and closed channels are refused with a message", ctx do
     {:ok, _} =
-      Firefly.Moderation.WatchedWords.create(ctx.admin, %{"word" => "darn", "action" => "block"})
-
-    on_exit(fn -> Firefly.Moderation.WatchedWords.put_cache(%{}) end)
+      Firefly.Moderation.Penalties.penalize(:silence, ctx.alice, ctx.admin, %{
+        "duration" => "1d",
+        "reason" => "shh"
+      })
 
     view = open(ctx.conn, ctx.alice, path(ctx.general))
-    assert send_body(view, "darn it") =~ "contains a word that&#39;s not allowed: darn"
+    assert send_body(view, "hi") =~ "You&#39;ve been silenced"
 
     {:ok, _} = Chat.set_status(ctx.general, "closed", ctx.admin)
     assert has_element?(view, "#channel-closed", "only staff can post")
