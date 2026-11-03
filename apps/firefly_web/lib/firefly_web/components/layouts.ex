@@ -145,6 +145,14 @@ defmodule FireflyWeb.Layouts do
             <.nav_item path={~p"/settings/profile"} current_path={@current_path} icon="hero-cog-6-tooth">
               Settings
             </.nav_item>
+            <.nav_item
+              :if={Firefly.Accounts.Invites.may_invite?(@current_user)}
+              path={~p"/invites"}
+              current_path={@current_path}
+              icon="hero-envelope"
+            >
+              Invites
+            </.nav_item>
             <%= if Firefly.Accounts.admin?(@current_user) do %>
               <.nav_item path={~p"/staff/review"} current_path={@current_path} icon="hero-inbox-stack">
                 Review

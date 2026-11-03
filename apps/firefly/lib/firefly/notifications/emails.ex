@@ -129,6 +129,26 @@ defmodule Firefly.Notifications.Emails do
     """)
   end
 
+  @doc "An invitation to join, for `invite.email` (with its inviter loaded)."
+  def invite(%{email: email, invited_by: %User{} = inviter}, url) do
+    new_email()
+    |> to(email)
+    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> subject("#{inviter.username} invited you to join #{site()}")
+    |> html_body("""
+    <p>Hi,</p>
+    <p>@#{escape(inviter.username)} invited you to join #{escape(site())}.</p>
+    <p><a href="#{escape(url)}">Accept the invitation</a></p>
+    """)
+    |> text_body("""
+    Hi,
+
+    @#{inviter.username} invited you to join #{site()}.
+
+    Accept the invitation: #{url}
+    """)
+  end
+
   def confirmation(%User{} = user, url) do
     new_email()
     |> to(user.email)

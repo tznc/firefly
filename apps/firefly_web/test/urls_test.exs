@@ -15,6 +15,7 @@ defmodule FireflyWeb.URLsTest do
     assert URLs.digest_unsubscribe_url(token) == url(~p"/email/unsubscribe/#{token}")
     assert URLs.notification_settings_url() == url(~p"/settings/notifications")
     assert URLs.user_url(%{id: 7}) == url(~p"/users/7")
+    assert URLs.invite_url("aB-_1") == url(~p"/invites/aB-_1")
     assert URLs.group_url(group) == url(~p"/groups/#{group.name}")
     assert URLs.group_url(group, "requests") == url(~p"/groups/#{group.name}/requests")
     assert URLs.badge_url(%{id: 3}) == url(~p"/badges/3")

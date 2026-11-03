@@ -71,6 +71,25 @@ defmodule Firefly.SiteSettings do
         help: "Off: nobody can create an account, with a password or a social login."
       },
       %{
+        key: "invite_only",
+        section: "Registration",
+        type: :boolean,
+        label: "Invite only",
+        default: false,
+        help:
+          "On: only people with an invitation can create an account (with a password, a social login or single sign-on)."
+      },
+      %{
+        key: "invite_expiry_days",
+        section: "Registration",
+        type: :integer,
+        label: "Invitations expire after (days)",
+        default: 30,
+        min: 1,
+        max: 365,
+        help: "How long an invitation can be used."
+      },
+      %{
         key: "require_email_confirmation",
         section: "Registration",
         type: :boolean,
@@ -280,6 +299,13 @@ defmodule Firefly.SiteSettings do
         "Members below it can't start conversations (they can still reply)."
       ),
       tl("min_trust_to_flag", "Trust level to flag posts", 1, 4, "Members below it can't flag."),
+      tl(
+        "min_trust_to_invite",
+        "Trust level to invite people",
+        2,
+        4,
+        "Members below it can't send invitations (admins always can)."
+      ),
       tl(
         "min_trust_to_edit_wiki",
         "Trust level to edit wiki posts",

@@ -10,7 +10,7 @@ defmodule FireflyWeb.DiscourseConnectController do
 
   alias Firefly.Accounts.{Auth, User}
   alias Firefly.Accounts.Auth.DiscourseConnect
-  alias FireflyWeb.Login
+  alias FireflyWeb.{InviteController, Login}
 
   def request(conn, _params) do
     {nonce, url} = DiscourseConnect.request(url(~p"/auth/discourse_connect/callback"))
@@ -49,9 +49,14 @@ defmodule FireflyWeb.DiscourseConnectController do
   end
 
   defp finish(conn, fields) do
-    case DiscourseConnect.login(fields) do
-      {:ok, user} -> Login.complete(conn, user, ~p"/login", :sso)
-      {:error, reason} -> Login.fail(conn, ~p"/login", reason)
+    {invite, conn} = InviteController.take_invite(conn)
+
+    case DiscourseConnect.login(fields, invite) do
+      {:ok, user} ->
+        Login.complete(conn, user, ~p"/login", :sso, InviteController.destination(invite))
+
+      {:error, reason} ->
+        Login.fail(conn, ~p"/login", reason)
     end
   end
 end

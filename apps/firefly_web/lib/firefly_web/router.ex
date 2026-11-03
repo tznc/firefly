@@ -98,6 +98,7 @@ defmodule FireflyWeb.Router do
     post("/login/passkey", PasskeyController, :create)
     post("/login/email/:token", MagicLinkController, :create)
     delete("/settings/account", AccountController, :delete)
+    get("/invites/:key/login/:provider", InviteController, :login)
 
     live_session :default,
       on_mount: [
@@ -119,6 +120,7 @@ defmodule FireflyWeb.Router do
       live("/settings/security", SettingsLive.Index, :security)
       live("/settings/account", SettingsLive.Index, :account)
       live("/unread", ThreadLive.Unread, :index)
+      live("/invites", InviteLive.Index, :index)
       live("/drafts", DraftLive.Index, :index)
       live("/bookmarks", BookmarkLive.Index, :index)
       live("/notifications", NotificationLive.Index, :index)
@@ -148,6 +150,7 @@ defmodule FireflyWeb.Router do
       live("/", ThreadLive.Recent, :index)
       live("/top", ThreadLive.Top, :index)
       live("/login", AuthLive.Login, :login)
+      live("/invites/:key", InviteLive.Show, :show)
       live("/email/unsubscribe/:token", DigestLive.Unsubscribe, :show)
       live("/login/two-factor", AuthLive.TwoFactor, :show)
       live("/login/email", AuthLive.MagicLink, :new)

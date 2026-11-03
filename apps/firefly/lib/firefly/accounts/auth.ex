@@ -34,7 +34,7 @@ defmodule Firefly.Accounts.Auth do
   import Ecto.Query
 
   alias Firefly.{Accounts, Repo}
-  alias Firefly.Accounts.{User, UserIdentity}
+  alias Firefly.Accounts.{Invite, Invites, User, UserIdentity}
   alias Firefly.Plugins.Events
 
   @providers [
@@ -155,8 +155,15 @@ defmodule Firefly.Accounts.Auth do
   user has no password and no linked account, and the emails match. A
   DiscourseConnect account may link to the account with its email (see
   `Firefly.Accounts.Auth.DiscourseConnect.account_for_email/1`).
+
+  With an `invite` (see `Firefly.Accounts.Invites`), a new account is made
+  through it, even while registrations are invite-only; an email invite
+  needs the provider's address to be the invited one, and confirms it.
   """
-  def login(%{provider: provider, uid: uid} = info) when not is_nil(uid) do
+  def login(info, invite \\ nil)
+
+  def login(%{provider: provider, uid: uid} = info, invite) when not is_nil(uid) do
+    info = Map.put(info, :invite, invite)
     provider = to_string(provider)
     uid = to_string(uid)
 
@@ -166,7 +173,7 @@ defmodule Firefly.Accounts.Auth do
     end
   end
 
-  def login(%{provider: provider}),
+  def login(%{provider: provider}, _invite),
     do: {:error, "#{label(to_string(provider))} did not return an account id."}
 
   defp identity_user(provider, uid) do
@@ -211,11 +218,28 @@ defmodule Firefly.Accounts.Auth do
     )
   end
 
+  defp register(provider, uid, %{invite: %Invite{} = invite} = info) do
+    with :ok <- Invites.open(),
+         {:ok, user} <- insert_user(provider, uid, info) do
+      Invites.redeemed(invite, user)
+      {:ok, user}
+    else
+      {:error, reason} when is_atom(reason) -> {:error, Invites.message(reason)}
+      error -> error
+    end
+  end
+
   defp register(provider, uid, info) do
     if Accounts.registration_open?(),
       do: insert_user(provider, uid, info),
       else: {:error, "New registrations are closed."}
   end
+
+  # An address an email invite was sent to is proven.
+  defp verified?(%{invite: %Invite{email: invited}, email: email}) when is_binary(invited),
+    do: is_binary(email) and String.downcase(email) == invited
+
+  defp verified?(info), do: info[:email_verified] not in [nil, false]
 
   defp insert_user(provider, uid, info) do
     username = available_username(provider, base_username(info))
@@ -223,7 +247,7 @@ defmodule Firefly.Accounts.Auth do
     result =
       Repo.transact(fn ->
         with {:ok, user} <-
-               %User{confirmed_at: if(info[:email_verified], do: DateTime.utc_now(:second))}
+               %User{confirmed_at: if(verified?(info), do: DateTime.utc_now(:second))}
                |> User.changeset(%{
                  username: username,
                  name: info[:name] || username,
@@ -231,7 +255,8 @@ defmodule Firefly.Accounts.Auth do
                  api_token: Ecto.UUID.generate()
                })
                |> Repo.insert(),
-             {:ok, _identity} <- link(user, provider, uid, info) do
+             {:ok, _identity} <- link(user, provider, uid, info),
+             {:ok, _invite} <- use_invite(info[:invite], user) do
           {:ok, user}
         end
       end)
@@ -241,6 +266,9 @@ defmodule Firefly.Accounts.Auth do
       {:ok, user}
     end
   end
+
+  defp use_invite(nil, _user), do: {:ok, nil}
+  defp use_invite(invite, user), do: Invites.use_invite(invite, user)
 
   @doc """
   A free username for a new account described by `info` (`nickname`,
