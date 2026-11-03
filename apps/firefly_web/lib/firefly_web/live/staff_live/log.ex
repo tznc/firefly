@@ -85,6 +85,8 @@ defmodule FireflyWeb.StaffLive.Log do
     "watched_word.create" => "Added watched word",
     "watched_word.delete" => "Removed watched word",
     "webhook.create" => "Added webhook",
+    "api_key.create" => "Created API key",
+    "api_key.revoke" => "Revoked API key",
     "webhook.update" => "Changed webhook",
     "webhook.delete" => "Deleted webhook",
     "webhook.auto_disable" => "Turned off failing webhook",
@@ -197,6 +199,9 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "emoji", details: %{"name" => name}}, _target),
     do: {":#{name}:", ~p"/staff/emoji"}
+
+  defp target_link(%{target_type: "api_key", details: %{"name" => name}}, _target),
+    do: {name, ~p"/staff/api-keys"}
 
   defp target_link(%{target_type: "badge", details: %{"badge" => name}}, _target),
     do: {name, ~p"/staff/badges"}

@@ -7,7 +7,7 @@ defmodule FireflyWeb.ClientIP do
   when the request comes from a trusted proxy (anyone can send that
   header). Trusted proxies are addresses or CIDR ranges in the
   `FIREFLY_TRUSTED_PROXIES` environment variable, comma-separated, e.g.
-  `10.0.0.0/8,fd00::/8`. With none configured (the default) the socket's
+  `10.0.0.0/8,fd00::/8` (see `Firefly.IPRange`). With none configured (the default) the socket's
   peer address is used and the header is ignored.
 
   The header is read right to left: each hop appends the address it got
@@ -20,7 +20,7 @@ defmodule FireflyWeb.ClientIP do
 
   @behaviour Plug
 
-  import Bitwise
+  alias Firefly.IPRange
 
   @impl Plug
   def init(opts), do: opts
@@ -69,7 +69,7 @@ defmodule FireflyWeb.ClientIP do
   defp forwarded(values, proxies, fallback) do
     values
     |> Enum.flat_map(&String.split(&1, ","))
-    |> Enum.map(&parse_address(String.trim(&1)))
+    |> Enum.map(&IPRange.address(String.trim(&1)))
     |> Enum.reverse()
     |> Enum.reduce_while(fallback, fn
       nil, last ->
@@ -80,48 +80,13 @@ defmodule FireflyWeb.ClientIP do
     end)
   end
 
-  defp trusted?(address, proxies), do: Enum.any?(proxies, &in_range?(address, &1))
+  defp trusted?(address, proxies), do: IPRange.member?(address, proxies)
 
-  defp in_range?(address, {network, bits}) when tuple_size(address) == tuple_size(network) do
-    size = if tuple_size(address) == 4, do: 8, else: 16
-    shift = tuple_size(address) * size - bits
-    to_integer(address, size) >>> shift == to_integer(network, size) >>> shift
-  end
-
-  defp in_range?(_address, _range), do: false
-
-  defp to_integer(address, size),
-    do: address |> Tuple.to_list() |> Enum.reduce(0, &(&2 <<< size ||| &1))
-
-  @doc "The configured trusted proxies, as `{address, prefix_bits}`."
+  @doc "The configured trusted proxies, as parsed `Firefly.IPRange` ranges."
   def trusted_proxies do
     :firefly_web
     |> Application.get_env(__MODULE__, [])
     |> Keyword.get(:trusted_proxies, [])
-    |> Enum.map(&parse_range!/1)
-  end
-
-  defp parse_range!(range) do
-    {address, bits} =
-      case String.split(String.trim(range), "/", parts: 2) do
-        [address, bits] -> {parse_address(address), Integer.parse(bits)}
-        [address] -> {parse_address(address), :host}
-      end
-
-    max = if is_tuple(address) and tuple_size(address) == 8, do: 128, else: 32
-
-    case {address, bits} do
-      {nil, _bits} -> raise ArgumentError, "invalid trusted proxy #{inspect(range)}"
-      {address, :host} -> {address, max}
-      {address, {bits, ""}} when bits in 0..max//1 -> {address, bits}
-      _invalid -> raise ArgumentError, "invalid trusted proxy #{inspect(range)}"
-    end
-  end
-
-  defp parse_address(string) do
-    case :inet.parse_strict_address(String.to_charlist(string)) do
-      {:ok, address} -> address
-      {:error, _} -> nil
-    end
+    |> Enum.map(&IPRange.parse!/1)
   end
 end

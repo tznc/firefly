@@ -3,7 +3,7 @@ defmodule Firefly.AI.MCP do
   A read-only [Model Context Protocol](https://modelcontextprotocol.io)
   server: the JSON-RPC 2.0 messages the web interface receives at `/mcp`
   (Streamable HTTP; see `FireflyWeb.MCPController`), handled for the member
-  whose API token authenticated the request. Off unless the
+  whose API key (with the `read` scope) authenticated the request. Off unless the
   `mcp_enabled` site setting is on.
 
   It answers `initialize` (negotiating the protocol version), `ping`,

@@ -356,7 +356,6 @@ defmodule Firefly.ForumsTest do
       assert user.username == "newbie"
       assert user.name == "newbie"
       assert user.email == "newbie@example.com"
-      assert is_binary(user.api_token)
       refute user.password_hash == "s3cret-password"
       assert Bcrypt.verify_pass("s3cret-password", user.password_hash)
     end

@@ -285,8 +285,7 @@ defmodule Firefly.Accounts.Auth do
                |> User.changeset(%{
                  username: username,
                  name: info[:name] || username,
-                 email: info[:email],
-                 api_token: Ecto.UUID.generate()
+                 email: info[:email]
                })
                |> Repo.insert(),
              {:ok, _identity} <- link(user, provider, uid, info),

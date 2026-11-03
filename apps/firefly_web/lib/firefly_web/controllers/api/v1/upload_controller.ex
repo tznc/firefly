@@ -7,33 +7,28 @@ defmodule FireflyWeb.Api.V1.UploadController do
   is saved.
   """
   use FireflyWeb, :controller
+  import FireflyWeb.Api.Helpers
 
-  alias Firefly.{RateLimit, Uploads}
+  alias Firefly.Uploads
 
-  plug(FireflyWeb.Plugs.RequireApiUser)
+  action_fallback(FireflyWeb.Api.V1.FallbackController)
+
+  plug(:require_scope, "uploads:write")
 
   def create(conn, %{"file" => %Plug.Upload{path: path, filename: filename}}) do
-    case Uploads.create(conn.assigns.current_user, path, filename) do
-      {:ok, upload} ->
-        conn
-        |> put_status(201)
-        |> json(%{
-          data: %{
-            url: Uploads.url(upload),
-            markdown: Uploads.markdown(upload),
-            content_type: upload.content_type,
-            size: upload.size
-          }
-        })
-
-      {:error, :rate_limited} ->
-        conn |> put_status(:too_many_requests) |> json(%{"error" => RateLimit.message()})
-
-      {:error, message} ->
-        conn |> put_status(:unprocessable_entity) |> json(%{"error" => message})
+    with {:ok, upload} <- Uploads.create(current_user(conn), path, filename) do
+      ok(
+        conn,
+        %{
+          url: Uploads.url(upload),
+          markdown: Uploads.markdown(upload),
+          content_type: upload.content_type,
+          size: upload.size
+        },
+        201
+      )
     end
   end
 
-  def create(conn, _params),
-    do: conn |> put_status(:unprocessable_entity) |> json(%{"error" => "a file is required"})
+  def create(_conn, _params), do: {:error, "a file is required"}
 end

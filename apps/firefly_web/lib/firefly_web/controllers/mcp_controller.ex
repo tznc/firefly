@@ -7,7 +7,9 @@ defmodule FireflyWeb.MCPController do
   and DELETE are `405`.
 
   Off (`404`) unless the `mcp_enabled` site setting is on. Requests need a
-  member's API token (`Authorization: Bearer <token>`, `401` otherwise),
+  member's API key with the `read` scope (`Authorization: Bearer <key>`;
+  `401` without one, `403` without the scope; see
+  `Firefly.Accounts.ApiKeys`), within the key's own rate limit,
   are rate limited per member (the `:mcp` bucket, `429`), refuse other
   sites' browser pages (an `Origin` header that isn't this site's, `403`,
   against DNS rebinding) and unknown `MCP-Protocol-Version` headers (`400`).
@@ -15,6 +17,7 @@ defmodule FireflyWeb.MCPController do
   use FireflyWeb, :controller
 
   alias Firefly.{RateLimit, SiteSettings}
+  alias Firefly.Accounts.ApiKeys
   alias Firefly.AI.MCP
 
   plug(:enabled)
@@ -76,13 +79,21 @@ defmodule FireflyWeb.MCPController do
     end
   end
 
-  defp authenticated(%{assigns: %{current_user: %{}}} = conn, _opts), do: conn
+  defp authenticated(%{assigns: %{current_user: %{}, api_key: key}} = conn, _opts) do
+    if ApiKeys.allows?(key, "read"),
+      do: conn,
+      else:
+        conn
+        |> put_status(403)
+        |> json(MCP.error(nil, -32_001, "This API key doesn't have the read scope."))
+        |> halt()
+  end
 
   defp authenticated(conn, _opts) do
     conn
     |> put_resp_header("www-authenticate", ~s(Bearer realm="firefly"))
     |> put_status(401)
-    |> json(MCP.error(nil, -32_001, "An API token is required (Authorization: Bearer <token>)."))
+    |> json(MCP.error(nil, -32_001, "An API key is required (Authorization: Bearer <key>)."))
     |> halt()
   end
 end

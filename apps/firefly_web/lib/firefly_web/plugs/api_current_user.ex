@@ -1,33 +1,65 @@
 defmodule FireflyWeb.Plugs.ApiCurrentUser do
   @moduledoc """
-  A `Plug` to assign `:current_user` based on the authorization header
-  containing a user's api token. Deleted and suspended users' tokens are
-  rejected.
+  Authenticates requests by API key (`Authorization: Bearer <key>`; see
+  `Firefly.Accounts.ApiKeys`), assigning `:current_user` and `:api_key`.
+  A global key acts as the user in the `Api-Username` header.
+
+  A request over the key's rate limit is refused (`429`). An unknown,
+  revoked or expired key, or one used from an address it doesn't allow,
+  is refused (`401`/`403`) with `strict: true` (the JSON API); otherwise
+  (MCP, plugin endpoints) the request just goes on without a user.
   """
 
   import Plug.Conn
-  alias Firefly.Accounts
-  alias Firefly.Accounts.User
+  alias Firefly.Accounts.ApiKeys
+  alias FireflyWeb.Api.Problem
 
-  def init(options), do: options
+  def init(opts), do: Keyword.get(opts, :strict, false)
 
-  def call(conn, _opts) do
-    case get_req_header(conn, "authorization") do
-      [] ->
+  def call(conn, strict?) do
+    case token(conn) do
+      nil ->
         conn
 
-      [authorization | _] ->
-        api_token =
-          authorization
-          |> String.replace("Bearer ", "")
+      token ->
+        username = conn |> get_req_header("api-username") |> List.first()
 
-        case Accounts.get_user_by_api_token(api_token) do
-          %{deleted_at: nil} = user -> assign_unless_suspended(conn, user)
-          _missing_or_deleted -> conn
+        case ApiKeys.authenticate(token, conn.remote_ip, username) do
+          {:ok, key, user} ->
+            conn |> assign(:current_user, user) |> assign(:api_key, key)
+
+          {:error, :rate_limited} ->
+            conn
+            |> put_resp_header("retry-after", "60")
+            |> Problem.send(429, Firefly.RateLimit.message())
+
+          {:error, reason} when strict? ->
+            refuse(conn, reason)
+
+          {:error, _reason} ->
+            conn
         end
     end
   end
 
-  defp assign_unless_suspended(conn, user),
-    do: if(User.suspended?(user), do: conn, else: assign(conn, :current_user, user))
+  defp token(conn) do
+    case get_req_header(conn, "authorization") do
+      ["Bearer " <> token | _] -> String.trim(token)
+      # Older clients sent the bare token.
+      [token | _] -> String.trim(token)
+      [] -> nil
+    end
+  end
+
+  defp refuse(conn, :ip_not_allowed),
+    do: Problem.send(conn, 403, "This API key can't be used from this address.")
+
+  defp refuse(conn, :no_user),
+    do: Problem.send(conn, 401, "The Api-Username header names no user this key may act as.")
+
+  defp refuse(conn, _invalid) do
+    conn
+    |> put_resp_header("www-authenticate", ~s(Bearer realm="firefly", error="invalid_token"))
+    |> Problem.send(401, "The API key is invalid, revoked or expired.")
+  end
 end

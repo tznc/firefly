@@ -40,6 +40,8 @@ defmodule FireflyWeb.MixProject do
       {:phoenix_html, "~> 4.4"},
       {:phoenix_live_reload, "~> 1.7", only: :dev},
       {:lazy_html, ">= 0.1.0", only: :test},
+      # Validates API responses against the OpenAPI document's schemas.
+      {:ex_json_schema, "~> 0.11.1", only: :test},
       {:phoenix_test, "~> 0.14", only: :test, runtime: false},
       {:phoenix_test_playwright, "~> 0.19", only: :test, runtime: false},
       {:bandit, "~> 1.14"},

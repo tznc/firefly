@@ -211,10 +211,10 @@ defmodule FireflyWeb.PenaltiesTest do
     test "can't post through the API", %{conn: conn, member: member, thread: thread} do
       conn =
         conn
-        |> put_req_header("authorization", "Bearer #{member.api_token}")
+        |> put_req_header("authorization", "Bearer #{api_token(member)}")
         |> post("/api/v1/posts", post: %{"body" => "hi"}, thread_id: thread.id)
 
-      assert json_response(conn, 403)["error"] =~ "silenced"
+      assert json_response(conn, 403)["detail"] =~ "silenced"
     end
   end
 
@@ -236,7 +236,7 @@ defmodule FireflyWeb.PenaltiesTest do
           user: %{username: "member", password: @password}
         )
 
-      assert json_response(conn, 403)["error"] =~ "suspended permanently"
+      assert json_response(conn, 403)["detail"] =~ "suspended permanently"
     end
 
     test "lose their sessions, open pages and API token", ctx do
@@ -252,7 +252,7 @@ defmodule FireflyWeb.PenaltiesTest do
 
       conn =
         build_conn()
-        |> put_req_header("authorization", "Bearer #{member.api_token}")
+        |> put_req_header("authorization", "Bearer #{api_token(member)}")
         |> post("/api/v1/posts", post: %{"body" => "hi"}, thread_id: thread.id)
 
       assert response(conn, 401)

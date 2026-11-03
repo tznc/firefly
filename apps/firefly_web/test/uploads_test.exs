@@ -448,7 +448,7 @@ defmodule FireflyWeb.UploadsTest do
 
       response =
         conn
-        |> put_req_header("authorization", "Bearer #{user.api_token}")
+        |> put_req_header("authorization", "Bearer #{api_token(user)}")
         |> post("/api/v1/uploads",
           file: %Plug.Upload{path: path, filename: "a.png", content_type: "image/png"}
         )
@@ -465,9 +465,10 @@ defmodule FireflyWeb.UploadsTest do
       assert conn |> post("/api/v1/uploads", file: file) |> json_response(401)
 
       assert conn
-             |> put_req_header("authorization", "Bearer #{user.api_token}")
+             |> put_req_header("authorization", "Bearer #{api_token(user)}")
              |> post("/api/v1/uploads", file: file)
-             |> json_response(422) == %{"error" => "That file type isn't allowed."}
+             |> json_response(422)
+             |> Map.get("detail") == "That file type isn't allowed."
     end
   end
 end

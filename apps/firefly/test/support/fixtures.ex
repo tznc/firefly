@@ -35,6 +35,15 @@ defmodule Firefly.Fixtures do
     user
   end
 
+  @doc """
+  A new API key's token for `user`, with `scopes` (default: all of them;
+  see `Firefly.Accounts.ApiKeys`).
+  """
+  def api_token(user, scopes \\ Firefly.Accounts.ApiKeys.full_scopes()) do
+    {:ok, _key, token} = Firefly.Accounts.ApiKeys.create(user, %{name: "Test", scopes: scopes})
+    token
+  end
+
   @doc "Creates a category."
   def category_fixture(title \\ "Elixir") do
     {:ok, category} = Firefly.Discussion.create_category(%{title: title})

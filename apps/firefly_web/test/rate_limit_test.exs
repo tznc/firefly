@@ -63,7 +63,7 @@ defmodule FireflyWeb.RateLimitTest do
         "user" => %{"username" => username, "password" => "x"}
       })
 
-    assert json_response(conn, 429)["error"] =~ "too often"
+    assert json_response(conn, 429)["detail"] =~ "too often"
   end
 
   test "limits registrations per client", %{conn: conn} do
@@ -116,7 +116,7 @@ defmodule FireflyWeb.RateLimitTest do
   @tag :tmp_dir
   test "limits uploads through the API", %{conn: conn, tmp_dir: tmp_dir} do
     user = user_fixture()
-    conn = put_req_header(conn, "authorization", "Bearer #{user.api_token}")
+    conn = put_req_header(conn, "authorization", "Bearer #{api_token(user)}")
     path = Firefly.UploadHelpers.file(tmp_dir, "a.txt", "hello")
     file = %Plug.Upload{path: path, filename: "a.txt", content_type: "text/plain"}
 

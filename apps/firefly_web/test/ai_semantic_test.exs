@@ -1,7 +1,7 @@
 defmodule FireflyWeb.AISemanticTest do
   use FireflyWeb.ConnCase, async: false
 
-  alias Firefly.{Accounts, Discussion, Groups, Repo, SiteSettings}
+  alias Firefly.{Accounts, Discussion, Groups, SiteSettings}
   alias Firefly.AI.FakeProvider
 
   setup do
@@ -84,7 +84,7 @@ defmodule FireflyWeb.AISemanticTest do
       {:ok, secret} = Discussion.create_category(%{title: "Secret", role_ids: [team.id]})
       open = thread_fixture(ctx.category, ctx.alice, %{title: "Open", body: "Hello there"})
       thread_fixture(secret, ctx.admin, %{title: "Hidden", body: "Hello there"})
-      token = ctx.alice.api_token
+      token = api_token(ctx.alice)
 
       init =
         mcp(
@@ -138,18 +138,20 @@ defmodule FireflyWeb.AISemanticTest do
       assert get_resp_header(conn, "www-authenticate") != []
 
       assert json_response(mcp(build_conn(), "not-a-token", ping), 401)
-      assert %{"result" => %{}} = json_response(mcp(build_conn(), ctx.alice.api_token, ping), 200)
+
+      assert %{"result" => %{}} =
+               json_response(mcp(build_conn(), api_token(ctx.alice), ping), 200)
 
       evil = [{"origin", "https://evil.example"}]
-      assert response(mcp(build_conn(), ctx.alice.api_token, ping, evil), 403)
+      assert response(mcp(build_conn(), api_token(ctx.alice), ping, evil), 403)
 
       old = [{"mcp-protocol-version", "1999-01-01"}]
-      assert json_response(mcp(build_conn(), ctx.alice.api_token, ping, old), 400)
+      assert json_response(mcp(build_conn(), api_token(ctx.alice), ping, old), 400)
 
       assert response(get(build_conn(), "/mcp"), 405)
 
       {:ok, _} = SiteSettings.update(%{"mcp_enabled" => "false"}, ctx.admin)
-      assert response(mcp(build_conn(), ctx.alice.api_token, ping), 404)
+      assert response(mcp(build_conn(), api_token(ctx.alice), ping), 404)
     end
 
     test "is rate limited per member", ctx do
@@ -157,9 +159,9 @@ defmodule FireflyWeb.AISemanticTest do
       Application.put_env(:firefly, Firefly.RateLimit, limits: [mcp: {1, 60_000}])
       on_exit(fn -> Application.put_env(:firefly, Firefly.RateLimit, limits) end)
 
-      user = Repo.update!(Ecto.Changeset.change(ctx.alice, api_token: Ecto.UUID.generate()))
-      assert json_response(mcp(build_conn(), user.api_token, request(1, "ping")), 200)
-      assert json_response(mcp(build_conn(), user.api_token, request(2, "ping")), 429)
+      token = api_token(user_fixture())
+      assert json_response(mcp(build_conn(), token, request(1, "ping")), 200)
+      assert json_response(mcp(build_conn(), token, request(2, "ping")), 429)
     end
   end
 end

@@ -35,7 +35,7 @@ defmodule FireflyWeb.Router do
     plug(:accepts, ["json"])
     # The API authenticates with bearer tokens (not cookies), so any origin may call it.
     plug(CORSPlug)
-    plug(FireflyWeb.Plugs.ApiCurrentUser)
+    plug(FireflyWeb.Plugs.ApiCurrentUser, strict: true)
     plug(FireflyWeb.Plugs.AkismetClient)
     plug(FireflyWeb.Plugs.Analytics, :api)
     plug(FireflyWeb.Plugs.ReadOnly)
@@ -134,6 +134,7 @@ defmodule FireflyWeb.Router do
       live("/settings/users", SettingsLive.Index, :users)
       live("/settings/logins", SettingsLive.Index, :logins)
       live("/settings/security", SettingsLive.Index, :security)
+      live("/settings/api-keys", SettingsLive.Index, :api_keys)
       live("/settings/account", SettingsLive.Index, :account)
       live("/unread", ThreadLive.Unread, :index)
       live("/invites", InviteLive.Index, :index)
@@ -168,6 +169,7 @@ defmodule FireflyWeb.Router do
       live("/staff/webhooks", StaffLive.Webhooks, :index)
       live("/staff/discourse-connect", StaffLive.DiscourseConnect, :index)
       live("/staff/webhooks/:id", StaffLive.Webhook, :show)
+      live("/staff/api-keys", StaffLive.ApiKeys, :index)
       live("/staff/badges", StaffLive.Badges, :index)
       live("/staff/plugins/:id", StaffLive.Plugin, :show)
       live("/categories/new", CategoryLive.Form, :new)
@@ -285,18 +287,117 @@ defmodule FireflyWeb.Router do
   # (so before SAML logins are on, too).
   get("/saml/metadata", FireflyWeb.SAMLController, :metadata)
 
-  # JSON API
+  # The API's reference, rendered from its OpenAPI document.
+  get("/api/v1/docs", FireflyWeb.Api.V1.DocsController, :show)
+
+  # JSON API (see FireflyWeb.Api.V1.OpenAPI for every operation).
   scope "/api/v1", FireflyWeb.Api.V1 do
     pipe_through(:api)
 
-    resources("/preview", PreviewController, only: [:create])
-    resources("/uploads", UploadController, only: [:create])
-    resources("/posts", PostController, only: [:create])
-    get("/search", SearchController, :index)
+    get("/openapi.json", DocsController, :spec)
+
     post("/auth/identity", AuthController, :identity)
+    get("/me", MeController, :show)
+    patch("/me", MeController, :update)
+    patch("/me/preferences", MeController, :preferences)
+
+    get("/categories", CategoryController, :index)
+    post("/categories", CategoryController, :create)
+    get("/categories/:id", CategoryController, :show)
+    patch("/categories/:id", CategoryController, :update)
+    delete("/categories/:id", CategoryController, :delete)
+    get("/categories/:id/threads", CategoryController, :threads)
+    put("/categories/:id/notification-level", CategoryController, :notification_level)
+
+    get("/threads", ThreadController, :index)
+    post("/threads", ThreadController, :create)
+    get("/threads/:id", ThreadController, :show)
+    patch("/threads/:id", ThreadController, :update)
+    delete("/threads/:id", ThreadController, :delete)
+    get("/threads/:id/posts", ThreadController, :posts)
+    post("/threads/:id/posts", ThreadController, :reply)
+    post("/threads/:id/read", ThreadController, :read)
+    put("/threads/:id/notification-level", ThreadController, :notification_level)
+    post("/threads/:id/move", ThreadController, :move)
+    put("/threads/:id/solution", ThreadController, :accept_answer)
+    delete("/threads/:id/solution", ThreadController, :unaccept_answer)
+    post("/threads/:id/:action", ThreadController, :moderate)
+
+    post("/posts", PostController, :create)
+    get("/posts/:id", PostController, :show)
+    patch("/posts/:id", PostController, :update)
+    delete("/posts/:id", PostController, :delete)
+    post("/posts/:id/restore", PostController, :restore)
+    put("/posts/:id/like", PostController, :like)
+    delete("/posts/:id/like", PostController, :like)
+    put("/posts/:id/bookmark", PostController, :bookmark)
+    delete("/posts/:id/bookmark", PostController, :bookmark)
+    post("/posts/:id/flags", PostController, :flag)
+    put("/posts/:id/wiki", PostController, :wiki)
+    get("/posts/:id/poll", PostController, :poll)
+    post("/posts/:id/poll/vote", PostController, :vote)
+    post("/posts/:id/poll/:action", PostController, :close_poll)
+    get("/bookmarks", BookmarkController, :index)
+
+    get("/tags", TagController, :index)
+    get("/tags/:name/threads", TagController, :threads)
+    put("/tags/:name/notification-level", TagController, :notification_level)
+
+    get("/users", UserController, :index)
+    get("/users/:username", UserController, :show)
+    get("/users/:username/posts", UserController, :posts)
+    post("/users/:username/penalties/:kind", UserController, :penalty)
+    delete("/users/:username/penalties/:kind", UserController, :penalty)
+
+    get("/notifications", NotificationController, :index)
+    post("/notifications/read", NotificationController, :read_all)
+    post("/notifications/:id/read", NotificationController, :read)
+
+    get("/messages", MessageController, :index)
+    post("/messages", MessageController, :create)
+    get("/messages/:id", MessageController, :show)
+    post("/messages/:id/replies", MessageController, :reply)
+
+    get("/chat/channels", ChatController, :index)
+    get("/chat/channels/browse", ChatController, :browse)
+    get("/chat/channels/:id/messages", ChatController, :messages)
+    post("/chat/channels/:id/messages", ChatController, :create)
+    put("/chat/channels/:id/follow", ChatController, :follow)
+    delete("/chat/channels/:id/follow", ChatController, :follow)
+    patch("/chat/messages/:message_id", ChatController, :update)
+    delete("/chat/messages/:message_id", ChatController, :delete)
+
+    get("/groups", GroupController, :index)
+    get("/groups/:name", GroupController, :show)
+    get("/groups/:name/members", GroupController, :members)
+    post("/groups/:name/join", GroupController, :join)
+    delete("/groups/:name/membership", GroupController, :leave)
+
+    get("/badges", Admin.BadgeController, :index)
+    get("/search", SearchController, :index)
+    post("/uploads", UploadController, :create)
+    post("/preview", PreviewController, :create)
+
+    get("/review", ReviewController, :index)
+    post("/review/posts/:id/:decision", ReviewController, :decide)
+
+    get("/admin/site-settings", Admin.SiteSettingController, :index)
+    patch("/admin/site-settings", Admin.SiteSettingController, :update)
+    get("/admin/webhooks", Admin.WebhookController, :index)
+    post("/admin/webhooks", Admin.WebhookController, :create)
+    get("/admin/webhooks/:id", Admin.WebhookController, :show)
+    patch("/admin/webhooks/:id", Admin.WebhookController, :update)
+    delete("/admin/webhooks/:id", Admin.WebhookController, :delete)
+    post("/admin/badges", Admin.BadgeController, :create)
+    patch("/admin/badges/:id", Admin.BadgeController, :update)
+    delete("/admin/badges/:id", Admin.BadgeController, :delete)
+    post("/admin/badges/:id/grants", Admin.BadgeController, :grant)
+    delete("/admin/badges/grants/:grant_id", Admin.BadgeController, :revoke)
+
+    match(:*, "/*path", DocsController, :not_found)
   end
 
-  # The MCP server (see FireflyWeb.MCPController): API tokens, no session.
+  # The MCP server (see FireflyWeb.MCPController): API keys, no session.
   pipeline :mcp do
     plug(FireflyWeb.Plugs.ApiCurrentUser)
   end

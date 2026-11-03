@@ -25,6 +25,8 @@ defmodule Firefly.RateLimit do
     * `:ai` - AI requests (summaries, translations, composer helpers) per
       user, on top of their daily quota (see `Firefly.AI`)
     * `:mcp` - requests to the MCP server (`/mcp`), per user
+    * API requests with a key are limited per key, by the key's own rate
+      limit or the `api_rate_limit` site setting (see `check_api/2`)
     * `:search` - searches (the search page and the API) per user, or per
       client IP for visitors
     * `:plugin_notify` - notifications a plugin sends (see
@@ -92,6 +94,14 @@ defmodule Firefly.RateLimit do
   @doc "Checks the search limit: per user when logged in, else per client IP."
   def check_search(%{id: user_id}, _remote_ip), do: check(:search, "user:#{user_id}")
   def check_search(nil, remote_ip), do: check(:search, "ip:#{format_ip(remote_ip)}")
+
+  @doc "Checks an API key's limit of `per_minute` requests a minute."
+  def check_api(key_id, per_minute) do
+    case hit("api:#{key_id}", :timer.minutes(1), per_minute) do
+      {:allow, _count} -> :ok
+      {:deny, _retry_after} -> {:error, :rate_limited}
+    end
+  end
 
   @doc "The message shown when a limit is hit."
   def message, do: "You're doing that too often. Please wait a moment and try again."

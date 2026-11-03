@@ -6,8 +6,6 @@ defmodule FireflyWeb.Plugs.ReadOnly do
 
   @behaviour Plug
 
-  import Plug.Conn
-
   @impl Plug
   def init(opts), do: opts
 
@@ -18,10 +16,8 @@ defmodule FireflyWeb.Plugs.ReadOnly do
   def call(conn, _opts) do
     if Firefly.Backups.read_only?() do
       conn
-      |> put_resp_content_type("application/json")
-      |> put_resp_header("retry-after", "300")
-      |> send_resp(503, Jason.encode!(%{error: "The forum is read-only for maintenance."}))
-      |> halt()
+      |> Plug.Conn.put_resp_header("retry-after", "300")
+      |> FireflyWeb.Api.Problem.send(503, "The forum is read-only for maintenance.")
     else
       conn
     end

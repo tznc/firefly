@@ -163,8 +163,7 @@ defmodule Firefly.Accounts.MagicLinks do
       |> User.changeset(%{
         username: Auth.free_username(%{email: email}, "email"),
         name: email |> String.split("@") |> hd(),
-        email: email,
-        api_token: Ecto.UUID.generate()
+        email: email
       })
       |> Repo.insert()
 

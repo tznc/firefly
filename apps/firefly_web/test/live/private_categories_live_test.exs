@@ -144,7 +144,7 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
 
       assert %{"results" => [_]} =
                ctx.conn
-               |> put_req_header("authorization", "Bearer #{ctx.insider.api_token}")
+               |> put_req_header("authorization", "Bearer #{api_token(ctx.insider)}")
                |> get(~p"/api/v1/search?q=classified")
                |> json_response(200)
     end
@@ -152,10 +152,10 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
     test "posting to a thread you can't read is a 404", ctx do
       conn =
         ctx.conn
-        |> put_req_header("authorization", "Bearer #{ctx.outsider.api_token}")
+        |> put_req_header("authorization", "Bearer #{api_token(ctx.outsider)}")
         |> post(~p"/api/v1/posts", post: %{"body" => "let me in"}, thread_id: ctx.thread.id)
 
-      assert json_response(conn, 404)["error"] == "Thread not found"
+      assert json_response(conn, 404)["detail"] == "Not found."
       refute Repo.get_by(Post, body: "let me in")
     end
 
@@ -167,7 +167,7 @@ defmodule FireflyWeb.PrivateCategoriesLiveTest do
       refute html.(ctx.conn)["data"]["html"] =~ "/categories/#{ctx.secret.id}"
 
       assert ctx.conn
-             |> put_req_header("authorization", "Bearer #{ctx.insider.api_token}")
+             |> put_req_header("authorization", "Bearer #{api_token(ctx.insider)}")
              |> then(html)
              |> get_in(["data", "html"]) =~ "/categories/#{ctx.secret.id}"
     end

@@ -239,6 +239,13 @@ defmodule FireflyWeb.Layouts do
                 Webhooks
               </.nav_item>
               <.nav_item
+                path={~p"/staff/api-keys"}
+                current_path={@current_path}
+                icon="hero-command-line"
+              >
+                API keys
+              </.nav_item>
+              <.nav_item
                 path={~p"/staff/discourse-connect"}
                 current_path={@current_path}
                 icon="hero-key"

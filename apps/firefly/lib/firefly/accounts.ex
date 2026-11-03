@@ -14,6 +14,7 @@ defmodule Firefly.Accounts do
     * `Firefly.Accounts.TwoFactor`, `Passkeys`, `WebAuthn` - second factors
     * `Firefly.Accounts.MagicLinks`, `PasswordReset`, `EmailConfirmation`
     * `Firefly.Accounts.AccountDeletion`, `AccountExport`
+    * `Firefly.Accounts.ApiKeys` (with the schema `ApiKey`) - API keys
     * `Firefly.Accounts.Ignores`, `Profiles`, `Visits`, `UserSessions`
     * `Firefly.Accounts.Invites` (with the schemas `Invite`,
       `InviteRedemption`) - invitations to join
@@ -26,6 +27,8 @@ defmodule Firefly.Accounts do
     check: [out: false],
     exports: [
       User,
+      ApiKey,
+      ApiKeys,
       Auth,
       Auth.DiscourseConnect,
       Auth.SAML,
@@ -129,11 +132,6 @@ defmodule Firefly.Accounts do
   end
 
   @doc """
-  Gets a single user by api_token. Maybe.
-  """
-  def get_user_by_api_token(api_token), do: Repo.get_by(User, %{api_token: api_token})
-
-  @doc """
   Gets a single user by email address. Maybe.
   """
   def get_user_by_email(email), do: Repo.get_by(User, %{email: email})
@@ -151,10 +149,6 @@ defmodule Firefly.Accounts do
 
   """
   def create_user(attrs \\ %{}) do
-    attrs =
-      attrs
-      |> Map.put(:api_token, generate_api_token())
-
     # Accounts created directly (by admins, scripts) are trusted: confirmed,
     # and past the new-user stage (see Firefly.TrustLevels).
     %User{confirmed_at: DateTime.utc_now(:second), trust_level: Map.get(attrs, :trust_level, 1)}
@@ -187,7 +181,7 @@ defmodule Firefly.Accounts do
     do: insert_registration(attrs, if(confirmed?, do: DateTime.utc_now(:second)))
 
   defp insert_registration(attrs, confirmed_at) do
-    %User{api_token: generate_api_token(), confirmed_at: confirmed_at}
+    %User{confirmed_at: confirmed_at}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
     |> tap_ok(&Events.emit("user_registered", %{user: %{id: &1.id, username: &1.username}}))
@@ -318,8 +312,6 @@ defmodule Firefly.Accounts do
 
   @doc "When `user` last had a page open (see `Firefly.Accounts.Visits`), or nil."
   def user_last_seen(%User{last_seen_at: at}), do: at
-
-  defp generate_api_token(), do: Ecto.UUID.generate()
 
   def admin?(%User{} = user) do
     user =

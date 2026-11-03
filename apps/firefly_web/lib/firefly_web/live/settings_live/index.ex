@@ -23,6 +23,8 @@ defmodule FireflyWeb.SettingsLive.Index do
       and two-factor authentication (see
       `Firefly.Accounts.TwoFactor`): an authenticator app, security keys
       (registered through the `SecurityKeyRegister` hook) and backup codes
+    * API keys (`/settings/api-keys`): keys for the API, with scopes,
+      expiry and allowed addresses (`FireflyWeb.ApiKeysComponent`)
     * Account: downloading your data and deleting your account (both handled
       by `FireflyWeb.AccountController`)
   """
@@ -45,6 +47,7 @@ defmodule FireflyWeb.SettingsLive.Index do
     users: {"Muted & ignored", "hero-speaker-x-mark"},
     logins: {"Logins", "hero-key"},
     security: {"Security", "hero-shield-check"},
+    api_keys: {"API keys", "hero-command-line"},
     account: {"Account", "hero-identification"}
   ]
 
@@ -464,7 +467,7 @@ defmodule FireflyWeb.SettingsLive.Index do
     |> String.capitalize()
   end
 
-  # Only the fields on the form; never e.g. the API token.
+  # Only the fields on the form.
   defp profile_params(params), do: Map.take(params, ~w(username name email bio website location))
 
   defp section_path(:profile), do: ~p"/settings/profile"
@@ -474,6 +477,7 @@ defmodule FireflyWeb.SettingsLive.Index do
   defp section_path(:users), do: ~p"/settings/users"
   defp section_path(:logins), do: ~p"/settings/logins"
   defp section_path(:security), do: ~p"/settings/security"
+  defp section_path(:api_keys), do: ~p"/settings/api-keys"
   defp section_path(:account), do: ~p"/settings/account"
 
   attr :image, :atom, required: true
@@ -858,6 +862,14 @@ defmodule FireflyWeb.SettingsLive.Index do
           <button class="btn btn-sm mb-2">Add</button>
         </.form>
       </div>
+      <.live_component
+        :if={@live_action == :api_keys}
+        module={FireflyWeb.ApiKeysComponent}
+        id="api-keys"
+        current_user={@current_user}
+        mode={:own}
+      />
+
       <div :if={@live_action == :logins} class="space-y-4">
         <p class="text-sm text-base-content/70">
           Log in with any account connected here{if @current_user.password_hash,

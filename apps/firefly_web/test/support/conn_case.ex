@@ -21,6 +21,7 @@ defmodule FireflyWeb.ConnCase do
       import PhoenixTest
       import FireflyWeb.ConnCase
       import Firefly.Fixtures
+      import FireflyWeb.ApiHelpers
     end
   end
 

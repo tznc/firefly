@@ -269,7 +269,7 @@ defmodule FireflyWeb.PluginUITest do
 
       assert %{"user" => "mia"} =
                conn
-               |> put_req_header("authorization", "Bearer #{member.api_token}")
+               |> put_req_header("authorization", "Bearer #{api_token(member)}")
                |> get("/api/plugins/hello/stats")
                |> json_response(200)
 

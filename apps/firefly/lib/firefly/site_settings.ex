@@ -1009,6 +1009,17 @@ defmodule Firefly.SiteSettings do
           "Messages in direct messages older than this are deleted, once an hour. 0: kept forever."
       },
       %{
+        key: "api_rate_limit",
+        section: "API",
+        type: :integer,
+        label: "API requests per minute",
+        default: 120,
+        min: 1,
+        max: 100_000,
+        help:
+          "How many requests an API key may make a minute, unless the key sets its own limit (see /api/v1/docs)."
+      },
+      %{
         key: "ai_enabled",
         section: "AI",
         type: :boolean,
@@ -1088,7 +1099,7 @@ defmodule Firefly.SiteSettings do
         label: "MCP server",
         default: false,
         help:
-          "AI assistants and agents can read the forum through the Model Context Protocol at /mcp (search, read topics, list the latest, look up members), authenticated with a member's API token and seeing only what that member may read."
+          "AI assistants and agents can read the forum through the Model Context Protocol at /mcp (search, read topics, list the latest, look up members), authenticated with an API key with the read scope and seeing only what that member may read."
       },
       %{
         key: "ai_summary_min_posts",

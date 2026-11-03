@@ -170,10 +170,10 @@ defmodule FireflyWeb.TopicToolsLiveTest do
 
     api =
       build_conn()
-      |> put_req_header("authorization", "Bearer #{member.api_token}")
+      |> put_req_header("authorization", "Bearer #{api_token(member)}")
       |> post(~p"/api/v1/posts", post: %{body: "again"}, thread_id: thread.id)
 
-    assert json_response(api, 429)["error"] =~ "slow mode"
+    assert json_response(api, 429)["detail"] =~ "slow mode"
 
     # An hour later it's fine.
     Repo.update_all(where(Post, user_id: ^member.id),
