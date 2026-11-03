@@ -6,6 +6,8 @@ defmodule FireflyWeb.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      # Who's in which chat channel (see FireflyWeb.ChatLive)
+      FireflyWeb.Presence,
       # Start the endpoint when the application starts
       FireflyWeb.Endpoint
     ]

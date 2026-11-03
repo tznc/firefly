@@ -21,6 +21,8 @@ defmodule FireflyWeb.URLsTest do
     assert URLs.badge_url(%{id: 3}) == url(~p"/badges/3")
     assert URLs.category_url(%{id: 4}) == url(~p"/categories/4")
     assert URLs.conversation_url(%{id: 5}) == url(~p"/messages/5")
+    assert URLs.chat_channel_url(%{id: 6, slug: "general"}) == url(~p"/chat/c/general/6")
+    assert URLs.chat_channel_url(%{id: 8, slug: nil}) == url(~p"/chat/c/dm/8")
     assert URLs.thread_url(%{id: 2, category_id: 1}) == url(~p"/categories/1/threads/2")
   end
 end

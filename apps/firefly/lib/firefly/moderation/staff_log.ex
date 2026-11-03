@@ -42,7 +42,7 @@ defmodule Firefly.Moderation.StaffLog do
     backup.create backup.delete backup.download backup.restore backup.read_only
     embed_host.create embed_host.delete
     chat_channel.create chat_channel.update chat_channel.status
-    chat_message.delete chat_message.restore
+    chat_message.delete chat_message.restore chat_message.pin chat_message.unpin
   )
 
   @doc "Every action the log records, in display order."
