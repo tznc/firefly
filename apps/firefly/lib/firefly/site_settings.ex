@@ -711,6 +711,42 @@ defmodule Firefly.SiteSettings do
         default: "",
         help:
           "Checked hourly: each new entry on an embeddable host gets its topic. Blank: off (topics are made when a page is first viewed)."
+      },
+      %{
+        key: "chat_enabled",
+        section: "Chat",
+        type: :boolean,
+        label: "Chat",
+        default: true,
+        help: "Members chat in channels and direct messages at /chat."
+      },
+      %{
+        key: "chat_allowed_groups",
+        section: "Chat",
+        type: :text,
+        label: "Groups that can chat",
+        default: "trust_level_0",
+        help:
+          "Group names, separated by commas (trust_level_0 is every member). Admins always can. Blank: admins only."
+      },
+      %{
+        key: "direct_message_enabled_groups",
+        section: "Chat",
+        type: :text,
+        label: "Groups that can start direct messages",
+        default: "trust_level_1",
+        help:
+          "Group names, separated by commas. Anyone in a direct message can reply to it. Blank: admins only."
+      },
+      %{
+        key: "chat_max_direct_message_users",
+        section: "Chat",
+        type: :integer,
+        label: "People in a direct message",
+        default: 20,
+        min: 2,
+        max: 100,
+        help: "The most people a direct message can have, its starter included."
       }
     ]
   end

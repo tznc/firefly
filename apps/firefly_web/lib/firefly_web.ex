@@ -22,6 +22,7 @@ defmodule FireflyWeb do
       Firefly.Analytics,
       Firefly.Backups,
       Firefly.Badges,
+      Firefly.Chat,
       Firefly.Directory,
       Firefly.Discussion,
       Firefly.Embedding,
