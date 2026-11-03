@@ -36,6 +36,39 @@ defmodule Firefly.Notifications.Emails do
     )
   end
 
+  @doc """
+  `post` in `thread`, for `user` in mailing list mode (see
+  `Firefly.Notifications.MailingList`; `post.user` loaded): the post itself,
+  with the thread's title as the subject so a mail client threads them.
+  """
+  def mailing_list_post(%User{} = user, %Thread{} = thread, %Post{} = post) do
+    author = if post.user, do: "@" <> post.user.username, else: "Someone"
+    url = post_url(thread, post)
+
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> subject("[#{site()}] #{thread.title}")
+    |> html_body("""
+    <p>#{escape(author)} #{link("posted", url)} in #{link(thread.title, thread_url(thread))}:</p>
+    <hr />
+    #{Markdown.render(post.body)}
+    <hr />
+    <p><small>You're getting every post because mailing list mode is on. Reply to this email to answer in the thread. #{link("Change your notification settings", settings_url())}.</small></p>
+    """)
+    |> text_body("""
+    #{author} posted [#{url}] in #{thread.title} [#{thread_url(thread)}]:
+
+    #{post.body}
+
+    --
+    You're getting every post because mailing list mode is on. Reply to this email to answer in the thread.
+    Change your notification settings: #{settings_url()}
+    """)
+    |> put_header("reply-to", Firefly.Notifications.ReplyAddress.address(thread, user))
+    |> put_header("List-Id", "#{site()} <list.#{URI.parse(Firefly.Endpoint.url()).host}>")
+  end
+
   @doc "`post` in `thread` mentions `user` (`post.user` must be loaded)."
   def mention_notification(%User{} = user, %Thread{} = thread, %Post{} = post) do
     author = "@" <> post.user.username

@@ -33,7 +33,7 @@ defmodule FireflyWeb.SettingsLive.Index do
   alias Firefly.{Accounts, Badges, RateLimit, SiteSettings, Uploads}
   alias Firefly.Accounts.{Auth, EmailConfirmation, Ignores, Passkeys, TwoFactor, WebAuthn}
   alias Firefly.Moderation.Posting
-  alias Firefly.Notifications.{Digests, WebPush}
+  alias Firefly.Notifications.{Digests, MailingList, WebPush}
 
   alias Firefly.Accounts.User
 
@@ -53,7 +53,7 @@ defmodule FireflyWeb.SettingsLive.Index do
     "interface" => ~w(theme),
     "notifications" =>
       ~w(email_notifications allow_private_messages reply_level new_thread_level digest_frequency
-         push_only_when_away),
+         push_only_when_away mailing_list_mode mailing_list_no_echo),
     "privacy" => ~w(hide_profile hide_profile_activity hide_from_directory)
   }
 
@@ -682,6 +682,23 @@ defmodule FireflyWeb.SettingsLive.Index do
             prompt={"Site default (#{Digests.label(SiteSettings.get("default_digest_frequency"))})"}
             options={Digests.frequency_options()}
           />
+          <div :if={MailingList.enabled?()} id="mailing-list-mode" class="space-y-1">
+            <.input
+              field={@form[:mailing_list_mode]}
+              type="checkbox"
+              label="Mailing list mode: email me every new post (and let me reply by email)"
+            />
+            <.input
+              field={@form[:mailing_list_no_echo]}
+              type="checkbox"
+              label="Except my own posts"
+            />
+            <p class="text-xs text-base-content/60">
+              Leaves out what I muted and can't read, up to {SiteSettings.get(
+                "max_mailing_list_emails_per_day"
+              )} emails a day. While it's on, other emails about posts stop: I'd get them twice.
+            </p>
+          </div>
           <.input
             :if={WebPush.enabled?()}
             field={@form[:push_only_when_away]}

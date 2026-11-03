@@ -469,6 +469,26 @@ defmodule Firefly.SiteSettings do
   defp content_definitions do
     [
       %{
+        key: "mailing_list_mode",
+        section: "Email",
+        type: :boolean,
+        label: "Mailing list mode",
+        default: true,
+        help:
+          "Members can choose to get every new post by email (and reply by email), instead of notification emails about posts."
+      },
+      %{
+        key: "max_mailing_list_emails_per_day",
+        section: "Email",
+        type: :integer,
+        label: "Mailing list emails per member per day",
+        default: 100,
+        min: 1,
+        max: 10_000,
+        help:
+          "Posts beyond this many in a day aren't emailed to that member (they're still on the site)."
+      },
+      %{
         key: "digests_enabled",
         section: "Email",
         type: :boolean,

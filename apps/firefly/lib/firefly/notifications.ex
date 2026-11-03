@@ -30,6 +30,10 @@ defmodule Firefly.Notifications do
   Nobody is notified of what a user they mute or ignore did (see
   `Firefly.Accounts.Ignores`).
 
+  Members in mailing list mode get every new post by email instead of
+  notification emails about posts (see
+  `Firefly.Notifications.MailingList`).
+
   Everyone notified gets an in-app notification; users at `watching`,
   mentioned users and message recipients also get an email, if they have
   email notifications on and a confirmed address. To avoid floods, a thread
@@ -52,7 +56,8 @@ defmodule Firefly.Notifications do
       Emails,
       Digests,
       WebPush,
-      ReplyAddress
+      ReplyAddress,
+      MailingList
     ]
 
   import Ecto.Query, warn: false
