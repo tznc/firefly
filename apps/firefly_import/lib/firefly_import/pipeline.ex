@@ -130,7 +130,7 @@ defmodule FireflyImport.Pipeline do
     imported = imported(state, kind, records)
 
     {:ok, state} =
-      transaction(state, fn ->
+      transaction(state, kind, fn ->
         {:ok, Enum.reduce(records, state, &import_record(&2, kind, &1, imported))}
       end)
 
@@ -138,9 +138,12 @@ defmodule FireflyImport.Pipeline do
     state |> log("#{kind}: #{summary(counts)}") |> save_progress()
   end
 
-  # A dry run is all one transaction already.
-  defp transaction(%{dry_run?: true}, fun), do: fun.()
-  defp transaction(_state, fun), do: Repo.transact(fun, timeout: :infinity)
+  # A dry run is all one transaction already. Uploads are stored one by
+  # one: storing a file is a transaction of its own (see Firefly.Uploads),
+  # and Ecto rolls back all of a transaction when a nested one fails.
+  defp transaction(%{dry_run?: true}, _kind, fun), do: fun.()
+  defp transaction(_state, :uploads, fun), do: fun.()
+  defp transaction(_state, _kind, fun), do: Repo.transact(fun, timeout: :infinity)
 
   # Which of the records were imported before.
   defp imported(state, kind, records) do
@@ -158,14 +161,8 @@ defmodule FireflyImport.Pipeline do
     end
   end
 
-  # Each record in a savepoint: one that fails leaves the batch intact.
   defp write_record(state, kind, record) do
-    result =
-      try do
-        Repo.transact(fn -> write(state, kind, record) end)
-      rescue
-        error -> {:error, Exception.message(error)}
-      end
+    result = isolated(Repo.in_transaction?(), fn -> write(state, kind, record) end)
 
     case result do
       {:ok, {:skip, state}} ->
@@ -193,6 +190,28 @@ defmodule FireflyImport.Pipeline do
   end
 
   defp remember(state, _kind, _record, _local_id), do: state
+
+  # In a transaction, each record in a savepoint: one that fails is rolled
+  # back alone, leaving the rest of the batch.
+  defp isolated(true = _in_transaction?, fun) do
+    Repo.query!("SAVEPOINT import_record")
+
+    case isolated(false, fun) do
+      {:ok, _} = ok ->
+        Repo.query!("RELEASE SAVEPOINT import_record")
+        ok
+
+      error ->
+        Repo.query!("ROLLBACK TO SAVEPOINT import_record")
+        error
+    end
+  end
+
+  defp isolated(false, fun) do
+    fun.()
+  rescue
+    error -> {:error, Exception.message(error)}
+  end
 
   ## Writing each kind
 
