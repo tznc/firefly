@@ -1065,6 +1065,7 @@ defmodule FireflyWeb.ThreadLive.Show do
         <.link
           navigate={~p"/categories/#{@category}/threads/#{@thread}/posts/new"}
           class="btn btn-primary"
+          data-shortcut="reply"
         >
           <.icon name="hero-arrow-uturn-left" class="size-4" /> Reply
         </.link>

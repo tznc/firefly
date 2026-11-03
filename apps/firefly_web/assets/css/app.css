@@ -41,7 +41,9 @@
   --color-neutral-content: #F2EFEA;
   --color-info: #2F7FD1;
   --color-info-content: #FFFFFF;
-  --color-success: #2E9A63;
+  /* Darker than the brand green so small success text clears AA on the
+     page's background (see FireflyWeb.E2E.AccessibilityTest). */
+  --color-success: #1F7A4C;
   --color-success-content: #FFFFFF;
   --color-warning: #FAAF3F;
   --color-warning-content: #3A2A0E;
@@ -151,3 +153,75 @@ img.emoji { display: inline-block; height: 1.25em; width: auto; margin: 0 0.05em
 .chart .series-3 { fill: var(--series-3); background-color: var(--series-3); }
 .chart .series-4 { fill: var(--series-4); background-color: var(--series-4); }
 .chart .bar:hover { opacity: 0.8; }
+
+/* Accessibility (see FireflyWeb.E2E.AccessibilityTest, which holds every
+   page to WCAG AA in both themes). */
+
+/* Secondary text: 60-70% of base-content composites to about 3.8:1 on
+   the page's background, below AA's 4.5:1 for small text, so the muted
+   utilities and daisyUI's menu titles keep a higher share of it. */
+.text-base-content\/50,
+.text-base-content\/60,
+.text-base-content\/70,
+.text-base-content\/80,
+.menu :where(.menu-title) {
+  color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
+}
+
+/* Table headings are dimmed by daisyUI too (the members directory). */
+.table :where(thead, tfoot) {
+  color: color-mix(in oklab, var(--color-base-content) 85%, transparent);
+}
+
+/* daisyUI's form labels are dimmed the same way (see .label in its form
+   styles), which small label text can't afford either. */
+.label,
+.fieldset-legend {
+  color: color-mix(in oklab, var(--color-base-content) 85%, transparent);
+}
+
+/* daisyUI dims an inactive tab to about 2.9:1 against the page (the
+   Latest/New/Unread/Top tabs), well under AA. */
+.tabs :where(.tab) {
+  color: color-mix(in oklab, var(--color-base-content) 80%, transparent);
+}
+.tabs :where(.tab-active) {
+  color: var(--color-base-content);
+}
+
+/* The dark theme's primary is too light against the page for 12px text
+   (the notification level's label), so small primary text uses the
+   lighter secondary instead. */
+[data-theme="firefly-dark"] .level-label {
+  color: var(--color-base-content);
+}
+
+/* Keyboard focus has to be visible on everything, including the elements
+   daisyUI styles with its own focus rules. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* The skip link (see Layouts.app/1): off screen until it has focus. */
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 50;
+  transition: top 150ms ease-in;
+}
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+/* Readers who ask for less motion get none: no spinners, no transitions,
+   no smooth scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

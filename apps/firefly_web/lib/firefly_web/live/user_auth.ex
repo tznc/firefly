@@ -32,7 +32,7 @@ defmodule FireflyWeb.UserAuth do
   import Phoenix.LiveView
 
   alias Firefly.{Accounts, Analytics, Backups, Chat, Messaging, Notifications}
-  alias Firefly.Accounts.Visits
+  alias Firefly.Accounts.{User, Visits}
   alias Firefly.Moderation.{Posting, Review}
   alias FireflyWeb.Session
 
@@ -91,6 +91,7 @@ defmodule FireflyWeb.UserAuth do
     |> count_page_view()
     |> assign_counts()
     |> assign_chat()
+    |> assign_shortcuts()
     |> read_only()
     |> subscribe_to_notifications()
     |> subscribe_to_review()
@@ -170,6 +171,12 @@ defmodule FireflyWeb.UserAuth do
     do: assign(socket, :chat, Chat.can?(user, :use_chat))
 
   defp assign_chat(socket), do: assign(socket, :chat, false)
+
+  # Keyboard shortcuts are on unless the member turned them off.
+  defp assign_shortcuts(%{assigns: %{current_user: %User{} = user}} = socket),
+    do: assign(socket, :shortcuts, user.keyboard_shortcuts)
+
+  defp assign_shortcuts(socket), do: assign(socket, :shortcuts, true)
 
   defp staff?(%{assigns: %{current_user: %{} = user}}), do: Accounts.admin?(user)
   defp staff?(_socket), do: false

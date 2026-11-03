@@ -232,7 +232,12 @@ defmodule FireflyWeb.ForumComponents do
     ~H"""
     <ol id={@id} class="list rounded-box border border-base-300 bg-base-100">
       <li :if={@threads == []} class="list-row text-base-content/60">{@empty}</li>
-      <li :for={thread <- @threads} id={"thread-#{thread.id}"} class="list-row items-start">
+      <li
+        :for={thread <- @threads}
+        id={"thread-#{thread.id}"}
+        class="list-row items-start"
+        data-shortcut-item="thread"
+      >
         <input
           :if={@selected}
           type="checkbox"
@@ -437,6 +442,7 @@ defmodule FireflyWeb.ForumComponents do
     ~H"""
     <article
       id={"post-#{@post.id}"}
+      data-shortcut-item="post"
       class={["card border border-base-300 bg-base-100", @post.deleted_at && "deleted-post opacity-60"]}
     >
       <div class="card-body gap-4 p-5">
@@ -613,6 +619,7 @@ defmodule FireflyWeb.ForumComponents do
         type="button"
         phx-click="toggle_like"
         phx-value-id={@post.id}
+        data-shortcut="like"
         class={["btn btn-ghost btn-sm", @liked? && "text-error"]}
         aria-label={if @liked?, do: "Unlike post #{@post.id}", else: "Like post #{@post.id}"}
         aria-pressed={to_string(@liked?)}

@@ -169,6 +169,24 @@ Lists are paginated with `limit` (up to 100) and `cursor` (from
 `meta.next_cursor`); errors are `application/problem+json` (RFC 9457). The
 MCP server at `/mcp` uses the same keys, with the `read` scope.
 
+### Accessibility
+
+Every page is held to WCAG 2.1 AA by
+[axe-core](https://github.com/dequelabs/axe-core) in the end-to-end tests
+(`FireflyWeb.E2E.AccessibilityTest`), in both themes and as a visitor and
+as staff: any serious or critical violation fails the suite. There is a
+skip link, the navigation is a labelled landmark, live regions announce
+flashes and new content, the shortcuts help is a native `dialog` (so the
+browser traps focus), focus outlines are never removed, and
+`prefers-reduced-motion` turns animations and smooth scrolling off.
+
+Keyboard shortcuts, as in Discourse: `?` opens the list, `j`/`k` move
+through the topics or posts, `g` then `h`/`c`/`n`/`u`/`t`/`b`/`m`/`p`
+goes to the home page, categories, new, unread, top, bookmarks, messages
+or chat, `r` replies, `l` likes and `b` bookmarks the post in hand, `/`
+focuses the search and `Esc` closes. They never fire while you are typing
+in a field, and members can turn them off in their interface settings.
+
 ### Languages
 
 The interface is translated with [Gettext](https://hexdocs.pm/gettext)

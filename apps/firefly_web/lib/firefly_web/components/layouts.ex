@@ -22,6 +22,7 @@ defmodule FireflyWeb.Layouts do
   attr :review_count, :integer, default: 0, doc: "items in the staff review queue (admins)"
   attr :read_only, :map, default: nil, doc: "the site's read-only state (see `Firefly.Backups`)"
   attr :chat, :boolean, default: false, doc: "the user may chat (see `Firefly.Chat`)"
+  attr :shortcuts, :boolean, default: true, doc: "keyboard shortcuts are on for this reader"
 
   attr :full, :boolean,
     default: false,
@@ -37,9 +38,10 @@ defmodule FireflyWeb.Layouts do
     assigns = assign(assigns, :contact_email, Firefly.SiteSettings.get("contact_email"))
 
     ~H"""
-    <div class="drawer lg:drawer-open">
+    <div class="drawer lg:drawer-open" id="shell" phx-hook="KeyboardShortcuts" data-shortcuts={to_string(@shortcuts)}>
       <input id="nav-drawer" type="checkbox" class="drawer-toggle" aria-label={gettext("Toggle navigation")} />
       <div class="drawer-content flex min-h-screen flex-col">
+        <a href="#main" class="skip-link btn btn-sm btn-primary">{gettext("Skip to content")}</a>
         <header class="navbar sticky top-0 z-30 border-b border-base-300 bg-base-100/90 px-4 backdrop-blur sm:px-6">
           <div class="flex-1">
             <.link navigate={~p"/"} class="flex w-fit items-center gap-2">
@@ -83,7 +85,7 @@ defmodule FireflyWeb.Layouts do
           </div>
         </header>
 
-        <main class={["flex-1", !@full && "px-4 py-8 sm:px-6 lg:px-10", @full && "min-h-0"]}>
+        <main id="main" class={["flex-1", !@full && "px-4 py-8 sm:px-6 lg:px-10", @full && "min-h-0"]}>
           <div class={[!@full && "mx-auto max-w-4xl space-y-6", @full && "flex h-full flex-col"]}>
             <div :if={@read_only} id="read-only-banner" role="status" class="alert alert-warning">
               <.icon name="hero-lock-closed" class="size-5" />
@@ -99,8 +101,12 @@ defmodule FireflyWeb.Layouts do
       </div>
 
       <div class="drawer-side z-40">
-        <label for="nav-drawer" aria-label={gettext("Close menu")} class="drawer-overlay"></label>
-        <nav class="menu min-h-full w-64 gap-1 border-r border-base-300 bg-base-100 p-4">
+        <label for="nav-drawer" aria-hidden="true" class="drawer-overlay"></label>
+        <nav aria-label={gettext("Forum navigation")} class="min-h-full w-64 border-r border-base-300 bg-base-100 p-4">
+          <label for="nav-drawer" class="btn btn-ghost btn-sm mb-2 lg:hidden">
+            <.icon name="hero-x-mark" class="size-5" /> {gettext("Close menu")}
+          </label>
+          <ul class="menu w-full gap-1 p-0">
           <%= if @current_user do %>
             <li class="menu-title">{gettext("You")}</li>
             <.nav_item path={~p"/threads/watching"} current_path={@current_path} icon="hero-eye">
@@ -300,13 +306,13 @@ defmodule FireflyWeb.Layouts do
               {gettext("Log in")}
             </.nav_item>
           <% end %>
-          <li>
-            <FireflyWeb.PluginComponents.plugin_outlet
-              outlet="sidebar"
-              key="nav"
-              user={@current_user}
-            />
-          </li>
+            <li>
+              <FireflyWeb.PluginComponents.plugin_outlet
+                outlet="sidebar"
+                key="nav"
+                user={@current_user}
+              />
+            </li>
           <li class="menu-title">{gettext("About")}</li>
           <li :if={@contact_email != ""}>
             <a id="contact-email" href={"mailto:" <> @contact_email}>
@@ -317,11 +323,63 @@ defmodule FireflyWeb.Layouts do
           <li><a href="https://github.com/tznc/firefly">{gettext("Firefly on GitHub")}</a></li>
           <li><a href="http://www.firestormforum.org">{gettext("Built on Firestorm")}</a></li>
           <li><a href="http://www.firestormforum.org#patrons">{gettext("Firestorm patrons")}</a></li>
+          </ul>
         </nav>
       </div>
     </div>
 
+    <.shortcuts_help />
     <.flash_group flash={@flash} />
+    """
+  end
+
+  @doc """
+  The keyboard shortcuts, in a modal the `KeyboardShortcuts` hook opens
+  with `?` (a native `dialog`, so the browser traps focus and Escape
+  closes it).
+  """
+  def shortcuts_help(assigns) do
+    assigns =
+      assign(assigns, :shortcuts, [
+        {"?", gettext("Show this help")},
+        {"j / k", gettext("Next / previous topic or post")},
+        {"g h", gettext("Home")},
+        {"g c", gettext("Categories")},
+        {"g n", gettext("New topics")},
+        {"g u", gettext("Unread topics")},
+        {"g t", gettext("Top topics")},
+        {"g b", gettext("Bookmarks")},
+        {"g m", gettext("Messages")},
+        {"r", gettext("Reply")},
+        {"l", gettext("Like the post in hand")},
+        {"b", gettext("Bookmark the post in hand")},
+        {"/", gettext("Search")},
+        {"Esc", gettext("Close")}
+      ])
+
+    ~H"""
+    <dialog id="shortcuts-help" class="modal" aria-labelledby="shortcuts-help-title">
+      <div class="modal-box">
+        <h2 id="shortcuts-help-title" class="text-lg font-semibold">{gettext("Keyboard shortcuts")}</h2>
+        <dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+          <div :for={{keys, description} <- @shortcuts} class="col-span-2 grid grid-cols-subgrid">
+            <dt><kbd class="kbd kbd-sm">{keys}</kbd></dt>
+            <dd>{description}</dd>
+          </div>
+        </dl>
+        <p class="mt-4 text-xs text-base-content/70">
+          {gettext("Turn these off in your interface settings.")}
+        </p>
+        <div class="modal-action">
+          <form method="dialog">
+            <button class="btn btn-sm">{gettext("Got it")}</button>
+          </form>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button aria-label={gettext("Got it")}>close</button>
+      </form>
+    </dialog>
     """
   end
 
@@ -382,7 +440,8 @@ defmodule FireflyWeb.Layouts do
       :current_path,
       :read_only,
       :update_available,
-      :chat
+      :chat,
+      :shortcuts
     ])
   end
 

@@ -7,7 +7,8 @@ defmodule FireflyWeb.SettingsLive.Index do
       Gravatar), and profile and user card backgrounds (see
       `Firefly.Uploads.set_profile_image/4`), and a title: one of
       their badges that allows it (see `Firefly.Badges`)
-    * Interface: the theme and the interface's language
+    * Interface: the theme, the interface's language and the keyboard
+      shortcuts
     * Notifications (`/settings/notifications`): email, private messages,
       the levels threads get when you reply or start one, and how often
       digest emails come (see `Firefly.Notifications.Digests`), and browser push
@@ -53,7 +54,7 @@ defmodule FireflyWeb.SettingsLive.Index do
 
   # Each preferences form only submits its own fields.
   @preference_fields %{
-    "interface" => ~w(theme locale),
+    "interface" => ~w(theme locale keyboard_shortcuts),
     "notifications" =>
       ~w(email_notifications allow_private_messages reply_level new_thread_level digest_frequency
          push_only_when_away mailing_list_mode mailing_list_no_echo),
@@ -665,6 +666,11 @@ defmodule FireflyWeb.SettingsLive.Index do
         <p class="-mt-2 text-xs text-base-content/60">
           {gettext("Machine translations, pending a native speaker's review: please report anything that reads wrong.")}
         </p>
+        <.input
+          field={@form[:keyboard_shortcuts]}
+          type="checkbox"
+          label={gettext("Keyboard shortcuts (press ? for the list)")}
+        />
         <.button variant="primary" phx-disable-with={gettext("Saving...")}>{gettext("Save")}</.button>
       </.form>
 
