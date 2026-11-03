@@ -676,6 +676,23 @@ defmodule Firefly.SiteSettings do
         default: true,
         help:
           "Backups include the uploaded files when they're stored on this server (files in S3 are already kept there)."
+      },
+      %{
+        key: "version_check",
+        section: "Updates",
+        type: :boolean,
+        label: "Check for new versions",
+        default: true,
+        help:
+          "Once a day, asks GitHub for Firefly's latest release, to show on the dashboard when there's a newer one."
+      },
+      %{
+        key: "version_check_notify",
+        section: "Updates",
+        type: :boolean,
+        label: "Notify admins of new versions",
+        default: true,
+        help: "Admins get a notification when a new version is out (once per version)."
       }
     ]
   end

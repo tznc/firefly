@@ -38,7 +38,7 @@ defmodule Firefly.Notifications.Notification do
   @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved
              bookmark_reminder answer_accepted plugin_disabled plugin
              group_mentioned group_message group_request group_invite promoted badge_granted
-             invite_redeemed webhook_disabled)
+             invite_redeemed webhook_disabled new_version)
 
   # Kinds that may have no thread_id: penalties are about the user, and a
   # rejected thread is gone. Any other notification without a thread_id or
@@ -46,7 +46,7 @@ defmodule Firefly.Notifications.Notification do
   # visibility.
   @threadless_kinds ~w(silenced suspended post_rejected plugin_disabled plugin group_request
                        group_invite promoted badge_granted invite_redeemed
-                       webhook_disabled)
+                       webhook_disabled new_version)
 
   @doc "Kinds that are about the user rather than a thread or conversation."
   def threadless_kinds, do: @threadless_kinds

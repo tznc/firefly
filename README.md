@@ -42,7 +42,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -83,6 +83,8 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_BACKUP_STORAGE` | Where backups (`/staff/backups`) are kept: `local` (default) or `s3` (the uploads' bucket, under `FIREFLY_BACKUP_S3_PREFIX`, default `backups/`) |
 | `FIREFLY_BACKUP_DIR` | The local backup directory, default `backups` under the working directory (`/app/backups` in the Docker image: mount a volume there) |
 | `FIREFLY_PG_BIN_DIR` | Where `pg_dump` and `pg_restore` are, for backups; they must match the database's major version (the Docker image has PostgreSQL 18's). Default: the newest `/usr/lib/postgresql/*/bin`, else the `PATH` |
+| `FIREFLY_GIT_SHA` | The commit the code was built from, shown with the version (the Docker image sets it from the `FIREFLY_GIT_SHA` build argument) |
+| `FIREFLY_UPDATE_REPO` | The GitHub repository whose latest release the daily version check compares with (default `tznc/firefly`); the check is off with the `version_check` site setting |
 | `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones) |
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
@@ -103,7 +105,7 @@ Docker images include it.
 is the development image used by `docker compose`):
 
 ```sh
-docker build -t firefly .
+docker build -t firefly --build-arg FIREFLY_GIT_SHA=$(git rev-parse HEAD) .
 
 # run database migrations, then the server
 docker run --rm --env-file .env firefly /app/bin/migrate

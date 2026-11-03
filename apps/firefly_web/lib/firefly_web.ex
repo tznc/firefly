@@ -34,6 +34,7 @@ defmodule FireflyWeb do
       Firefly.Reports,
       Firefly.SiteSettings,
       Firefly.TrustLevels,
+      Firefly.Upgrades,
       Firefly.Uploads,
       Firefly.Webhooks,
       FireflyPlugins

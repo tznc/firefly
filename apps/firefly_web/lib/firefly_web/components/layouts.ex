@@ -21,6 +21,11 @@ defmodule FireflyWeb.Layouts do
   attr :current_path, :string, default: nil, doc: "used to highlight the active link"
   attr :review_count, :integer, default: 0, doc: "items in the staff review queue (admins)"
   attr :read_only, :map, default: nil, doc: "the site's read-only state (see `Firefly.Backups`)"
+
+  attr :update_available, :boolean,
+    default: false,
+    doc: "a newer Firefly is out (admins; see `Firefly.Upgrades`)"
+
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -232,6 +237,16 @@ defmodule FireflyWeb.Layouts do
               >
                 Backups
               </.nav_item>
+              <.nav_item
+                path={~p"/staff/upgrade"}
+                current_path={@current_path}
+                icon="hero-arrow-up-circle"
+              >
+                Upgrade
+                <span :if={@update_available} id="update-badge" class="badge badge-sm badge-info">
+                  new
+                </span>
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>
@@ -330,7 +345,8 @@ defmodule FireflyWeb.Layouts do
       :message_count,
       :review_count,
       :current_path,
-      :read_only
+      :read_only,
+      :update_available
     ])
   end
 

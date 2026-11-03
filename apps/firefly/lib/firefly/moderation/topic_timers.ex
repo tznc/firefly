@@ -164,8 +164,9 @@ defmodule Firefly.Moderation.TopicTimers do
     `Firefly.TrustLevels`), granting badges (see
     `Firefly.Badges`), sending digest emails (see
     `Firefly.Notifications.Digests`), pruning a day's analytics
-    viewers (see `Firefly.Analytics`) and scheduled backups (see
-    `Firefly.Backups`). Nothing runs while the site is read-only. At start (so nothing that fell due while the
+    viewers (see `Firefly.Analytics`), scheduled backups (see
+    `Firefly.Backups`) and the daily version check (see
+    `Firefly.Upgrades`). Nothing runs while the site is read-only. At start (so nothing that fell due while the
     app was down is lost), then every `:interval` milliseconds (the
     `Firefly.Moderation.TopicTimers` config; 30 seconds by default), so each runs
     at most that late. Every job takes its due rows one locked transaction
@@ -187,7 +188,8 @@ defmodule Firefly.Moderation.TopicTimers do
       Firefly.Badges,
       Firefly.Notifications.Digests,
       Firefly.Analytics,
-      Firefly.Backups
+      Firefly.Backups,
+      Firefly.Upgrades
     ]
 
     def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)

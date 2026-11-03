@@ -5,7 +5,7 @@ defmodule FireflyWeb.UserAuth do
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
       the unread notification and conversation counts, for admins the review
       queue's count (kept live; views can export `review_changed/1` to react
-      too) and the current path. It records the user's visit (see
+      too) and whether a newer Firefly is out, and the current path. It records the user's visit (see
       `Firefly.Accounts.Visits`) and counts a page view (see
       `Firefly.Analytics`) once the page connects.
       For a user, it also handles the theme toggle's `"set_theme"` event on
@@ -155,6 +155,7 @@ defmodule FireflyWeb.UserAuth do
 
       socket
       |> assign(:review_count, Review.pending_count())
+      |> assign(:update_available, Firefly.Upgrades.update_available?())
       |> attach_hook(:review, :handle_info, &handle_review/2)
     else
       assign(socket, :review_count, 0)

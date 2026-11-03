@@ -137,6 +137,7 @@ defmodule FireflyWeb.Router do
       live("/staff/reports", StaffLive.Reports, :index)
       live("/staff/reports/:id", StaffLive.Report, :show)
       live("/staff/backups", StaffLive.Backups, :index)
+      live("/staff/upgrade", StaffLive.Upgrade, :index)
       live("/staff/log", StaffLive.Log, :index)
       live("/staff/settings", StaffLive.Settings, :index)
       live("/staff/groups", StaffLive.Groups, :index)
