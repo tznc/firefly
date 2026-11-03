@@ -26,6 +26,12 @@ config :firefly, Firefly.Upgrades,
 config :firefly_web, FireflyWeb.ClientIP,
   trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
 
+# The secret AI providers' API keys are encrypted with at rest (see
+# Firefly.AI.Encrypted); without it, a key derived from the secret key base.
+if ai_key = System.get_env("FIREFLY_AI_ENCRYPTION_KEY") do
+  config :firefly, Firefly.AI, encryption_key: ai_key
+end
+
 # Where uploads are stored: `local` (a directory, FIREFLY_UPLOAD_DIR) or
 # `s3` (the FIREFLY_AWS_* bucket). See Firefly.Uploads.Storage.
 if config_env() != :test do

@@ -22,6 +22,8 @@ defmodule Firefly.RateLimit do
     * `:export` - account data exports per user
     * `:flag` - post flags per user
     * `:invite` - invitations made or resent, per user
+    * `:ai` - AI requests (summaries, translations, composer helpers) per
+      user, on top of their daily quota (see `Firefly.AI`)
     * `:search` - searches (the search page and the API) per user, or per
       client IP for visitors
     * `:plugin_notify` - notifications a plugin sends (see
@@ -48,6 +50,7 @@ defmodule Firefly.RateLimit do
     magic_link: {10, :timer.hours(1)},
     password_reset: {10, :timer.hours(1)},
     search: {60, :timer.minutes(1)},
+    ai: {20, :timer.minutes(1)},
     flag: {20, :timer.hours(1)},
     invite: {20, :timer.hours(1)},
     plugin_notify: {100, :timer.hours(1)},

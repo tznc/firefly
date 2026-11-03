@@ -110,6 +110,7 @@ config :firefly, Firefly.RateLimit,
     magic_link: {1_000, 60_000},
     password_reset: {1_000, 60_000},
     search: {1_000, 60_000},
+    ai: {1_000, 60_000},
     flag: {1_000, 60_000},
     invite: {1_000, 60_000},
     plugin_notify: {1_000, 60_000},
@@ -120,6 +121,10 @@ config :firefly, Firefly.RateLimit,
 
 # Each test sees its own (transactional) plugins: no shared cache.
 config :firefly, :plugins_cache, false
+
+# AI providers are faked by local servers (see Firefly.AI.FakeProvider):
+# retries don't wait.
+config :firefly, Firefly.AI, retry_base_ms: 0
 
 # Link previews aren't fetched, except by the tests of them.
 config :firefly, Firefly.Rendering.LinkPreviews, enabled: false

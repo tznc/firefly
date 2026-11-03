@@ -19,6 +19,7 @@ defmodule FireflyWeb do
     deps: [
       Firefly,
       Firefly.Accounts,
+      Firefly.AI,
       Firefly.Analytics,
       Firefly.Backups,
       Firefly.Badges,
@@ -114,6 +115,7 @@ defmodule FireflyWeb do
       import Phoenix.HTML
       import FireflyWeb.CoreComponents
       import FireflyWeb.ForumComponents
+      import FireflyWeb.AIComponents
       import FireflyWeb.Authorization
 
       alias Phoenix.LiveView.JS
