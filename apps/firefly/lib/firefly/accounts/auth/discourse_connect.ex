@@ -156,8 +156,8 @@ defmodule Firefly.Accounts.Auth.DiscourseConnect do
   defp blank(_value), do: nil
 
   @doc "Logs in (or links, or registers) the provider's user, then syncs it (see the moduledoc)."
-  def login(params) do
-    with {:ok, user} <- Auth.login(info(params)), do: {:ok, sync(user, params)}
+  def login(params, invite \\ nil) do
+    with {:ok, user} <- Auth.login(info(params), invite), do: {:ok, sync(user, params)}
   end
 
   @doc """

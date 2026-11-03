@@ -9,7 +9,7 @@ defmodule FireflyWeb.AuthController do
 
   alias Firefly.{Accounts, RateLimit}
   alias Firefly.Accounts.{Auth, User}
-  alias FireflyWeb.Login
+  alias FireflyWeb.{InviteController, Login}
 
   # Ueberauth redirects GET /auth/:provider for OAuth providers before this
   # action runs; we only get here for unknown providers, or when the
@@ -60,10 +60,17 @@ defmodule FireflyWeb.AuthController do
     end
   end
 
+  # An invite the visitor came from (see `FireflyWeb.InviteController`)
+  # lets the login create their account.
   def callback(%{assigns: %{ueberauth_auth: auth}} = conn, _params) do
-    case Auth.login(Auth.from_ueberauth(auth)) do
-      {:ok, user} -> Login.complete(conn, user, ~p"/login", :sso)
-      {:error, reason} -> Login.fail(conn, ~p"/login", reason)
+    {invite, conn} = InviteController.take_invite(conn)
+
+    case Auth.login(Auth.from_ueberauth(auth), invite) do
+      {:ok, user} ->
+        Login.complete(conn, user, ~p"/login", :sso, InviteController.destination(invite))
+
+      {:error, reason} ->
+        Login.fail(conn, ~p"/login", reason)
     end
   end
 
@@ -73,7 +80,8 @@ defmodule FireflyWeb.AuthController do
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-
            Accounts.authenticate_by_password(user_params["username"], user_params["password"]) do
-      Login.complete(conn, user, ~p"/auth/identity", :password)
+      # Registering through an invite lands where the invite says.
+      Login.complete(conn, user, ~p"/auth/identity", :password, params["return_to"] || "/")
     else
       {:error, :rate_limited} -> Login.fail(conn, ~p"/auth/identity", RateLimit.message())
       {:error, reason} -> Login.fail(conn, ~p"/auth/identity", reason)

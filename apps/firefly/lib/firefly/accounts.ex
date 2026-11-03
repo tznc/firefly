@@ -14,6 +14,8 @@ defmodule Firefly.Accounts do
     * `Firefly.Accounts.MagicLinks`, `PasswordReset`, `EmailConfirmation`
     * `Firefly.Accounts.AccountDeletion`, `AccountExport`
     * `Firefly.Accounts.Ignores`, `Profiles`, `Visits`, `UserSessions`
+    * `Firefly.Accounts.Invites` (with the schemas `Invite`,
+      `InviteRedemption`) - invitations to join
 
   Other contexts and the web interface use only these (see `Firefly`).
   """
@@ -36,7 +38,10 @@ defmodule Firefly.Accounts do
       Ignores,
       Profiles,
       Visits,
-      UserSessions
+      UserSessions,
+      Invites,
+      Invite,
+      InviteRedemption
     ]
 
   import Ecto.Query, warn: false
@@ -163,18 +168,33 @@ defmodule Firefly.Accounts do
     # Whether that's needed to post is the `require_email_confirmation`
     # setting's job (see `Firefly.Moderation.Posting`): `confirmed_at` only ever
     # means the address was proven.
-    if registration_open?() do
-      %User{api_token: generate_api_token()}
-      |> User.registration_changeset(attrs)
-      |> Repo.insert()
-      |> tap_ok(&Events.emit("user_registered", %{user: %{id: &1.id, username: &1.username}}))
-    else
-      {:error, :registration_closed}
-    end
+    if registration_open?(),
+      do: insert_registration(attrs, nil),
+      else: {:error, :registration_closed}
   end
 
-  @doc "Whether new accounts may be created (the `allow_registrations` site setting)."
-  def registration_open?, do: SiteSettings.get("allow_registrations")
+  @doc """
+  `register_user/1` for someone redeeming an invite (see
+  `Firefly.Accounts.Invites.register/2`, which checks registrations are
+  allowed): `confirmed?` when the invite was emailed to the address.
+  """
+  def register_invited_user(attrs, confirmed?),
+    do: insert_registration(attrs, if(confirmed?, do: DateTime.utc_now(:second)))
+
+  defp insert_registration(attrs, confirmed_at) do
+    %User{api_token: generate_api_token(), confirmed_at: confirmed_at}
+    |> User.registration_changeset(attrs)
+    |> Repo.insert()
+    |> tap_ok(&Events.emit("user_registered", %{user: %{id: &1.id, username: &1.username}}))
+  end
+
+  @doc """
+  Whether anyone may create an account: the `allow_registrations` site
+  setting is on and `invite_only` is off (invited people may join while
+  only `allow_registrations` is on; see `Firefly.Accounts.Invites`).
+  """
+  def registration_open?,
+    do: SiteSettings.get("allow_registrations") and not SiteSettings.get("invite_only")
 
   @doc "A changeset for the registration form."
   def change_registration(%User{} = user \\ %User{}, attrs \\ %{}) do

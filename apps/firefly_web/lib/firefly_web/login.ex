@@ -23,16 +23,24 @@ defmodule FireflyWeb.Login do
 
   @doc """
   Logs `user` in after they proved who they are by `method` (`:password`,
-  `:sso`, `:magic_link`, `:passkey`), asks for their second factor, or
-  sends them back to `failure_path` if they're suspended.
+  `:sso`, `:magic_link`, `:passkey`) and sends them to `to` (a path on this
+  site), asks for their second factor, or sends them back to
+  `failure_path` if they're suspended.
   """
-  def complete(conn, %User{} = user, failure_path, method) do
+  def complete(conn, %User{} = user, failure_path, method, to \\ "/") do
     cond do
       User.suspended?(user) -> fail(conn, failure_path, Penalties.suspended_message(user))
       TwoFactor.required?(user, method) -> ask_second_factor(conn, user)
-      true -> log_in(conn, user)
+      true -> log_in(conn, user, "Successfully authenticated.", to)
     end
   end
+
+  @doc "`path` if it's a path on this site (not another site's URL), else the home page."
+  def local_path("/" <> rest = path) do
+    if String.starts_with?(rest, ["/", "\\"]), do: "/", else: path
+  end
+
+  def local_path(_path), do: "/"
 
   defp ask_second_factor(conn, user) do
     conn
@@ -67,9 +75,9 @@ defmodule FireflyWeb.Login do
 
   @doc """
   Logs `user` in: a fresh session, any pending second-factor step gone,
-  and `notice` (or a welcome) to show.
+  and `notice` (or a welcome) to show at `to`.
   """
-  def log_in(conn, user, notice \\ "Successfully authenticated.") do
+  def log_in(conn, user, notice \\ "Successfully authenticated.", to \\ "/") do
     conn
     |> configure_session(renew: true)
     |> delete_session(:two_factor)
@@ -77,7 +85,7 @@ defmodule FireflyWeb.Login do
     |> put_session(:current_user, user.id)
     |> put_session(:live_socket_id, FireflyWeb.Session.live_socket_id(user))
     |> put_flash(:info, notice)
-    |> redirect(to: ~p"/")
+    |> redirect(to: local_path(to))
   end
 
   @doc "Sends the browser back to `path` with `reason` (a message or a changeset)."

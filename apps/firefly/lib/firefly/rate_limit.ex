@@ -20,6 +20,7 @@ defmodule Firefly.RateLimit do
     * `:message` - new private conversations per user
     * `:export` - account data exports per user
     * `:flag` - post flags per user
+    * `:invite` - invitations made or resent, per user
     * `:search` - searches (the search page and the API) per user, or per
       client IP for visitors
     * `:plugin_notify` - notifications a plugin sends (see
@@ -46,6 +47,7 @@ defmodule Firefly.RateLimit do
     password_reset: {10, :timer.hours(1)},
     search: {60, :timer.minutes(1)},
     flag: {20, :timer.hours(1)},
+    invite: {20, :timer.hours(1)},
     plugin_notify: {100, :timer.hours(1)},
     plugin_call: {60, :timer.minutes(1)},
     plugin_api: {300, :timer.minutes(1)},

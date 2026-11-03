@@ -21,6 +21,8 @@ defmodule Firefly.URLs do
 
   def user_url(user), do: url(["users", user.id])
 
+  def invite_url(key), do: url(["invites", key])
+
   @doc "A group's page (`tab`: e.g. `\"members\"`, `\"requests\"`)."
   def group_url(group, tab \\ nil)
   def group_url(group, nil), do: url(["groups", group.name])
