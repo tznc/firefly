@@ -5,6 +5,10 @@ defmodule FireflyWeb.Drafting do
   each form change saves it, `discard_draft/1` drops it, and
   `draft_status/1` shows that it's saved with a "Discard draft" button
   (which sends `discard_draft`).
+
+  Every function here takes the composer's socket, with `:current_user`
+  (a `Firefly.Accounts.User`) and, after `assign_draft/2`, `:draft_context`
+  assigned.
   """
   use FireflyWeb, :html
 
