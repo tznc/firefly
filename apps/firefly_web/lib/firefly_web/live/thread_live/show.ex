@@ -49,7 +49,7 @@ defmodule FireflyWeb.ThreadLive.Show do
   alias Firefly.Rendering.LinkPreviews
   alias Firefly.{RateLimit, Repo}
   alias Firefly.AI
-  alias Firefly.AI.{Summaries, Translations}
+  alias Firefly.AI.{SemanticSearch, Summaries, Translations}
   alias Firefly.Discussion.Solved
   alias Firefly.Moderation.TopicTimers
   alias Firefly.Discussion.{Category, Post, Thread}
@@ -128,7 +128,15 @@ defmodule FireflyWeb.ThreadLive.Show do
      |> assign(:can_translate?, AI.available?(socket.assigns.current_user, "translate"))
      |> assign(:ai_summary, nil)
      |> assign(:translations, %{})
+     |> assign(:related, related(thread, socket.assigns.current_user))
      |> load_thread(thread)}
+  end
+
+  # Topics nearest this one in meaning (see Firefly.AI.SemanticSearch).
+  defp related(thread, user) do
+    if Firefly.SiteSettings.get("ai_related_topics"),
+      do: SemanticSearch.related(thread, user),
+      else: []
   end
 
   @impl true
@@ -1004,6 +1012,23 @@ defmodule FireflyWeb.ThreadLive.Show do
           <.bookmark_form :if={@bookmarking == post.id} form={@bookmark_form} />
         </li>
       </ol>
+
+      <section :if={@related != []} id="related-topics" class="space-y-1">
+        <h2 class="flex items-center gap-2 font-semibold">
+          Related topics
+          <span class="badge badge-sm badge-soft badge-secondary gap-1" title="Found by an AI model">
+            <.icon name="hero-sparkles" class="size-3" /> AI
+          </span>
+        </h2>
+        <ul class="list rounded-box border border-base-300 bg-base-100">
+          <li :for={topic <- @related} class="list-row flex items-center gap-2">
+            <.category_badge category={topic.category} />
+            <.link navigate={~p"/categories/#{topic.category_id}/threads/#{topic}"} class="link-hover">
+              {topic.title}
+            </.link>
+          </li>
+        </ul>
+      </section>
 
       <.live_component module={FireflyWeb.UserCard} id="user-card" current_user={@current_user} />
 

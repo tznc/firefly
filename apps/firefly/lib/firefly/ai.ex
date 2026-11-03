@@ -48,7 +48,10 @@ defmodule Firefly.AI do
       Translations,
       Triage,
       Composer,
-      Classification
+      Classification,
+      Embeddings,
+      SemanticSearch,
+      MCP
     ]
 
   import Ecto.Query
@@ -83,6 +86,14 @@ defmodule Firefly.AI do
       system: true,
       description:
         "Rates new and flagged posts for toxicity, spam and sentiment, and flags, hides or tags them."
+    },
+    %{
+      key: "embeddings",
+      label: "Semantic search",
+      capability: :embed,
+      system: true,
+      description:
+        "Embeds posts so search can also find posts by meaning (a toggle on the search page), and shows related topics under each topic. Needs a provider with embeddings."
     },
     %{
       key: "composer",
@@ -381,19 +392,34 @@ defmodule Firefly.AI do
   A post was published (or approved): triage rates it in the background
   (see `Firefly.AI.Triage`), when triage is on.
   """
-  def post_published(%Firefly.Discussion.Post{} = post), do: triage(post)
+  def post_published(%Firefly.Discussion.Post{} = post) do
+    :ok = Firefly.AI.Embeddings.embed_later(post)
+    triage(post)
+  end
+
+  @doc "A post was edited: its embedding is made again in the background."
+  def post_edited(%Firefly.Discussion.Post{} = post), do: Firefly.AI.Embeddings.embed_later(post)
+
+  @doc """
+  Embeds the posts still missing an up-to-date embedding, a few batches at
+  a time (see `Firefly.AI.Embeddings`); run by the scheduler.
+  """
+  def run_due, do: Firefly.AI.Embeddings.run_due()
 
   @doc "A post was flagged: triage rates it in the background if it hasn't yet."
   def post_flagged(%Firefly.Discussion.Post{} = post), do: triage(post)
 
   defp triage(post) do
-    if available?(nil, "triage"), do: async(fn -> Firefly.AI.Triage.classify(post) end)
+    if available?(nil, "triage"), do: background(fn -> Firefly.AI.Triage.classify(post) end)
     :ok
   end
 
-  # Background work never holds up (or fails) what triggered it. Tests run
-  # it in their own process (`config :firefly, Firefly.AI, async: false`).
-  defp async(fun) do
+  @doc """
+  Runs `fun` in the background: AI work never holds up (or fails) what
+  triggered it. Tests run it in their own process (`config :firefly,
+  Firefly.AI, async: false`).
+  """
+  def background(fun) do
     if Application.get_env(:firefly, __MODULE__, [])[:async] == false do
       fun.()
     else

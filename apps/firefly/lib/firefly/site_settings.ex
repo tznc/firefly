@@ -846,6 +846,24 @@ defmodule Firefly.SiteSettings do
           "How many AI requests (summaries, translations, composer helpers) a member at trust level 4 may make a day. 0: none. Admins have no limit."
       },
       %{
+        key: "ai_related_topics",
+        section: "AI",
+        type: :boolean,
+        label: "Related topics",
+        default: true,
+        help:
+          "With semantic search on, topics end with the topics nearest them in meaning (those the reader may read)."
+      },
+      %{
+        key: "mcp_enabled",
+        section: "AI",
+        type: :boolean,
+        label: "MCP server",
+        default: false,
+        help:
+          "AI assistants and agents can read the forum through the Model Context Protocol at /mcp (search, read topics, list the latest, look up members), authenticated with a member's API token and seeing only what that member may read."
+      },
+      %{
         key: "ai_summary_min_posts",
         section: "AI",
         type: :integer,

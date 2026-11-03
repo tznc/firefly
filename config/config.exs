@@ -15,7 +15,10 @@ config :firefly_web,
   generators: [context_app: :firefly, timestamp_type: :naive_datetime_usec]
 
 # Ecto 2 stored microsecond timestamps; keep doing so for new migrations.
-config :firefly, Firefly.Repo, migration_timestamps: [type: :naive_datetime_usec]
+config :firefly, Firefly.Repo,
+  migration_timestamps: [type: :naive_datetime_usec],
+  # Ecto's types and pgvector's (see Firefly.PostgrexTypes).
+  types: Firefly.PostgrexTypes
 
 # The web interface the domain links to and broadcasts through (see
 # Firefly.Endpoint): the domain never references it at compile time.

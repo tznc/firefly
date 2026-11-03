@@ -1,7 +1,8 @@
 services:
   postgres:
     container_name: firestorm-pg
-    image: postgres:18
+    # PostgreSQL 18 with the pgvector extension (semantic search).
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

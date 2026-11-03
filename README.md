@@ -16,7 +16,11 @@ the open-source Firestorm forum project.
 
 ## Development
 
-Requirements: Elixir 1.20 / Erlang/OTP 29, Node.js 26 and PostgreSQL 18 (see `.tool-versions`).
+Requirements: Elixir 1.20 / Erlang/OTP 29, Node.js 26 and PostgreSQL 18 with the
+[pgvector](https://github.com/pgvector/pgvector) extension available (see
+`.tool-versions`; the `pgvector/pgvector:pg18` Docker image has both). The
+migrations create the extension, so the database user needs the right to
+(or create it beforehand: `CREATE EXTENSION vector`).
 
 The web UI is Phoenix LiveView styled with Tailwind CSS and daisyUI; the JSON
 API lives under `/api/v1`.
@@ -153,6 +157,19 @@ system's; the `Sentiment` report and dashboard chart); and composer
 helpers (proofread, suggest a title or tags). Only content the member
 asking may read is ever sent, never private messages, and every AI output
 is labelled as AI-generated.
+
+Semantic search embeds posts (with an OpenAI-compatible provider's
+embedding model) into a pgvector column, as they're posted and edited and
+by a background backfill; the search page then offers a "Semantic" toggle
+(hybrid: full-text and vector results fused by reciprocal rank), and topics
+end with related topics. Results follow the same permission rules as
+search.
+
+The MCP server (off by default: the `mcp_enabled` setting) lets AI
+assistants read the forum over the Model Context Protocol (Streamable HTTP)
+at `/mcp`, with a member's API token as `Authorization: Bearer <token>`:
+tools `search`, `read_topic`, `list_latest` and `get_user_profile`, which
+see only what that member may read.
 
 ### Tests
 

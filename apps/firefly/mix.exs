@@ -70,6 +70,8 @@ defmodule Firefly.MixProject do
       {:image, "~> 0.72"},
       # AI providers' HTTP APIs (see Firefly.AI): timeouts, retries, streaming.
       {:req, "~> 0.7.5"},
+      # Embeddings for semantic search, in a pgvector column.
+      {:pgvector, "~> 0.4.2"},
       # Tests fake AI providers with a local HTTP server (see Firefly.AI.FakeProvider).
       {:bandit, "~> 1.14", only: :test}
     ]

@@ -8,13 +8,18 @@ defmodule FireflyWeb.SearchLive.Index do
   searches: the static one shows the form alone, so a page load counts
   once and plain HTTP requests get no results (the JSON API, also limited,
   is for those).
+
+  With semantic search on (see `Firefly.AI.SemanticSearch`), the
+  "Semantic" toggle (`mode=semantic`) adds posts found by meaning, fused
+  with the full-text results; the same permission rules apply.
   """
   use FireflyWeb, :live_view
 
   alias Firefly.{Discussion, RateLimit}
+  alias Firefly.AI.SemanticSearch
   alias Firefly.Discussion.Search
 
-  @controls ~w(category tag user in order muted)
+  @controls ~w(category tag user in order muted mode)
 
   @impl true
   def mount(_params, _session, socket) do
@@ -26,6 +31,8 @@ defmodule FireflyWeb.SearchLive.Index do
        page_title: "Search",
        categories: categories,
        remote_ip: FireflyWeb.ClientIP.from_socket(socket),
+       semantic_available?: SemanticSearch.enabled?(),
+       semantic?: false,
        rate_limited?: false
      )}
   end
@@ -40,21 +47,33 @@ defmodule FireflyWeb.SearchLive.Index do
      |> assign(:query, query)
      |> assign(:searched?, connected?(socket) and Search.present?(search))
      |> assign(:form, to_form(query, as: :search))
-     |> run(search, params["page"] || 1)}
+     |> run(search, params["page"] || 1, params["mode"] == "semantic")}
   end
 
-  defp run(socket, search, page) do
+  defp run(socket, search, page, semantic?) do
     %{current_user: user, remote_ip: remote_ip} = socket.assigns
+    socket = assign(socket, :semantic?, false)
 
     cond do
       not connected?(socket) or not Search.present?(search) ->
         assign(socket, results: Search.no_results(), rate_limited?: false)
 
-      RateLimit.check_search(user, remote_ip) == :ok ->
-        assign(socket, results: Search.run(search, user, page), rate_limited?: false)
+      RateLimit.check_search(user, remote_ip) != :ok ->
+        assign(socket, results: Search.no_results(), rate_limited?: true)
+
+      semantic? and socket.assigns.semantic_available? ->
+        {mode, results} = SemanticSearch.run(search, user, page_number(page))
+        assign(socket, results: results, semantic?: mode == :semantic, rate_limited?: false)
 
       true ->
-        assign(socket, results: Search.no_results(), rate_limited?: true)
+        assign(socket, results: Search.run(search, user, page), rate_limited?: false)
+    end
+  end
+
+  defp page_number(page) do
+    case Integer.parse(to_string(page)) do
+      {n, ""} when n > 0 -> n
+      _ -> 1
     end
   end
 
@@ -109,6 +128,15 @@ defmodule FireflyWeb.SearchLive.Index do
               class="checkbox checkbox-sm"
             /> Titles only
           </label>
+          <label :if={@semantic_available?} class="label self-end pb-3 text-sm">
+            <input
+              type="checkbox"
+              name="search[mode]"
+              value="semantic"
+              checked={@form[:mode].value == "semantic"}
+              class="checkbox checkbox-sm"
+            /> Semantic (also by meaning)
+          </label>
           <label :if={@current_user} class="label self-end pb-3 text-sm">
             <input
               type="checkbox"
@@ -130,8 +158,11 @@ defmodule FireflyWeb.SearchLive.Index do
       </p>
 
       <section :if={@searched? and not @rate_limited?} id="search-results" class="space-y-4">
-        <p class="text-sm text-base-content/70">
+        <p class="flex items-center gap-2 text-sm text-base-content/70">
           {ngettext("1 result", "%{count} results", @results.total_entries)}
+          <span :if={@semantic?} id="semantic-note" class="badge badge-sm badge-soft badge-secondary gap-1" data-ai-generated>
+            <.icon name="hero-sparkles" class="size-3" /> Ranked with AI embeddings
+          </span>
         </p>
         <ol class="list rounded-box border border-base-300 bg-base-100">
           <li

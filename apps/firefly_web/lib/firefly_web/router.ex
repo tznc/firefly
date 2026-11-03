@@ -269,6 +269,19 @@ defmodule FireflyWeb.Router do
     post("/auth/identity", AuthController, :identity)
   end
 
+  # The MCP server (see FireflyWeb.MCPController): API tokens, no session.
+  pipeline :mcp do
+    plug(FireflyWeb.Plugs.ApiCurrentUser)
+  end
+
+  scope "/mcp", FireflyWeb do
+    pipe_through(:mcp)
+
+    post("/", MCPController, :post)
+    get("/", MCPController, :unsupported)
+    delete("/", MCPController, :unsupported)
+  end
+
   # Inbound email webhooks
   scope "/inbound", FireflyWeb do
     pipe_through(:webhook)
