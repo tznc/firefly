@@ -16,6 +16,29 @@ defmodule FireflyImport.Markdown do
   def from_bbcode(nil), do: ""
   def from_bbcode(text), do: BBCode.to_markdown(text)
 
+  @doc "`text` with its HTML entities (`&amp;`, `&quot;`, `&#39;`...) decoded."
+  def decode_entities(nil), do: nil
+
+  def decode_entities(text) do
+    text
+    |> String.replace(~r/&#(\d+);/, fn entity ->
+      [_, code] = Regex.run(~r/&#(\d+);/, entity)
+
+      case String.to_integer(code) do
+        code when code in 1..0x10FFFF and code not in 0xD800..0xDFFF -> <<code::utf8>>
+        _invalid -> ""
+      end
+    end)
+    |> String.replace(["&quot;", "&lt;", "&gt;", "&#39;", "&nbsp;"], fn
+      "&quot;" -> "\""
+      "&lt;" -> "<"
+      "&gt;" -> ">"
+      "&#39;" -> "'"
+      "&nbsp;" -> " "
+    end)
+    |> String.replace("&amp;", "&")
+  end
+
   @doc "`html` as Markdown."
   def from_html(nil), do: ""
 

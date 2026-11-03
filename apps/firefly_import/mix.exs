@@ -41,6 +41,11 @@ defmodule FireflyImport.MixProject do
       # As in firefly_web (Kaffy's optional `decimal ~> 2.2`): the umbrella's
       # apps must agree on it, and Postgrex brings it in here too.
       {:decimal, "~> 3.2", override: true},
+      # phpBB's and vBulletin's MySQL (or MariaDB) databases.
+      {:myxql, "~> 0.9.0"},
+      # NodeBB's database: MongoDB or Redis.
+      {:mongodb_driver, "~> 1.6"},
+      {:redix, "~> 1.5"},
       # HTML to Markdown.
       {:floki, "~> 0.38"},
       # Files to download (uploads given by URL).
