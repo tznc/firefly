@@ -18,6 +18,7 @@ defmodule Firefly.RateLimit do
     * `:upload` - upload signatures per user
     * `:like` - likes and unlikes per user
     * `:message` - new private conversations per user
+    * `:chat` - chat messages per user (see `Firefly.Chat`)
     * `:export` - account data exports per user
     * `:flag` - post flags per user
     * `:invite` - invitations made or resent, per user
@@ -40,6 +41,7 @@ defmodule Firefly.RateLimit do
     upload: {30, :timer.hours(1)},
     like: {30, :timer.minutes(5)},
     message: {10, :timer.hours(1)},
+    chat: {30, :timer.minutes(1)},
     export: {3, :timer.hours(1)},
     email: {3, :timer.hours(1)},
     two_factor: {6, :timer.minutes(5)},

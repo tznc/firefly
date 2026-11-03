@@ -12,7 +12,9 @@ defmodule Firefly.Moderation.Posting do
   checks penalties (`check(user, :like)`), as do other public writes that
   aren't posts (adding people to a conversation, editing a thread's title or
   tags, editing one's profile); flagging checks penalties, a confirmed address
-  and its own rate limit (`check(user, :flag)`). Replying also needs the user to be able to
+  and its own rate limit (`check(user, :flag)`). A chat message
+  (`check(user, :chat)`, see `Firefly.Chat`) checks what a post does but
+  against the `:chat` rate limit. Replying also needs the user to be able to
   read the thread (`:not_found` otherwise, as if it didn't exist): a
   reply-to address or API call outlives access to a category. A thread in
   slow mode (see `Firefly.Moderation.TopicTools.set_slow_mode/3`) takes one reply
@@ -50,6 +52,14 @@ defmodule Firefly.Moderation.Posting do
     with :ok <- check(user, :like),
          :ok <- if(User.confirmed?(user), do: :ok, else: {:error, :unconfirmed}),
          do: RateLimit.check_flag(user)
+  end
+
+  def check(%User{} = user, :chat) do
+    with :ok <- check(user, :like) do
+      if confirmed_enough?(user),
+        do: RateLimit.check(:chat, user.id),
+        else: {:error, :unconfirmed}
+    end
   end
 
   def check(%User{} = user, :new_conversation) do

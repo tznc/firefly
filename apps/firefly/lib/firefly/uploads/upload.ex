@@ -9,8 +9,8 @@ defmodule Firefly.Uploads.Upload do
   whether a smaller copy exists, for images larger than the thumbnail size.
 
   `attached_to` says what it belongs to, which decides who may fetch it:
-  `"post"` (`post_id`) or `"message"` (`message_id`), whoever may read
-  that; `"avatar"`, the uploader's profile picture, `"background"`, their
+  `"post"` (`post_id`), `"message"` (`message_id`) or `"chat"`
+  (`chat_message_id`, see `Firefly.Chat`), whoever may read that; `"avatar"`, the uploader's profile picture, `"background"`, their
   profile or user card background, and `"emoji"`, a
   custom emoji (see `Firefly.Rendering.Emoji`), and `"preview"`, a link
   preview's image (see `Firefly.Rendering.LinkPreviews`), anyone. Nil: nothing
@@ -22,9 +22,10 @@ defmodule Firefly.Uploads.Upload do
 
   alias Firefly.Accounts.User
   alias Firefly.Discussion.Post
+  alias Firefly.Chat
   alias Firefly.Messaging.Message
 
-  @kinds ~w(post message avatar background emoji preview)
+  @kinds ~w(post message chat avatar background emoji preview)
 
   schema "uploads" do
     field(:token, :string)
@@ -40,6 +41,7 @@ defmodule Firefly.Uploads.Upload do
     belongs_to(:user, User)
     belongs_to(:post, Post)
     belongs_to(:message, Message)
+    belongs_to(:chat_message, Chat.Message)
 
     timestamps(type: :naive_datetime_usec)
   end

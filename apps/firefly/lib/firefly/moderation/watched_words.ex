@@ -283,7 +283,24 @@ defmodule Firefly.Moderation.WatchedWords do
   def posted(%Post{} = post, %User{} = user, title \\ nil) do
     text = Enum.join([title || "", post.body || ""], "\n")
 
-    if not Accounts.admin?(user) do
+    with [_ | _] = words <- written(text, user),
+         false <- Post.queued?(post) do
+      Flags.flag_by_system(post, "Watched words: " <> Enum.join(words, ", "))
+    end
+
+    :ok
+  end
+
+  @doc """
+  After `user` wrote and saved `text` (a post, a chat message): silences
+  them for a `silence` word, and returns the `flag` words in it, for the
+  caller to flag what they wrote. Admins are neither silenced nor
+  flagged (`[]`).
+  """
+  def written(text, %User{} = user) do
+    if Accounts.admin?(user) do
+      []
+    else
       with [_ | _] = words <- match(text, "silence") do
         Penalties.penalize(:silence, user, :system, %{
           "duration" => "forever",
@@ -291,13 +308,8 @@ defmodule Firefly.Moderation.WatchedWords do
         })
       end
 
-      with [_ | _] = words <- match(text, "flag"),
-           false <- Post.queued?(post) do
-        Flags.flag_by_system(post, "Watched words: " <> Enum.join(words, ", "))
-      end
+      match(text, "flag")
     end
-
-    :ok
   end
 
   @doc "The tags a new thread with `title` and `body` gets from `tag` words."

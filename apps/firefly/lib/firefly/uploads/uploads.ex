@@ -1,7 +1,7 @@
 defmodule Firefly.Uploads do
   @moduledoc """
-  File uploads: attachments in posts and private messages, avatars and
-  custom emoji.
+  File uploads: attachments in posts, private messages and chat messages,
+  avatars and custom emoji.
 
   A file goes through the server (the composer's LiveView upload, or
   `POST /api/v1/uploads`): its type is checked from its content and images
@@ -15,9 +15,9 @@ defmodule Firefly.Uploads do
   member's total (`upload_quota_mb`, 0: none) and the longest side of an
   image (`max_image_dimension`), on top of the upload rate limit.
 
-  A new upload is attached to nothing; saving a post or message whose body
-  links it (`/uploads/<token>/...`) attaches it there (see `attach/3`), and
-  from then on it's served to whoever may read that post or message (see
+  A new upload is attached to nothing; saving a post, message or chat
+  message whose body links it (`/uploads/<token>/...`) attaches it there
+  (see `attach/3`), and from then on it's served to whoever may read that (see
   `readable?/2`). Uploads still unattached after the `orphan_upload_hours`
   setting are removed by `run_due/0`, unless a draft of their uploader's
   links them.
@@ -31,7 +31,7 @@ defmodule Firefly.Uploads do
   import Ecto.Query
   require Logger
 
-  alias Firefly.{Accounts, Discussion, Messaging, RateLimit, Repo, SiteSettings}
+  alias Firefly.{Accounts, Chat, Discussion, Messaging, RateLimit, Repo, SiteSettings}
   alias Firefly.Moderation.StaffLog
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Draft, Post}
@@ -298,6 +298,10 @@ defmodule Firefly.Uploads do
     end
   end
 
+  defp attachment_readable?(%Upload{attached_to: "chat", chat_message_id: id}, viewer)
+       when is_integer(id),
+       do: Chat.message_readable?(id, viewer)
+
   defp attachment_readable?(%Upload{attached_to: nil, user_id: owner_id}, %User{id: owner_id}),
     do: true
 
@@ -313,7 +317,7 @@ defmodule Firefly.Uploads do
 
   @doc """
   Attaches the uploads `body` links to that `author` uploaded and hasn't
-  used yet to `target` (a post or message). An upload already attached
+  used yet to `target` (a post, message or chat message). An upload already attached
   elsewhere stays there (and keeps that place's readers).
   """
   def attach(body, %User{id: author_id}, target) do
@@ -341,6 +345,7 @@ defmodule Firefly.Uploads do
 
   defp target_field(%Post{}), do: {"post", :post_id}
   defp target_field(%Message{}), do: {"message", :message_id}
+  defp target_field(%Chat.Message{}), do: {"chat", :chat_message_id}
 
   ## Profile images
 
