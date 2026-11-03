@@ -21,6 +21,7 @@ defmodule Firefly.Rendering do
       Emoji,
       Emoji.CustomEmoji,
       LinkPreviews,
-      LinkPreviews.Fetcher
+      LinkPreviews.Fetcher,
+      LinkPreviews.Parser
     ]
 end

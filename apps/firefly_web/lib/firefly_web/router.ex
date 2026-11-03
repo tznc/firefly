@@ -138,6 +138,7 @@ defmodule FireflyWeb.Router do
       live("/staff/reports/:id", StaffLive.Report, :show)
       live("/staff/backups", StaffLive.Backups, :index)
       live("/staff/upgrade", StaffLive.Upgrade, :index)
+      live("/staff/embedding", StaffLive.Embedding, :index)
       live("/staff/log", StaffLive.Log, :index)
       live("/staff/settings", StaffLive.Settings, :index)
       live("/staff/groups", StaffLive.Groups, :index)
@@ -196,6 +197,21 @@ defmodule FireflyWeb.Router do
         :show
       )
     end
+  end
+
+  # Blog comments: the script sites include, and the framed comments page
+  # (see FireflyWeb.EmbedController). No session: it's public, and framed
+  # cross-site, where cookies don't go anyway.
+  pipeline :embed do
+    plug(:accepts, ["html"])
+  end
+
+  get("/embed.js", FireflyWeb.EmbedController, :script)
+
+  scope "/embed", FireflyWeb do
+    pipe_through(:embed)
+
+    get("/comments", EmbedController, :comments)
   end
 
   # Link click beacons (navigator.sendBeacon): no session or CSRF token,

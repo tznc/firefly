@@ -40,6 +40,7 @@ defmodule Firefly.Moderation.StaffLog do
     watched_word.create watched_word.delete
     webhook.create webhook.update webhook.delete webhook.auto_disable
     backup.create backup.delete backup.download backup.restore backup.read_only
+    embed_host.create embed_host.delete
   )
 
   @doc "Every action the log records, in display order."

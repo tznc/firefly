@@ -24,6 +24,7 @@ defmodule FireflyWeb do
       Firefly.Badges,
       Firefly.Directory,
       Firefly.Discussion,
+      Firefly.Embedding,
       Firefly.Groups,
       Firefly.Messaging,
       Firefly.Moderation,

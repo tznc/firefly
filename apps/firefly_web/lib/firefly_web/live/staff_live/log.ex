@@ -92,7 +92,9 @@ defmodule FireflyWeb.StaffLive.Log do
     "backup.delete" => "Deleted backup",
     "backup.download" => "Downloaded backup",
     "backup.restore" => "Restored backup",
-    "backup.read_only" => "Changed read-only mode"
+    "backup.read_only" => "Changed read-only mode",
+    "embed_host.create" => "Allowed embedding host",
+    "embed_host.delete" => "Removed embedding host"
   }
 
   @impl true
@@ -159,6 +161,9 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "webhook", target_id: id, details: %{"url" => url}}, _target),
     do: {url, ~p"/staff/webhooks/#{id}"}
+
+  defp target_link(%{target_type: "embed_host", details: %{"host" => host}}, _target),
+    do: {host, ~p"/staff/embedding"}
 
   defp target_link(%{target_type: "backup", details: %{"name" => name}}, _target),
     do: {name, ~p"/staff/backups"}
