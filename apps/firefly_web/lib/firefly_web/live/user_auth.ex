@@ -3,7 +3,8 @@ defmodule FireflyWeb.UserAuth do
   `on_mount` hooks for LiveViews:
 
     * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
-      the unread notification and conversation counts, for admins the review
+      the unread notification and conversation counts, whether they may
+      chat (`:chat`, for the navigation), for admins the review
       queue's count (kept live; views can export `review_changed/1` to react
       too) and whether a newer Firefly is out, and the current path. It records the user's visit (see
       `Firefly.Accounts.Visits`) and counts a page view (see
@@ -28,7 +29,7 @@ defmodule FireflyWeb.UserAuth do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
   import Phoenix.LiveView
 
-  alias Firefly.{Accounts, Analytics, Backups, Messaging, Notifications}
+  alias Firefly.{Accounts, Analytics, Backups, Chat, Messaging, Notifications}
   alias Firefly.Accounts.Visits
   alias Firefly.Moderation.{Posting, Review}
   alias FireflyWeb.Session
@@ -86,6 +87,7 @@ defmodule FireflyWeb.UserAuth do
     |> record_visit()
     |> count_page_view()
     |> assign_counts()
+    |> assign_chat()
     |> read_only()
     |> subscribe_to_notifications()
     |> subscribe_to_review()
@@ -145,6 +147,11 @@ defmodule FireflyWeb.UserAuth do
     |> assign(:notification_count, notification_count(user))
     |> assign(:message_count, Messaging.unread_conversation_count(user))
   end
+
+  defp assign_chat(%{assigns: %{current_user: %{} = user}} = socket),
+    do: assign(socket, :chat, Chat.can?(user, :use_chat))
+
+  defp assign_chat(socket), do: assign(socket, :chat, false)
 
   defp staff?(%{assigns: %{current_user: %{} = user}}), do: Accounts.admin?(user)
   defp staff?(_socket), do: false

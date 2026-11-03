@@ -20,6 +20,10 @@ defmodule Firefly.Chat.Policy do
       the channel) and admins, unless it's deleted already
     * `:restore_message` (the message) - admins; its author if they
       deleted it themselves
+    * `:react` (the message) - those who may post in its channel, unless
+      it's deleted
+    * `:pin_message` (the message) - in a category channel admins; in a
+      direct message its members. Not deleted messages
     * `:manage_channel` (create, edit, open, close and archive channels) -
       admins
 
@@ -94,6 +98,24 @@ defmodule Firefly.Chat.Policy do
       Accounts.admin?(user) -> :ok
       message.user_id == user.id and message.deleted_by_id == user.id -> :ok
       true -> {:error, :unauthorized}
+    end
+  end
+
+  def authorize(:react, %User{} = user, %Message{} = message) do
+    message = Repo.preload(message, :channel)
+
+    if Message.deleted?(message),
+      do: {:error, :unauthorized},
+      else: authorize(:post_message, user, message.channel)
+  end
+
+  def authorize(:pin_message, %User{} = user, %Message{} = message) do
+    message = Repo.preload(message, :channel)
+
+    cond do
+      Message.deleted?(message) -> {:error, :unauthorized}
+      message.channel.kind == "direct" -> authorize(:view_channel, user, message.channel)
+      true -> ok(Accounts.admin?(user))
     end
   end
 

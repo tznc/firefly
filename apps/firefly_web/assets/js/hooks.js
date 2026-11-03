@@ -385,6 +385,95 @@ const MentionAutocomplete = {
   },
 }
 
+// The chat composer (see FireflyWeb.ChatComponents): the editor's
+// autocomplete, plus Enter to send (Shift+Enter for a new line; Enter
+// still picks a suggestion while the menu is open), a "typing" event at
+// most every 2 seconds while typing (`data-thread` says where), and
+// clearing once the server says the message went ("chat_sent"): LiveView
+// leaves a focused textarea's value alone.
+const ChatComposer = {
+  ...MentionAutocomplete,
+  mounted() {
+    MentionAutocomplete.mounted.call(this)
+    this.lastTyping = 0
+    this.el.addEventListener("keydown", e => {
+      if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.defaultPrevented) { return }
+      e.preventDefault()
+      if (this.el.value.trim() !== "") { this.el.form.requestSubmit() }
+    })
+    this.el.addEventListener("input", () => {
+      const now = Date.now()
+      if (now - this.lastTyping > 2000 && this.el.value.trim() !== "") {
+        this.lastTyping = now
+        this.pushEvent("typing", {thread: this.el.dataset.thread || null})
+      }
+    })
+    this.handleEvent("chat_sent", ({form}) => {
+      if (this.el.form && this.el.form.id === form) { this.el.value = ""; this.lastTyping = 0 }
+    })
+  },
+}
+
+// The chat's message list: stays at the bottom as messages arrive (unless
+// scrolled up), keeps its place when older messages are added above, asks
+// for older ones ("load_older") near the top while `data-has-more`, and
+// on opening a channel ("chat_opened") shows `focus` (the new-messages
+// divider or a message linked to) or the bottom.
+const ChatScroll = {
+  mounted() {
+    this.atBottom = true
+    this.lastHeight = this.el.scrollHeight
+    this.el.addEventListener("scroll", () => {
+      this.atBottom = this.el.scrollHeight - this.el.scrollTop - this.el.clientHeight < 80
+      if (this.el.scrollTop < 60 && this.el.dataset.hasMore === "true" && !this.loading) {
+        this.loading = true
+        this.pushEvent("load_older", {}, () => { this.loading = false })
+      }
+    })
+    this.observer = new MutationObserver(() => {
+      const added = this.el.scrollHeight - this.lastHeight
+      if (this.atBottom) { this.el.scrollTop = this.el.scrollHeight }
+      else if (this.el.scrollTop < 60 && added > 0) { this.el.scrollTop += added }
+      this.lastHeight = this.el.scrollHeight
+    })
+    this.observer.observe(this.el, {childList: true, subtree: true})
+    this.handleEvent("chat_opened", ({focus}) => requestAnimationFrame(() => this.show(focus)))
+    this.show(this.el.dataset.focus)
+  },
+  destroyed() { this.observer.disconnect() },
+  show(focus) {
+    const target = focus && document.getElementById(focus)
+    if (target) {
+      target.scrollIntoView({block: "center"})
+      this.atBottom = false
+    } else {
+      this.el.scrollTop = this.el.scrollHeight
+      this.atBottom = true
+    }
+    this.lastHeight = this.el.scrollHeight
+  },
+}
+
+// The chat's emoji picker for reactions: one for the page, opened by a
+// message's "More reactions" button (a "chat:react" event with the
+// message's id); picking reacts ("react").
+const ReactionPicker = {
+  ...EmojiPicker,
+  mounted() {
+    EmojiPicker.mounted.call(this)
+    // Opened after the click that asked for it, which would close it.
+    this.el.addEventListener("chat:react", e => {
+      this.messageId = e.detail.id
+      setTimeout(() => this.open(), 0)
+    })
+  },
+  pick(emoji) {
+    rememberEmoji(emoji)
+    this.close()
+    if (this.messageId) { this.pushEvent("react", {id: String(this.messageId), emoji: emojiText(emoji)}) }
+  },
+}
+
 // The post editor's attachments: files pasted into it (e.g. a screenshot)
 // are uploaded like picked or dropped ones, to the LiveView upload named
 // by `data-upload`. While files are dragged over it, it's highlighted
@@ -629,4 +718,4 @@ const PushNotifications = {
   },
 }
 
-export default {PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}
+export default {ChatComposer, ChatScroll, ReactionPicker, PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

@@ -21,6 +21,11 @@ defmodule FireflyWeb.Layouts do
   attr :current_path, :string, default: nil, doc: "used to highlight the active link"
   attr :review_count, :integer, default: 0, doc: "items in the staff review queue (admins)"
   attr :read_only, :map, default: nil, doc: "the site's read-only state (see `Firefly.Backups`)"
+  attr :chat, :boolean, default: false, doc: "the user may chat (see `Firefly.Chat`)"
+
+  attr :full, :boolean,
+    default: false,
+    doc: "the page fills the space next to the navigation (no margins, as chat)"
 
   attr :update_available, :boolean,
     default: false,
@@ -78,8 +83,8 @@ defmodule FireflyWeb.Layouts do
           </div>
         </header>
 
-        <main class="flex-1 px-4 py-8 sm:px-6 lg:px-10">
-          <div class="mx-auto max-w-4xl space-y-6">
+        <main class={["flex-1", !@full && "px-4 py-8 sm:px-6 lg:px-10", @full && "min-h-0"]}>
+          <div class={[!@full && "mx-auto max-w-4xl space-y-6", @full && "flex h-full flex-col"]}>
             <div :if={@read_only} id="read-only-banner" role="status" class="alert alert-warning">
               <.icon name="hero-lock-closed" class="size-5" />
               <span>
@@ -130,6 +135,9 @@ defmodule FireflyWeb.Layouts do
               >
                 {@message_count}
               </span>
+            </.nav_item>
+            <.nav_item :if={@chat} path={~p"/chat"} current_path={@current_path} icon="hero-chat-bubble-oval-left-ellipsis">
+              Chat
             </.nav_item>
           <% end %>
           <li class="menu-title">Forum</li>
@@ -349,7 +357,8 @@ defmodule FireflyWeb.Layouts do
       :review_count,
       :current_path,
       :read_only,
-      :update_available
+      :update_available,
+      :chat
     ])
   end
 

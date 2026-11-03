@@ -36,6 +36,9 @@ defmodule Firefly.URLs do
 
   def conversation_url(conversation), do: url(["messages", conversation.id])
 
+  @doc "A chat channel (a direct message's slug is `dm`)."
+  def chat_channel_url(channel), do: url(["chat", "c", channel.slug || "dm", channel.id])
+
   def thread_url(thread), do: url(["categories", thread.category_id, "threads", thread.id])
 
   defp url(segments) do

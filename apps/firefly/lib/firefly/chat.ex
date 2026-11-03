@@ -21,7 +21,9 @@ defmodule Firefly.Chat do
   edited (keeping revisions), soft-deleted and restored by their author or
   staff, quote the message they reply to (`in_reply_to_id`) or go into a
   thread (`thread_of`), whose replies stay out of the channel's stream and
-  have their own read position.
+  have their own read position. Members react with emoji, pin messages
+  (staff in category channels, anyone in a direct message) and search the
+  messages they may read (`search/3`).
 
   Sending goes through the posting gate (`Firefly.Moderation.Posting.check/2`
   with `:chat`: read-only mode, penalties, confirmation and the `:chat`
@@ -34,8 +36,8 @@ defmodule Firefly.Chat do
 
     * `"chat:channel:<id>"` (`subscribe/1`) - `{:message_created, message}`,
       `{:message_updated, message}` (edited, deleted, restored),
-      `{:channel_updated, channel}` and `{:typing, %{user_id, username,
-      thread_id}}`
+      `{:channel_updated, channel}` and `{:typing, %{channel_id, user_id,
+      username, thread_id}}`
     * `"chat:user:<id>"` (`subscribe_user/1`) - `{:chat_read, channel_id}`
       when the user read a channel elsewhere, and `:channels_changed` when
       their list changed (followed, left, a new direct message)
@@ -49,12 +51,12 @@ defmodule Firefly.Chat do
   use Boundary,
     top_level?: true,
     check: [out: false],
-    exports: [Channel, Message, MessageRevision, Membership, Thread, ThreadMembership]
+    exports: [Channel, Message, MessageRevision, Membership, Reaction, Thread, ThreadMembership]
 
   import Ecto.Query
   import Ecto.Changeset, only: [change: 2, put_change: 3]
 
-  alias Firefly.{Accounts, Repo, SiteSettings}
+  alias Firefly.{Accounts, RateLimit, Repo, SiteSettings}
   alias Firefly.Accounts.{Ignores, User}
 
   alias Firefly.Chat.{
@@ -64,12 +66,14 @@ defmodule Firefly.Chat do
     Message,
     MessageRevision,
     Policy,
+    Reaction,
     Thread,
     ThreadMembership
   }
 
   alias Firefly.Discussion.Mentions
   alias Firefly.Moderation.{Posting, StaffLog, WatchedWords}
+  alias Firefly.Rendering.Emoji
 
   @page 50
 
@@ -442,10 +446,19 @@ defmodule Firefly.Chat do
   @doc """
   A page of the channel's stream (thread replies left out), oldest first,
   as `viewer` sees it (messages from users they ignore left out): the
-  latest `@page`, or those `before:` or `after:` a message id (`limit:`
-  to change the size).
+  latest `#{@page}`, or those `before:` or `after:` a message id, or half
+  a page each side of the one `around:` (`limit:` to change the size).
   """
-  def messages(%Channel{id: id}, %User{} = viewer, opts \\ []) do
+  def messages(channel, viewer, opts \\ [])
+
+  def messages(%Channel{} = channel, %User{} = viewer, around: id) do
+    half = div(@page, 2)
+
+    messages(channel, viewer, before: id + 1, limit: half) ++
+      messages(channel, viewer, after: id, limit: half)
+  end
+
+  def messages(%Channel{id: id}, %User{} = viewer, opts) do
     limit = opts[:limit] || @page
 
     query =
@@ -490,7 +503,9 @@ defmodule Firefly.Chat do
   def display(%Message{} = message), do: hd(for_display([message]))
 
   defp for_display(messages) do
-    messages = Repo.preload(messages, [:user, :deleted_by, :thread, in_reply_to: :user])
+    messages =
+      Repo.preload(messages, [:user, :deleted_by, :thread, reactions: :user, in_reply_to: :user])
+
     counts = reply_counts(for m <- messages, m.thread_id, do: m.thread_id)
 
     Enum.map(messages, fn message ->
@@ -511,6 +526,34 @@ defmodule Firefly.Chat do
     |> select([m], {m.thread_id, count(m.id)})
     |> Repo.all()
     |> Map.new()
+  end
+
+  @doc """
+  The channel's threads, most recently replied to first, each with its
+  original message (ready to show) and `unread` replies for `viewer`
+  (when they take part).
+  """
+  def threads(%Channel{id: id} = channel, %User{} = viewer) do
+    threads =
+      Thread
+      |> where([t], t.channel_id == ^id and not is_nil(t.last_reply_at))
+      |> order_by(desc: :last_reply_at)
+      |> limit(50)
+      |> preload(:original_message)
+      |> Repo.all()
+
+    originals =
+      threads |> Enum.map(& &1.original_message) |> for_display() |> Map.new(&{&1.id, &1})
+
+    unread = thread_unread_counts(channel, viewer)
+
+    for thread <- threads do
+      %{
+        thread: thread,
+        original: originals[thread.original_message_id],
+        unread: Map.get(unread, thread.id, 0)
+      }
+    end
   end
 
   @doc "The message with `id`, with its channel, or nil."
@@ -786,16 +829,153 @@ defmodule Firefly.Chat do
     end
   end
 
-  # What members do to their own messages isn't staff action.
-  defp log(%User{id: id}, _action, %Message{user_id: id}), do: nil
+  # What members do to their own messages isn't staff action (pinning is,
+  # whoever wrote it).
+  defp log(actor, action, message, whose \\ :others)
+  defp log(%User{id: id}, _action, %Message{user_id: id}, :others), do: nil
 
-  defp log(actor, action, message) do
+  defp log(actor, action, message, _whose) do
     StaffLog.record(actor, action, {"chat_message", message.id}, %{
       channel: message.channel.name || "direct message",
       author: message.user && message.user.username,
       excerpt: String.slice(message.body, 0, 200)
     })
   end
+
+  ## Reactions and pins
+
+  @doc """
+  Adds `user`'s `emoji` reaction to the message, or takes it back if
+  they'd reacted so. Counts against the `:like` rate limit.
+  """
+  def toggle_reaction(%Message{} = message, %User{} = user, emoji) do
+    message = Repo.preload(Repo.get!(Message, message.id), :channel)
+
+    with :ok <- authorized(user, :react, message),
+         :ok <- Posting.check(user, :like),
+         :ok <- valid_emoji(emoji),
+         :ok <- RateLimit.check_like(user) do
+      case Repo.get_by(Reaction, message_id: message.id, user_id: user.id, emoji: emoji) do
+        nil ->
+          Repo.insert!(%Reaction{message_id: message.id, user_id: user.id, emoji: emoji},
+            on_conflict: :nothing
+          )
+
+        reaction ->
+          Repo.delete!(reaction)
+      end
+
+      updated(message)
+    end
+  end
+
+  # A custom emoji by name, or a short run of characters that aren't
+  # letters, digits, spaces or markup (a standard emoji).
+  defp valid_emoji(":" <> rest) do
+    name = String.trim_trailing(rest, ":")
+    if Map.has_key?(Emoji.custom(), name), do: :ok, else: {:error, :invalid_emoji}
+  end
+
+  defp valid_emoji(emoji) when is_binary(emoji) do
+    if String.length(emoji) in 1..2 and not String.match?(emoji, ~r/[\s<>&"'\w:]/u),
+      do: :ok,
+      else: {:error, :invalid_emoji}
+  end
+
+  defp valid_emoji(_emoji), do: {:error, :invalid_emoji}
+
+  @doc """
+  The message's reactions grouped by emoji, in the order first used:
+  `[%{emoji, users}]` (usernames). Needs `reactions` loaded (see
+  `display/1`).
+  """
+  def reaction_groups(%Message{reactions: reactions}) when is_list(reactions) do
+    reactions
+    |> Enum.group_by(& &1.emoji)
+    |> Enum.map(fn {emoji, list} ->
+      %{emoji: emoji, users: Enum.map(list, & &1.user.username), first: hd(list).id}
+    end)
+    |> Enum.sort_by(& &1.first)
+  end
+
+  @doc "Pins the message to its channel (see `:pin_message`; staff are logged)."
+  def pin_message(%Message{} = message, %User{} = user),
+    do: set_pin(message, user, DateTime.utc_now(:second), "chat_message.pin")
+
+  @doc "Unpins the message."
+  def unpin_message(%Message{} = message, %User{} = user),
+    do: set_pin(message, user, nil, "chat_message.unpin")
+
+  defp set_pin(message, user, at, action) do
+    message = Repo.preload(Repo.get!(Message, message.id), [:channel, :user])
+
+    with :ok <- authorized(user, :pin_message, message),
+         :ok <- Posting.check(user, :like) do
+      {:ok, _} = Repo.transact(fn -> save_pin(message, user, at, action) end)
+      updated(message)
+    end
+  end
+
+  # Staff pinning in a category channel is logged.
+  defp save_pin(message, user, at, action) do
+    message |> change(pinned_at: at, pinned_by_id: at && user.id) |> Repo.update!()
+    if message.channel.kind == "category", do: log(user, action, message, :always)
+    {:ok, message}
+  end
+
+  defp updated(message) do
+    updated = display(Repo.get!(Message, message.id))
+    broadcast(updated.channel_id, {:message_updated, updated})
+    {:ok, updated}
+  end
+
+  @doc "The channel's pinned messages, most recently pinned first."
+  def pinned_messages(%Channel{id: id}, %User{} = viewer) do
+    Message
+    |> where([m], m.channel_id == ^id and not is_nil(m.pinned_at) and is_nil(m.deleted_at))
+    |> without_ignored(viewer)
+    |> order_by(desc: :pinned_at, desc: :id)
+    |> Repo.all()
+    |> for_display()
+  end
+
+  ## Search
+
+  @doc """
+  The messages matching `terms` (web search syntax: words, `"phrases"`,
+  `-excluded`) that `user` may read, newest first, at most 50, with their
+  channel. `channel:` narrows it to one channel.
+  """
+  def search(%User{} = user, terms, opts \\ []) do
+    terms = String.trim(terms || "")
+
+    if terms == "" do
+      []
+    else
+      viewable = Channel |> Policy.viewable_category_channels(user) |> select([c], c.id)
+      direct = from(m in Membership, where: m.user_id == ^user.id, select: m.channel_id)
+
+      Message
+      |> join(:inner, [m], c in Channel, on: c.id == m.channel_id)
+      |> where(
+        [m, c],
+        (c.kind == "category" and c.id in subquery(viewable)) or
+          (c.kind == "direct" and c.id in subquery(direct))
+      )
+      |> where([m], is_nil(m.deleted_at))
+      |> where([m], fragment("? @@ websearch_to_tsquery('english', ?)", m.search_vector, ^terms))
+      |> in_channel_filter(opts[:channel])
+      |> without_ignored(user)
+      |> order_by(desc: :id)
+      |> limit(50)
+      |> Repo.all()
+      |> for_display()
+      |> Repo.preload(:channel)
+    end
+  end
+
+  defp in_channel_filter(query, nil), do: query
+  defp in_channel_filter(query, %Channel{id: id}), do: where(query, [m], m.channel_id == ^id)
 
   ## Read positions
 
@@ -889,7 +1069,8 @@ defmodule Firefly.Chat do
       Firefly.PubSub,
       self(),
       topic(id),
-      {:typing, %{user_id: user.id, username: user.username, thread_id: thread_id}}
+      {:typing,
+       %{channel_id: id, user_id: user.id, username: user.username, thread_id: thread_id}}
     )
   end
 

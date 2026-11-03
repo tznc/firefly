@@ -4,14 +4,16 @@ defmodule Firefly.Chat.Message do
   (a thread's original message has it too); `in_reply_to_id` quotes the
   message it answers. `edited_at` is set by edits (the earlier bodies are
   `Firefly.Chat.MessageRevision`s); `deleted_at` and `deleted_by_id` by a
-  soft delete, which the author or staff can undo.
+  soft delete, which the author or staff can undo; `pinned_at` and
+  `pinned_by_id` pin it to its channel. Its emoji reactions are
+  `Firefly.Chat.Reaction`s.
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
   alias Firefly.Accounts.User
-  alias Firefly.Chat.{Channel, Thread}
+  alias Firefly.Chat.{Channel, Reaction, Thread}
 
   @max_length 6000
 
@@ -19,11 +21,14 @@ defmodule Firefly.Chat.Message do
     field(:body, :string)
     field(:edited_at, :utc_datetime)
     field(:deleted_at, :utc_datetime)
+    field(:pinned_at, :utc_datetime)
     belongs_to(:channel, Channel)
     belongs_to(:user, User)
     belongs_to(:thread, Thread)
     belongs_to(:in_reply_to, __MODULE__)
     belongs_to(:deleted_by, User)
+    belongs_to(:pinned_by, User)
+    has_many(:reactions, Reaction, preload_order: [asc: :id])
 
     # How many replies its thread has (for a thread's original message),
     # when loaded for display.

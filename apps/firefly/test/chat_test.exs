@@ -330,5 +330,82 @@ defmodule Firefly.ChatTest do
       assert Uploads.readable?(upload, ctx.bob)
       refute Uploads.readable?(upload, nil)
     end
+
+    test "reactions toggle per user and emoji", ctx do
+      message = send!(ctx.general, ctx.alice, "Ship it")
+      {:ok, _} = Chat.toggle_reaction(message, ctx.bob, "👍")
+      {:ok, _} = Chat.toggle_reaction(message, ctx.alice, "👍")
+      {:ok, reacted} = Chat.toggle_reaction(message, ctx.bob, "🎉")
+
+      assert [%{emoji: "👍", users: ["bob", "alice"]}, %{emoji: "🎉", users: ["bob"]}] =
+               Chat.reaction_groups(reacted)
+
+      {:ok, toggled} = Chat.toggle_reaction(message, ctx.bob, "👍")
+      assert [%{emoji: "👍", users: ["alice"]}, _] = Chat.reaction_groups(toggled)
+
+      assert {:error, :invalid_emoji} = Chat.toggle_reaction(message, ctx.bob, "<b>")
+      assert {:error, :invalid_emoji} = Chat.toggle_reaction(message, ctx.bob, ":nope:")
+    end
+
+    test "pins: staff in category channels, members in direct messages", ctx do
+      message = send!(ctx.general, ctx.alice, "Rules: be nice")
+      assert {:error, :unauthorized} = Chat.pin_message(message, ctx.alice)
+      {:ok, pinned} = Chat.pin_message(message, ctx.admin)
+      assert pinned.pinned_at
+      assert [%{id: id}] = Chat.pinned_messages(ctx.general, ctx.bob)
+      assert id == message.id
+      {:ok, _} = Chat.unpin_message(message, ctx.admin)
+      assert Chat.pinned_messages(ctx.general, ctx.bob) == []
+
+      {:ok, dm} = Chat.direct_channel(ctx.alice, ["bob"])
+      note = send!(dm, ctx.alice, "the address")
+      assert {:ok, _} = Chat.pin_message(note, ctx.bob)
+
+      assert ~w(chat_message.pin chat_message.unpin) ==
+               Repo.all(
+                 from(a in StaffAction,
+                   where: a.action in ["chat_message.pin", "chat_message.unpin"],
+                   order_by: a.id,
+                   select: a.action
+                 )
+               )
+    end
+
+    test "search finds what the user may read", ctx do
+      {:ok, team} = Groups.create_group(%{name: "team"}, ctx.admin)
+      {:ok, secret} = Discussion.create_category(%{title: "Secret", role_ids: [team.id]})
+
+      {:ok, hidden} =
+        Chat.create_channel(%{"name" => "Hidden", "category_id" => secret.id}, ctx.admin)
+
+      send!(ctx.general, ctx.alice, "launching rockets tomorrow")
+      send!(hidden, ctx.admin, "rockets are secret")
+      {:ok, dm} = Chat.direct_channel(ctx.admin, ["alice"])
+      send!(dm, ctx.admin, "private rockets")
+      gone = send!(ctx.general, ctx.alice, "deleted rockets")
+      {:ok, _} = Chat.delete_message(gone, ctx.alice)
+
+      assert ["launching rockets tomorrow"] = Enum.map(Chat.search(ctx.bob, "rocket"), & &1.body)
+
+      assert ["private rockets", "launching rockets tomorrow"] =
+               Enum.map(Chat.search(ctx.alice, "rockets"), & &1.body)
+
+      assert [] = Chat.search(ctx.alice, "rockets", channel: hidden)
+      assert Chat.search(ctx.alice, "  ") == []
+    end
+
+    test "threads list and paging around a message", ctx do
+      ids = for n <- 1..60, do: send!(ctx.general, ctx.alice, "m#{n}").id
+      around = Chat.messages(ctx.general, ctx.bob, around: Enum.at(ids, 10))
+      assert Enum.at(ids, 10) in Enum.map(around, & &1.id)
+      assert length(around) == 36
+
+      send!(ctx.general, ctx.bob, "reply", %{"thread_of" => hd(ids)})
+
+      assert [%{original: %{id: original_id, reply_count: 1}, unread: 1}] =
+               Chat.threads(ctx.general, ctx.alice)
+
+      assert original_id == hd(ids)
+    end
   end
 end
