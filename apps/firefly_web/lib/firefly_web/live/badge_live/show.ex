@@ -18,6 +18,12 @@ defmodule FireflyWeb.BadgeLive.Show do
     {:ok,
      socket
      |> assign(:page_title, "#{badge.name} - Badges")
+     |> FireflyWeb.SEO.assign(%{
+       title: badge.name,
+       description: badge.description,
+       canonical: Firefly.URLs.badge_url(badge),
+       noindex: not Firefly.SEO.index_user_pages?()
+     })
      |> assign(:badge, badge)
      |> assign(:staff?, staff?)
      |> assign(:grant_form, to_form(%{}, as: :grant))}

@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href={~p"/images/apple-touch-icon.png"} />
     <link rel="manifest" href={~p"/manifest.json"} />
     <% site = Firefly.SiteSettings.all() %>
-    <meta :if={site["description"] != ""} name="description" content={site["description"]} />
+    <FireflyWeb.SEO.tags seo={assigns[:seo]} />
     <.live_title default={site["title"]} suffix={" - " <> site["title"]} phx-no-format>{assigns[:page_title]}</.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
@@ -53,6 +53,11 @@
     </script>
   </head>
   <body class="bg-base-200 min-h-screen">
+    <noscript>
+      <p class="bg-warning text-warning-content p-2 text-center text-sm">
+        Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it.
+      </p>
+    </noscript>
     {@inner_content}
   </body>
 </html>

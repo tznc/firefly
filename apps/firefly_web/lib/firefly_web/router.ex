@@ -24,6 +24,7 @@ defmodule FireflyWeb.Router do
     plug(FireflyWeb.Plugs.CurrentUser)
     plug(FireflyWeb.Plugs.AkismetClient)
     plug(FireflyWeb.Plugs.Analytics, :browser)
+    plug(FireflyWeb.Plugs.CrawlerView)
   end
 
   pipeline :admin do
@@ -286,6 +287,19 @@ defmodule FireflyWeb.Router do
   # SAML service provider metadata, for setting up the identity provider
   # (so before SAML logins are on, too).
   get("/saml/metadata", FireflyWeb.SAMLController, :metadata)
+
+  # Crawlers: robots.txt and the sitemaps (see Firefly.SEO). No session.
+  pipeline :crawlers do
+    plug(:accepts, ["xml", "txt", "html"])
+  end
+
+  scope "/", FireflyWeb do
+    pipe_through(:crawlers)
+
+    get("/robots.txt", SitemapController, :robots)
+    get("/sitemap.xml", SitemapController, :index)
+    get("/sitemap/:name", SitemapController, :show)
+  end
 
   # The API's reference, rendered from its OpenAPI document.
   get("/api/v1/docs", FireflyWeb.Api.V1.DocsController, :show)

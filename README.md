@@ -169,6 +169,25 @@ Lists are paginated with `limit` (up to 100) and `cursor` (from
 `meta.next_cursor`); errors are `application/problem+json` (RFC 9457). The
 MCP server at `/mcp` uses the same keys, with the `read` scope.
 
+### Search engines
+
+`robots.txt` is generated (crawl rules, the staff, account and private
+paths, the admin's extra rules and a link to the sitemap), and
+`/sitemap.xml` indexes paginated sitemaps of public topics, categories and
+tags with their last change. Every page carries a canonical URL,
+OpenGraph and Twitter card tags and, where it applies, JSON-LD
+(`DiscussionForumPosting` with its replies, `BreadcrumbList`, and
+`WebSite` with a `SearchAction` plus `Organization` on the home page).
+Private categories, archived topics, search results and members' personal
+lists say `noindex`; so do profiles, the directory, groups and badges
+unless "Index member pages" is on, and nothing is indexed at all with
+"Allow indexing" off (both under Search engines in the site settings).
+
+Crawlers (by `User-Agent`) get topics as plain server-rendered pages that
+need no JavaScript, long ones split into `?page=` pages linked with
+`rel="prev"`/`rel="next"`; readers with a browser get the LiveView as
+before, whose first render is server-rendered too.
+
 ### Admin
 
 `/admin` is a [Kaffy](https://github.com/aesmail/kaffy) admin UI, available to

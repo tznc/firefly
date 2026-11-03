@@ -22,6 +22,11 @@ defmodule FireflyWeb.UserLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Users")
+     |> FireflyWeb.SEO.assign(%{
+       title: "Users",
+       canonical: ~p"/users",
+       noindex: not Firefly.SEO.index_user_pages?()
+     })
      |> assign(:refreshed_at, Directory.refreshed_at())}
   end
 

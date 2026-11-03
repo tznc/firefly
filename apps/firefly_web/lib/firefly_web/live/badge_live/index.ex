@@ -14,6 +14,11 @@ defmodule FireflyWeb.BadgeLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Badges")
+     |> FireflyWeb.SEO.assign(%{
+       title: "Badges",
+       canonical: ~p"/badges",
+       noindex: not Firefly.SEO.index_user_pages?()
+     })
      |> assign(:groups, Badges.listing())
      |> assign(:held, Badges.held_ids(socket.assigns.current_user))}
   end

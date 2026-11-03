@@ -32,6 +32,14 @@ defmodule FireflyWeb.UserLive.Show do
      socket
      |> assign(:page_title, "#{user.username} - Users")
      |> assign(:user, user)
+     |> FireflyWeb.SEO.assign(%{
+       title: user.name || user.username,
+       description: Profiles.bio_excerpt(user),
+       canonical: Firefly.URLs.user_url(user),
+       image: User.avatar_url(user),
+       # Profiles are public but personal: indexed only if the site says so.
+       noindex: not Firefly.SEO.index_user_pages?() or user.hide_profile
+     })
      |> assign(:staff?, staff?(socket.assigns.current_user))
      |> assign(:penalty_form, penalty_form())
      |> assign_trust_level()

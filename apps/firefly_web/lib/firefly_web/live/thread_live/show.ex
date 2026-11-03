@@ -591,6 +591,9 @@ defmodule FireflyWeb.ThreadLive.Show do
       :page_title,
       "#{WatchedWords.censor(thread.title)} - #{socket.assigns.category.title}"
     )
+    |> FireflyWeb.SEO.assign(
+      FireflyWeb.SEO.thread(thread, socket.assigns.category, [first_post | replies])
+    )
     |> assign(:thread, thread)
     |> assign(
       :can_summarize?,

@@ -4,7 +4,9 @@ defmodule FireflyWeb.ThreadLive.ListView do
   watching, participating). Each page supplies a title, a path and a `load/1`
   function; the list reloads whenever a thread is created, updated, deleted or
   gets a new post. Pass `tabs: true` to show the Latest/New/Unread/Top tabs,
-  and `intro: true` to show the site's description (the home page). Signed-in
+  and `intro: true` to show the site's description and tell search engines
+  about the site (the home page; the personal lists are `noindex`, being
+  different for every reader). Signed-in
   users can select threads and act on them in bulk (see
   `FireflyWeb.BulkThreads`).
   """
@@ -27,6 +29,7 @@ defmodule FireflyWeb.ThreadLive.ListView do
          |> assign(:page_title, @list_opts[:title])
          |> assign(:list_opts, @list_opts)
          |> assign(:threads, load(socket.assigns.current_user))
+         |> FireflyWeb.SEO.assign(FireflyWeb.ThreadLive.ListView.seo(@list_opts))
          |> FireflyWeb.BulkThreads.init()}
       end
 
@@ -45,6 +48,15 @@ defmodule FireflyWeb.ThreadLive.ListView do
 
       @impl true
       def render(assigns), do: FireflyWeb.ThreadLive.ListView.list_page(assigns)
+    end
+  end
+
+  @doc "The page's SEO data: the home page describes the site, the rest are noindex."
+  def seo(opts) do
+    if opts[:intro] do
+      %{canonical: opts[:path], json_ld: FireflyWeb.SEO.site_json_ld()}
+    else
+      %{title: opts[:title], canonical: opts[:path], noindex: true}
     end
   end
 

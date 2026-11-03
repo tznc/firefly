@@ -27,7 +27,16 @@ defmodule FireflyWeb.GroupLive.Show do
     group = Groups.get_by_name(name)
 
     if group && Groups.visible?(group, socket.assigns.current_user) do
-      {:ok, socket |> assign(:page_title, group.name) |> load(group)}
+      {:ok,
+       socket
+       |> assign(:page_title, group.name)
+       |> FireflyWeb.SEO.assign(%{
+         title: group.name,
+         description: group.description,
+         canonical: Firefly.URLs.group_url(group),
+         noindex: not Firefly.SEO.index_user_pages?()
+       })
+       |> load(group)}
     else
       {:ok, socket |> put_flash(:error, "No such group.") |> push_navigate(to: ~p"/groups")}
     end
