@@ -1157,7 +1157,11 @@ defmodule Firefly.Discussion do
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_thread(%Thread{} = thread, attrs, editor \\ nil) do
+  def update_thread(%Thread{} = thread, attrs, editor \\ nil),
+    do: announced(update_thread_unannounced(thread, attrs, editor))
+
+  @doc "`update_thread/3` without telling open pages yet (see `close_thread_unannounced/4`)."
+  def update_thread_unannounced(%Thread{} = thread, attrs, editor) do
     thread = Repo.preload(thread, :tags)
 
     changeset =
@@ -1173,7 +1177,8 @@ defmodule Firefly.Discussion do
         if staff?, do: log_thread_edit(editor, thread, updated)
       end)
 
-    tap_ok(result, &broadcast_thread(:thread_updated, &1))
+    with {:ok, updated} <- result,
+         do: {:ok, updated, fn -> broadcast_thread(:thread_updated, updated) end}
   end
 
   defp log_thread_edit(editor, before, updated) do
@@ -1367,9 +1372,17 @@ defmodule Firefly.Discussion do
 
   @doc "Pins or unpins a thread (pinned threads list first in their category)."
   def pin_thread(%Thread{} = thread, pinned?, actor),
+    do: announced(pin_thread_unannounced(thread, pinned?, actor))
+
+  @doc "`pin_thread/3` without telling open pages yet (see `close_thread_unannounced/4`)."
+  def pin_thread_unannounced(%Thread{} = thread, pinned?, actor),
     do:
-      moderate(thread, actor, if(pinned?, do: "thread.pin", else: "thread.unpin"),
-        pinned_at: stamp(pinned?)
+      moderate_unannounced(
+        thread,
+        actor,
+        if(pinned?, do: "thread.pin", else: "thread.unpin"),
+        [pinned_at: stamp(pinned?)],
+        %{}
       )
 
   @doc "Closes or reopens a thread to new replies."
@@ -1397,9 +1410,17 @@ defmodule Firefly.Discussion do
 
   @doc "Archives (closes and hides from Latest/New/Unread/Top) or unarchives a thread."
   def archive_thread(%Thread{} = thread, archived?, actor),
+    do: announced(archive_thread_unannounced(thread, archived?, actor))
+
+  @doc "`archive_thread/3` without telling open pages yet (see `close_thread_unannounced/4`)."
+  def archive_thread_unannounced(%Thread{} = thread, archived?, actor),
     do:
-      moderate(thread, actor, if(archived?, do: "thread.archive", else: "thread.unarchive"),
-        archived_at: stamp(archived?)
+      moderate_unannounced(
+        thread,
+        actor,
+        if(archived?, do: "thread.archive", else: "thread.unarchive"),
+        [archived_at: stamp(archived?)],
+        %{}
       )
 
   @doc """
@@ -1407,10 +1428,18 @@ defmodule Firefly.Discussion do
   there). The log notes when the move put the thread in a restricted
   category (one only some groups can read).
   """
-  def move_thread(%Thread{category_id: id} = thread, %Category{id: id}, _actor),
-    do: {:ok, thread}
+  def move_thread(%Thread{} = thread, %Category{} = category, actor),
+    do: announced(move_thread_unannounced(thread, category, actor))
 
-  def move_thread(%Thread{category_id: old_category_id} = thread, %Category{} = category, actor) do
+  @doc "`move_thread/3` without telling open pages yet (see `close_thread_unannounced/4`)."
+  def move_thread_unannounced(%Thread{category_id: id} = thread, %Category{id: id}, _actor),
+    do: {:ok, thread, fn -> :ok end}
+
+  def move_thread_unannounced(
+        %Thread{category_id: old_category_id} = thread,
+        %Category{} = category,
+        actor
+      ) do
     details = %{
       from_category: Repo.get(Category, old_category_id).title,
       to_category: category.title
@@ -1421,22 +1450,25 @@ defmodule Firefly.Discussion do
         do: Map.put(details, :restricted, true),
         else: details
 
-    with {:ok, moved} <-
-           moderate(thread, actor, "thread.move", [category_id: category.id], details) do
-      broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
-      {:ok, moved}
+    with {:ok, moved, announce} <-
+           moderate_unannounced(thread, actor, "thread.move", [category_id: category.id], details) do
+      {:ok, moved,
+       fn ->
+         announce.()
+         broadcast("forums:category:#{old_category_id}", {:thread_deleted, moved})
+       end}
     end
   end
 
   defp stamp(true), do: DateTime.utc_now(:second)
   defp stamp(false), do: nil
 
-  defp moderate(thread, actor, action, changes, details \\ %{}) do
-    with {:ok, updated, announce} <- moderate_unannounced(thread, actor, action, changes, details) do
-      announce.()
-      {:ok, updated}
-    end
+  defp announced({:ok, updated, announce}) do
+    announce.()
+    {:ok, updated}
   end
+
+  defp announced(error), do: error
 
   defp moderate_unannounced(thread, actor, action, changes, details) do
     result =

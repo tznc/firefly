@@ -1,7 +1,8 @@
 defmodule FireflyWeb.StaffLive.Review do
   @moduledoc """
   The staff review queue (admins only; see `Firefly.Moderation.Review`): flagged
-  posts and posts awaiting approval. Updates live as flags come in and as
+  posts and posts awaiting approval; queued posts can be approved or
+  rejected together. Updates live as flags come in and as
   other staff decide.
   """
   use FireflyWeb, :live_view
@@ -16,7 +17,7 @@ defmodule FireflyWeb.StaffLive.Review do
   @impl true
   def mount(_params, _session, socket) do
     if can?(socket.assigns.current_user, :review) do
-      {:ok, socket |> assign(:page_title, "Review") |> load()}
+      {:ok, socket |> assign(page_title: "Review", selected: MapSet.new()) |> load()}
     else
       {:ok,
        socket
@@ -28,11 +29,58 @@ defmodule FireflyWeb.StaffLive.Review do
   @doc false
   def review_changed(socket), do: load(socket)
 
+  # The selection keeps only posts still in the queue.
   defp load(socket) do
-    assign(socket, flagged: Review.flagged_posts(), queued: Review.queued_posts())
+    queued = Review.queued_posts()
+    selected = MapSet.intersection(socket.assigns.selected, MapSet.new(queued, & &1.id))
+    assign(socket, flagged: Review.flagged_posts(), queued: queued, selected: selected)
   end
 
   @impl true
+  def handle_event("select", %{"post_id" => id}, socket) do
+    id = String.to_integer(id)
+    selected = socket.assigns.selected
+
+    selected =
+      if MapSet.member?(selected, id),
+        do: MapSet.delete(selected, id),
+        else: MapSet.put(selected, id)
+
+    {:noreply, assign(socket, :selected, selected)}
+  end
+
+  def handle_event("select_all", _params, socket),
+    do: {:noreply, assign(socket, :selected, MapSet.new(socket.assigns.queued, & &1.id))}
+
+  def handle_event(event, params, socket) when event in ["approve_selected", "reject_selected"] do
+    admin = socket.assigns.current_user
+    ids = MapSet.to_list(socket.assigns.selected)
+
+    result =
+      cond do
+        not can?(admin, :review) -> {:error, :unauthorized}
+        event == "approve_selected" -> Review.approve_many(ids, admin)
+        true -> Review.reject_many(ids, admin, params["reason"])
+      end
+
+    case result do
+      {:ok, count} ->
+        verb = if event == "approve_selected", do: "Approved", else: "Rejected"
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "#{verb} #{count} of #{length(ids)} selected posts.")
+         |> assign(:selected, MapSet.new())
+         |> load()}
+
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, denied_message(admin))}
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Review.message(reason))}
+    end
+  end
+
   def handle_event(event, params, socket) do
     admin = socket.assigns.current_user
 
@@ -152,8 +200,34 @@ defmodule FireflyWeb.StaffLive.Review do
 
       <section :if={@queued != []} id="queued" class="space-y-4">
         <h2 class="text-lg font-semibold">Awaiting approval</h2>
+        <div id="bulk-review" class="flex flex-wrap items-end gap-2 text-sm">
+          <button type="button" phx-click="select_all" class="btn btn-ghost btn-xs">Select all</button>
+          <%= if MapSet.size(@selected) > 0 do %>
+            <span id="selected-count" class="font-medium">{MapSet.size(@selected)} selected:</span>
+            <button phx-click="approve_selected" class="btn btn-xs btn-primary">Approve selected</button>
+            <form id="reject-selected" phx-submit="reject_selected" class="join">
+              <input
+                type="text"
+                name="reason"
+                placeholder="Why not (the authors see it)"
+                aria-label="Reason for rejecting the selected posts"
+                class="input input-xs join-item min-w-56"
+              />
+              <button class="btn btn-xs btn-error join-item">Reject selected</button>
+            </form>
+          <% end %>
+        </div>
         <article :for={post <- @queued} id={"queued-#{post.id}"} class="card border border-base-300 bg-base-100">
           <div class="card-body gap-3">
+            <label class="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                phx-click="select"
+                phx-value-post_id={post.id}
+                checked={MapSet.member?(@selected, post.id)}
+              /> Select
+            </label>
             <.item_header post={post} />
             <p class="text-xs text-base-content/60">{if post.first?, do: "New thread", else: "Reply"}</p>
             <p :if={post.queued_reason} class="alert alert-info py-2 text-sm">{post.queued_reason}</p>

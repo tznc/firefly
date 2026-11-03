@@ -220,17 +220,28 @@ defmodule FireflyWeb.ForumComponents do
 
   @doc """
   A list of threads (each decorated with `first_post`, `posts_count` and
-  `completely_read?`).
+  `completely_read?`). With `selected` (a set of thread ids), each thread
+  has a checkbox sending `bulk_select` (see `FireflyWeb.BulkThreads`).
   """
   attr :threads, :list, required: true
   attr :id, :string, default: "threads"
   attr :empty, :string, default: "No threads yet."
+  attr :selected, :any, default: nil
 
   def thread_list(assigns) do
     ~H"""
     <ol id={@id} class="list rounded-box border border-base-300 bg-base-100">
       <li :if={@threads == []} class="list-row text-base-content/60">{@empty}</li>
       <li :for={thread <- @threads} id={"thread-#{thread.id}"} class="list-row items-start">
+        <input
+          :if={@selected}
+          type="checkbox"
+          class="bulk-select checkbox checkbox-sm mt-2"
+          phx-click="bulk_select"
+          phx-value-id={thread.id}
+          checked={MapSet.member?(@selected, thread.id)}
+          aria-label={"Select #{thread.title}"}
+        />
         <.avatar :if={thread.first_post} user={thread.first_post.user} />
         <div class="list-col-grow min-w-0 space-y-1">
           <div class="flex flex-wrap items-center gap-2">
