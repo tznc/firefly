@@ -36,6 +36,7 @@ defmodule FireflyWeb.Router do
     plug(CORSPlug)
     plug(FireflyWeb.Plugs.ApiCurrentUser)
     plug(FireflyWeb.Plugs.Analytics, :api)
+    plug(FireflyWeb.Plugs.ReadOnly)
   end
 
   # Uploads are fetched by <img> tags and downloads, so any Accept; the
@@ -53,6 +54,7 @@ defmodule FireflyWeb.Router do
 
   pipeline :plugin_api do
     plug(FireflyWeb.Plugs.ApiCurrentUser)
+    plug(FireflyWeb.Plugs.ReadOnly)
   end
 
   # Plugins' assets and widget SDK: served to sandboxed frames, so no
@@ -134,6 +136,7 @@ defmodule FireflyWeb.Router do
       live("/staff/dashboard", StaffLive.Dashboard, :index)
       live("/staff/reports", StaffLive.Reports, :index)
       live("/staff/reports/:id", StaffLive.Report, :show)
+      live("/staff/backups", StaffLive.Backups, :index)
       live("/staff/log", StaffLive.Log, :index)
       live("/staff/settings", StaffLive.Settings, :index)
       live("/staff/groups", StaffLive.Groups, :index)
@@ -200,11 +203,12 @@ defmodule FireflyWeb.Router do
     post("/click", AnalyticsController, :click)
   end
 
-  # Reports as CSV, for admins.
+  # Reports as CSV and backup downloads, for admins.
   scope "/staff", FireflyWeb do
     pipe_through([:browser, :admin])
 
     get("/reports/:id/export", ReportController, :export)
+    get("/backups/download/:token", BackupController, :download)
   end
 
   scope "/email", FireflyWeb do

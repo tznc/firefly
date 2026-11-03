@@ -42,7 +42,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -80,6 +80,9 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_UPLOAD_STORAGE` | Where uploads are kept: `local` (default, a directory on disk) or `s3` |
 | `FIREFLY_UPLOAD_DIR` | The local upload directory, default `uploads` under the working directory (`/app/uploads` in the Docker image: mount a volume there) |
 | `FIREFLY_AWS_ACCESS_KEY_ID`, `FIREFLY_AWS_SECRET_ACCESS_KEY`, `FIREFLY_AWS_S3_BUCKET`, `FIREFLY_AWS_S3_REGION` | The S3 bucket for uploads, with `FIREFLY_UPLOAD_STORAGE=s3` (kept private: files are served through Firefly's access checks) |
+| `FIREFLY_BACKUP_STORAGE` | Where backups (`/staff/backups`) are kept: `local` (default) or `s3` (the uploads' bucket, under `FIREFLY_BACKUP_S3_PREFIX`, default `backups/`) |
+| `FIREFLY_BACKUP_DIR` | The local backup directory, default `backups` under the working directory (`/app/backups` in the Docker image: mount a volume there) |
+| `FIREFLY_PG_BIN_DIR` | Where `pg_dump` and `pg_restore` are, for backups; they must match the database's major version (the Docker image has PostgreSQL 18's). Default: the newest `/usr/lib/postgresql/*/bin`, else the `PATH` |
 | `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones) |
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |

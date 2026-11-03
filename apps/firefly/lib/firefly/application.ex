@@ -38,7 +38,9 @@ defmodule Firefly.Application do
       # Counts traffic in memory and writes it in batches
       Firefly.Analytics.Buffer,
       # Reports' results for the day
-      Firefly.Reports.Cache
+      Firefly.Reports.Cache,
+      # Runs backups and restores; applies read-only mode
+      Firefly.Backups.Runner
     ] ++ topic_timers() ++ plugin_queue()
   end
 

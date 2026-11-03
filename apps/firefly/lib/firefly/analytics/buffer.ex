@@ -67,7 +67,8 @@ defmodule Firefly.Analytics.Buffer do
 
   @impl true
   def handle_info(:flush, state) do
-    flush()
+    # Counts wait in memory while the site is read-only (see Firefly.Backups).
+    if not Firefly.Backups.read_only?(), do: flush()
     schedule(state.interval)
     {:noreply, state}
   end

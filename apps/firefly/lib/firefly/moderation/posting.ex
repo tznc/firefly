@@ -1,6 +1,7 @@
 defmodule Firefly.Moderation.Posting do
   @moduledoc """
-  Whether a user may post right now (web, API and email): they must not be
+  Whether a user may post right now (web, API and email): the site must
+  not be read-only (see `Firefly.Backups`), and they must not be
   silenced or suspended (see `Firefly.Moderation.Penalties`), must have a
   confirmed email address (unless the `require_email_confirmation` site
   setting is off) and be within the posting rate limit, and a reply's
@@ -19,7 +20,7 @@ defmodule Firefly.Moderation.Posting do
   """
   import Ecto.Query, only: [from: 2]
 
-  alias Firefly.{Accounts, Discussion, RateLimit, Repo, SiteSettings, TrustLevels}
+  alias Firefly.{Accounts, Backups, Discussion, RateLimit, Repo, SiteSettings, TrustLevels}
   alias Firefly.Moderation.Penalties
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
@@ -36,6 +37,7 @@ defmodule Firefly.Moderation.Posting do
     user = current(user)
 
     cond do
+      Backups.read_only?() -> {:error, :read_only}
       User.suspended?(user) -> {:error, {:suspended, user.suspended_until}}
       User.silenced?(user) -> {:error, {:silenced, user.silenced_until}}
       true -> :ok
@@ -131,6 +133,9 @@ defmodule Firefly.Moderation.Posting do
       "You've been silenced #{Penalties.ends_text(until)}: you can read, but not post, message, like or flag."
 
   def message({:suspended, until}), do: "Your account is suspended #{Penalties.ends_text(until)}."
+
+  def message(:read_only),
+    do: "The forum is read-only for maintenance right now. Try again in a little while."
 
   def message(:closed), do: "This thread is closed to new replies."
 

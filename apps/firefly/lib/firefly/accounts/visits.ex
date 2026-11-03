@@ -21,7 +21,9 @@ defmodule Firefly.Accounts.Visits do
   def seen(%User{last_seen_at: last} = user) do
     now = DateTime.utc_now(:second)
 
-    if is_nil(last) or DateTime.diff(now, last) > @fresh_seconds do
+    # Nothing is written while the site is read-only (see Firefly.Backups).
+    if (is_nil(last) or DateTime.diff(now, last) > @fresh_seconds) and
+         not Firefly.Backups.read_only?() do
       User |> where([u], u.id == ^user.id) |> Repo.update_all(set: [last_seen_at: now])
 
       if is_nil(last) or DateTime.to_date(last) != DateTime.to_date(now),

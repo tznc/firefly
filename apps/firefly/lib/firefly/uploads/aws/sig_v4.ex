@@ -1,7 +1,8 @@
 defmodule Firefly.Uploads.AWS.SigV4 do
   @moduledoc """
-  AWS Signature Version 4 for the S3 upload storage: signed requests the
-  server makes (`PUT` and `DELETE` an object) and presigned `GET` links
+  AWS Signature Version 4 for the S3 upload storage (and backups kept
+  there, see `Firefly.Backups`): signed requests the server makes (`PUT`,
+  `DELETE`, listing) and presigned `GET` links
   that expire, so a private bucket's files reach only the viewers
   `FireflyWeb.UploadController` let through.
 
@@ -16,16 +17,34 @@ defmodule Firefly.Uploads.AWS.SigV4 do
   The URL and headers of a signed request for `key`: `method` (`"PUT"` or
   `"DELETE"`) with `body` and extra `headers` (lowercase names).
   """
-  def request(method, key, body \\ "", headers \\ [], now \\ DateTime.utc_now()) do
-    {date, timestamp} = stamps(now)
-    payload_hash = hex(:crypto.hash(:sha256, body))
+  def request(method, key, body \\ "", headers \\ [], now \\ DateTime.utc_now()),
+    do:
+      signed(method, key,
+        headers: headers,
+        payload_hash: hex(:crypto.hash(:sha256, body)),
+        now: now
+      )
+
+  @doc """
+  Like `request/5`, with options: `:query` (`[{name, value}]`),
+  `:headers`, `:payload_hash` (`"UNSIGNED-PAYLOAD"` to stream a body that
+  isn't hashed; the empty body's hash by default) and `:now`.
+  """
+  def signed(method, key, opts) do
+    {date, timestamp} = stamps(opts[:now] || DateTime.utc_now())
+    payload_hash = opts[:payload_hash] || hex(:crypto.hash(:sha256, ""))
+
+    query =
+      (opts[:query] || [])
+      |> Enum.sort()
+      |> Enum.map_join("&", fn {name, value} -> "#{encode(name)}=#{encode(value)}" end)
 
     headers =
       Enum.sort([
         {"host", host()},
         {"x-amz-content-sha256", payload_hash},
         {"x-amz-date", timestamp}
-        | headers
+        | opts[:headers] || []
       ])
 
     signed_headers = Enum.map_join(headers, ";", &elem(&1, 0))
@@ -35,7 +54,7 @@ defmodule Firefly.Uploads.AWS.SigV4 do
         [
           method,
           path(key),
-          "",
+          query,
           Enum.map_join(headers, "", fn {name, value} -> "#{name}:#{String.trim(value)}\n" end),
           signed_headers,
           payload_hash
@@ -47,7 +66,8 @@ defmodule Firefly.Uploads.AWS.SigV4 do
       "#{@algorithm} Credential=#{credential(date)}, SignedHeaders=#{signed_headers}, " <>
         "Signature=#{signature(canonical, date, timestamp)}"
 
-    {"https://#{host()}#{path(key)}", [{"authorization", authorization} | headers]}
+    url = "https://#{host()}#{path(key)}" <> if(query == "", do: "", else: "?" <> query)
+    {url, [{"authorization", authorization} | headers]}
   end
 
   @doc """
