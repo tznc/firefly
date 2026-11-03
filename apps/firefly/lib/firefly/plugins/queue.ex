@@ -1,7 +1,8 @@
 defmodule Firefly.Plugins.Queue do
   @moduledoc """
   Runs plugins' background work from the database: delivers queued events
-  (see `Firefly.Plugins.Events`) every `:interval` milliseconds (1
+  (see `Firefly.Plugins.Events`) and webhooks' deliveries (see
+  `Firefly.Webhooks`) every `:interval` milliseconds (1
   second by default) and at once when one is queued on this node, and runs
   due scheduled jobs (see `Firefly.Plugins.Jobs`) every
   `:jobs_interval` (15 seconds). Both take their rows one locked transaction
@@ -60,6 +61,7 @@ defmodule Firefly.Plugins.Queue do
     # Kicks that arrived meanwhile are covered by this run.
     flush(:kick)
     safely(&Events.deliver_due/0)
+    safely(&Firefly.Webhooks.deliver_due/0)
   end
 
   defp flush(message) do

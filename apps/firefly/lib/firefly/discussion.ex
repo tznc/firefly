@@ -292,7 +292,7 @@ defmodule Firefly.Discussion do
         )
       )
 
-    tap_ok(result, &broadcast("forums:categories", {:category_created, &1}))
+    tap_ok(result, &category_changed(:category_created, &1, actor))
   end
 
   @doc """
@@ -326,7 +326,7 @@ defmodule Firefly.Discussion do
             )
       end)
 
-    tap_ok(result, &broadcast("forums:categories", {:category_updated, &1}))
+    tap_ok(result, &category_changed(:category_updated, &1, actor))
   end
 
   # Restricts the category to the roles in `attrs`' `role_ids` (blank
@@ -374,7 +374,19 @@ defmodule Firefly.Discussion do
         &StaffLog.record(actor, "category.delete", &1, %{title: &1.title})
       )
 
-    tap_ok(result, &broadcast("forums:categories", {:category_deleted, &1}))
+    tap_ok(result, &category_changed(:category_deleted, &1, actor))
+  end
+
+  # Open pages, plugins and webhooks hear of it.
+  defp category_changed(event, category, actor) do
+    broadcast("forums:categories", {event, category})
+
+    data =
+      if event == :category_deleted,
+        do: %{category_id: category.id},
+        else: %{category: Events.category_data(category)}
+
+    Events.emit(Atom.to_string(event), data, category: category, actor: actor)
   end
 
   @doc """

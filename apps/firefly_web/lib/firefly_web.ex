@@ -32,6 +32,7 @@ defmodule FireflyWeb do
       Firefly.SiteSettings,
       Firefly.TrustLevels,
       Firefly.Uploads,
+      Firefly.Webhooks,
       FireflyPlugins
     ],
     exports: []

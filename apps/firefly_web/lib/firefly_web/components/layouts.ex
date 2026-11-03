@@ -208,6 +208,9 @@ defmodule FireflyWeb.Layouts do
               >
                 Watched words
               </.nav_item>
+              <.nav_item path={~p"/staff/webhooks"} current_path={@current_path} icon="hero-bolt">
+                Webhooks
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>

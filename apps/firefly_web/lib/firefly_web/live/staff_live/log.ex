@@ -83,7 +83,11 @@ defmodule FireflyWeb.StaffLive.Log do
     "badge.grant" => "Granted badge",
     "badge.revoke" => "Revoked badge",
     "watched_word.create" => "Added watched word",
-    "watched_word.delete" => "Removed watched word"
+    "watched_word.delete" => "Removed watched word",
+    "webhook.create" => "Added webhook",
+    "webhook.update" => "Changed webhook",
+    "webhook.delete" => "Deleted webhook",
+    "webhook.auto_disable" => "Turned off failing webhook"
   }
 
   @impl true
@@ -147,6 +151,9 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "upload", details: %{"filename" => name}}, _target),
     do: {name, ~p"/staff/uploads"}
+
+  defp target_link(%{target_type: "webhook", target_id: id, details: %{"url" => url}}, _target),
+    do: {url, ~p"/staff/webhooks/#{id}"}
 
   defp target_link(%{target_type: "watched_word", details: %{"word" => word}}, _target),
     do: {word, ~p"/staff/watched-words"}

@@ -29,6 +29,7 @@ defmodule Firefly.Moderation.Review do
   alias Firefly.Accounts.User
   alias Firefly.Discussion.Post
   alias Firefly.Moderation.Flag
+  alias Firefly.Plugins.Events
 
   @topic "staff:review"
 
@@ -209,6 +210,19 @@ defmodule Firefly.Moderation.Review do
         do: Discussion.announce_thread(approved.thread),
         else: Discussion.announce_post(approved)
 
+      Events.emit(
+        "post_approved",
+        fn ->
+          %{
+            post: Events.post_data(approved, approved.thread),
+            thread: Events.thread_data(approved.thread)
+          }
+        end,
+        thread: approved.thread,
+        post: approved,
+        actor: admin
+      )
+
       changed()
     end)
   end
@@ -241,6 +255,14 @@ defmodule Firefly.Moderation.Review do
     with {:ok, announce} <- result do
       announce.()
       tell_rejected(post, reason, first?)
+
+      Events.emit(
+        "post_rejected",
+        %{post_id: post.id, thread_id: post.thread_id, reason: reason},
+        thread: post.thread,
+        actor: admin
+      )
+
       changed()
       {:ok, post}
     end
