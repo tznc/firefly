@@ -98,7 +98,9 @@ defmodule FireflyWeb.StaffLive.Log do
     "ai_provider.create" => "Added AI provider",
     "ai_provider.update" => "Changed AI provider",
     "ai_provider.delete" => "Deleted AI provider",
-    "ai_feature.update" => "Changed AI feature"
+    "ai_feature.update" => "Changed AI feature",
+    "ai.flag" => "AI triage flagged post",
+    "ai.hide" => "AI triage hid post"
   }
 
   @impl true

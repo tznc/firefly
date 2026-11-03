@@ -12,7 +12,7 @@ defmodule FireflyWeb.PostLive.New do
   alias Firefly.Discussion.{Polls, Quote}
   alias FireflyWeb.LocalTime
   alias Firefly.Discussion.Post
-  alias FireflyWeb.{Editor, PollComponents}
+  alias FireflyWeb.{AIComposer, Editor, PollComponents}
 
   import FireflyWeb.Drafting
   import FireflyWeb.PollComponents, only: [poll_composer: 1]
@@ -55,7 +55,14 @@ defmodule FireflyWeb.PostLive.New do
      |> assign(:poll_form, to_form(PollComponents.defaults(), as: :poll))
      |> assign(:tz_offset, LocalTime.offset(socket))
      |> Editor.allow_attachments(&handle_progress/3)
-     |> Editor.mention_search()}
+     |> Editor.mention_search()
+     |> AIComposer.attach([:proofread], &(&1.assigns.form[:body].value || ""), &apply_ai/3)}
+  end
+
+  # A proofread body from the AI helpers, once the member picked it.
+  defp apply_ai(socket, :proofread, body) do
+    changeset = Post.changeset(%Post{}, post_attrs(socket, %{"body" => body}))
+    socket |> assign(:form, to_form(changeset)) |> autosave(%{body: body})
   end
 
   @impl true
@@ -180,6 +187,7 @@ defmodule FireflyWeb.PostLive.New do
 
       <.form for={@form} id="post-form" phx-change="validate" phx-submit="save" class="space-y-4">
         <Editor.body_editor field={@form[:body]} uploads={@uploads} user={@current_user} />
+        <.composer_helpers helpers={@ai_helpers} suggestion={@ai_suggestion} />
         <.poll_composer form={@poll_form} open={@poll_open?} />
         <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">

@@ -16,6 +16,10 @@ defmodule FireflyWeb.StaffLive.Dashboard do
 
   @charts ~w(page_views signups posts)
 
+  # With AI triage on, how posts feel too.
+  defp charts,
+    do: if(Firefly.AI.available?(nil, "triage"), do: @charts ++ ["sentiment"], else: @charts)
+
   @impl true
   def mount(_params, _session, socket) do
     if can?(socket.assigns.current_user, :view_reports) do
@@ -43,7 +47,7 @@ defmodule FireflyWeb.StaffLive.Dashboard do
     overview = Reports.overview(range, opts)
 
     charts =
-      for id <- @charts, report = Reports.get(id) do
+      for id <- charts(), report = Reports.get(id) do
         {report, Reports.run(report, range, opts).result}
       end
 

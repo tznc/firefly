@@ -23,7 +23,7 @@ defmodule Firefly.ReportsTest do
 
   test "every report runs, with a unique id" do
     ids = Enum.map(Reports.list(), & &1.id())
-    assert length(ids) == 22
+    assert length(ids) == 23
     assert ids == Enum.uniq(ids)
 
     for report <- Reports.list() do

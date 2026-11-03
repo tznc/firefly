@@ -43,8 +43,9 @@ defmodule Firefly.AITest do
 
     test "a key from another secret reads as nil" do
       stored = Encrypted.encrypt("sk-secret")
-      Application.put_env(:firefly, Firefly.AI, retry_base_ms: 0, encryption_key: "another")
-      on_exit(fn -> Application.put_env(:firefly, Firefly.AI, retry_base_ms: 0) end)
+      config = Application.get_env(:firefly, Firefly.AI)
+      Application.put_env(:firefly, Firefly.AI, Keyword.put(config, :encryption_key, "another"))
+      on_exit(fn -> Application.put_env(:firefly, Firefly.AI, config) end)
       assert Encrypted.decrypt(stored) == nil
     end
 

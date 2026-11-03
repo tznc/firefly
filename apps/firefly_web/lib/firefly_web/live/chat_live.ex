@@ -26,7 +26,8 @@ defmodule FireflyWeb.ChatLive do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Chat, Discussion, RateLimit}
+  alias Firefly.{AI, Chat, Discussion, RateLimit}
+  alias Firefly.AI.{Summaries, Translations}
   alias Firefly.Chat.Channel
   alias Firefly.Moderation.{Flag, Posting}
   alias FireflyWeb.{ChatComponents, Editor, Presence}
@@ -59,6 +60,8 @@ defmodule FireflyWeb.ChatLive do
          history: nil,
          search: nil,
          search_results: [],
+         ai: nil,
+         language: viewer_language(socket),
          admin?: Firefly.Accounts.admin?(user),
          can_dm?: Chat.can?(user, :create_direct_message)
        )
@@ -201,7 +204,9 @@ defmodule FireflyWeb.ChatLive do
     %{
       admin?: admin?,
       post?: Chat.can?(user, :post_message, channel),
-      pin?: if(Channel.direct?(channel), do: true, else: admin?)
+      pin?: if(Channel.direct?(channel), do: true, else: admin?),
+      translate?: AI.available?(user, "translate"),
+      summarize?: AI.available?(user, "summarize")
     }
   end
 
@@ -356,6 +361,19 @@ defmodule FireflyWeb.ChatLive do
   end
 
   def handle_info({:chat_read, _channel_id}, socket), do: {:noreply, load_sidebar(socket)}
+
+  def handle_info({:ai_delta, ref, text}, %{assigns: %{ai: %{ref: ref}}} = socket),
+    do: {:noreply, update(socket, :ai, &%{&1 | result: append_text(&1.result, text)})}
+
+  def handle_info({:ai_delta, _stale, _text}, socket), do: {:noreply, socket}
+
+  # An AI summary or translation finished; one for a pane since closed or
+  # replaced is dropped.
+  @impl true
+  def handle_async({:ai, ref}, result, %{assigns: %{pane: :ai, ai: %{ref: ref}}} = socket),
+    do: {:noreply, update(socket, :ai, &%{&1 | result: ai_outcome(result)})}
+
+  def handle_async({:ai, _ref}, _result, socket), do: {:noreply, socket}
 
   defp current?(socket, channel_id),
     do: match?(%Channel{id: ^channel_id}, socket.assigns.channel)
@@ -534,6 +552,28 @@ defmodule FireflyWeb.ChatLive do
     do: {:noreply, push_patch(socket, to: channel_path(socket.assigns.channel))}
 
   def handle_event("close_pane", _params, socket), do: {:noreply, assign(socket, :pane, nil)}
+
+  def handle_event("summarize", _params, %{assigns: %{channel: %Channel{} = channel}} = socket) do
+    user = socket.assigns.current_user
+    {:noreply, ai_pane(socket, "Summary", &Summaries.channel(channel, user, stream: &1))}
+  end
+
+  def handle_event("translate", %{"id" => id}, socket) do
+    %{current_user: user, language: language} = socket.assigns
+
+    case channel_message(socket, id) do
+      nil ->
+        {:noreply, socket}
+
+      message ->
+        {:noreply,
+         ai_pane(
+           socket,
+           "Translation",
+           &Translations.message(message, user, language, stream: &1)
+         )}
+    end
+  end
 
   def handle_event("history", %{"id" => id}, socket) do
     case channel_message(socket, id) do
@@ -766,6 +806,17 @@ defmodule FireflyWeb.ChatLive do
     end
   end
 
+  # Opens the AI pane on `run`'s result (a summary or translation), which
+  # streams in from a task.
+  defp ai_pane(socket, title, run) do
+    ref = make_ref()
+    page = self()
+
+    socket
+    |> assign(pane: :ai, ai: %{ref: ref, title: title, result: %{status: :loading, text: ""}})
+    |> start_async({:ai, ref}, fn -> run.(&send(page, {:ai_delta, ref, &1})) end)
+  end
+
   defp channel_message(%{assigns: %{channel: %Channel{id: channel_id}}}, id) do
     case Chat.get_message(parse_id(id) || 0) do
       %{channel_id: ^channel_id} = message -> message
@@ -994,6 +1045,16 @@ defmodule FireflyWeb.ChatLive do
       <p :if={@channel.description} class="hidden truncate text-sm text-base-content/60 lg:block">
         {@channel.description}
       </p>
+      <button
+        :if={@perms.summarize?}
+        id="summarize-channel"
+        type="button"
+        phx-click="summarize"
+        class="btn btn-ghost btn-xs"
+        title="Summarize what you haven't read"
+      >
+        <.icon name="hero-sparkles" class="size-4" /> Summarize
+      </button>
       <span id="presence" class="ml-auto text-xs text-base-content/60" title={Enum.join(@present, ", ")}>
         <.icon name="hero-signal-micro" class="size-3 text-success" /> {length(@present)} here
       </span>
@@ -1067,7 +1128,7 @@ defmodule FireflyWeb.ChatLive do
     <aside id="chat-pane" class="flex w-full shrink-0 flex-col border-l border-base-300 bg-base-100 md:w-96">
       <header class="flex items-center gap-2 border-b border-base-300 px-4 py-2">
         <h2 class="flex-1 font-semibold">
-          {%{thread: "Thread", threads: "Threads", pinned: "Pinned messages", search: "Search", settings: "Settings", history: "Edit history", flag: "Flag message"}[@pane]}
+          {%{thread: "Thread", threads: "Threads", pinned: "Pinned messages", search: "Search", settings: "Settings", history: "Edit history", flag: "Flag message", ai: "AI"}[@pane]}
         </h2>
         <button type="button" phx-click="close_pane" class="btn btn-ghost btn-xs" aria-label="Close">
           <.icon name="hero-x-mark" class="size-4" />
@@ -1081,6 +1142,7 @@ defmodule FireflyWeb.ChatLive do
         <.settings_pane :if={@pane == :settings} {assigns} />
         <.history_pane :if={@pane == :history} {assigns} />
         <.flag_pane :if={@pane == :flag} {assigns} />
+        <.ai_result :if={@pane == :ai} id="chat-ai" title={@ai.title} result={@ai.result} viewer={@current_user} />
       </div>
     </aside>
     """

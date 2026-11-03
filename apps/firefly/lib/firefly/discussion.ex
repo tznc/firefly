@@ -1055,16 +1055,19 @@ defmodule Firefly.Discussion do
   end
 
   # `tag` watched words tag a new thread, whatever tags its author may use.
-  defp add_watched_tags(thread, body) do
-    case WatchedWords.tags(thread.title, body) do
-      [] ->
-        :ok
+  defp add_watched_tags(thread, body),
+    do: add_system_tags(thread, WatchedWords.tags(thread.title, body))
 
-      names ->
-        rows = for tag <- ensure_tags(names), do: %{thread_id: thread.id, tag_id: tag.id}
-        Repo.insert_all("forums_threads_tags", rows, on_conflict: :nothing)
-        :ok
-    end
+  @doc """
+  Adds the tags `names` (made if new) to `thread` as the system, whatever
+  tags its author may use: for watched words and AI triage.
+  """
+  def add_system_tags(_thread, []), do: :ok
+
+  def add_system_tags(%Thread{} = thread, names) do
+    rows = for tag <- ensure_tags(names), do: %{thread_id: thread.id, tag_id: tag.id}
+    Repo.insert_all("forums_threads_tags", rows, on_conflict: :nothing)
+    :ok
   end
 
   @doc """
@@ -1098,6 +1101,8 @@ defmodule Firefly.Discussion do
     :ok = Notifications.thread_created(thread)
 
     if post = thread.first_post do
+      :ok = Firefly.AI.post_published(post)
+
       Events.emit(
         "thread_created",
         fn -> %{thread: Events.thread_data(thread), post: Events.post_data(post, thread)} end,
@@ -1633,6 +1638,7 @@ defmodule Firefly.Discussion do
     :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
     broadcast("forums:thread:#{post.thread_id}", {:post_created, post})
     broadcast_thread(:thread_activity, post.thread)
+    :ok = Firefly.AI.post_published(post)
 
     Events.emit(
       "post_created",

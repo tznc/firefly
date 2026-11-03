@@ -10,7 +10,7 @@ const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   // The browser's offset from UTC, in minutes (as getTimezoneOffset()), so
   // times picked on the server (bookmark reminders) mean local time.
-  params: {_csrf_token: csrfToken, tz_offset: new Date().getTimezoneOffset()},
+  params: {_csrf_token: csrfToken, tz_offset: new Date().getTimezoneOffset(), locale: navigator.language},
   hooks: Hooks,
 })
 

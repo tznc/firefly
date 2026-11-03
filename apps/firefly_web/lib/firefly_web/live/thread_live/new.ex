@@ -13,7 +13,7 @@ defmodule FireflyWeb.ThreadLive.New do
   alias Firefly.Discussion.{Polls, Tags}
   alias FireflyWeb.LocalTime
   alias Firefly.Discussion.{Tag, Thread}
-  alias FireflyWeb.{Editor, PollComponents}
+  alias FireflyWeb.{AIComposer, Editor, PollComponents}
 
   import FireflyWeb.Drafting
   import FireflyWeb.PollComponents, only: [poll_composer: 1]
@@ -35,7 +35,31 @@ defmodule FireflyWeb.ThreadLive.New do
      |> assign(:poll_form, to_form(PollComponents.defaults(), as: :poll))
      |> assign(:tz_offset, LocalTime.offset(socket))
      |> Editor.allow_attachments(&handle_progress/3)
-     |> Editor.mention_search()}
+     |> Editor.mention_search()
+     |> AIComposer.attach(
+       [:proofread, :title, :tags],
+       &(&1.assigns.form.params["body"] || ""),
+       &apply_ai/3
+     )}
+  end
+
+  # A suggestion from the AI helpers, once the member picked it.
+  defp apply_ai(socket, helper, value) do
+    params = socket.assigns.form.params
+
+    params =
+      case helper do
+        :proofread ->
+          Map.put(params, "body", value)
+
+        :title ->
+          Map.put(params, "title", value)
+
+        :tags ->
+          Map.put(params, "tags", Enum.reduce(value, params["tags"] || "", &Tag.append(&2, &1)))
+      end
+
+    socket |> assign_form(params, socket.assigns.form.errors) |> save_draft(params)
   end
 
   @impl true
@@ -181,6 +205,7 @@ defmodule FireflyWeb.ThreadLive.New do
           user={@current_user}
           placeholder="Type thread content here. Use markdown syntax."
         />
+        <.composer_helpers helpers={@ai_helpers} suggestion={@ai_suggestion} />
         <.poll_composer form={@poll_form} open={@poll_open?} />
         <.draft_status draft={@draft} error={@draft_error} />
         <div class="flex justify-end gap-2">
