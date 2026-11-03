@@ -88,8 +88,9 @@ RUN mix release firefly
 FROM ${RUNNER_IMAGE} AS final
 
 # postgresql-client-18 (from the PostgreSQL project's apt repository, set up
-# by postgresql-common's script) for backups: pg_dump and pg_restore must
-# match the server's major version (see Firefly.Backups).
+# by postgresql-common's script) for backups: pg_dump and pg_restore must be
+# at least the server's major version (17 in the supabase/postgres image
+# docker-compose.yml and CI use; see Firefly.Backups).
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates tini \
     libvips42t64 postgresql-common \

@@ -16,11 +16,26 @@ the open-source Firestorm forum project.
 
 ## Development
 
-Requirements: Elixir 1.20 / Erlang/OTP 29, Node.js 26 and PostgreSQL 18 with the
-[pgvector](https://github.com/pgvector/pgvector) extension available (see
-`.tool-versions`; the `pgvector/pgvector:pg18` Docker image has both). The
-migrations create the extension, so the database user needs the right to
-(or create it beforehand: `CREATE EXTENSION vector`).
+Requirements: Elixir 1.20 / Erlang/OTP 29 and Node.js 26 (see `.tool-versions`),
+and PostgreSQL 17 or newer with the [pgvector](https://github.com/pgvector/pgvector)
+extension available. The migrations create the extension, so the database user
+needs the right to (or create it beforehand: `CREATE EXTENSION vector`).
+
+Development, the tests, CI and `docker compose` use the
+[`supabase/postgres`](https://hub.docker.com/r/supabase/postgres) image
+(PostgreSQL 17 with pgvector; only the database image, none of Supabase's
+other services):
+
+```sh
+docker run -d --name supa-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 supabase/postgres:17.11.0.018
+```
+
+Its superuser is `supabase_admin`; `POSTGRES_PASSWORD` also sets the password of
+the `postgres` role, which Firefly connects as by default: it isn't a superuser
+but may create databases and extensions. Leave `POSTGRES_USER` and `POSTGRES_DB`
+unset (the image's init scripts depend on them), and give it a few seconds on
+first start, while it sets itself up. `FIREFLY_POSTGRES_HOST`, `_PORT`, `_USER`
+and `_PASSWORD` point development and the tests at another server.
 
 The web UI is Phoenix LiveView styled with Tailwind CSS and daisyUI; the JSON
 API lives under `/api/v1`.
@@ -87,7 +102,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_AWS_ACCESS_KEY_ID`, `FIREFLY_AWS_SECRET_ACCESS_KEY`, `FIREFLY_AWS_S3_BUCKET`, `FIREFLY_AWS_S3_REGION` | The S3 bucket for uploads, with `FIREFLY_UPLOAD_STORAGE=s3` (kept private: files are served through Firefly's access checks) |
 | `FIREFLY_BACKUP_STORAGE` | Where backups (`/staff/backups`) are kept: `local` (default) or `s3` (the uploads' bucket, under `FIREFLY_BACKUP_S3_PREFIX`, default `backups/`) |
 | `FIREFLY_BACKUP_DIR` | The local backup directory, default `backups` under the working directory (`/app/backups` in the Docker image: mount a volume there) |
-| `FIREFLY_PG_BIN_DIR` | Where `pg_dump` and `pg_restore` are, for backups; they must match the database's major version (the Docker image has PostgreSQL 18's). Default: the newest `/usr/lib/postgresql/*/bin`, else the `PATH` |
+| `FIREFLY_PG_BIN_DIR` | Where `pg_dump` and `pg_restore` are, for backups; they must be the database's major version or newer (the Docker image has PostgreSQL 18's, for servers up to 18). Default: the newest `/usr/lib/postgresql/*/bin`, else the `PATH` |
 | `FIREFLY_GIT_SHA` | The commit the code was built from, shown with the version (the Docker image sets it from the `FIREFLY_GIT_SHA` build argument) |
 | `FIREFLY_UPDATE_REPO` | The GitHub repository whose latest release the daily version check compares with (default `tznc/firefly`); the check is off with the `version_check` site setting |
 | `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones) |
@@ -121,7 +136,9 @@ docker run -d -p 4000:4000 --env-file .env firefly
 The image needs at least `FIREFLY_DATABASE_URL` and `FIREFLY_SECRET_KEY_BASE` (generate one with
 `mix phx.gen.secret`); `FIREFLY_DOMAIN` sets the public domain. It listens on IPv4 port
 `FIREFLY_PORT` (default 4000); set `FIREFLY_IPV6=true` to listen on IPv6 as well. Set
-`FIREFLY_DATABASE_SSL=false` for a database without TLS. The other settings (GitHub
+`FIREFLY_DATABASE_SSL=false` for a database without TLS. Any PostgreSQL 17 or
+newer with pgvector works (a managed one too); the `supabase/postgres` image
+above is the recommended one to run yourself. The other settings (GitHub
 login, email, S3 uploads) are read from the environment in `config/runtime.exs`.
 
 ### Admin
