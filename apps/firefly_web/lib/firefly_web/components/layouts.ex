@@ -238,6 +238,13 @@ defmodule FireflyWeb.Layouts do
               <.nav_item path={~p"/staff/webhooks"} current_path={@current_path} icon="hero-bolt">
                 Webhooks
               </.nav_item>
+              <.nav_item
+                path={~p"/staff/discourse-connect"}
+                current_path={@current_path}
+                icon="hero-key"
+              >
+                DiscourseConnect
+              </.nav_item>
               <.nav_item path={~p"/staff/embedding"} current_path={@current_path} icon="hero-code-bracket">
                 Embedding
               </.nav_item>

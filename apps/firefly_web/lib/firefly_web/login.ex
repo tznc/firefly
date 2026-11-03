@@ -35,6 +35,9 @@ defmodule FireflyWeb.Login do
     end
   end
 
+  @doc "Remembers `path` (on this site) as where to go once logged in."
+  def put_return_to(conn, path), do: put_session(conn, :return_to, local_path(path))
+
   @doc "`path` if it's a path on this site (not another site's URL), else the home page."
   def local_path("/" <> rest = path) do
     if String.starts_with?(rest, ["/", "\\"]), do: "/", else: path
@@ -75,11 +78,15 @@ defmodule FireflyWeb.Login do
 
   @doc """
   Logs `user` in: a fresh session, any pending second-factor step gone,
-  and `notice` (or a welcome) to show at `to`.
+  and `notice` (or a welcome) to show at `to`, or (when `to` is the home
+  page) at the page that sent them to log in (see `put_return_to/2`).
   """
   def log_in(conn, user, notice \\ "Successfully authenticated.", to \\ "/") do
+    to = if to == "/", do: get_session(conn, :return_to) || to, else: to
+
     conn
     |> configure_session(renew: true)
+    |> delete_session(:return_to)
     |> delete_session(:two_factor)
     |> delete_session(:two_factor_challenge)
     |> put_session(:current_user, user.id)

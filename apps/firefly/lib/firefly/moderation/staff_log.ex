@@ -39,6 +39,7 @@ defmodule Firefly.Moderation.StaffLog do
     badge.create badge.update badge.delete badge.grant badge.revoke
     watched_word.create watched_word.delete
     webhook.create webhook.update webhook.delete webhook.auto_disable
+    discourse_connect_client.create discourse_connect_client.update discourse_connect_client.delete
     backup.create backup.delete backup.download backup.restore backup.read_only
     embed_host.create embed_host.delete
     ai_provider.create ai_provider.update ai_provider.delete ai_feature.update ai.flag ai.hide
