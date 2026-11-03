@@ -43,6 +43,7 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     |> click_button("Create Category")
     |> assert_has("#flash-info", text: "Category created successfully.")
     |> click_link("New Thread")
+    |> assert_has("[data-phx-main].phx-connected")
     |> fill_in("Title", with: "OTP is cool")
     |> fill_in("Body", with: "**Supervisors** all the way down :fire:")
     |> assert_has("#post-preview strong", text: "Supervisors")
@@ -72,6 +73,7 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     |> log_in("bob")
     |> visit(thread_path)
     |> click_link("a.btn-primary", "Reply")
+    |> assert_has("[data-phx-main].phx-connected")
     |> fill_in("Body", with: "Totally agree!")
     |> click_button("Reply")
     |> assert_has("#flash-info", text: "Post created successfully.")
@@ -106,6 +108,7 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     another_browser(context)
     |> log_in("alice")
     |> visit(thread_path <> "/posts/new")
+    |> assert_has("[data-phx-main].phx-connected")
     |> fill_in("Body", with: "Herp Derp")
     |> click_button("Reply")
     |> assert_has("#flash-info", text: "Post created successfully.")
@@ -209,6 +212,7 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     conn
     |> log_in("bob")
     |> visit("/categories/#{category.id}/threads/#{thread.id}/posts/new")
+    |> assert_has("[data-phx-main].phx-connected")
     |> fill_in("Body", with: "My notes:")
     |> PhoenixTest.Playwright.evaluate("""
     (() => {
