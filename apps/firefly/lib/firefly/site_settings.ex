@@ -693,6 +693,24 @@ defmodule Firefly.SiteSettings do
         label: "Notify admins of new versions",
         default: true,
         help: "Admins get a notification when a new version is out (once per version)."
+      },
+      %{
+        key: "embed_username",
+        section: "Embedding",
+        type: :text,
+        label: "Post embedded topics as (username)",
+        default: "",
+        help:
+          "The member who posts the topics made for embedded pages (blog comments). Blank: the first admin."
+      },
+      %{
+        key: "embed_feed_url",
+        section: "Embedding",
+        type: :text,
+        label: "Feed to make topics from (RSS or Atom URL)",
+        default: "",
+        help:
+          "Checked hourly: each new entry on an embeddable host gets its topic. Blank: off (topics are made when a page is first viewed)."
       }
     ]
   end

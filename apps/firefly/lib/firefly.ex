@@ -23,6 +23,7 @@ defmodule Firefly do
   | `Firefly.Reports` | the admin dashboard's overview and reports |
   | `Firefly.Backups` | backups and restores, read-only mode |
   | `Firefly.Upgrades` | the running version, the daily check for new releases, pending migrations |
+  | `Firefly.Embedding` | topics as comments on other sites' pages (embeddable hosts, the embed feed) |
   | `Firefly.Plugins` (with `Firefly.Plugin`) | the plugin API, hook runner, host functions and installed plugins |
 
   A context's public API is its root module plus the modules its `use
