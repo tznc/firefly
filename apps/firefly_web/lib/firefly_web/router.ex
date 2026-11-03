@@ -141,6 +141,7 @@ defmodule FireflyWeb.Router do
       live("/staff/reports", StaffLive.Reports, :index)
       live("/staff/reports/:id", StaffLive.Report, :show)
       live("/staff/backups", StaffLive.Backups, :index)
+      live("/staff/import", StaffLive.Imports, :index)
       live("/staff/upgrade", StaffLive.Upgrade, :index)
       live("/staff/embedding", StaffLive.Embedding, :index)
       live("/staff/ai", StaffLive.AI, :index)
@@ -291,5 +292,11 @@ defmodule FireflyWeb.Router do
 
   if Application.compile_env(:firefly_web, :dev_routes) do
     forward("/sent_emails", Bamboo.SentEmailViewerPlug)
+  end
+
+  # Last: an imported site's old URLs (see FireflyWeb.PermalinkController),
+  # anything else a 404.
+  scope "/", FireflyWeb do
+    get("/*path", PermalinkController, :show)
   end
 end

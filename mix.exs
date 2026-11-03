@@ -2,7 +2,8 @@ defmodule Firefly.Umbrella.MixProject do
   use Mix.Project
 
   # The umbrella: `apps/firefly` (the domain), `apps/firefly_plugins` (the
-  # sandboxed plugin runtime) and `apps/firefly_web` (the web interface).
+  # sandboxed plugin runtime), `apps/firefly_web` (the web interface) and
+  # `apps/firefly_import` (importers from other forums and platforms).
   # Dependencies live in the app that uses them; only tools that run from the
   # root are declared here.
   def project do
@@ -28,11 +29,17 @@ defmodule Firefly.Umbrella.MixProject do
     ]
   end
 
-  # One release with all three apps, started in dependency order.
+  # One release with all four apps, started in dependency order. The
+  # importers start nothing: they run from `bin/firefly eval`.
   defp releases do
     [
       firefly: [
-        applications: [firefly: :permanent, firefly_plugins: :permanent, firefly_web: :permanent]
+        applications: [
+          firefly: :permanent,
+          firefly_plugins: :permanent,
+          firefly_web: :permanent,
+          firefly_import: :load
+        ]
       ]
     ]
   end

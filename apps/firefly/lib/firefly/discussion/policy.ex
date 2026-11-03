@@ -61,7 +61,8 @@ defmodule Firefly.Discussion.Policy do
       `:manage_uploads` (list and delete any upload), `:manage_emoji`
       (custom emoji), `:manage_watched_words`, `:manage_webhooks`,
       `:view_reports` (the dashboard and reports), `:manage_backups` (and
-      read-only mode), `:manage_upgrades` (the upgrade page),
+      read-only mode), `:manage_imports` (the import runs, see
+      `Firefly.Import`), `:manage_upgrades` (the upgrade page),
       `:manage_embedding` (embeddable hosts), `:manage_ai` (AI providers
       and features, see `Firefly.AI`) - admins
     * `:view_category`, `:view_thread` (in its category) - everyone, members
@@ -212,6 +213,7 @@ defmodule Firefly.Discussion.Policy do
              :manage_webhooks,
              :view_reports,
              :manage_backups,
+             :manage_imports,
              :manage_upgrades,
              :manage_embedding,
              :manage_ai,
