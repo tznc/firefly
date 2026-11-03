@@ -42,7 +42,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Embedding`, `Firefly.Chat`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -87,6 +87,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_UPDATE_REPO` | The GitHub repository whose latest release the daily version check compares with (default `tznc/firefly`); the check is off with the `version_check` site setting |
 | `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones) |
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
+| `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
 
@@ -128,6 +129,20 @@ users with the `admin` role (the seeds create `admin` / `password`).
 Staff install and manage plugins at `/staff/plugins`: core plugins written
 in Elixir, and third-party JavaScript plugins that run sandboxed in QuickJS
 on WebAssembly. See [PLUGINS.md](PLUGINS.md) for the plugin API.
+
+### AI
+
+AI features are off until an admin turns them on at `/staff/ai`, adds a
+model provider and picks the provider serving each feature. Providers are
+pluggable adapters (`Firefly.AI.Provider`): the Anthropic Messages API, and
+any OpenAI-compatible API (OpenAI, or a self-hosted Ollama, vLLM or LM
+Studio by base URL; tick "Allow private addresses" for one on the local
+network). Model ids are whatever the provider calls them, for example
+`gpt-4o-mini` at `https://api.openai.com/v1` or `llama3.1` at
+`http://localhost:11434/v1`. Members get a daily number of AI requests by
+trust level (site settings, AI section), and every request is logged with
+its tokens (the `AI usage` report). Prompts are built in and can be
+overridden in the AI prompts site settings.
 
 ### Tests
 

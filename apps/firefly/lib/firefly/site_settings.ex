@@ -33,8 +33,9 @@ defmodule Firefly.SiteSettings do
   @doc """
   Every setting, in display order: `key`, `section`, `type` (`:string`,
   `:text`, `:email`, `:boolean`, `:integer` or `:select`), `label`, `help`,
-  `default`, for integers `min`/`max`, and for selects `options` (`{label,
-  value}` pairs).
+  `default`, for integers `min`/`max`, for texts optionally `max_length`
+  (500 characters by default), and for selects `options` (`{label, value}`
+  pairs).
   """
   def definitions do
     [
@@ -779,6 +780,133 @@ defmodule Firefly.SiteSettings do
         max: 3650,
         help:
           "Messages in direct messages older than this are deleted, once an hour. 0: kept forever."
+      },
+      %{
+        key: "ai_enabled",
+        section: "AI",
+        type: :boolean,
+        label: "AI features",
+        default: false,
+        help:
+          "Turns on the AI features set up at /staff/ai (each also needs a provider and to be switched on there). Off: no content is sent to any AI provider."
+      },
+      %{
+        key: "ai_daily_quota_tl0",
+        section: "AI",
+        type: :integer,
+        label: "AI requests a day at trust level 0",
+        default: 2,
+        min: 0,
+        max: 10_000,
+        help:
+          "How many AI requests (summaries, translations, composer helpers) a member at trust level 0 may make a day. 0: none. Admins have no limit."
+      },
+      %{
+        key: "ai_daily_quota_tl1",
+        section: "AI",
+        type: :integer,
+        label: "AI requests a day at trust level 1",
+        default: 10,
+        min: 0,
+        max: 10_000,
+        help:
+          "How many AI requests (summaries, translations, composer helpers) a member at trust level 1 may make a day. 0: none. Admins have no limit."
+      },
+      %{
+        key: "ai_daily_quota_tl2",
+        section: "AI",
+        type: :integer,
+        label: "AI requests a day at trust level 2",
+        default: 25,
+        min: 0,
+        max: 10_000,
+        help:
+          "How many AI requests (summaries, translations, composer helpers) a member at trust level 2 may make a day. 0: none. Admins have no limit."
+      },
+      %{
+        key: "ai_daily_quota_tl3",
+        section: "AI",
+        type: :integer,
+        label: "AI requests a day at trust level 3",
+        default: 50,
+        min: 0,
+        max: 10_000,
+        help:
+          "How many AI requests (summaries, translations, composer helpers) a member at trust level 3 may make a day. 0: none. Admins have no limit."
+      },
+      %{
+        key: "ai_daily_quota_tl4",
+        section: "AI",
+        type: :integer,
+        label: "AI requests a day at trust level 4",
+        default: 100,
+        min: 0,
+        max: 10_000,
+        help:
+          "How many AI requests (summaries, translations, composer helpers) a member at trust level 4 may make a day. 0: none. Admins have no limit."
+      },
+      %{
+        key: "ai_prompt_summarize_topic",
+        section: "AI prompts",
+        type: :text,
+        max_length: 4_000,
+        label: "Topic summary prompt",
+        default: "",
+        help: "Replaces the built-in prompt (shown at /staff/ai). Blank: the built-in one."
+      },
+      %{
+        key: "ai_prompt_summarize_chat",
+        section: "AI prompts",
+        type: :text,
+        max_length: 4_000,
+        label: "Chat summary prompt",
+        default: "",
+        help: "Replaces the built-in prompt (shown at /staff/ai). Blank: the built-in one."
+      },
+      %{
+        key: "ai_prompt_translate",
+        section: "AI prompts",
+        type: :text,
+        max_length: 4_000,
+        label: "Translation prompt",
+        default: "",
+        help: "Replaces the built-in prompt (shown at /staff/ai). Blank: the built-in one."
+      },
+      %{
+        key: "ai_prompt_triage",
+        section: "AI prompts",
+        type: :text,
+        max_length: 4_000,
+        label: "Triage prompt",
+        default: "",
+        help: "Replaces the built-in prompt (shown at /staff/ai). Blank: the built-in one."
+      },
+      %{
+        key: "ai_prompt_proofread",
+        section: "AI prompts",
+        type: :text,
+        max_length: 4_000,
+        label: "Proofreading prompt",
+        default: "",
+        help: "Replaces the built-in prompt (shown at /staff/ai). Blank: the built-in one."
+      },
+      %{
+        key: "ai_prompt_suggest_title",
+        section: "AI prompts",
+        type: :text,
+        max_length: 4_000,
+        label: "Title suggestion prompt",
+        default: "",
+        help: "Replaces the built-in prompt (shown at /staff/ai). Blank: the built-in one."
+      },
+      %{
+        key: "ai_prompt_suggest_tags",
+        section: "AI prompts",
+        type: :text,
+        max_length: 4_000,
+        label: "Tag suggestion prompt",
+        default: "",
+        help: "Replaces the built-in prompt (shown at /staff/ai). Blank: the built-in one."
       }
     ]
   end
@@ -925,11 +1053,12 @@ defmodule Firefly.SiteSettings do
     end
   end
 
-  def cast(%{type: :text}, value) when is_binary(value) do
+  def cast(%{type: :text} = definition, value) when is_binary(value) do
     value = String.trim(value)
+    max = definition[:max_length] || 500
 
-    if String.length(value) > 500,
-      do: {:error, "must be at most 500 characters"},
+    if String.length(value) > max,
+      do: {:error, "must be at most #{max} characters"},
       else: {:ok, value}
   end
 

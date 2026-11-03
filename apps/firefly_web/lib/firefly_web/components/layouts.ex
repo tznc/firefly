@@ -241,6 +241,9 @@ defmodule FireflyWeb.Layouts do
               <.nav_item path={~p"/staff/embedding"} current_path={@current_path} icon="hero-code-bracket">
                 Embedding
               </.nav_item>
+              <.nav_item path={~p"/staff/ai"} current_path={@current_path} icon="hero-sparkles">
+                AI
+              </.nav_item>
               <.nav_item
                 path={~p"/staff/backups"}
                 current_path={@current_path}

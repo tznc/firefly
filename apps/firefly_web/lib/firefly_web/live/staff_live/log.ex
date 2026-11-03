@@ -94,7 +94,11 @@ defmodule FireflyWeb.StaffLive.Log do
     "backup.restore" => "Restored backup",
     "backup.read_only" => "Changed read-only mode",
     "embed_host.create" => "Allowed embedding host",
-    "embed_host.delete" => "Removed embedding host"
+    "embed_host.delete" => "Removed embedding host",
+    "ai_provider.create" => "Added AI provider",
+    "ai_provider.update" => "Changed AI provider",
+    "ai_provider.delete" => "Deleted AI provider",
+    "ai_feature.update" => "Changed AI feature"
   }
 
   @impl true
@@ -164,6 +168,12 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "embed_host", details: %{"host" => host}}, _target),
     do: {host, ~p"/staff/embedding"}
+
+  defp target_link(%{target_type: "ai_provider", details: %{"name" => name}}, _target),
+    do: {name, ~p"/staff/ai"}
+
+  defp target_link(%{target_type: "ai_feature", details: %{"feature" => feature}}, _target),
+    do: {feature, ~p"/staff/ai"}
 
   defp target_link(%{target_type: "backup", details: %{"name" => name}}, _target),
     do: {name, ~p"/staff/backups"}

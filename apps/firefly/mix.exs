@@ -67,7 +67,11 @@ defmodule Firefly.MixProject do
       # Plugins' outgoing HTTP requests (already used by oembed through httpoison).
       {:hackney, "~> 4.9"},
       # Uploaded images: auto-orient, strip metadata, downscale, thumbnails (libvips).
-      {:image, "~> 0.72"}
+      {:image, "~> 0.72"},
+      # AI providers' HTTP APIs (see Firefly.AI): timeouts, retries, streaming.
+      {:req, "~> 0.7.5"},
+      # Tests fake AI providers with a local HTTP server (see Firefly.AI.FakeProvider).
+      {:bandit, "~> 1.14", only: :test}
     ]
   end
 
