@@ -28,8 +28,6 @@ defmodule Firefly.Accounts.MagicLinks do
   alias Firefly.Notifications.Emails
   alias Firefly.Plugins.Events
 
-  @minutes 15
-
   @doc "Whether email login links are on."
   def enabled?, do: SiteSettings.get("magic_links") and Auth.password_login?()
 
@@ -86,7 +84,7 @@ defmodule Firefly.Accounts.MagicLinks do
         user_id: user && user.id,
         email: email,
         token_hash: hash(token),
-        expires_at: DateTime.add(now, @minutes, :minute),
+        expires_at: DateTime.add(now, Firefly.SiteSettings.get("magic_link_minutes"), :minute),
         inserted_at: now
       }
     ])
@@ -164,6 +162,7 @@ defmodule Firefly.Accounts.MagicLinks do
              confirmed_at: DateTime.utc_now(:second),
              approved: Firefly.Accounts.approved_on_signup?(false)
            }
+           |> struct(Firefly.Accounts.new_member_defaults())
            |> User.changeset(%{
              username: Auth.free_username(%{email: email}, "email"),
              name: email |> String.split("@") |> hd(),

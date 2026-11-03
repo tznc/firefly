@@ -9,11 +9,6 @@ if System.get_env("FIREFLY_SERVER") do
   config :firefly_web, FireflyWeb.Endpoint, server: true
 end
 
-# Only admins create new tags; members pick existing ones.
-if System.get_env("FIREFLY_TAGS_ADMIN_ONLY") in ~w(true 1) do
-  config :firefly, tags_admin_only: true
-end
-
 # The commit the code was built from (a Docker build argument) and the
 # GitHub repository whose releases the version check follows (see
 # Firefly.Upgrades).

@@ -23,7 +23,6 @@ defmodule Firefly.AI.SemanticSearch do
 
   @candidates 100
   @k 60
-  @page_size 20
 
   @doc "Whether semantic search is on (the `embeddings` feature)."
   def enabled?, do: AI.available?(nil, "embeddings")
@@ -44,21 +43,22 @@ defmodule Firefly.AI.SemanticSearch do
         ])
 
       page = max(page, 1)
+      page_size = Search.page_size()
 
       entries =
         Search.results(
           search,
           user,
-          ids |> Enum.drop((page - 1) * @page_size) |> Enum.take(@page_size)
+          ids |> Enum.drop((page - 1) * page_size) |> Enum.take(page_size)
         )
 
       {:semantic,
        %Scrivener.Page{
          entries: entries,
          page_number: page,
-         page_size: @page_size,
+         page_size: page_size,
          total_entries: length(ids),
-         total_pages: max(div(length(ids) + @page_size - 1, @page_size), 1)
+         total_pages: max(div(length(ids) + page_size - 1, page_size), 1)
        }}
     else
       _no_semantics -> {:full_text, Search.run(search, user, page)}

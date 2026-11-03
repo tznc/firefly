@@ -51,7 +51,6 @@ defmodule Firefly.Discussion.Search do
 
   @orders ~w(relevance latest)
   @statuses ~w(solved unsolved)
-  @page_size 20
 
   # ts_headline marks matches with these; they're stripped from the post
   # first, so after HTML-escaping they can only be ours.
@@ -156,7 +155,7 @@ defmodule Firefly.Discussion.Search do
       |> match(search)
       |> order(search)
       |> select_headline(search.terms)
-      |> Repo.paginate(page: page, page_size: @page_size)
+      |> Repo.paginate(page: page, page_size: page_size())
       |> Map.update!(:entries, &Enum.map(&1, fn row -> result(row) end))
     else
       no_results()
@@ -217,13 +216,16 @@ defmodule Firefly.Discussion.Search do
     for id <- ids, entry = by_id[id], do: entry
   end
 
+  @doc "Results a page (the `search_results_per_page` setting)."
+  def page_size, do: Firefly.SiteSettings.get("search_results_per_page")
+
   @doc "An empty page of results."
   @spec no_results() :: Scrivener.Page.t()
   def no_results do
     %Scrivener.Page{
       entries: [],
       page_number: 1,
-      page_size: @page_size,
+      page_size: page_size(),
       total_entries: 0,
       total_pages: 1
     }

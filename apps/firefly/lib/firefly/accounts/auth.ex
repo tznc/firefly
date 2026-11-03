@@ -286,6 +286,7 @@ defmodule Firefly.Accounts.Auth do
                  confirmed_at: if(verified?(info), do: DateTime.utc_now(:second)),
                  approved: Accounts.approved_on_signup?(info[:invite] != nil)
                }
+               |> struct(Accounts.new_member_defaults())
                |> User.changeset(%{
                  username: username,
                  name: info[:name] || username,

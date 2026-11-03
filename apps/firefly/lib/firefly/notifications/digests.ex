@@ -150,7 +150,8 @@ defmodule Firefly.Notifications.Digests do
         threads: threads,
         new_posts: Discussion.new_posts_count(user, since),
         replies: Discussion.top_replies(user, since, 3),
-        notifications: {length(unread), Enum.take(unread, 5)}
+        notifications:
+          {length(unread), Enum.take(unread, SiteSettings.get("digest_max_notifications"))}
       }
     end
   end

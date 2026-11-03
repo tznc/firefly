@@ -811,13 +811,15 @@ defmodule FireflyWeb.Api.V1.OpenAPI do
         object(
           %{
             key: str(),
+            category: str(),
             section: str(),
-            type: enum(~w(string text email boolean integer select)),
+            type: enum(~w(string text email boolean integer select list color upload)),
             label: str(),
             value: %{},
-            default: %{}
+            default: %{},
+            env_override: nullable(str())
           },
-          ~w(key section type value)
+          ~w(key category section type value)
         ),
       "ReviewItem" =>
         object(

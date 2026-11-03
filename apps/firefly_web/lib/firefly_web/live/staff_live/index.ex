@@ -74,9 +74,6 @@ defmodule FireflyWeb.StaffLive.Index do
     |> Enum.take(20)
   end
 
-  defp section_anchor(section),
-    do: "settings-" <> String.replace(String.downcase(section), " ", "-")
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -116,7 +113,7 @@ defmodule FireflyWeb.StaffLive.Index do
         <ul :if={@settings != []} id="admin-search-settings" class="list rounded-box border border-base-300 bg-base-100">
           <li :for={setting <- @settings} class="list-row">
             <div>
-              <.link navigate={~p"/staff/settings" <> "#" <> section_anchor(setting.section)} class="link font-medium">
+              <.link navigate={~p"/staff/settings?#{%{q: setting.key}}"} class="link font-medium">
                 {setting.label}
               </.link>
               <p class="text-xs text-base-content/70">{gettext("Site setting")} · {setting.section}</p>

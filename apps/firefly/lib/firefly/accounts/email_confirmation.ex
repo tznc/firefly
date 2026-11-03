@@ -11,15 +11,16 @@ defmodule Firefly.Accounts.EmailConfirmation do
   alias Firefly.Endpoint
 
   @salt "email confirmation"
-  @max_age 7 * 24 * 60 * 60
-
   def token(%User{id: id, email: email}), do: Endpoint.sign(@salt, {id, email})
 
   def url(%User{} = user), do: Firefly.URLs.confirmation_url(token(user))
 
   @doc "Confirms the user the token was issued for, if their email hasn't changed since."
   def confirm(token) when is_binary(token) do
-    with {:ok, {id, email}} <- Endpoint.verify(@salt, token, max_age: @max_age),
+    with {:ok, {id, email}} <-
+           Endpoint.verify(@salt, token,
+             max_age: Firefly.SiteSettings.get("email_confirmation_days") * 86_400
+           ),
          %User{email: ^email} = user <- Accounts.get_user(id) do
       Accounts.confirm_user(user)
     else

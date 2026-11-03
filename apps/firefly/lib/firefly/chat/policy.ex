@@ -185,10 +185,7 @@ defmodule Firefly.Chat.Policy do
     end
   end
 
-  @doc "The group names in a setting's value (separated by commas or spaces, `@` optional)."
-  def group_names(value) do
-    value
-    |> String.split(~r/[\s,]+/, trim: true)
-    |> Enum.map(&(&1 |> String.trim_leading("@") |> String.downcase()))
-  end
+  @doc "The group names in a list setting's value (`@` optional), lowercased."
+  def group_names(names) when is_list(names),
+    do: Enum.map(names, &(&1 |> String.trim_leading("@") |> String.downcase()))
 end

@@ -1,8 +1,9 @@
 defmodule Firefly.Accounts.PasswordReset do
   @moduledoc """
   Password reset by email. Links carry a signed token bound to the user's
-  current email and password hash, so they expire after an hour and stop
-  working once the password changes (single use).
+  current email and password hash, so they expire (after the
+  `password_reset_hours` setting) and stop working once the password
+  changes (single use).
   """
   require Logger
 
@@ -12,7 +13,6 @@ defmodule Firefly.Accounts.PasswordReset do
   alias Firefly.Endpoint
 
   @salt "password reset"
-  @max_age 60 * 60
 
   def token(%User{} = user),
     do: Endpoint.sign(@salt, {user.id, user.email, fingerprint(user)})
@@ -22,7 +22,9 @@ defmodule Firefly.Accounts.PasswordReset do
   @doc "The user a reset token is valid for."
   def verify(token) when is_binary(token) do
     with {:ok, {id, email, fingerprint}} <-
-           Endpoint.verify(@salt, token, max_age: @max_age),
+           Endpoint.verify(@salt, token,
+             max_age: Firefly.SiteSettings.get("password_reset_hours") * 3600
+           ),
          %User{email: ^email} = user <- Accounts.get_user(id),
          true <- Plug.Crypto.secure_compare(fingerprint(user), fingerprint) do
       {:ok, user}

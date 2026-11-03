@@ -70,7 +70,10 @@ defmodule Firefly.Directory do
       |> search(params["name"])
       |> order_by([u, d], [{^direction, coalesce(field(d, ^field), 0)}, asc: u.username])
       |> select([u, d], %{user: u, stats: d})
-      |> Repo.paginate(page: params["page"], page_size: 20)
+      |> Repo.paginate(
+        page: params["page"],
+        page_size: Firefly.SiteSettings.get("directory_page_size")
+      )
 
     entries =
       Enum.map(page.entries, fn entry ->

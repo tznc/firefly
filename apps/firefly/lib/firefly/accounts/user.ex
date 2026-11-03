@@ -93,10 +93,16 @@ defmodule Firefly.Accounts.User do
   @doc """
   Usernames nobody can pick: `deleted-user-<id>` is what account deletion
   renames an account to, so taking it ahead of time would block that
-  deletion and let someone pose as a deleted account.
+  deletion and let someone pose as a deleted account; and those the
+  `reserved_usernames` site setting lists (any case).
   """
-  def reserved_username?(username) when is_binary(username),
-    do: String.match?(username, ~r/^deleted-user-/i)
+  def reserved_username?(username) when is_binary(username) do
+    String.match?(username, ~r/^deleted-user-/i) or
+      String.downcase(username) in Enum.map(
+        Firefly.SiteSettings.get("reserved_usernames"),
+        &String.downcase/1
+      )
+  end
 
   @doc "The placeholder username of a deleted account."
   def deleted_username(id), do: "deleted-user-#{id}"
@@ -166,7 +172,7 @@ defmodule Firefly.Accounts.User do
     user
     |> cast(attrs, [:password])
     |> validate_required([:password])
-    |> validate_length(:password, min: 8, max: 72)
+    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"), max: 72)
     |> validate_confirmation(:password, message: "does not match password")
     |> put_password_hash()
   end
@@ -231,10 +237,13 @@ defmodule Firefly.Accounts.User do
     |> validate_format(:username, ~r/^[A-Za-z0-9_-]+$/,
       message: "can only contain letters, numbers, - and _"
     )
-    |> validate_length(:username, min: 2, max: 32)
+    |> validate_length(:username,
+      min: Firefly.SiteSettings.get("min_username_length"),
+      max: Firefly.SiteSettings.get("max_username_length")
+    )
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "must be a valid email")
     |> validate_length(:email, max: 160)
-    |> validate_length(:password, min: 8, max: 72)
+    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"), max: 72)
     |> unsafe_validate_unique(:username, Firefly.Repo)
     |> put_password_hash()
   end

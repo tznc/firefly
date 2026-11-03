@@ -6,6 +6,7 @@ defmodule Firefly.Notifications.Emails do
 
   import Bamboo.Email
   alias Firefly.Rendering.Markdown
+  alias Firefly.SiteSettings
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Messaging.{Conversation, Message}
@@ -50,7 +51,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "mailing_list_post")
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("[#{site()}] #{thread.title}")
     |> html_body("""
     <p>#{escape(author)} #{link("posted", url)} in #{link(thread.title, thread_url(thread))}:</p>
@@ -92,7 +93,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, parts[:template])
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject(parts[:subject])
     |> html_body("""
     <p>#{parts[:html]}</p>
@@ -128,7 +129,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "message_notification")
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("#{subject} on #{site()}")
     |> html_body("""
     <p>#{escape(subject)}. #{link("Read and reply on #{site()}", url)}:</p>
@@ -156,7 +157,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "chat_notification")
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("#{subject} on #{site()}")
     |> html_body("""
     <p>#{escape(subject)}. #{link("Open it in chat", url)}:</p>
@@ -181,7 +182,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "penalty")
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("#{subject} on #{site()}")
     |> html_body("""
     <p>Hi #{escape(user.username)},</p>
@@ -202,7 +203,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "invite")
     |> to(email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("#{inviter.username} invited you to join #{site()}")
     |> html_body("""
     <p>Hi,</p>
@@ -222,12 +223,12 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "confirmation")
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("Confirm your email address for #{site()}")
     |> html_body("""
     <p>Hi #{escape(user.username)},</p>
     <p>Confirm your email address to start posting on #{escape(site())}: #{link("confirm my email", url)}</p>
-    <p>The link expires in 7 days. If you didn't create a #{escape(site())} account, ignore this email.</p>
+    <p>The link expires in #{SiteSettings.get("email_confirmation_days")} days. If you didn't create a #{escape(site())} account, ignore this email.</p>
     """)
     |> text_body("""
     Hi #{user.username},
@@ -236,7 +237,7 @@ defmodule Firefly.Notifications.Emails do
 
     #{url}
 
-    The link expires in 7 days. If you didn't create a #{site()} account, ignore this email.
+    The link expires in #{SiteSettings.get("email_confirmation_days")} days. If you didn't create a #{site()} account, ignore this email.
     """)
   end
 
@@ -244,12 +245,12 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "password_reset")
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("Reset your #{site()} password")
     |> html_body("""
     <p>Hi #{escape(user.username)},</p>
     <p>Someone asked to reset the password for your #{escape(site())} account. #{link("Choose a new password", url)}.</p>
-    <p>The link expires in an hour and works once. If it wasn't you, ignore this email.</p>
+    <p>The link expires in #{hours(SiteSettings.get("password_reset_hours"))} and works once. If it wasn't you, ignore this email.</p>
     """)
     |> text_body("""
     Hi #{user.username},
@@ -258,7 +259,7 @@ defmodule Firefly.Notifications.Emails do
 
     #{url}
 
-    The link expires in an hour and works once. If it wasn't you, ignore this email.
+    The link expires in #{hours(SiteSettings.get("password_reset_hours"))} and works once. If it wasn't you, ignore this email.
     """)
   end
 
@@ -273,12 +274,12 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "magic_link")
     |> to(address)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("Your #{site()} login link")
     |> html_body("""
     <p>#{escape(greeting)}</p>
     <p>Use this link to #{action} #{escape(site())}: #{link("log me in", url)}</p>
-    <p>It expires in 15 minutes and works once. If you didn't ask for it, ignore this email.</p>
+    <p>It expires in #{SiteSettings.get("magic_link_minutes")} minutes and works once. If you didn't ask for it, ignore this email.</p>
     """)
     |> text_body("""
     #{greeting}
@@ -287,7 +288,7 @@ defmodule Firefly.Notifications.Emails do
 
     #{url}
 
-    It expires in 15 minutes and works once. If you didn't ask for it, ignore this email.
+    It expires in #{SiteSettings.get("magic_link_minutes")} minutes and works once. If you didn't ask for it, ignore this email.
     """)
   end
 
@@ -303,7 +304,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "digest")
     |> to(user.email)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("[#{site()}] Summary since #{since}")
     |> put_header("List-Unsubscribe", "<#{unsubscribe}>")
     |> put_header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
@@ -348,7 +349,7 @@ defmodule Firefly.Notifications.Emails do
     new_email()
     |> put_private(:template, "test_email")
     |> to(address)
-    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> from(sender())
     |> subject("Test email from #{site()}")
     |> html_body("""
     <p>This is a test email from #{link(site(), Firefly.Endpoint.url())}.</p>
@@ -422,7 +423,16 @@ defmodule Firefly.Notifications.Emails do
   end
 
   # The site's name (the `title` site setting).
-  defp site, do: Firefly.SiteSettings.get("title")
+  defp site, do: SiteSettings.get("title")
+
+  defp hours(1), do: "an hour"
+  defp hours(n), do: "#{n} hours"
+
+  # The deployment's sender address, named as the `email_from_name` setting says.
+  defp sender do
+    {_name, address} = Application.fetch_env!(:firefly, :email)[:from]
+    {SiteSettings.get("email_from_name"), address}
+  end
 
   defp settings_url, do: Firefly.URLs.notification_settings_url()
 
