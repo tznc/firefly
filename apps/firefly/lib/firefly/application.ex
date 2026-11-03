@@ -36,7 +36,9 @@ defmodule Firefly.Application do
       # Posts as plugins transformed them
       Firefly.Plugins.Content.cache_spec(),
       # Counts traffic in memory and writes it in batches
-      Firefly.Analytics.Buffer
+      Firefly.Analytics.Buffer,
+      # Reports' results for the day
+      Firefly.Reports.Cache
     ] ++ topic_timers() ++ plugin_queue()
   end
 

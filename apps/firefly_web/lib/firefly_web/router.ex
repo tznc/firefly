@@ -131,6 +131,9 @@ defmodule FireflyWeb.Router do
       live("/messages/new", MessageLive.New, :new)
       live("/messages/:id", MessageLive.Show, :show)
       live("/notifications/:id", NotificationLive.Show, :show)
+      live("/staff/dashboard", StaffLive.Dashboard, :index)
+      live("/staff/reports", StaffLive.Reports, :index)
+      live("/staff/reports/:id", StaffLive.Report, :show)
       live("/staff/log", StaffLive.Log, :index)
       live("/staff/settings", StaffLive.Settings, :index)
       live("/staff/groups", StaffLive.Groups, :index)
@@ -195,6 +198,13 @@ defmodule FireflyWeb.Router do
   # they only add to a counter (see FireflyWeb.AnalyticsController).
   scope "/analytics", FireflyWeb do
     post("/click", AnalyticsController, :click)
+  end
+
+  # Reports as CSV, for admins.
+  scope "/staff", FireflyWeb do
+    pipe_through([:browser, :admin])
+
+    get("/reports/:id/export", ReportController, :export)
   end
 
   scope "/email", FireflyWeb do

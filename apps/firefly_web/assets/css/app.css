@@ -141,3 +141,13 @@ img.emoji { display: inline-block; height: 1.25em; width: auto; margin: 0 0.05em
 
 /* Footnotes: the list at the end of a post */
 .post-body > section { margin-top: 1rem; border-top: 1px solid var(--color-base-300); font-size: 0.875em; }
+
+/* Report charts (see FireflyWeb.ReportComponents): categorical series
+   colors in a fixed order, stepped separately for the dark theme */
+.chart { --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; }
+[data-theme=firefly-dark] .chart { --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; }
+.chart .series-1 { fill: var(--series-1); background-color: var(--series-1); }
+.chart .series-2 { fill: var(--series-2); background-color: var(--series-2); }
+.chart .series-3 { fill: var(--series-3); background-color: var(--series-3); }
+.chart .series-4 { fill: var(--series-4); background-color: var(--series-4); }
+.chart .bar:hover { opacity: 0.8; }

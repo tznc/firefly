@@ -30,6 +30,7 @@ defmodule FireflyWeb do
       Firefly.Plugin,
       Firefly.Plugins,
       Firefly.Rendering,
+      Firefly.Reports,
       Firefly.SiteSettings,
       Firefly.TrustLevels,
       Firefly.Uploads,
