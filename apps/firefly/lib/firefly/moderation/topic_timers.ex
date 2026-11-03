@@ -163,8 +163,9 @@ defmodule Firefly.Moderation.TopicTimers do
     (see `Firefly.Directory`), reviewing trust levels (see
     `Firefly.TrustLevels`), granting badges (see
     `Firefly.Badges`), sending digest emails (see
-    `Firefly.Notifications.Digests`) and pruning a day's analytics
-    viewers (see `Firefly.Analytics`). At start (so nothing that fell due while the
+    `Firefly.Notifications.Digests`), pruning a day's analytics
+    viewers (see `Firefly.Analytics`) and scheduled backups (see
+    `Firefly.Backups`). Nothing runs while the site is read-only. At start (so nothing that fell due while the
     app was down is lost), then every `:interval` milliseconds (the
     `Firefly.Moderation.TopicTimers` config; 30 seconds by default), so each runs
     at most that late. Every job takes its due rows one locked transaction
@@ -185,7 +186,8 @@ defmodule Firefly.Moderation.TopicTimers do
       Firefly.TrustLevels,
       Firefly.Badges,
       Firefly.Notifications.Digests,
-      Firefly.Analytics
+      Firefly.Analytics,
+      Firefly.Backups
     ]
 
     def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -205,7 +207,7 @@ defmodule Firefly.Moderation.TopicTimers do
       # A failing job is logged, not fatal: crashing would only retry it
       # straight away, and then take the app down with it. Nor does it hold
       # up the other jobs.
-      for job <- @jobs do
+      for job <- @jobs, not Firefly.Backups.read_only?() do
         try do
           job.run_due()
         rescue

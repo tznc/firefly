@@ -266,6 +266,12 @@ defmodule Firefly.Plugins do
   @doc false
   def clear_cache, do: :persistent_term.put(@generation_key, make_ref())
 
+  @doc """
+  Reloads the plugins on every node from the database (after it was
+  replaced under them, as by a restore).
+  """
+  def reload, do: changed()
+
   # After a change commits: reload here, and on every other node.
   defp changed do
     clear_cache()

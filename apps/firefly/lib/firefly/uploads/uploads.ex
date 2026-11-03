@@ -23,7 +23,10 @@ defmodule Firefly.Uploads do
   links them.
   """
 
-  use Boundary, top_level?: true, check: [out: false], exports: [Upload, Processor, Storage]
+  use Boundary,
+    top_level?: true,
+    check: [out: false],
+    exports: [Upload, Processor, Storage, Storage.Local, AWS.SigV4]
 
   import Ecto.Query
   require Logger

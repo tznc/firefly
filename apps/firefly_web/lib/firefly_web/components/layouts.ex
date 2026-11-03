@@ -20,6 +20,7 @@ defmodule FireflyWeb.Layouts do
   attr :message_count, :integer, default: 0, doc: "conversations with unread messages"
   attr :current_path, :string, default: nil, doc: "used to highlight the active link"
   attr :review_count, :integer, default: 0, doc: "items in the staff review queue (admins)"
+  attr :read_only, :map, default: nil, doc: "the site's read-only state (see `Firefly.Backups`)"
   slot :inner_block, required: true
 
   def app(assigns) do
@@ -74,6 +75,12 @@ defmodule FireflyWeb.Layouts do
 
         <main class="flex-1 px-4 py-8 sm:px-6 lg:px-10">
           <div class="mx-auto max-w-4xl space-y-6">
+            <div :if={@read_only} id="read-only-banner" role="status" class="alert alert-warning">
+              <.icon name="hero-lock-closed" class="size-5" />
+              <span>
+                The forum is read-only for maintenance ({@read_only.reason}). You can read, but not post or change anything for now.
+              </span>
+            </div>
             <.confirm_email_notice current_user={@current_user} />
             <.silenced_notice current_user={@current_user} />
             {render_slot(@inner_block)}
@@ -218,6 +225,13 @@ defmodule FireflyWeb.Layouts do
               <.nav_item path={~p"/staff/webhooks"} current_path={@current_path} icon="hero-bolt">
                 Webhooks
               </.nav_item>
+              <.nav_item
+                path={~p"/staff/backups"}
+                current_path={@current_path}
+                icon="hero-archive-box-arrow-down"
+              >
+                Backups
+              </.nav_item>
               <li>
                 <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> Admin</a>
               </li>
@@ -315,7 +329,8 @@ defmodule FireflyWeb.Layouts do
       :notification_count,
       :message_count,
       :review_count,
-      :current_path
+      :current_path,
+      :read_only
     ])
   end
 

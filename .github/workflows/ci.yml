@@ -45,6 +45,12 @@ jobs:
       - name: Install libvips
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
 
+      # Backup tests run pg_dump/pg_restore, which must match the server (18).
+      - name: Install postgresql-client-18
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-18
+
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -146,3 +152,5 @@ jobs:
             -e FIREFLY_DATABASE_URL=ecto://user:pass@localhost/firefly \
             -e FIREFLY_SECRET_KEY_BASE="$(openssl rand -base64 48)" \
             firefly:ci /app/bin/firefly eval 'IO.puts(Application.spec(:firefly_web, :vsn))'
+          # Backups need the PostgreSQL 18 client tools.
+          docker run --rm --entrypoint /usr/lib/postgresql/18/bin/pg_restore firefly:ci --version

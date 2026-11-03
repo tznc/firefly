@@ -647,6 +647,35 @@ defmodule Firefly.SiteSettings do
         default: true,
         help:
           "First-party counts of page views, topic views, referrers and link clicks (no cookies, no IP addresses kept, nothing sent to third parties)."
+      },
+      %{
+        key: "backup_frequency_days",
+        section: "Backups",
+        type: :integer,
+        label: "Back up every (days)",
+        default: 0,
+        min: 0,
+        max: 30,
+        help: "Automatic backups, every this many days. 0: off."
+      },
+      %{
+        key: "backup_keep",
+        section: "Backups",
+        type: :integer,
+        label: "Backups to keep",
+        default: 5,
+        min: 1,
+        max: 100,
+        help: "After each backup, older ones beyond this many are deleted."
+      },
+      %{
+        key: "backup_uploads",
+        section: "Backups",
+        type: :boolean,
+        label: "Include uploads",
+        default: true,
+        help:
+          "Backups include the uploaded files when they're stored on this server (files in S3 are already kept there)."
       }
     ]
   end
@@ -756,6 +785,12 @@ defmodule Firefly.SiteSettings do
     clear_cache()
     Phoenix.PubSub.broadcast_from(@pubsub, self(), @topic, :site_settings_changed)
   end
+
+  @doc """
+  Reloads every node's settings from the database (after it was replaced
+  under them, as by a restore).
+  """
+  def reload, do: invalidate()
 
   @doc false
   def topic, do: @topic

@@ -62,6 +62,8 @@ config :firefly, Firefly.Analytics, flush_interval: :manual
 # Reports read each test's own data: no cache shared between tests.
 config :firefly, Firefly.Reports, cache: false
 
+config :firefly, Firefly.Backups, dir: Path.join(System.tmp_dir!(), "firefly-test-backups")
+
 # Each test reads its own (transactional) site settings: no shared cache.
 config :firefly, site_settings_cache: false
 

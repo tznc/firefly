@@ -10,6 +10,9 @@ defmodule FireflyWeb.UserAuth do
       `Firefly.Analytics`) once the page connects.
       For a user, it also handles the theme toggle's `"set_theme"` event on
       every page, saving their theme.
+      It keeps `:read_only` (see `Firefly.Backups`) live for the banner, and
+      while the site is read-only refuses every event (they'd write), but
+      on the backups page, where admins lift it.
     * `:require_user` - redirects to the categories page when nobody is
       logged in. Used by individual LiveViews, after the live session's
       `:mount_current_user`.
@@ -25,9 +28,9 @@ defmodule FireflyWeb.UserAuth do
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
   import Phoenix.LiveView
 
-  alias Firefly.{Accounts, Analytics, Messaging, Notifications}
+  alias Firefly.{Accounts, Analytics, Backups, Messaging, Notifications}
   alias Firefly.Accounts.Visits
-  alias Firefly.Moderation.Review
+  alias Firefly.Moderation.{Posting, Review}
   alias FireflyWeb.Session
 
   def on_mount(:mount_current_user, _params, session, socket) do
@@ -83,6 +86,7 @@ defmodule FireflyWeb.UserAuth do
     |> record_visit()
     |> count_page_view()
     |> assign_counts()
+    |> read_only()
     |> subscribe_to_notifications()
     |> subscribe_to_review()
     |> handle_set_theme()
@@ -110,6 +114,28 @@ defmodule FireflyWeb.UserAuth do
     end
 
     socket
+  end
+
+  defp read_only(socket) do
+    if connected?(socket), do: Backups.subscribe_read_only()
+
+    socket
+    |> assign(:read_only, Backups.read_only())
+    |> attach_hook(:read_only, :handle_info, fn
+      {:read_only, value}, socket -> {:halt, assign(socket, :read_only, value)}
+      _other, socket -> {:cont, socket}
+    end)
+    |> attach_hook(:read_only_events, :handle_event, &refuse_when_read_only/3)
+  end
+
+  # Checked when the event comes, not from the assign: another node may
+  # have changed it a moment ago.
+  defp refuse_when_read_only(_event, _params, socket) do
+    if Backups.read_only?() and socket.view != FireflyWeb.StaffLive.Backups do
+      {:halt, put_flash(socket, :error, Posting.message(:read_only))}
+    else
+      {:cont, socket}
+    end
   end
 
   defp assign_counts(socket) do

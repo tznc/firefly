@@ -86,9 +86,14 @@ RUN mix release firefly
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE} AS final
 
+# postgresql-client-18 (from the PostgreSQL project's apt repository, set up
+# by postgresql-common's script) for backups: pg_dump and pg_restore must
+# match the server's major version (see Firefly.Backups).
 RUN apt-get update \
   && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates tini \
-    libvips42t64 \
+    libvips42t64 postgresql-common \
+  && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
+  && apt-get install -y --no-install-recommends postgresql-client-18 \
   && rm -rf /var/lib/apt/lists/*
 
 # Set the locale
@@ -104,6 +109,8 @@ RUN chown nobody /app
 
 # set runner ENV
 ENV MIX_ENV="prod"
+# Backups are kept here (mount a volume) unless FIREFLY_BACKUP_STORAGE=s3
+ENV FIREFLY_BACKUP_DIR="/app/backups"
 
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/firefly ./

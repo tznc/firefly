@@ -60,7 +60,8 @@ defmodule Firefly.Discussion.Policy do
       `:manage_tags` (tag groups and synonyms), `:manage_badges`, `:manage_plugins`,
       `:manage_uploads` (list and delete any upload), `:manage_emoji`
       (custom emoji), `:manage_watched_words`, `:manage_webhooks`,
-      `:view_reports` (the dashboard and reports) - admins
+      `:view_reports` (the dashboard and reports), `:manage_backups` (and
+      read-only mode) - admins
     * `:view_category`, `:view_thread` (in its category) - everyone, members
       or not, unless the category is restricted to roles (groups): then
       members of one of those roles, and admins. A subcategory also needs its
@@ -208,6 +209,7 @@ defmodule Firefly.Discussion.Policy do
              :manage_watched_words,
              :manage_webhooks,
              :view_reports,
+             :manage_backups,
              :manage_badges,
              :set_trust_level
            ],

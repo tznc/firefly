@@ -26,6 +26,15 @@ if config_env() != :test do
     storage: if(System.get_env("FIREFLY_UPLOAD_STORAGE") == "s3", do: :s3, else: :local),
     local_dir: System.get_env("FIREFLY_UPLOAD_DIR", "uploads")
 
+  # Backups (see Firefly.Backups): kept in FIREFLY_BACKUP_DIR, or in the
+  # uploads' S3 bucket under a prefix. pg_dump/pg_restore come from
+  # FIREFLY_PG_BIN_DIR, else the newest /usr/lib/postgresql/*/bin.
+  config :firefly, Firefly.Backups,
+    storage: if(System.get_env("FIREFLY_BACKUP_STORAGE") == "s3", do: :s3, else: :local),
+    dir: System.get_env("FIREFLY_BACKUP_DIR", "backups"),
+    s3_prefix: System.get_env("FIREFLY_BACKUP_S3_PREFIX", "backups/"),
+    pg_bin_dir: System.get_env("FIREFLY_PG_BIN_DIR")
+
   # Social logins: each provider is enabled when its client id and secret
   # are set (see Firefly.Accounts.Auth).
   for {provider, config_key} <- [
