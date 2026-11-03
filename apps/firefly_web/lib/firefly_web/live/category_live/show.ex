@@ -1,5 +1,8 @@
 defmodule FireflyWeb.CategoryLive.Show do
-  @moduledoc "A category's threads, most recently active first; updates live."
+  @moduledoc """
+  A category's threads, most recently active first; updates live. Signed-in
+  users can act on several at once (see `FireflyWeb.BulkThreads`).
+  """
   use FireflyWeb, :live_view
 
   alias Firefly.Discussion
@@ -15,7 +18,8 @@ defmodule FireflyWeb.CategoryLive.Show do
      |> assign(:page_title, category.title)
      |> assign(:category, category)
      |> assign(:level, Subscriptions.category_level(socket.assigns.current_user, category))
-     |> load_threads()}
+     |> load_threads()
+     |> FireflyWeb.BulkThreads.init()}
   end
 
   @impl true
@@ -30,6 +34,9 @@ defmodule FireflyWeb.CategoryLive.Show do
 
   # Unknown levels, or an anonymous viewer.
   def handle_event("set_level", _params, socket), do: {:noreply, socket}
+
+  def handle_event("bulk_" <> _ = event, params, socket),
+    do: FireflyWeb.BulkThreads.handle_event(event, params, socket, &load_threads/1)
 
   def handle_event("delete", _params, socket) do
     if can?(socket.assigns.current_user, :manage_category) do
@@ -105,7 +112,12 @@ defmodule FireflyWeb.CategoryLive.Show do
         </div>
       </div>
 
-      <.thread_list threads={@threads} />
+      <FireflyWeb.BulkThreads.bar
+        selected={@selected}
+        actions={@bulk_actions}
+        categories={@bulk_categories}
+      />
+      <.thread_list threads={@threads} selected={@selected} />
     </Layouts.app>
     """
   end

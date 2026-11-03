@@ -246,6 +246,35 @@ defmodule Firefly.Moderation.Review do
     end
   end
 
+  @doc """
+  Approves the queued posts with ids `post_ids` as `admin`, in queue order;
+  each one as `approve/2` does (and is logged). Posts someone else already
+  decided are skipped. Returns `{:ok, approved count}`.
+  """
+  def approve_many(post_ids, %User{} = admin),
+    do: {:ok, count_ok(queued(post_ids), &approve(&1, admin))}
+
+  @doc """
+  Rejects the queued posts with ids `post_ids` as `admin`, each as
+  `reject/3` does, telling every author `reason`. Returns `{:ok, rejected
+  count}`, or `{:error, :reason_required}`.
+  """
+  def reject_many(post_ids, %User{} = admin, reason) do
+    if String.trim(reason || "") == "",
+      do: {:error, :reason_required},
+      else: {:ok, count_ok(queued(post_ids), &reject(&1, admin, reason))}
+  end
+
+  defp queued(post_ids) do
+    queued_query()
+    |> where([p], p.id in ^post_ids)
+    |> order_by(asc: :queued_at, asc: :id)
+    |> Repo.all()
+  end
+
+  # Posts that went with a thread rejected before them count as skipped.
+  defp count_ok(posts, decide), do: Enum.count(posts, &match?({:ok, _}, decide.(&1)))
+
   defp still_queued?(nil), do: false
   defp still_queued?(post), do: Post.queued?(post) and not Post.deleted?(post)
 
