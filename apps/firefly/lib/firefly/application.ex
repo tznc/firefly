@@ -33,6 +33,8 @@ defmodule Firefly.Application do
       # Fetches link previews in the background
       {Task.Supervisor, name: Firefly.Rendering.LinkPreviews.supervisor()},
       {Task.Supervisor, name: Firefly.Notifications.WebPush.TaskSupervisor},
+      # Runs AI work in the background (triage, embeddings)
+      {Task.Supervisor, name: Firefly.AI.TaskSupervisor},
       # Posts as plugins transformed them
       Firefly.Plugins.Content.cache_spec(),
       # Counts traffic in memory and writes it in batches

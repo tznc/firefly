@@ -79,8 +79,24 @@ defmodule Firefly.AI.FakeProvider do
     :ok
   end
 
-  @doc "An OpenAI-compatible chat completion answering `text`."
-  def openai_reply(conn, text, usage \\ %{"prompt_tokens" => 12, "completion_tokens" => 5}) do
+  @doc """
+  An OpenAI-compatible chat completion answering `text` (streamed in two
+  chunks when the request asks for a stream).
+  """
+  def openai_reply(conn, text, usage \\ %{"prompt_tokens" => 12, "completion_tokens" => 5})
+
+  def openai_reply(%{assigns: %{body: %{"stream" => true}}} = conn, text, usage) do
+    {first, second} = String.split_at(text, div(String.length(text), 2))
+
+    sse(conn, [
+      {nil, %{"choices" => [%{"delta" => %{"content" => first}}]}},
+      {nil, %{"choices" => [%{"delta" => %{"content" => second}}]}},
+      {nil, %{"choices" => [], "usage" => usage}},
+      {nil, "[DONE]"}
+    ])
+  end
+
+  def openai_reply(conn, text, usage) do
     json(conn, 200, %{
       "choices" => [%{"index" => 0, "message" => %{"role" => "assistant", "content" => text}}],
       "usage" => usage

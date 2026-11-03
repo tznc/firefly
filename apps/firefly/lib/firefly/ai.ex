@@ -38,7 +38,18 @@ defmodule Firefly.AI do
   use Boundary,
     top_level?: true,
     check: [out: false],
-    exports: [ProviderConfig, FeatureSetting, Provider, Prompts, Usage]
+    exports: [
+      ProviderConfig,
+      FeatureSetting,
+      Provider,
+      Prompts,
+      Usage,
+      Summaries,
+      Translations,
+      Triage,
+      Composer,
+      Classification
+    ]
 
   import Ecto.Query
 
@@ -364,6 +375,34 @@ defmodule Firefly.AI do
     end
   end
 
+  ## Content events
+
+  @doc """
+  A post was published (or approved): triage rates it in the background
+  (see `Firefly.AI.Triage`), when triage is on.
+  """
+  def post_published(%Firefly.Discussion.Post{} = post), do: triage(post)
+
+  @doc "A post was flagged: triage rates it in the background if it hasn't yet."
+  def post_flagged(%Firefly.Discussion.Post{} = post), do: triage(post)
+
+  defp triage(post) do
+    if available?(nil, "triage"), do: async(fn -> Firefly.AI.Triage.classify(post) end)
+    :ok
+  end
+
+  # Background work never holds up (or fails) what triggered it. Tests run
+  # it in their own process (`config :firefly, Firefly.AI, async: false`).
+  defp async(fun) do
+    if Application.get_env(:firefly, __MODULE__, [])[:async] == false do
+      fun.()
+    else
+      {:ok, _pid} = Task.Supervisor.start_child(Firefly.AI.TaskSupervisor, fun)
+    end
+
+    :ok
+  end
+
   @doc "A message for a reason `chat/4` or `embed/2` gave."
   def message(:disabled), do: "That AI feature is off."
   def message(:read_only), do: "AI features are unavailable while the forum is read-only."
@@ -373,4 +412,5 @@ defmodule Firefly.AI do
   def message(:quota), do: "You've used today's AI requests. Try again tomorrow."
   def message(:provider_failed), do: "The AI service didn't answer. Please try again later."
   def message(:unauthorized), do: "You can't use AI on that."
+  def message(:empty), do: "Write something first."
 end

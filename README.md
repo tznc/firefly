@@ -144,6 +144,16 @@ trust level (site settings, AI section), and every request is logged with
 its tokens (the `AI usage` report). Prompts are built in and can be
 overridden in the AI prompts site settings.
 
+The features: topic summaries on long threads (cached until enough new
+posts) and chat catch-ups of unread messages; translating a post or chat
+message into the reader's browser language (cached); triage, which rates
+new and flagged posts for toxicity, spam and sentiment in the background
+and flags, hides or tags them past configurable thresholds (logged as the
+system's; the `Sentiment` report and dashboard chart); and composer
+helpers (proofread, suggest a title or tags). Only content the member
+asking may read is ever sent, never private messages, and every AI output
+is labelled as AI-generated.
+
 ### Tests
 
 Page tests use [PhoenixTest](https://hexdocs.pm/phoenix_test); critical user

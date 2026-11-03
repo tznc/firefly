@@ -846,6 +846,80 @@ defmodule Firefly.SiteSettings do
           "How many AI requests (summaries, translations, composer helpers) a member at trust level 4 may make a day. 0: none. Admins have no limit."
       },
       %{
+        key: "ai_summary_min_posts",
+        section: "AI",
+        type: :integer,
+        label: "Summaries for topics with at least (posts)",
+        default: 10,
+        min: 2,
+        max: 1_000,
+        help: "Topics this long get a Summarize button (with the Summaries feature on)."
+      },
+      %{
+        key: "ai_summary_stale_posts",
+        section: "AI",
+        type: :integer,
+        label: "Summarize again after (new posts)",
+        default: 5,
+        min: 1,
+        max: 1_000,
+        help: "A topic's summary is kept until this many posts were added since it was made."
+      },
+      %{
+        key: "ai_triage_flag_threshold",
+        section: "AI",
+        type: :integer,
+        label: "Triage flags posts rated at least",
+        default: 70,
+        min: 0,
+        max: 100,
+        help:
+          "Posts triage rates this toxic or spammy (0 to 100) are flagged into the review queue. 0: never."
+      },
+      %{
+        key: "ai_triage_hide_threshold",
+        section: "AI",
+        type: :integer,
+        label: "Triage hides posts rated at least",
+        default: 0,
+        min: 0,
+        max: 100,
+        help:
+          "Posts triage rates this toxic or spammy are flagged and hidden until staff review them (admins' posts are only flagged). 0: never."
+      },
+      %{
+        key: "ai_triage_tag",
+        section: "AI",
+        type: :text,
+        label: "Tag topics triage flags",
+        default: "",
+        help: "A tag added to the topic of a post triage flags or hides. Blank: none."
+      },
+      %{
+        key: "ai_composer_proofread",
+        section: "AI",
+        type: :boolean,
+        label: "Composer: proofread",
+        default: true,
+        help: "Offers to fix spelling and grammar in the composer (with Composer helpers on)."
+      },
+      %{
+        key: "ai_composer_title",
+        section: "AI",
+        type: :boolean,
+        label: "Composer: suggest a title",
+        default: true,
+        help: "Offers a title for a new topic from its first post."
+      },
+      %{
+        key: "ai_composer_tags",
+        section: "AI",
+        type: :boolean,
+        label: "Composer: suggest tags",
+        default: true,
+        help: "Offers tags for a new topic from its first post."
+      },
+      %{
         key: "ai_prompt_summarize_topic",
         section: "AI prompts",
         type: :text,

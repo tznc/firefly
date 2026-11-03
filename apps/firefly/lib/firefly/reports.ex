@@ -42,7 +42,8 @@ defmodule Firefly.Reports do
     Firefly.Reports.WebhookFailures,
     Firefly.Reports.Penalties,
     Firefly.Reports.StaffActions,
-    Firefly.Reports.AIUsage
+    Firefly.Reports.AIUsage,
+    Firefly.Reports.Sentiment
   ]
 
   @presets [7, 30, 90, 365]

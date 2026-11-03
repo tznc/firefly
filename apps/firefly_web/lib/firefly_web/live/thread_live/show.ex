@@ -48,6 +48,8 @@ defmodule FireflyWeb.ThreadLive.Show do
   alias Firefly.Moderation.{Flags, Posting, WatchedWords}
   alias Firefly.Rendering.LinkPreviews
   alias Firefly.{RateLimit, Repo}
+  alias Firefly.AI
+  alias Firefly.AI.{Summaries, Translations}
   alias Firefly.Discussion.Solved
   alias Firefly.Moderation.TopicTimers
   alias Firefly.Discussion.{Category, Post, Thread}
@@ -122,6 +124,10 @@ defmodule FireflyWeb.ThreadLive.Show do
      |> assign(:analytics_dnt, session["analytics_dnt"] == true)
      |> assign(:ignored_user_ids, MapSet.new(Ignores.ignored_ids(socket.assigns.current_user)))
      |> assign(:revealed_ids, MapSet.new())
+     |> assign(:language, viewer_language(socket))
+     |> assign(:can_translate?, AI.available?(socket.assigns.current_user, "translate"))
+     |> assign(:ai_summary, nil)
+     |> assign(:translations, %{})
      |> load_thread(thread)}
   end
 
@@ -203,7 +209,22 @@ defmodule FireflyWeb.ThreadLive.Show do
   def handle_info({:ignores_changed, viewer}, socket),
     do: {:noreply, assign(socket, :ignored_user_ids, MapSet.new(Ignores.ignored_ids(viewer)))}
 
+  def handle_info({:ai_delta, :summary, text}, socket),
+    do: {:noreply, update(socket, :ai_summary, &append_text(&1, text))}
+
+  def handle_info({:ai_delta, {:translation, id}, text}, socket),
+    do:
+      {:noreply,
+       update(socket, :translations, &Map.update!(&1, id, fn r -> append_text(r, text) end))}
+
   def handle_info({_event, _thread}, socket), do: {:noreply, socket}
+
+  @impl true
+  def handle_async(:summary, result, socket),
+    do: {:noreply, assign(socket, :ai_summary, ai_outcome(result))}
+
+  def handle_async({:translation, id}, result, socket),
+    do: {:noreply, update(socket, :translations, &Map.put(&1, id, ai_outcome(result)))}
 
   defp leave(socket) do
     socket
@@ -231,9 +252,44 @@ defmodule FireflyWeb.ThreadLive.Show do
              "vote",
              "close_poll",
              "reopen_poll",
-             "toggle_wiki"
+             "toggle_wiki",
+             "summarize",
+             "translate"
            ] do
     {:noreply, put_flash(socket, :error, denied_message(nil))}
+  end
+
+  # AI: results stream in (see FireflyWeb.AIComponents) from tasks the page
+  # runs, so the page stays responsive while the model writes.
+  def handle_event("summarize", _params, socket) do
+    %{thread: thread, current_user: user} = socket.assigns
+    page = self()
+
+    {:noreply,
+     socket
+     |> assign(:ai_summary, %{status: :loading, text: ""})
+     |> start_async(:summary, fn ->
+       Summaries.topic(thread, user, stream: &send(page, {:ai_delta, :summary, &1}))
+     end)}
+  end
+
+  def handle_event("translate", %{"id" => id}, socket) do
+    case Enum.find(socket.assigns.thread.posts, &(to_string(&1.id) == id)) do
+      nil ->
+        {:noreply, socket}
+
+      post ->
+        %{current_user: user, language: language} = socket.assigns
+        page = self()
+        key = {:translation, post.id}
+
+        {:noreply,
+         socket
+         |> update(:translations, &Map.put(&1, post.id, %{status: :loading, text: ""}))
+         |> start_async(key, fn ->
+           Translations.post(post, user, language, stream: &send(page, {:ai_delta, key, &1}))
+         end)}
+    end
   end
 
   def handle_event("set_level", %{"level" => level}, socket)
@@ -528,6 +584,11 @@ defmodule FireflyWeb.ThreadLive.Show do
       "#{WatchedWords.censor(thread.title)} - #{socket.assigns.category.title}"
     )
     |> assign(:thread, thread)
+    |> assign(
+      :can_summarize?,
+      user != nil and Summaries.summarizable?(length(thread.posts)) and
+        AI.available?(user, "summarize")
+    )
     |> assign(:first_post, first_post)
     |> assign(:replies, replies)
     |> assign(:refs, Mentions.refs(Enum.map(thread.posts, & &1.body), user))
@@ -756,6 +817,13 @@ defmodule FireflyWeb.ThreadLive.Show do
         </div>
       </header>
 
+      <section :if={@can_summarize?} id="topic-summary" class="rounded-box border border-base-300 bg-base-100 p-3">
+        <button :if={is_nil(@ai_summary)} id="summarize" phx-click="summarize" class="btn btn-sm">
+          <.icon name="hero-sparkles" class="size-4" /> Summarize this topic
+        </button>
+        <.ai_result :if={@ai_summary} id="summary" title="Summary" result={@ai_summary} viewer={@current_user} />
+      </section>
+
       <ol id="posts" class="space-y-4">
         <li>
           <.hidden_post :if={MapSet.member?(@hidden_ids, @first_post.id)} post={@first_post} />
@@ -806,6 +874,7 @@ defmodule FireflyWeb.ThreadLive.Show do
                 flagged={MapSet.member?(@flagged_ids, @first_post.id)}
                 count={@flag_counts[@first_post.id]}
               />
+              <.translate_button :if={@can_translate?} post={@first_post} />
               <.wiki_button :if={@can_wiki?} post={@first_post} />
               <.bookmark_button
                 :if={@current_user}
@@ -820,6 +889,13 @@ defmodule FireflyWeb.ThreadLive.Show do
               />
             </:actions>
           </.post>
+          <.ai_result
+            :if={@translations[@first_post.id]}
+            id={"translation-#{@first_post.id}"}
+            title="Translation"
+            result={@translations[@first_post.id]}
+            viewer={@current_user}
+          />
           <.flag_reason_form :if={@flagging == @first_post.id} form={@flag_form} />
           <.bookmark_form :if={@bookmarking == @first_post.id} form={@bookmark_form} />
           <.accepted_answer :if={@accepted} post={@accepted} />
@@ -890,6 +966,7 @@ defmodule FireflyWeb.ThreadLive.Show do
                 post={post}
                 accepted={post.id == @thread.accepted_post_id}
               />
+              <.translate_button :if={@can_translate? and not Post.deleted?(post)} post={post} />
               <.wiki_button :if={@can_wiki? and not Post.deleted?(post)} post={post} />
               <.bookmark_button
                 :if={@current_user}
@@ -916,6 +993,13 @@ defmodule FireflyWeb.ThreadLive.Show do
               </button>
             </:actions>
           </.post>
+          <.ai_result
+            :if={@translations[post.id]}
+            id={"translation-#{post.id}"}
+            title="Translation"
+            result={@translations[post.id]}
+            viewer={@current_user}
+          />
           <.flag_reason_form :if={@flagging == post.id} form={@flag_form} />
           <.bookmark_form :if={@bookmarking == post.id} form={@bookmark_form} />
         </li>
@@ -958,6 +1042,22 @@ defmodule FireflyWeb.ThreadLive.Show do
         </.link>
       </div>
     </Layouts.app>
+    """
+  end
+
+  attr :post, :any, required: true
+
+  defp translate_button(assigns) do
+    ~H"""
+    <button
+      phx-click="translate"
+      phx-value-id={@post.id}
+      class="btn btn-ghost btn-sm btn-square"
+      aria-label={"Translate post #{@post.id}"}
+      title="Translate"
+    >
+      <.icon name="hero-language" class="size-4" />
+    </button>
     """
   end
 

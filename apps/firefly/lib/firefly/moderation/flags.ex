@@ -47,6 +47,7 @@ defmodule Firefly.Moderation.Flags do
 
       notify_admins(post, user)
       Firefly.Moderation.Review.changed()
+      :ok = Firefly.AI.post_flagged(post)
 
       Firefly.Plugins.Events.emit(
         "flag_raised",
@@ -74,6 +75,17 @@ defmodule Firefly.Moderation.Flags do
 
     notify_admins(post, nil)
     Firefly.Moderation.Review.changed()
+    {:ok, flag}
+  end
+
+  @doc """
+  Flags `post` as the system (see `flag_by_system/2`) and hides it at once
+  pending review, as enough members' flags would (e.g. for AI triage, see
+  `Firefly.AI.Triage`). Admins' posts are flagged, not hidden.
+  """
+  def hide_by_system(%Post{} = post, note) do
+    {:ok, flag} = flag_by_system(post, note)
+    hide(Repo.preload(post, [:thread, :user]))
     {:ok, flag}
   end
 

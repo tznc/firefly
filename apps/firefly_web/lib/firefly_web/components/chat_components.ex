@@ -220,6 +220,11 @@ defmodule FireflyWeb.ChatComponents do
               {if @message.pinned_at, do: "Unpin", else: "Pin"}
             </button>
           </li>
+          <li :if={@perms[:translate?] && !@deleted?}>
+            <button type="button" phx-click="translate" phx-value-id={@message.id}>
+              <.icon name="hero-language" class="size-4" /> Translate
+            </button>
+          </li>
           <li :if={@can_flag?}>
             <button type="button" phx-click="flag_form" phx-value-id={@message.id}>
               <.icon name="hero-flag" class="size-4" /> Flag
