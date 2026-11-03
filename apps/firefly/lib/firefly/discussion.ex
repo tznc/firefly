@@ -1033,6 +1033,7 @@ defmodule Firefly.Discussion do
           Firefly.Uploads.attach(post.body, user, post)
           Firefly.Rendering.LinkPreviews.resolve(post)
           :ok = WatchedWords.posted(post, user, thread.title)
+          :ok = Firefly.Moderation.Akismet.posted(post, user)
         end
 
         {:ok, _} = mark_thread_read(user, thread)
@@ -1611,6 +1612,7 @@ defmodule Firefly.Discussion do
       # Authors have read what they wrote, whichever way they posted it.
       {:ok, _} = advance_read(user.id, thread.id, post.id)
       :ok = WatchedWords.posted(post, user)
+      :ok = Firefly.Moderation.Akismet.posted(post, user)
 
       if Post.queued?(post) do
         Firefly.Moderation.Review.changed()

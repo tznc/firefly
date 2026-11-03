@@ -126,6 +126,8 @@ config :firefly, :plugins_cache, false
 # AI providers are faked by local servers (see Firefly.AI.FakeProvider):
 # retries don't wait.
 config :firefly, Firefly.AI, retry_base_ms: 0, async: false
+# Akismet is faked by a local server too (see Firefly.FakeAkismet).
+config :firefly, Firefly.Moderation.Akismet, async: false
 
 # Link previews aren't fetched, except by the tests of them.
 config :firefly, Firefly.Rendering.LinkPreviews, enabled: false

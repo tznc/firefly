@@ -10,7 +10,7 @@ defmodule FireflyWeb.StaffLive.Review do
   on_mount({FireflyWeb.UserAuth, :require_user})
 
   alias Firefly.{Chat, Repo}
-  alias Firefly.Moderation.{Penalties, Review}
+  alias Firefly.Moderation.{Akismet, Penalties, Review}
   alias Firefly.Discussion.Post
   alias Firefly.Moderation.Flag
 
@@ -38,7 +38,8 @@ defmodule FireflyWeb.StaffLive.Review do
       flagged: Review.flagged_posts(),
       queued: queued,
       selected: selected,
-      chat_flagged: Chat.flagged_messages()
+      chat_flagged: Chat.flagged_messages(),
+      akismet: Akismet.pending()
     )
   end
 
@@ -112,6 +113,24 @@ defmodule FireflyWeb.StaffLive.Review do
     end
   end
 
+  def handle_event(event, %{"check_id" => id}, socket)
+      when event in ~w(akismet_spam akismet_ham) do
+    admin = socket.assigns.current_user
+    verdict = if event == "akismet_spam", do: :spam, else: :ham
+
+    with true <- can?(admin, :review) || {:error, :unauthorized},
+         {:ok, _check} <- Akismet.review(String.to_integer(id), admin, verdict) do
+      done = if verdict == :spam, do: "Confirmed spam.", else: "Marked not spam."
+      {:noreply, socket |> put_flash(:info, done) |> load()}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, denied_message(admin))}
+
+      {:error, reason} ->
+        {:noreply, socket |> put_flash(:error, Akismet.message(reason)) |> load()}
+    end
+  end
+
   def handle_event(event, params, socket) do
     admin = socket.assigns.current_user
 
@@ -156,6 +175,11 @@ defmodule FireflyWeb.StaffLive.Review do
   defp run("reject", post, admin, params),
     do: {Review.reject(post, admin, params["reason"]), "Rejected; the author was told."}
 
+  defp akismet?(flags), do: Enum.any?(flags, &Akismet.flag?/1)
+
+  defp akismet_kind("message"), do: "Private message"
+  defp akismet_kind("profile"), do: "Profile"
+
   defp chat_link(message),
     do: ~p"/chat/c/#{message.channel.slug || "dm"}/#{message.channel.id}?message=#{message.id}"
 
@@ -168,12 +192,46 @@ defmodule FireflyWeb.StaffLive.Review do
       </.page_header>
 
       <p
-        :if={@flagged == [] and @queued == [] and @chat_flagged == []}
+        :if={@flagged == [] and @queued == [] and @chat_flagged == [] and @akismet == []}
         id="review-empty"
         class="text-base-content/70"
       >
         Nothing to review.
       </p>
+
+      <section :if={@akismet != []} id="akismet" class="space-y-4">
+        <h2 class="text-lg font-semibold">Akismet: private messages and profiles</h2>
+        <article
+          :for={check <- @akismet}
+          id={"akismet-#{check.id}"}
+          class="card border border-warning/50 bg-base-100"
+        >
+          <div class="card-body gap-3">
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+              <span class="badge badge-sm">{akismet_kind(check.kind)}</span>
+              <.link :if={check.user} navigate={~p"/users/#{check.user}"} class="font-medium">
+                @{check.user.username}
+              </.link>
+              · <.time_ago id={"akismet-#{check.id}-at"} at={check.inserted_at} />
+            </div>
+            <blockquote class="border-l-2 border-base-300 pl-3 text-sm whitespace-pre-wrap">{check.params["comment_content"]}</blockquote>
+            <p class="text-sm"><.icon name="hero-flag" class="size-4 text-warning" /> System: Spam ({Akismet.flag_note()})</p>
+            <div class="flex flex-wrap gap-2">
+              <button
+                phx-click="akismet_spam"
+                phx-value-check_id={check.id}
+                data-confirm={if check.kind == "message", do: "Delete this message?", else: "Clear this profile's bio, website and location?"}
+                class="btn btn-sm btn-error"
+              >
+                Confirm spam
+              </button>
+              <button phx-click="akismet_ham" phx-value-check_id={check.id} class="btn btn-sm">
+                Not spam
+              </button>
+            </div>
+          </div>
+        </article>
+      </section>
 
       <section :if={@chat_flagged != []} id="chat-flagged" class="space-y-4">
         <h2 class="text-lg font-semibold">Flagged chat messages</h2>
@@ -210,10 +268,10 @@ defmodule FireflyWeb.StaffLive.Review do
                 data-confirm="Delete this message?"
                 class="btn btn-sm btn-error"
               >
-                Agree and delete
+                {if akismet?(message.flags), do: "Confirm spam", else: "Agree and delete"}
               </button>
               <button phx-click="chat_disagree" phx-value-message_id={message.id} class="btn btn-sm">
-                Disagree
+                {if akismet?(message.flags), do: "Not spam", else: "Disagree"}
               </button>
             </div>
           </div>
@@ -240,6 +298,19 @@ defmodule FireflyWeb.StaffLive.Review do
                 · <.time_ago id={"flag-#{flag.id}-at"} at={flag.inserted_at} />
               </li>
             </ul>
+            <div :if={akismet?(post.flags)} class="flex flex-wrap gap-2">
+              <button
+                phx-click="agree_delete"
+                phx-value-post_id={post.id}
+                data-confirm="Delete this post as spam?"
+                class="btn btn-sm btn-error"
+              >
+                Confirm spam
+              </button>
+              <button phx-click="disagree" phx-value-post_id={post.id} class="btn btn-sm">
+                Not spam
+              </button>
+            </div>
             <div class="flex flex-wrap gap-2">
               <button phx-click="agree_hide" phx-value-post_id={post.id} class="btn btn-sm btn-warning">
                 Agree and hide

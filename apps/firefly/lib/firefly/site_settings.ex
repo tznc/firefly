@@ -34,8 +34,8 @@ defmodule Firefly.SiteSettings do
   Every setting, in display order: `key`, `section`, `type` (`:string`,
   `:text`, `:email`, `:boolean`, `:integer` or `:select`), `label`, `help`,
   `default`, for integers `min`/`max`, for texts optionally `max_length`
-  (500 characters by default), and for selects `options` (`{label, value}`
-  pairs).
+  (500 characters by default) and `secret` (the staff log doesn't record
+  the value), and for selects `options` (`{label, value}` pairs).
   """
   def definitions do
     [
@@ -361,6 +361,67 @@ defmodule Firefly.SiteSettings do
         default: false,
         help:
           "Accept responses that answer no request of ours (from the identity provider's app list). Such logins can't be tied to the browser, so they're off unless needed."
+      },
+      %{
+        key: "akismet_enabled",
+        section: "Akismet",
+        type: :boolean,
+        label: "Check new content with Akismet",
+        default: false,
+        help:
+          "Akismet (akismet.com) checks what members below the trust level below post, in the background; spam is hidden and queued for review."
+      },
+      %{
+        key: "akismet_api_key",
+        section: "Akismet",
+        type: :text,
+        secret: true,
+        label: "Akismet API key",
+        default: "",
+        help: "From your akismet.com account. The staff log records only that it changed."
+      },
+      %{
+        key: "akismet_trust_level",
+        section: "Akismet",
+        type: :integer,
+        min: 1,
+        max: 5,
+        label: "Check members below trust level",
+        default: 2,
+        help:
+          "Members at this trust level or above (and admins) aren't checked. 5: everyone else is."
+      },
+      %{
+        key: "akismet_check_posts",
+        section: "Akismet",
+        type: :boolean,
+        label: "Check posts",
+        default: true,
+        help: "New topics and replies."
+      },
+      %{
+        key: "akismet_check_messages",
+        section: "Akismet",
+        type: :boolean,
+        label: "Check private messages",
+        default: true,
+        help: "New private messages."
+      },
+      %{
+        key: "akismet_check_chat",
+        section: "Akismet",
+        type: :boolean,
+        label: "Check chat messages",
+        default: true,
+        help: "New chat messages."
+      },
+      %{
+        key: "akismet_check_profiles",
+        section: "Akismet",
+        type: :boolean,
+        label: "Check profiles",
+        default: true,
+        help: "Bios, websites and locations, as members change them."
       },
       %{
         key: "new_user_max_links",
@@ -1259,7 +1320,7 @@ defmodule Firefly.SiteSettings do
 
           StaffLog.record(admin, "setting.update", {"setting", nil}, %{
             key: key,
-            value: %{before: current[key], after: value}
+            value: logged_value(key, current[key], value)
           })
         end
 
@@ -1268,6 +1329,13 @@ defmodule Firefly.SiteSettings do
 
     if changes != %{}, do: invalidate()
     {:ok, changes}
+  end
+
+  # Secrets (an API key) aren't written to the log, only that they changed.
+  defp logged_value(key, before, value) do
+    if Enum.any?(definitions(), &(&1.key == key and &1[:secret])),
+      do: %{before: "[secret]", after: "[secret]"},
+      else: %{before: before, after: value}
   end
 
   defp invalidate do

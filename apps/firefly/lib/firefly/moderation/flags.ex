@@ -62,16 +62,30 @@ defmodule Firefly.Moderation.Flags do
 
   @doc """
   Flags `post` as the system, with no flagging member (e.g. for a watched
-  word, see `Firefly.Moderation.WatchedWords`): `note` says why. Staff
-  review it like any flag; on its own it doesn't hide the post.
+  word, see `Firefly.Moderation.WatchedWords`): `note` says why, `reason`
+  is `"other"` unless given. Staff review it like any flag; on its own it
+  doesn't hide the post. A post has one pending system flag at most: a
+  second (AI triage and Akismet both, say) adds its note to the first, so
+  the post is queued once.
   """
-  def flag_by_system(%Post{} = post, note) do
+  def flag_by_system(%Post{} = post, note, reason \\ "other") do
     post = Repo.preload(post, [:thread, :user])
 
+    pending =
+      Repo.one(
+        from(f in Flag,
+          where: f.post_id == ^post.id and is_nil(f.user_id) and f.status == "pending",
+          limit: 1
+        )
+      )
+
     {:ok, flag} =
-      %Flag{post_id: post.id}
-      |> Flag.changeset(%{reason: "other", note: note})
-      |> Repo.insert()
+      if pending,
+        do: pending |> Ecto.Changeset.change(note: pending.note <> "; " <> note) |> Repo.update(),
+        else:
+          %Flag{post_id: post.id}
+          |> Flag.changeset(%{reason: reason, note: note})
+          |> Repo.insert()
 
     notify_admins(post, nil)
     Firefly.Moderation.Review.changed()
@@ -79,12 +93,12 @@ defmodule Firefly.Moderation.Flags do
   end
 
   @doc """
-  Flags `post` as the system (see `flag_by_system/2`) and hides it at once
+  Flags `post` as the system (see `flag_by_system/3`) and hides it at once
   pending review, as enough members' flags would (e.g. for AI triage, see
-  `Firefly.AI.Triage`). Admins' posts are flagged, not hidden.
+  `Firefly.AI.Triage`, and Akismet). Admins' posts are flagged, not hidden.
   """
-  def hide_by_system(%Post{} = post, note) do
-    {:ok, flag} = flag_by_system(post, note)
+  def hide_by_system(%Post{} = post, note, reason \\ "other") do
+    {:ok, flag} = flag_by_system(post, note, reason)
     hide(Repo.preload(post, [:thread, :user]))
     {:ok, flag}
   end

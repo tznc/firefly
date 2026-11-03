@@ -85,6 +85,7 @@ defmodule FireflyWeb.UserAuth do
     socket
     |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
     |> record_visit()
+    |> record_client()
     |> count_page_view()
     |> assign_counts()
     |> assign_chat()
@@ -100,6 +101,21 @@ defmodule FireflyWeb.UserAuth do
   # Once the page is live, not for the static render before it.
   defp record_visit(socket) do
     if connected?(socket), do: Visits.seen(socket.assigns.current_user)
+    socket
+  end
+
+  # Who's on the other end, for the Akismet checks of what this LiveView
+  # posts (see Firefly.Moderation.Akismet).
+  defp record_client(socket) do
+    if connected?(socket) do
+      ip = FireflyWeb.ClientIP.from_socket(socket)
+
+      Firefly.Moderation.Akismet.put_client(%{
+        ip: if(is_tuple(ip), do: ip |> :inet.ntoa() |> to_string(), else: ip),
+        user_agent: get_connect_info(socket, :user_agent)
+      })
+    end
+
     socket
   end
 

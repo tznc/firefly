@@ -3,8 +3,10 @@ defmodule Firefly.Moderation.Review do
   The staff review queue (`/staff/review`): posts with pending flags (see
   `Firefly.Moderation.Flags`), grouped per post, posts awaiting approval (a
   new user's first `approve_new_user_posts` posts; see
-  `Firefly.Discussion.approval_required?/1`), and flagged chat messages
-  (decided by `Firefly.Chat.review_flags/3`).
+  `Firefly.Discussion.approval_required?/1`), flagged chat messages
+  (decided by `Firefly.Chat.review_flags/3`), and private messages and
+  profiles Akismet called spam (decided by `Firefly.Moderation.Akismet.review/3`).
+  Decisions on content Akismet checked are reported back to it.
 
   Flag decisions settle every pending flag on the post:
 
@@ -43,7 +45,9 @@ defmodule Firefly.Moderation.Review do
   @doc "How many items wait for review: flagged posts, queued posts and flagged chat messages."
   def pending_count do
     flagged = from(f in Flag, where: f.status == "pending", select: count(f.post_id, :distinct))
-    Repo.one(flagged) + Repo.aggregate(queued_query(), :count) + Firefly.Chat.pending_flag_count()
+
+    Repo.one(flagged) + Repo.aggregate(queued_query(), :count) +
+      Firefly.Chat.pending_flag_count() + Firefly.Moderation.Akismet.pending_count()
   end
 
   @doc """
@@ -100,19 +104,27 @@ defmodule Firefly.Moderation.Review do
   def agree(%Post{} = post, %User{} = admin, decision) do
     post = Repo.preload(post, [:thread, :user])
 
-    decide(post, admin, "agreed", "flag.agree", %{decision: decision_name(decision)}, fn ->
-      carry_out(decision, post, admin)
-    end)
+    with {:ok, post} <-
+           decide(post, admin, "agreed", "flag.agree", %{decision: decision_name(decision)}, fn ->
+             carry_out(decision, post, admin)
+           end) do
+      :ok = Firefly.Moderation.Akismet.post_reviewed(post.id, :spam)
+      {:ok, post}
+    end
   end
 
   @doc "Disagrees with the post's flags as `admin`: it's shown again."
   def disagree(%Post{} = post, %User{} = admin) do
     post = Repo.preload(post, [:thread, :user])
 
-    decide(post, admin, "disagreed", "flag.disagree", %{}, fn ->
-      Post |> where([p], p.id == ^post.id) |> Repo.update_all(set: [hidden_at: nil])
-      {:ok, []}
-    end)
+    with {:ok, post} <-
+           decide(post, admin, "disagreed", "flag.disagree", %{}, fn ->
+             Post |> where([p], p.id == ^post.id) |> Repo.update_all(set: [hidden_at: nil])
+             {:ok, []}
+           end) do
+      :ok = Firefly.Moderation.Akismet.post_reviewed(post.id, :ham)
+      {:ok, post}
+    end
   end
 
   @doc "Defers the post's flags as `admin`: they're set aside, the post stays as it is."

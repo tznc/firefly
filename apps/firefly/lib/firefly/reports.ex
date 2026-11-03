@@ -43,6 +43,7 @@ defmodule Firefly.Reports do
     Firefly.Reports.Penalties,
     Firefly.Reports.StaffActions,
     Firefly.Reports.AIUsage,
+    Firefly.Reports.Akismet,
     Firefly.Reports.Sentiment
   ]
 

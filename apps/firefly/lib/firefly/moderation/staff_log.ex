@@ -43,6 +43,7 @@ defmodule Firefly.Moderation.StaffLog do
     backup.create backup.delete backup.download backup.restore backup.read_only
     embed_host.create embed_host.delete
     ai_provider.create ai_provider.update ai_provider.delete ai_feature.update ai.flag ai.hide
+    akismet.spam akismet.confirm akismet.not_spam
     chat_channel.create chat_channel.update chat_channel.status chat_channel.remove_member
     chat_message.delete chat_message.restore chat_message.pin chat_message.unpin chat_flag.agree chat_flag.disagree
   )

@@ -35,6 +35,8 @@ defmodule Firefly.Application do
       {Task.Supervisor, name: Firefly.Notifications.WebPush.TaskSupervisor},
       # Runs AI work in the background (triage, embeddings)
       {Task.Supervisor, name: Firefly.AI.TaskSupervisor},
+      # Checks new content with Akismet in the background
+      {Task.Supervisor, name: Firefly.Moderation.Akismet.TaskSupervisor},
       # Posts as plugins transformed them
       Firefly.Plugins.Content.cache_spec(),
       # Counts traffic in memory and writes it in batches
