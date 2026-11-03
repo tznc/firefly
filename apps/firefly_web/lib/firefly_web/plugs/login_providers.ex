@@ -4,7 +4,7 @@ defmodule FireflyWeb.Plugs.LoginProviders do
   login providers that aren't enabled (see `Firefly.Accounts.Auth`), before
   Ueberauth would send the browser to the provider with no credentials,
   and password logins (`/auth/identity`) when single sign-on is the only
-  way in. Runs after the session and flash are fetched.
+  way in, or the directory's form when LDAP replaces local passwords. Runs after the session and flash are fetched.
   """
   @behaviour Plug
 
@@ -17,7 +17,16 @@ defmodule FireflyWeb.Plugs.LoginProviders do
 
   @impl true
   def call(%Plug.Conn{path_info: ["auth", "identity" | _]} = conn, _opts) do
-    if Auth.password_login?(), do: conn, else: refuse(conn, "Log in with single sign-on.")
+    cond do
+      Auth.password_login?() ->
+        conn
+
+      Auth.ldap_replaces_password?() ->
+        conn |> Phoenix.Controller.redirect(to: "/login/ldap") |> halt()
+
+      true ->
+        refuse(conn, "Log in with single sign-on.")
+    end
   end
 
   def call(%Plug.Conn{path_info: ["auth", name | _]} = conn, _opts) do

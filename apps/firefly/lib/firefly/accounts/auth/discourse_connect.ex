@@ -158,30 +158,6 @@ defmodule Firefly.Accounts.Auth.DiscourseConnect do
     with {:ok, user} <- Auth.login(info(params), invite), do: {:ok, sync(user, params)}
   end
 
-  @doc """
-  The local account to link an unknown `external_id` to: the one with the
-  provider's email, confirmed, when the provider vouches for it, and not
-  linked to another provider account already.
-  """
-  def account_for_email(%{email: email, email_verified: true}) when is_binary(email) do
-    Repo.one(
-      from(u in User,
-        as: :user,
-        where: fragment("lower(?)", u.email) == ^String.downcase(email),
-        where: not is_nil(u.confirmed_at) and is_nil(u.deleted_at),
-        where:
-          not exists(
-            from(i in UserIdentity,
-              where: i.user_id == parent_as(:user).id and i.provider == "discourse_connect"
-            )
-          ),
-        limit: 1
-      )
-    )
-  end
-
-  def account_for_email(_info), do: nil
-
   @doc "Brings `user` up to date with the provider's fields, as the site settings allow."
   def sync(%User{} = user, params) do
     info = info(params)

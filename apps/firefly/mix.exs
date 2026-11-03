@@ -22,7 +22,10 @@ defmodule Firefly.MixProject do
   end
 
   def application do
-    [mod: {Firefly.Application, []}, extra_applications: [:logger, :runtime_tools, :crypto]]
+    [
+      mod: {Firefly.Application, []},
+      extra_applications: [:logger, :runtime_tools, :crypto, :eldap]
+    ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]

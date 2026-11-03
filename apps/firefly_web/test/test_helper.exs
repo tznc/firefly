@@ -1,4 +1,5 @@
-ExUnit.configure(exclude: [pending: true])
+# `:ldap` tests need a directory server (see Firefly.LDAPTestDirectory).
+ExUnit.configure(exclude: [pending: true, ldap: true])
 
 # End-to-end browser tests (tagged :e2e) need Playwright; see README.
 {:ok, _} = PhoenixTest.Playwright.Supervisor.start_link()

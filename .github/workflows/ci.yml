@@ -61,6 +61,16 @@ jobs:
           --health-interval 5s
           --health-timeout 10s
           --health-retries 20
+      # A directory for the LDAP login tests (tagged ldap; see
+      # Firefly.LDAPTestDirectory).
+      ldap:
+        image: ghcr.io/rroemhild/docker-test-openldap@sha256:d402f9a21a1d071db43b321ab2e304ee7945c1d8162c9c496fbedbda9ffe58a5
+        ports: ["10389:10389", "10636:10636"]
+        options: >-
+          --health-cmd "/healthcheck.sh"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
       redis:
         image: redis:7
         ports: ["6379:6379"]
@@ -130,8 +140,8 @@ jobs:
 
       # Every app's tests: unit, LiveView (PhoenixTest) and end-to-end browser
       # (PhoenixTest.Playwright) tests, and the importers' against the
-      # source databases above
-      - run: mix test --include import_mysql --include import_mongo --include import_redis
+      # source databases and the directory above
+      - run: mix test --include import_mysql --include import_mongo --include import_redis --include ldap
 
   dialyzer:
     name: Dialyzer

@@ -92,6 +92,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_OIDC_DISCOVERY_URL`, `FIREFLY_OIDC_CLIENT_ID`, `FIREFLY_OIDC_CLIENT_SECRET` | Single sign-on with an OpenID Connect provider (its `.well-known/openid-configuration` URL; the secret is optional for public clients). Optional: `FIREFLY_OIDC_SCOPES` (default `openid email profile`), `FIREFLY_OIDC_NAME` (the button's name). Callback URL: `https://<domain>/auth/oidc/callback` |
 | `FIREFLY_DISCOURSE_CONNECT_URL`, `FIREFLY_DISCOURSE_CONNECT_SECRET` | Single sign-on through a DiscourseConnect provider (its endpoint and the shared secret); optional `FIREFLY_DISCOURSE_CONNECT_NAME`. Which fields each login syncs is set under Logins in the site settings |
 | `FIREFLY_SAML_SP_KEY`, `FIREFLY_SAML_SP_CERT` | The private key and certificate (PEM) SAML login requests are signed with, when "Sign login requests" is on. SAML itself is set up under SAML in the site settings (the identity provider's metadata URL or XML, attribute mapping); give the identity provider `https://<domain>/saml/metadata` (assertion consumer service: `https://<domain>/auth/saml/acs`) |
+| `FIREFLY_LDAP_HOST`, `FIREFLY_LDAP_BASE_DN` | Logging in with an LDAP directory (OpenLDAP, Active Directory...): its host and where to search for people. Optional: `FIREFLY_LDAP_PORT`, `FIREFLY_LDAP_ENCRYPTION` (`starttls`, the default, `ldaps` or `none`), `FIREFLY_LDAP_VERIFY` (`false` skips certificate checks), `FIREFLY_LDAP_CA_CERT_FILE` (default: the system's CAs), `FIREFLY_LDAP_BIND_DN` and `FIREFLY_LDAP_BIND_PASSWORD` (the account searches run as; default anonymous), `FIREFLY_LDAP_USER_FILTER` (default `(uid=%{username})`; Active Directory: `(sAMAccountName=%{username})`), `FIREFLY_LDAP_UID_ATTRIBUTE` (default `entryUUID`; Active Directory: `objectGUID`), `_USERNAME_ATTRIBUTE`, `_EMAIL_ATTRIBUTE`, `_NAME_ATTRIBUTE` (default `uid`, `mail`, `cn`), `FIREFLY_LDAP_GROUP_BASE_DN` (syncs groups by name), `FIREFLY_LDAP_GROUP_FILTER` (default `(member=%{dn})`), `FIREFLY_LDAP_GROUP_NAME_ATTRIBUTE` (default `cn`), `FIREFLY_LDAP_NAME` (the button's name). "LDAP replaces local passwords" in the site settings turns password logins off |
 | `FIREFLY_SSO_ONLY` | `true`: single sign-on is the only way to log in (no social logins, passwords or registration form) |
 | `FIREFLY_SENDGRID_API_KEY` | Outbound email |
 | `FIREFLY_VAPID_PUBLIC_KEY`, `FIREFLY_VAPID_PRIVATE_KEY`, `FIREFLY_VAPID_SUBJECT` | Browser push notifications: a VAPID key pair (make one with `mix firefly.gen.vapid_keys`) and a contact URL (`mailto:admin@example.com`). Push is off and hidden without them |
@@ -240,6 +241,14 @@ docker run -d -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root mariadb:11
 docker run -d -p 27017:27017 mongo:7
 docker run -d -p 6379:6379 redis:7
 mix test --include import_mysql --include import_mongo --include import_redis
+```
+
+The LDAP login tests need a directory, so they're left out unless included
+(CI runs them too; `FIREFLY_TEST_LDAP_HOST` points them elsewhere):
+
+```sh
+docker run -d -p 10389:10389 -p 10636:10636 ghcr.io/rroemhild/docker-test-openldap:master
+mix test --include ldap
 ```
 
 `FIREFLY_IMPORT_MYSQL_URL`, `FIREFLY_IMPORT_MONGO_URL` and

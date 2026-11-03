@@ -25,7 +25,8 @@ defmodule Firefly.Accounts.Auth do
 
   Single sign-on works the same way: an OpenID Connect provider
   (`Firefly.Accounts.Auth.OIDC`, provider `"oidc"`), a SAML identity provider
-  (`Firefly.Accounts.Auth.SAML`, provider `"saml"`) and a DiscourseConnect
+  (`Firefly.Accounts.Auth.SAML`, provider `"saml"`), a directory
+  (`Firefly.Accounts.Auth.LDAP`, provider `"ldap"`) and a DiscourseConnect
   provider (`Firefly.Accounts.Auth.DiscourseConnect`), each enabled by its own
   configuration. With `FIREFLY_SSO_ONLY` set (see `sso_only?/0`), they're
   the only ways in: social logins, passwords and the registration form are
@@ -34,7 +35,7 @@ defmodule Firefly.Accounts.Auth do
 
   import Ecto.Query
 
-  alias Firefly.{Accounts, Repo}
+  alias Firefly.{Accounts, Repo, SiteSettings}
   alias Firefly.Accounts.{Invite, Invites, User, UserIdentity}
   alias Firefly.Plugins.Events
 
@@ -49,10 +50,11 @@ defmodule Firefly.Accounts.Auth do
     # Single sign-on: enabled and named by their own configuration.
     oidc: {nil, Firefly.Accounts.Auth.OIDC},
     saml: {nil, Firefly.Accounts.Auth.SAML},
+    ldap: {nil, Firefly.Accounts.Auth.LDAP},
     discourse_connect: {nil, Firefly.Accounts.Auth.DiscourseConnect}
   ]
 
-  @sso [:oidc, :saml, :discourse_connect]
+  @sso [:oidc, :saml, :ldap, :discourse_connect]
 
   @names Enum.map(@providers, fn {provider, _} -> to_string(provider) end)
 
@@ -66,8 +68,20 @@ defmodule Firefly.Accounts.Auth do
       Enum.any?(@sso, &enabled?/1)
   end
 
-  @doc "Whether people may log in (and register) with a username and password."
-  def password_login?, do: not sso_only?()
+  @doc """
+  Whether people may log in (and register) with a local username and
+  password: not while single sign-on is the only way in, nor while the
+  directory replaces local passwords (see `ldap_replaces_password?/0`).
+  """
+  def password_login?, do: not sso_only?() and not ldap_replaces_password?()
+
+  @doc """
+  Whether directory (LDAP) logins replace local passwords: the
+  `ldap_replaces_password` setting, while LDAP is configured.
+  """
+  def ldap_replaces_password? do
+    SiteSettings.get("ldap_replaces_password") and Firefly.Accounts.Auth.LDAP.enabled?()
+  end
 
   @doc "Every provider, in display order."
   def providers, do: Keyword.keys(@providers)
@@ -155,8 +169,9 @@ defmodule Firefly.Accounts.Auth do
   For accounts GitHub logins created before account ids were stored, the
   GitHub account is linked to a user of the same username only if that
   user has no password and no linked account, and the emails match. A
-  DiscourseConnect account may link to the account with its email (see
-  `Firefly.Accounts.Auth.DiscourseConnect.account_for_email/1`).
+  DiscourseConnect or LDAP account the provider vouches for the email of
+  links to the confirmed local account with that email, unless that one is
+  linked to another account there already.
 
   With an `invite` (see `Firefly.Accounts.Invites`), a new account is made
   through it, even while registrations are invite-only; an email invite
@@ -195,17 +210,34 @@ defmodule Firefly.Accounts.Auth do
     end
   end
 
-  defp link_legacy_or_register("discourse_connect", uid, info) do
-    case Firefly.Accounts.Auth.DiscourseConnect.account_for_email(info) do
-      %User{} = user ->
-        with {:ok, _} <- link(user, "discourse_connect", uid, info), do: {:ok, user}
-
-      nil ->
-        register("discourse_connect", uid, info)
+  defp link_legacy_or_register(provider, uid, info)
+       when provider in ["discourse_connect", "ldap"] do
+    case account_for_email(info, provider) do
+      %User{} = user -> with {:ok, _} <- link(user, provider, uid, info), do: {:ok, user}
+      nil -> register(provider, uid, info)
     end
   end
 
   defp link_legacy_or_register(provider, uid, info), do: register(provider, uid, info)
+
+  defp account_for_email(%{email: email, email_verified: true}, provider) when is_binary(email) do
+    Repo.one(
+      from(u in User,
+        as: :user,
+        where: fragment("lower(?)", u.email) == ^String.downcase(email),
+        where: not is_nil(u.confirmed_at) and is_nil(u.deleted_at),
+        where:
+          not exists(
+            from(i in UserIdentity,
+              where: i.user_id == parent_as(:user).id and i.provider == ^provider
+            )
+          ),
+        limit: 1
+      )
+    )
+  end
+
+  defp account_for_email(_info, _provider), do: nil
 
   defp legacy_github_user(nil, _email), do: nil
 

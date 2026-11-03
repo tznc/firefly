@@ -83,6 +83,29 @@ if config_env() != :test do
     sp_key: System.get_env("FIREFLY_SAML_SP_KEY"),
     sp_cert: System.get_env("FIREFLY_SAML_SP_CERT")
 
+  # Logging in with an LDAP directory (see Firefly.Accounts.Auth.LDAP): on
+  # when a host and base DN are set.
+  config :firefly, Firefly.Accounts.Auth.LDAP,
+    host: System.get_env("FIREFLY_LDAP_HOST"),
+    port:
+      System.get_env("FIREFLY_LDAP_PORT") &&
+        String.to_integer(System.get_env("FIREFLY_LDAP_PORT")),
+    encryption: System.get_env("FIREFLY_LDAP_ENCRYPTION"),
+    verify: System.get_env("FIREFLY_LDAP_VERIFY") not in ~w(false 0),
+    ca_cert_file: System.get_env("FIREFLY_LDAP_CA_CERT_FILE"),
+    bind_dn: System.get_env("FIREFLY_LDAP_BIND_DN"),
+    bind_password: System.get_env("FIREFLY_LDAP_BIND_PASSWORD"),
+    base_dn: System.get_env("FIREFLY_LDAP_BASE_DN"),
+    user_filter: System.get_env("FIREFLY_LDAP_USER_FILTER"),
+    uid_attribute: System.get_env("FIREFLY_LDAP_UID_ATTRIBUTE"),
+    username_attribute: System.get_env("FIREFLY_LDAP_USERNAME_ATTRIBUTE"),
+    email_attribute: System.get_env("FIREFLY_LDAP_EMAIL_ATTRIBUTE"),
+    name_attribute: System.get_env("FIREFLY_LDAP_NAME_ATTRIBUTE"),
+    group_base_dn: System.get_env("FIREFLY_LDAP_GROUP_BASE_DN"),
+    group_filter: System.get_env("FIREFLY_LDAP_GROUP_FILTER"),
+    group_name_attribute: System.get_env("FIREFLY_LDAP_GROUP_NAME_ATTRIBUTE"),
+    name: System.get_env("FIREFLY_LDAP_NAME")
+
   # Single sign-on (see Firefly.Accounts.Auth.OIDC and
   # Firefly.Accounts.Auth.DiscourseConnect); FIREFLY_SSO_ONLY makes it the only
   # way to log in.
