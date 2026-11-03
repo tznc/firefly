@@ -24,7 +24,10 @@ defmodule Firefly.Notifications.Notification do
   `Firefly.TrustLevels`) or `"badge_granted"` (you earned a badge;
   see `Firefly.Badges`) or `"invite_redeemed"` (someone accepted your
   invitation; see `Firefly.Accounts.Invites`) or `"webhook_disabled"`
-  (for admins: a failing webhook was turned off; see `Firefly.Webhooks`).
+  (for admins: a failing webhook was turned off; see `Firefly.Webhooks`), or,
+  in chat (see `Firefly.Chat`, with `chat_channel_id`), `"chat_mention"`
+  (someone mentioned you) or `"chat_message"` (a direct message, or a
+  message in a channel you hear about every message of).
   `read_at` is set when you open it
   or read the thread; `emailed_at` when it was also sent by email.
   """
@@ -32,13 +35,14 @@ defmodule Firefly.Notifications.Notification do
   use Ecto.Schema
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
+  alias Firefly.Chat
   alias Firefly.Messaging.{Conversation, Message}
   import Ecto.Changeset
 
   @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved
              bookmark_reminder answer_accepted plugin_disabled plugin
              group_mentioned group_message group_request group_invite promoted badge_granted
-             invite_redeemed webhook_disabled new_version)
+             invite_redeemed webhook_disabled new_version chat_mention chat_message)
 
   # Kinds that may have no thread_id: penalties are about the user, and a
   # rejected thread is gone. Any other notification without a thread_id or
@@ -46,7 +50,7 @@ defmodule Firefly.Notifications.Notification do
   # visibility.
   @threadless_kinds ~w(silenced suspended post_rejected plugin_disabled plugin group_request
                        group_invite promoted badge_granted invite_redeemed
-                       webhook_disabled new_version)
+                       webhook_disabled new_version chat_mention chat_message)
 
   @doc "Kinds that are about the user rather than a thread or conversation."
   def threadless_kinds, do: @threadless_kinds
@@ -62,6 +66,7 @@ defmodule Firefly.Notifications.Notification do
     belongs_to(:thread, Thread)
     belongs_to(:post, Post)
     belongs_to(:conversation, Conversation)
+    belongs_to(:chat_channel, Chat.Channel)
 
     timestamps(type: :naive_datetime_usec)
   end
@@ -137,10 +142,13 @@ defmodule Firefly.Notifications.Notification do
 
   def read?(%__MODULE__{read_at: read_at}), do: not is_nil(read_at)
 
-  @doc "The in-app path to open (the url's path and fragment)."
+  @doc "The in-app path to open (the url's path, query and fragment)."
   def path(%__MODULE__{url: url}) do
     uri = URI.parse(url || "/")
-    (uri.path || "/") <> if(uri.fragment, do: "#" <> uri.fragment, else: "")
+
+    (uri.path || "/") <>
+      if(uri.query, do: "?" <> uri.query, else: "") <>
+      if(uri.fragment, do: "#" <> uri.fragment, else: "")
   end
 
   def changeset(%__MODULE__{} = notification, attrs) do
@@ -153,7 +161,8 @@ defmodule Firefly.Notifications.Notification do
       :url,
       :thread_id,
       :post_id,
-      :conversation_id
+      :conversation_id,
+      :chat_channel_id
     ])
     |> validate_required([:user_id, :body, :subject, :url])
     |> validate_inclusion(:kind, @kinds)

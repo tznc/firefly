@@ -16,6 +16,10 @@ defmodule Firefly.Plugins.Events do
       `parent_id`, `url`); `category_deleted` - `%{category_id}`
     * `post_approved` - `%{post, thread}` (staff approved a queued post);
       `post_rejected` - `%{post_id, thread_id, reason}`
+    * `chat_message_created`, `chat_message_edited` - `%{message, channel}`;
+      `chat_message_deleted` - `%{message_id, channel_id}`;
+      `chat_channel_created` - `%{channel}` (see `Firefly.Chat`). Plugins
+      only hear of channels anyone may read (never direct messages)
 
   where a post is `%{id, thread_id, user_id, author, body, url}` and a
   thread `%{id, title, category_id, url}`.
@@ -47,7 +51,8 @@ defmodule Firefly.Plugins.Events do
 
   @names ~w(post_created post_edited post_deleted thread_created user_registered flag_raised
             post_liked solved poll_closed category_created category_updated category_deleted
-            post_approved post_rejected)
+            post_approved post_rejected chat_message_created chat_message_edited
+            chat_message_deleted chat_channel_created)
   @max_attempts 5
   # How long a delivery in progress holds its row before another node may
   # take it.
@@ -61,7 +66,8 @@ defmodule Firefly.Plugins.Events do
   a function building it (only called if anyone listens). Options:
   `:thread` (the content's thread, or a function loading it: nothing is
   sent unless anonymous visitors can read it), `:post` (likewise: not while it awaits approval),
-  `:category` (likewise, for category events), `:actor` (the user who did it).
+  `:category` (likewise, for category events), `:private` (true: webhooks
+  only, never plugins), `:actor` (the user who did it).
   """
   def emit(event, data, opts \\ []) when event in @names do
     :ok = Firefly.Webhooks.enqueue(event, data, opts)
@@ -73,7 +79,8 @@ defmodule Firefly.Plugins.Events do
           not bot_of?(actor, plugin.id),
           do: plugin
 
-    if subscribers != [] and public?(opts[:post], opts[:thread], opts[:category]) do
+    if subscribers != [] and opts[:private] != true and
+         public?(opts[:post], opts[:thread], opts[:category]) do
       payload = if is_function(data, 0), do: data.(), else: data
       now = DateTime.utc_now()
 

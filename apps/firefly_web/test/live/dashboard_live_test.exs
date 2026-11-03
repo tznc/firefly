@@ -60,7 +60,7 @@ defmodule FireflyWeb.DashboardLiveTest do
     conn
     |> log_in_as(admin)
     |> visit(~p"/staff/reports")
-    |> assert_has("#reports li", count: 20)
+    |> assert_has("#reports li", count: 21)
     |> click_link("Topics with no response")
     |> assert_has("#result table td", text: "Counted")
     |> visit(~p"/staff/reports/topics?period=7")

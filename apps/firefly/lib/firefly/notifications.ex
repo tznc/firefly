@@ -26,6 +26,9 @@ defmodule Firefly.Notifications do
       the group's other members by their group notification level:
       `watching` (every message, emailed), `tracking` (every message),
       `normal` (new conversations) or `muted` (nothing)
+    * a chat message notifies the users it mentions and the members at
+      the `always` level (direct messages' default), as `Firefly.Chat.notify/2`
+      decides
 
   Nobody is notified of what a user they mute or ignore did (see
   `Firefly.Accounts.Ignores`).
@@ -90,6 +93,13 @@ defmodule Firefly.Notifications do
 
   @doc "Notify `users` that `actor` added them to a conversation."
   defdelegate participants_added(conversation, actor, users), to: Dispatcher
+
+  @doc """
+  Notify about a chat message: the users with ids `mentioned_ids` it
+  newly mentions, and those who hear about every message in its channel
+  (see `Firefly.Chat.notify/2`).
+  """
+  defdelegate chat_message_created(message, mentioned_ids), to: Dispatcher
 
   ## In-app notifications
 
@@ -177,9 +187,16 @@ defmodule Firefly.Notifications do
   """
   def unread_emailed_notification?(%User{} = user, %Notification{} = notification) do
     about =
-      if notification.conversation_id,
-        do: dynamic([n], n.conversation_id == ^notification.conversation_id),
-        else: dynamic([n], n.thread_id == ^notification.thread_id)
+      cond do
+        notification.conversation_id ->
+          dynamic([n], n.conversation_id == ^notification.conversation_id)
+
+        notification.chat_channel_id ->
+          dynamic([n], n.chat_channel_id == ^notification.chat_channel_id)
+
+        true ->
+          dynamic([n], n.thread_id == ^notification.thread_id)
+      end
 
     Notification
     |> where([n], n.user_id == ^user.id and n.id != ^notification.id)

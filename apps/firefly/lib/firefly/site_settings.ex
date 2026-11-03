@@ -747,6 +747,38 @@ defmodule Firefly.SiteSettings do
         min: 2,
         max: 100,
         help: "The most people a direct message can have, its starter included."
+      },
+      %{
+        key: "chat_channel_wide_mentions_min_trust",
+        section: "Chat",
+        type: :integer,
+        label: "Trust level to mention @here and @all",
+        default: 1,
+        min: 0,
+        max: 4,
+        help:
+          "@all notifies everyone following the channel, @here those active in the last 5 minutes (where the channel allows them). Admins always can."
+      },
+      %{
+        key: "chat_channel_retention_days",
+        section: "Chat",
+        type: :integer,
+        label: "Delete channel messages after (days)",
+        default: 0,
+        min: 0,
+        max: 3650,
+        help: "Messages in channels older than this are deleted, once an hour. 0: kept forever."
+      },
+      %{
+        key: "chat_dm_retention_days",
+        section: "Chat",
+        type: :integer,
+        label: "Delete direct messages after (days)",
+        default: 0,
+        min: 0,
+        max: 3650,
+        help:
+          "Messages in direct messages older than this are deleted, once an hour. 0: kept forever."
       }
     ]
   end

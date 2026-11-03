@@ -1,7 +1,7 @@
 defmodule FireflyWeb.StaffLive.Review do
   @moduledoc """
   The staff review queue (admins only; see `Firefly.Moderation.Review`): flagged
-  posts and posts awaiting approval; queued posts can be approved or
+  posts, posts awaiting approval and flagged chat messages; queued posts can be approved or
   rejected together. Updates live as flags come in and as
   other staff decide.
   """
@@ -9,7 +9,7 @@ defmodule FireflyWeb.StaffLive.Review do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.Repo
+  alias Firefly.{Chat, Repo}
   alias Firefly.Moderation.{Penalties, Review}
   alias Firefly.Discussion.Post
   alias Firefly.Moderation.Flag
@@ -33,7 +33,13 @@ defmodule FireflyWeb.StaffLive.Review do
   defp load(socket) do
     queued = Review.queued_posts()
     selected = MapSet.intersection(socket.assigns.selected, MapSet.new(queued, & &1.id))
-    assign(socket, flagged: Review.flagged_posts(), queued: queued, selected: selected)
+
+    assign(socket,
+      flagged: Review.flagged_posts(),
+      queued: queued,
+      selected: selected,
+      chat_flagged: Chat.flagged_messages()
+    )
   end
 
   @impl true
@@ -81,6 +87,31 @@ defmodule FireflyWeb.StaffLive.Review do
     end
   end
 
+  def handle_event(event, %{"message_id" => id}, socket)
+      when event in ~w(chat_agree chat_disagree) do
+    admin = socket.assigns.current_user
+    decision = if event == "chat_agree", do: :agree, else: :disagree
+
+    with %{} = message <- Chat.get_message(id),
+         {:ok, _} <- Chat.review_flags(message, admin, decision) do
+      done =
+        if decision == :agree,
+          do: "Agreed: the message was deleted.",
+          else: "Disagreed: the message stays."
+
+      {:noreply, socket |> put_flash(:info, done) |> load()}
+    else
+      {:error, :unauthorized} ->
+        {:noreply, put_flash(socket, :error, denied_message(admin))}
+
+      {:error, reason} ->
+        {:noreply, socket |> put_flash(:error, Review.message(reason)) |> load()}
+
+      nil ->
+        {:noreply, load(socket)}
+    end
+  end
+
   def handle_event(event, params, socket) do
     admin = socket.assigns.current_user
 
@@ -125,6 +156,9 @@ defmodule FireflyWeb.StaffLive.Review do
   defp run("reject", post, admin, params),
     do: {Review.reject(post, admin, params["reason"]), "Rejected; the author was told."}
 
+  defp chat_link(message),
+    do: ~p"/chat/c/#{message.channel.slug || "dm"}/#{message.channel.id}?message=#{message.id}"
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -133,9 +167,58 @@ defmodule FireflyWeb.StaffLive.Review do
         <:subtitle>Flagged posts and posts awaiting approval. Every decision goes to the staff log.</:subtitle>
       </.page_header>
 
-      <p :if={@flagged == [] and @queued == []} id="review-empty" class="text-base-content/70">
+      <p
+        :if={@flagged == [] and @queued == [] and @chat_flagged == []}
+        id="review-empty"
+        class="text-base-content/70"
+      >
         Nothing to review.
       </p>
+
+      <section :if={@chat_flagged != []} id="chat-flagged" class="space-y-4">
+        <h2 class="text-lg font-semibold">Flagged chat messages</h2>
+        <article
+          :for={message <- @chat_flagged}
+          id={"chat-flagged-#{message.id}"}
+          class="card border border-warning/50 bg-base-100"
+        >
+          <div class="card-body gap-3">
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+              <span class="font-semibold">
+                {if message.user, do: "@" <> message.user.username, else: "deleted user"}
+              </span>
+              in
+              <.link navigate={chat_link(message)} class="link">
+                {if message.channel.kind == "direct",
+                  do: "a direct message (" <> Enum.map_join(message.channel.members, ", ", &("@" <> &1.username)) <> ")",
+                  else: "#" <> message.channel.name}
+              </.link>
+              <span :if={message.deleted_at} class="badge badge-error badge-xs">deleted</span>
+            </div>
+            <blockquote class="border-l-2 border-base-300 pl-3 text-sm whitespace-pre-wrap">{message.body}</blockquote>
+            <ul class="space-y-1 text-sm">
+              <li :for={flag <- message.flags} class="flag">
+                <.icon name="hero-flag" class="size-4 text-warning" />
+                <span class="font-medium">{if flag.user, do: "@" <> flag.user.username, else: "System"}</span>:
+                {Flag.reason_label(flag.reason)}<span :if={flag.note}> ({flag.note})</span>
+              </li>
+            </ul>
+            <div class="flex flex-wrap gap-2">
+              <button
+                phx-click="chat_agree"
+                phx-value-message_id={message.id}
+                data-confirm="Delete this message?"
+                class="btn btn-sm btn-error"
+              >
+                Agree and delete
+              </button>
+              <button phx-click="chat_disagree" phx-value-message_id={message.id} class="btn btn-sm">
+                Disagree
+              </button>
+            </div>
+          </div>
+        </article>
+      </section>
 
       <section :if={@flagged != []} id="flagged" class="space-y-4">
         <h2 class="text-lg font-semibold">Flagged posts</h2>

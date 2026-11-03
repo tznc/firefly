@@ -39,6 +39,10 @@ defmodule Firefly.Notifications.Dispatcher do
   def participants_added(%Conversation{} = conversation, %User{} = actor, users),
     do: GenServer.cast(@name, {:participants_added, conversation, actor, users})
 
+  @doc "Notify about a chat message (see `Firefly.Chat.notify/2`)."
+  def chat_message_created(message, mentioned_ids),
+    do: GenServer.cast(@name, {:chat_message_created, message, mentioned_ids})
+
   ### Server API
 
   @impl true
@@ -102,6 +106,11 @@ defmodule Firefly.Notifications.Dispatcher do
       notify_group(conversation, message, author, first?, skip)
     end
 
+    {:noreply, state}
+  end
+
+  def handle_cast({:chat_message_created, message, mentioned_ids}, state) do
+    :ok = Firefly.Chat.notify(message, mentioned_ids)
     {:noreply, state}
   end
 

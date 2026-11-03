@@ -169,4 +169,31 @@ defmodule FireflyWeb.ChatLiveTest do
     assert {:error, {:live_redirect, %{to: "/"}}} =
              ctx.conn |> log_in_as(ctx.alice) |> live(~p"/chat")
   end
+
+  test "members flag messages; staff decide in the review queue", ctx do
+    {:ok, message} = Chat.send_message(ctx.general, ctx.alice, %{"body" => "rude words"})
+    view = open(ctx.conn, ctx.bob, path(ctx.general))
+    view |> element("#chat-message-#{message.id} button", "Flag") |> render_click()
+
+    view
+    |> form("#flag-form", %{flag: %{reason: "inappropriate", note: "not nice"}})
+    |> render_submit()
+
+    assert render(view) =~ "staff will take a look"
+
+    review = open(build_conn(), ctx.admin, ~p"/staff/review")
+    assert has_element?(review, "#chat-flagged-#{message.id}", "rude words")
+    assert has_element?(review, "#chat-flagged-#{message.id}", "not nice")
+    review |> element("#chat-flagged-#{message.id} button", "Agree and delete") |> render_click()
+    refute has_element?(review, "#chat-flagged-#{message.id}")
+    assert Chat.get_message(message.id).deleted_at
+  end
+
+  test "staff remove members from a channel", ctx do
+    view = open(ctx.conn, ctx.admin, path(ctx.general))
+    view |> element("button[aria-label='Settings']") |> render_click()
+    view |> element("#member-#{ctx.bob.id} button") |> render_click()
+    refute has_element?(view, "#member-#{ctx.bob.id}")
+    refute Chat.membership(ctx.general, ctx.bob)
+  end
 end

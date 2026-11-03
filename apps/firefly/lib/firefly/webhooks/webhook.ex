@@ -10,7 +10,7 @@ defmodule Firefly.Webhooks.Webhook do
   use Ecto.Schema
   import Ecto.Changeset
 
-  @types ~w(topic post user category tag group flag review like)
+  @types ~w(topic post user category tag group flag review like chat)
 
   schema "webhooks" do
     field(:payload_url, :string)

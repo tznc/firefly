@@ -142,6 +142,33 @@ defmodule Firefly.Notifications.Emails do
     """)
   end
 
+  @doc """
+  A chat message for `user`, who's away: a mention, or a direct message
+  (`subject` says which). `url` opens it in chat.
+  """
+  def chat_notification(%User{} = user, subject, body, url) do
+    new_email()
+    |> to(user.email)
+    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> subject("#{subject} on #{site()}")
+    |> html_body("""
+    <p>#{escape(subject)}. #{link("Open it in chat", url)}:</p>
+    <hr />
+    #{Markdown.render(body)}
+    <hr />
+    <p><small>You're getting this because you weren't on #{escape(site())} when it was sent. We won't email you about this chat again until you've read it. #{link("Change your notification settings", settings_url())}.</small></p>
+    """)
+    |> text_body("""
+    #{subject}. Open it in chat: #{url}
+
+    #{body}
+
+    --
+    You're getting this because you weren't on #{site()} when it was sent. We won't email you about this chat again until you've read it.
+    Change your notification settings: #{settings_url()}
+    """)
+  end
+
   @doc "Tells `user` they were silenced or suspended (`subject` says which and until when)."
   def penalty(%User{} = user, subject, reason) do
     new_email()

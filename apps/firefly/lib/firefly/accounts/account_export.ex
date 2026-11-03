@@ -6,7 +6,7 @@ defmodule Firefly.Accounts.AccountExport do
   notifications, private messages they sent and the conversations they're
   in, notification levels, read positions, drafts, bookmarks, the members they mute or ignore, their connected login accounts, the days they visited, poll votes and the polls they created,
   their uploads (with links, which work while the user may still see them),
-  their badges, the browsers they get push notifications on, the custom emoji they added as staff, and what plugins keep for them
+  their badges, the browsers they get push notifications on, the custom emoji they added as staff, their chat messages, channels and reactions, and what plugins keep for them
   (their storage entries and custom fields on the user, by plugin id).
 
   Other people appear only by public username: no one else's email, name,
@@ -79,7 +79,8 @@ defmodule Firefly.Accounts.AccountExport do
       uploads: Firefly.Uploads.export(user),
       custom_emoji_added: Firefly.Rendering.Emoji.export(user),
       plugin_storage: Firefly.Plugins.Storage.export(user),
-      plugin_fields: Firefly.Plugins.Fields.export(user)
+      plugin_fields: Firefly.Plugins.Fields.export(user),
+      chat: Firefly.Chat.export(user)
     }
   end
 
