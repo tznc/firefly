@@ -11,7 +11,7 @@ defmodule Firefly.Notifications.Dispatcher do
   alias Firefly.Accounts.{Ignores, User}
   alias Firefly.Discussion.{Mentions, Policy, Post, Thread}
   alias Firefly.Messaging.{Conversation, Message}
-  alias Firefly.Notifications.{Emails, Notification, Subscriptions}
+  alias Firefly.Notifications.{Emails, MailingList, Notification, Subscriptions}
 
   @name Firefly.Notifications
 
@@ -47,7 +47,8 @@ defmodule Firefly.Notifications.Dispatcher do
   @impl true
   def handle_cast({:post_created, %Post{} = post}, state) do
     with {:ok, thread, post} <- reload(post) do
-      fan_out("new_post", thread, post, notify_mentions(thread, post))
+      listed = MailingList.deliver(thread, post)
+      fan_out("new_post", thread, post, notify_mentions(thread, post, listed), listed)
     end
 
     {:noreply, state}
@@ -68,7 +69,8 @@ defmodule Firefly.Notifications.Dispatcher do
 
     if first_post do
       post = Repo.preload(first_post, :user)
-      fan_out("new_thread", thread, post, notify_mentions(thread, post))
+      listed = MailingList.deliver(thread, post)
+      fan_out("new_thread", thread, post, notify_mentions(thread, post, listed), listed)
     end
 
     {:noreply, state}
@@ -150,7 +152,8 @@ defmodule Firefly.Notifications.Dispatcher do
 
   # `mentioned_ids` already got a mention for this post instead. Anyone who
   # has already read the post (e.g. had the thread open) is skipped too.
-  defp fan_out(kind, thread, post, mentioned_ids) do
+  # `listed` (mailing list mode) got the post by email already.
+  defp fan_out(kind, thread, post, mentioned_ids, listed) do
     already_read = Discussion.users_who_read(thread, post)
 
     subscribers = Subscriptions.subscribers(thread)
@@ -164,7 +167,8 @@ defmodule Firefly.Notifications.Dispatcher do
       {:ok, notification} =
         Notifications.notify(user, Notification.for_post(kind, thread, post, post.user))
 
-      if level == "watching", do: maybe_email(user, notification, thread, post)
+      if level == "watching" and user.id not in listed,
+        do: maybe_email(user, notification, thread, post)
     end
 
     :ok
@@ -172,7 +176,7 @@ defmodule Firefly.Notifications.Dispatcher do
 
   # Notifies the users the post mentions who haven't been notified of a
   # mention in it yet. Returns the ids of every user mentioned in it so far.
-  defp notify_mentions(thread, post) do
+  defp notify_mentions(thread, post, listed \\ []) do
     already =
       Notification
       |> where(post_id: ^post.id, kind: "mentioned")
@@ -192,7 +196,7 @@ defmodule Firefly.Notifications.Dispatcher do
         {:ok, notification} =
           Notifications.notify(user, Notification.for_post("mentioned", thread, post, post.user))
 
-        maybe_email(user, notification, thread, post)
+        if user.id not in listed, do: maybe_email(user, notification, thread, post)
         user.id
       end
 

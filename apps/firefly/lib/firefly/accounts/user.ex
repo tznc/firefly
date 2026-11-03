@@ -52,6 +52,12 @@ defmodule Firefly.Accounts.User do
     field(:last_digest_at, :utc_datetime)
     # Browser pushes only while they're away (see Firefly.Notifications.WebPush).
     field(:push_only_when_away, :boolean, default: true)
+    # Mailing list mode (see Firefly.Notifications.MailingList), and its
+    # count of emails sent on `mailing_list_sent_on`.
+    field(:mailing_list_mode, :boolean, default: false)
+    field(:mailing_list_no_echo, :boolean, default: true)
+    field(:mailing_list_sent_on, :date)
+    field(:mailing_list_sent_count, :integer, default: 0)
     # The badge shown as their title, if it allows that (see Firefly.Badges).
     belongs_to(:title_badge, Firefly.Badges.Badge)
     # The plugin this account acts for (see Firefly.Plugins.Bots), if any.
@@ -108,7 +114,9 @@ defmodule Firefly.Accounts.User do
       :hide_from_directory,
       :hide_profile,
       :digest_frequency,
-      :push_only_when_away
+      :push_only_when_away,
+      :mailing_list_mode,
+      :mailing_list_no_echo
     ])
     |> validate_required([:theme, :reply_level, :new_thread_level])
     |> validate_inclusion(:theme, themes())
