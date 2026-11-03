@@ -59,6 +59,9 @@ config :firefly, Firefly.Moderation.TopicTimers, enabled: false
 # Analytics are written when tests call Firefly.Analytics.flush/0.
 config :firefly, Firefly.Analytics, flush_interval: :manual
 
+# Reports read each test's own data: no cache shared between tests.
+config :firefly, Firefly.Reports, cache: false
+
 # Each test reads its own (transactional) site settings: no shared cache.
 config :firefly, site_settings_cache: false
 

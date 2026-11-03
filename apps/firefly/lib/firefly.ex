@@ -20,6 +20,7 @@ defmodule Firefly do
   | `Firefly.Uploads`, `Firefly.Rendering` | uploaded files; Markdown/BBCode, emoji, embeds and link previews |
   | `Firefly.SiteSettings` | site settings |
   | `Firefly.Analytics` | first-party traffic counts: page views, topic views, referrers, link clicks |
+  | `Firefly.Reports` | the admin dashboard's overview and reports |
   | `Firefly.Plugins` (with `Firefly.Plugin`) | the plugin API, hook runner, host functions and installed plugins |
 
   A context's public API is its root module plus the modules its `use

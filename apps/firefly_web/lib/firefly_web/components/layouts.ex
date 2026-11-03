@@ -154,6 +154,13 @@ defmodule FireflyWeb.Layouts do
               Invites
             </.nav_item>
             <%= if Firefly.Accounts.admin?(@current_user) do %>
+              <.nav_item
+                path={~p"/staff/dashboard"}
+                current_path={@current_path}
+                icon="hero-chart-bar"
+              >
+                Dashboard
+              </.nav_item>
               <.nav_item path={~p"/staff/review"} current_path={@current_path} icon="hero-inbox-stack">
                 Review
                 <span
