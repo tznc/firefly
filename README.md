@@ -33,7 +33,7 @@ mix phx.server   # http://localhost:4000
 
 ### Layout
 
-Firefly is an umbrella of three apps; each declares the dependencies it uses,
+Firefly is an umbrella of four apps; each declares the dependencies it uses,
 and the shared configuration is in `config/`:
 
 | App | Modules | What |
@@ -41,6 +41,7 @@ and the shared configuration is in `config/`:
 | `apps/firefly` | `Firefly.*` | The domain: the `Firefly.Repo`, schemas and bounded contexts, jobs, email, authentication, the plugin layer and core plugins. Migrations and seeds are in `apps/firefly/priv/repo`. Depends on neither of the others |
 | `apps/firefly_plugins` | `FireflyPlugins.*` | The sandbox uploaded plugins run in: QuickJS on WebAssembly via Wasmex (`priv/plugins/quickjs.wasm`, built from `wasm/quickjs`), and bundle validation. Registers itself with the domain at start |
 | `apps/firefly_web` | `FireflyWeb.*` | The web interface: endpoint, router, LiveViews, controllers, channels, JSON API, Kaffy admin, assets and static files |
+| `apps/firefly_import` | `FireflyImport.*` | Importers from other forums and platforms (see "Importing"): each reads its source and hands the records to the domain's `Firefly.Import`. Apart so their database drivers stay out of the domain |
 
 Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
@@ -133,6 +134,22 @@ users with the `admin` role (the seeds create `admin` / `password`).
 Staff install and manage plugins at `/staff/plugins`: core plugins written
 in Elixir, and third-party JavaScript plugins that run sandboxed in QuickJS
 on WebAssembly. See [PLUGINS.md](PLUGINS.md) for the plugin API.
+
+### Importing
+
+`mix firefly.import <source> [options]` imports another site's content:
+users (without passwords: they reset theirs, use a magic link or the same
+single sign-on), groups, categories, tags, topics and posts with their
+original authors and dates, likes, bookmarks, polls, accepted answers,
+private messages and uploads, plus permalinks that redirect the old URLs.
+Run it again to resume it or pick up what's new; `--dry-run` shows what it
+would do. In the Docker image: `bin/firefly eval
+'FireflyImport.CLI.main(~w(<source> [options]))'`. Admins follow the runs at
+`/staff/import`.
+
+| Source | Reads |
+| --- | --- |
+| `discourse` | its PostgreSQL database (`--source-url`, a running site's or a backup's restored dump) and uploads directory (`--uploads-dir`) |
 
 ### AI
 

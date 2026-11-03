@@ -53,6 +53,7 @@ COPY mix.exs mix.lock ./
 COPY apps/firefly/mix.exs apps/firefly/
 COPY apps/firefly_plugins/mix.exs apps/firefly_plugins/
 COPY apps/firefly_web/mix.exs apps/firefly_web/
+COPY apps/firefly_import/mix.exs apps/firefly_import/
 RUN mix deps.get --only $MIX_ENV
 RUN mkdir config
 

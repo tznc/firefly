@@ -4,8 +4,8 @@ defmodule Firefly.Rendering do
 
   Its public modules:
 
-    * `Firefly.Rendering.Markdown` - Markdown (and BBCode, see
-      `Firefly.Rendering.BBCode`) to sanitized HTML
+    * `Firefly.Rendering.Markdown` - Markdown (and BBCode) to sanitized HTML
+    * `Firefly.Rendering.BBCode` - BBCode to Markdown (also for importers)
     * `Firefly.Rendering.Emoji` - standard and custom emoji
     * `Firefly.Rendering.OEmbed` and `OembedExtractor` - embedded media
     * `Firefly.Rendering.LinkPreviews` - previews of linked pages
@@ -16,6 +16,7 @@ defmodule Firefly.Rendering do
     check: [out: false],
     exports: [
       Markdown,
+      BBCode,
       OEmbed,
       OembedExtractor,
       Emoji,

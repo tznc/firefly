@@ -66,6 +66,14 @@ defmodule Firefly.Uploads do
   """
   def create_for_site(data, filename, opts), do: create_from_data(nil, data, filename, opts)
 
+  @doc """
+  Stores `data` (named `filename`) as `user`'s upload, for an importer (see
+  `Firefly.Import`): the original site already accepted it, so no rate
+  limit, size limit or quota applies. `variant:` as for `create/4`.
+  """
+  def import(%User{} = user, data, filename, opts \\ []),
+    do: create_from_data(user, data, filename, Keyword.put(opts, :quota, false))
+
   defp create_from_data(user, data, filename, opts) do
     filename = safe_filename(filename)
 
@@ -75,7 +83,7 @@ defmodule Firefly.Uploads do
 
       if variant && not String.starts_with?(content_type, "image/"),
         do: {:error, "An #{variant} must be an image."},
-        else: store(user, data, filename, content_type, sha256, variant)
+        else: store(user, data, filename, content_type, sha256, opts)
     end
   end
 
@@ -91,13 +99,15 @@ defmodule Firefly.Uploads do
 
   # Under a lock on the content's hash, so a file being removed (see
   # `remove/1`) can't vanish under an upload that reuses it.
-  defp store(user, data, filename, content_type, sha256, variant) do
+  defp store(user, data, filename, content_type, sha256, opts) do
+    variant = opts[:variant]
+
     Repo.transact(fn ->
       lock(sha256)
 
       with nil <- reusable(user, sha256, variant),
            {:ok, stored} <- stored(data, content_type, sha256, variant),
-           :ok <- check_quota(user, sha256, stored.size) do
+           :ok <- check_quota(user, sha256, stored.size, opts) do
         %Upload{
           token: token(),
           user_id: user && user.id,
@@ -182,6 +192,10 @@ defmodule Firefly.Uploads do
 
   defp same_file(sha256, variant),
     do: where(Upload, [u], u.sha256 == ^sha256 and u.attached_to == ^variant)
+
+  # Imports (`quota: false`) and the site's own uploads have no quota.
+  defp check_quota(user, sha256, size, opts),
+    do: if(opts[:quota] == false, do: :ok, else: check_quota(user, sha256, size))
 
   defp check_quota(nil = _site, _sha256, _size), do: :ok
 

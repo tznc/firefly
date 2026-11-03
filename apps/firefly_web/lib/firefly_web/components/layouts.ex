@@ -252,6 +252,13 @@ defmodule FireflyWeb.Layouts do
                 Backups
               </.nav_item>
               <.nav_item
+                path={~p"/staff/import"}
+                current_path={@current_path}
+                icon="hero-arrow-down-tray"
+              >
+                Import
+              </.nav_item>
+              <.nav_item
                 path={~p"/staff/upgrade"}
                 current_path={@current_path}
                 icon="hero-arrow-up-circle"
