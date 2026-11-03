@@ -1,0 +1,6 @@
+[
+  {"id": "U01", "name": "ann", "real_name": "Ann Lee", "profile": {"real_name": "Ann Lee", "email": "ann@example.com"}},
+  {"id": "U02", "name": "ben.k", "profile": {"real_name": "Ben K", "email": "ben@example.com"}},
+  {"id": "B01", "name": "deploybot", "is_bot": true, "profile": {}},
+  {"id": "USLACKBOT", "name": "slackbot", "profile": {}}
+]

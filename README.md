@@ -153,6 +153,9 @@ would do. In the Docker image: `bin/firefly eval
 | `phpbb` | phpBB 3.x's MySQL/MariaDB database (`--source-url mysql://...`, `--table-prefix`) and `files/` directory (`--files-dir`) |
 | `vbulletin` | vBulletin 4's or 5's MySQL/MariaDB database (`--source-url`, `--table-prefix`), attachments from it or `--attachments-dir` |
 | `nodebb` | NodeBB's MongoDB (`--mongo-url`) or Redis (`--redis-url`) database and `public/uploads` (`--uploads-dir`) |
+| `slack` | a workspace export ZIP (`--path`); `--as chat` (default) or `--as forum`; `--token` to download shared files |
+| `discord` | DiscordChatExporter JSON files (`--path`); `--as chat` or `--as forum`; `--download` for attachments on Discord's CDN |
+| `github` | a repository's Discussions through the GraphQL API (`--repo owner/name --token ...`) |
 
 ### AI
 

@@ -1,0 +1,9 @@
+{
+  "guild": {"id": "900", "name": "Firefly fans"},
+  "channel": {"id": "200", "type": "GuildTextChat", "categoryId": "60", "category": "Support",
+              "name": "help", "topic": null},
+  "messages": [
+    {"id": "2001", "type": "Default", "timestamp": "2021-05-02T09:00:00+00:00",
+     "content": "Anyone?", "author": {"id": "8", "name": "ben", "isBot": false}, "attachments": [], "reactions": []}
+  ]
+}

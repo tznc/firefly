@@ -1,0 +1,11 @@
+{
+  "guild": {"id": "900", "name": "Firefly fans"},
+  "channel": {"id": "1001", "type": "GuildPublicThread", "categoryId": "100", "category": "general",
+              "name": "Welcome thread", "topic": null},
+  "messages": [
+    {"id": "1001", "type": "ThreadStarterMessage", "timestamp": "2021-05-01T10:00:00+00:00",
+     "content": "", "author": {"id": "7", "name": "ann", "isBot": false}, "attachments": [], "reactions": []},
+    {"id": "1101", "type": "Default", "timestamp": "2021-05-01T10:05:00+00:00",
+     "content": "In the thread", "author": {"id": "8", "name": "ben", "isBot": false}, "attachments": [], "reactions": []}
+  ]
+}

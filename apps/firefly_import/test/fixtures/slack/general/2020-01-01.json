@@ -1,0 +1,9 @@
+[
+  {"type": "message", "subtype": "channel_join", "user": "U02", "text": "<@U02> has joined the channel", "ts": "1577872800.000100"},
+  {"type": "message", "user": "U01", "text": "Welcome *everyone*! Ask <@U02> about <https://example.com|the site> &amp; _more_",
+   "ts": "1577876400.000200", "thread_ts": "1577876400.000200", "reply_count": 1,
+   "reactions": [{"name": "tada", "users": ["U02"], "count": 1}],
+   "files": [{"id": "F01", "name": "logo.png", "url_private_download": "FILE_URL"}]},
+  {"type": "message", "user": "U02", "text": "Thanks!", "ts": "1577880000.000300", "thread_ts": "1577876400.000200",
+   "edited": {"user": "U02", "ts": "1577880100.000000"}}
+]
