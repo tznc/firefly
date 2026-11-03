@@ -219,7 +219,7 @@ Redis databases, so they're left out unless included (CI runs them):
 
 ```sh
 docker run -d -p 3306:3306 -e MARIADB_ROOT_PASSWORD=root mariadb:11
-docker run -d -p 27017:27017 mongo:8
+docker run -d -p 27017:27017 mongo:7
 docker run -d -p 6379:6379 redis:7
 mix test --include import_mysql --include import_mongo --include import_redis
 ```
