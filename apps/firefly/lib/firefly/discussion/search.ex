@@ -151,19 +151,9 @@ defmodule Firefly.Discussion.Search do
   @spec run(t, term, term) :: Scrivener.Page.t()
   def run(%__MODULE__{} = search, user, page \\ 1) do
     if present?(search) do
-      Post
-      |> Post.visible()
-      |> join(:inner, [p], t in assoc(p, :thread), as: :thread)
-      |> join(:inner, [p], u in assoc(p, :user), as: :user)
-      |> join(:inner, [thread: t], c in assoc(t, :category), as: :category)
-      |> where([p, thread: t], is_nil(t.archived_at) and is_nil(p.hidden_at))
-      |> Policy.readable_threads(user)
-      |> without_muted(user, search)
+      search
+      |> scope(user)
       |> match(search)
-      |> by_category(search.category)
-      |> by_tag(search.tag)
-      |> by_user(search.user)
-      |> by_status(search.status)
       |> order(search)
       |> select_headline(search.terms)
       |> Repo.paginate(page: page, page_size: @page_size)
@@ -171,6 +161,60 @@ defmodule Firefly.Discussion.Search do
     else
       no_results()
     end
+  end
+
+  @doc """
+  The posts `search` may find for `user`, before matching its terms: those
+  published in threads the user may read (see the moduledoc), with the
+  filters applied. The thread, author and category are bound as `:thread`,
+  `:user` and `:category`. Other ways of searching (see
+  `Firefly.AI.SemanticSearch`) start from it, so they leave out exactly
+  what this search does.
+  """
+  def scope(%__MODULE__{} = search, user) do
+    Post
+    |> Post.visible()
+    |> join(:inner, [p], t in assoc(p, :thread), as: :thread)
+    |> join(:inner, [p], u in assoc(p, :user), as: :user)
+    |> join(:inner, [thread: t], c in assoc(t, :category), as: :category)
+    |> where([p, thread: t], is_nil(t.archived_at) and is_nil(p.hidden_at))
+    |> Policy.readable_threads(user)
+    |> without_muted(user, search)
+    |> by_category(search.category)
+    |> by_tag(search.tag)
+    |> by_user(search.user)
+    |> by_status(search.status)
+    |> then(&if(search.in_title, do: first_posts(&1), else: &1))
+  end
+
+  @doc "Restricts a `scope/2` query to threads' first posts."
+  def first_posts(query), do: where(query, [p, thread: t], p.id == first_post_id(t))
+
+  @doc "The ids of the posts matching `search`'s terms for `user`, best first, at most `limit`."
+  def ranked_ids(%__MODULE__{} = search, user, limit) do
+    search
+    |> scope(user)
+    |> match(search)
+    |> order(search)
+    |> select([p], p.id)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  @doc """
+  The results (as `run/3`'s entries) for the posts `ids`, in that order,
+  leaving out any `search` can't find for `user`.
+  """
+  def results(%__MODULE__{} = search, user, ids) do
+    by_id =
+      search
+      |> scope(user)
+      |> where([p], p.id in ^ids)
+      |> select_headline(search.terms)
+      |> Repo.all()
+      |> Map.new(fn row -> {elem(row, 0).id, result(row)} end)
+
+    for id <- ids, entry = by_id[id], do: entry
   end
 
   @doc "An empty page of results."
@@ -222,18 +266,10 @@ defmodule Firefly.Discussion.Search do
     })
   end
 
-  defp match(query, %{terms: "", in_title: true}),
-    do: where(query, [p, thread: t], p.id == first_post_id(t))
-
   defp match(query, %{terms: ""}), do: query
 
-  defp match(query, %{terms: terms, in_title: true}) do
-    where(
-      query,
-      [p, thread: t],
-      fragment("? @@ ?", t.search_vector, tsquery(^terms)) and p.id == first_post_id(t)
-    )
-  end
+  defp match(query, %{terms: terms, in_title: true}),
+    do: where(query, [thread: t], fragment("? @@ ?", t.search_vector, tsquery(^terms)))
 
   defp match(query, %{terms: terms}),
     do: where(query, [p], fragment("? @@ ?", p.search_vector, tsquery(^terms)))

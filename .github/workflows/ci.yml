@@ -23,7 +23,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18
+        # PostgreSQL 18 with the pgvector extension (semantic search).
+        image: pgvector/pgvector:pg18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

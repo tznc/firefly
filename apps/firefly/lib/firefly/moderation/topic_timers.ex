@@ -167,7 +167,8 @@ defmodule Firefly.Moderation.TopicTimers do
     viewers (see `Firefly.Analytics`), scheduled backups (see
     `Firefly.Backups`), the daily version check (see
     `Firefly.Upgrades`), polling the embedding feed (see
-    `Firefly.Embedding`) and chat retention (see `Firefly.Chat`). Nothing runs while the site is read-only. At start (so nothing that fell due while the
+    `Firefly.Embedding`), chat retention (see `Firefly.Chat`) and
+    embedding posts for semantic search (see `Firefly.AI`). Nothing runs while the site is read-only. At start (so nothing that fell due while the
     app was down is lost), then every `:interval` milliseconds (the
     `Firefly.Moderation.TopicTimers` config; 30 seconds by default), so each runs
     at most that late. Every job takes its due rows one locked transaction
@@ -192,7 +193,8 @@ defmodule Firefly.Moderation.TopicTimers do
       Firefly.Backups,
       Firefly.Upgrades,
       Firefly.Embedding,
-      Firefly.Chat
+      Firefly.Chat,
+      Firefly.AI
     ]
 
     def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)

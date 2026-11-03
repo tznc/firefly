@@ -623,11 +623,15 @@ defmodule Firefly.Discussion do
     |> order_by([last_post: lp], desc_nulls_last: lp.at)
   end
 
-  @doc "Every thread, most recently active first (the Latest list)."
-  def latest_threads(user_or_nil) do
+  @doc """
+  Every thread, most recently active first (the Latest list), or the
+  first `limit`.
+  """
+  def latest_threads(user_or_nil, limit \\ nil) do
     threads_query()
     |> listed(user_or_nil)
     |> by_last_activity()
+    |> then(&if(limit, do: limit(&1, ^limit), else: &1))
     |> preload(:category)
     |> Repo.all()
     |> decorate_threads(user_or_nil)
@@ -1760,6 +1764,7 @@ defmodule Firefly.Discussion do
 
     :ok = Endpoint.broadcast!("threads:#{post.thread_id}", "update", payload)
     broadcast("forums:thread:#{post.thread_id}", {:post_updated, post})
+    :ok = Firefly.AI.post_edited(post)
 
     Events.emit(
       "post_edited",
