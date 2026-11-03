@@ -1,0 +1,33 @@
+defmodule Firefly.Plugins.InstalledPlugin do
+  @moduledoc """
+  A plugin's stored state (see `Firefly.Plugins`): whether it's
+  enabled, its settings, and for an uploaded plugin its bundle (the zip and
+  its SHA-256 `checksum`), parsed `manifest` and joined `code`. A plugin the
+  circuit breaker turned off has `disabled_reason`. `fail_closed`: whether
+  posting is refused when the plugin's moderation hook fails (see
+  `Firefly.Plugins.ModerationHooks`). `secret` authenticates calls to its
+  inbound endpoints (see `Firefly.Plugins.UI`).
+  """
+
+  use Ecto.Schema
+
+  alias Firefly.Accounts.User
+
+  schema "plugins" do
+    field(:plugin_id, :string)
+    field(:source, :string)
+    field(:version, :string)
+    field(:manifest, :map)
+    field(:bundle, :binary, redact: true)
+    field(:checksum, :string)
+    field(:code, :string, redact: true)
+    field(:enabled, :boolean, default: false)
+    field(:disabled_reason, :string)
+    field(:settings, :map, default: %{})
+    field(:fail_closed, :boolean, default: false)
+    field(:secret, :string, redact: true)
+    belongs_to(:installed_by, User)
+
+    timestamps(type: :naive_datetime_usec)
+  end
+end

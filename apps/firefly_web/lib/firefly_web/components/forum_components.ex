@@ -1,0 +1,916 @@
+defmodule FireflyWeb.ForumComponents do
+  @moduledoc """
+  Forum-specific UI components: thread lists, posts, avatars, timestamps,
+  category badges, rendered markdown, oEmbeds and pagination.
+  """
+  use Phoenix.Component
+
+  use Phoenix.VerifiedRoutes,
+    endpoint: FireflyWeb.Endpoint,
+    router: FireflyWeb.Router,
+    statics: FireflyWeb.static_paths()
+
+  import FireflyWeb.CoreComponents, only: [icon: 1, input: 1]
+
+  alias Firefly.Accounts.User
+  alias Firefly.Rendering.Markdown
+
+  ## Helpers
+
+  defdelegate avatar_url(user, size \\ 256), to: User
+
+  @doc "Abbreviated month, day and two-digit year, i.e. `Jul 3, '17`."
+  def short_date(date), do: Calendar.strftime(date, "%b %-d, '%y")
+
+  @doc "A badge's icon, colored by its type (gold, silver, bronze); see `Firefly.Badges`."
+  attr :badge, :any, required: true
+  attr :size, :string, default: "size-6"
+
+  def badge_icon(assigns) do
+    ~H"""
+    <span
+      class={[
+        "badge-icon inline-flex shrink-0 items-center justify-center rounded-full p-1",
+        badge_color(@badge.badge_type)
+      ]}
+      title={@badge.name}
+    >
+      <.icon name={@badge.icon} class={@size} />
+    </span>
+    """
+  end
+
+  defp badge_color("gold"), do: "bg-warning/20 text-warning"
+  defp badge_color("silver"), do: "bg-base-300 text-base-content/70"
+  defp badge_color(_bronze), do: "bg-orange-200/40 text-orange-700"
+
+  @doc "A category's CSS color: its chosen color, or a hue derived from its slug."
+  def category_color(%{color: "#" <> _ = color}), do: color
+
+  def category_color(category) do
+    hue =
+      for(<<num <- :crypto.hash(:sha, category.slug)>>, do: num)
+      |> Enum.sum()
+      |> rem(360)
+
+    "oklch(55% 0.13 #{hue})"
+  end
+
+  @doc "ISO 8601 UTC string for a timestamp."
+  def iso8601(%DateTime{} = time),
+    do: time |> DateTime.shift_zone!("Etc/UTC") |> DateTime.to_iso8601()
+
+  def iso8601(%NaiveDateTime{} = time),
+    do: time |> DateTime.from_naive!("Etc/UTC") |> DateTime.to_iso8601()
+
+  ## Components
+
+  @doc """
+  A `<time>` element showing an ISO 8601 UTC timestamp, humanized to relative
+  time ("3 hours ago") in the browser.
+  """
+  attr :at, :any, required: true
+  attr :id, :string, required: true
+  attr :class, :string, default: nil
+
+  def time_ago(assigns) do
+    assigns = assign(assigns, :iso, iso8601(assigns.at))
+
+    ~H"""
+    <time id={@id} datetime={@iso} title={@iso} phx-hook="LocalTime" class={@class}>{@iso}</time>
+    """
+  end
+
+  @doc "A user's avatar."
+  attr :user, :any, required: true
+  attr :size, :string, default: "size-10"
+
+  def avatar(assigns) do
+    # Small avatars (in lists and posts) load the small file.
+    pixels = if assigns.size in ~w(size-6 size-8 size-9 size-10), do: 96, else: 256
+    assigns = assign(assigns, :src, avatar_url(assigns.user, pixels))
+
+    ~H"""
+    <div class="avatar">
+      <div class={["rounded-full", @size]}>
+        <img src={@src} alt={"#{@user.username}'s avatar"} />
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  A category badge, colored from the category's slug, with a lock if it's
+  restricted (see `Firefly.Discussion.mark_restricted/1`).
+  """
+  attr :category, :any, required: true
+
+  def category_badge(assigns) do
+    ~H"""
+    <.link
+      navigate={~p"/categories/#{@category}"}
+      class="badge badge-sm border-0 font-medium text-white"
+      style={"background-color: #{category_color(@category)}"}
+    >
+      <.lock :if={Map.get(@category, :restricted)} class="size-3" />{@category.title}
+    </.link>
+    """
+  end
+
+  @doc "The lock shown on restricted categories (only their members see them)."
+  attr :class, :string, default: "size-4"
+
+  def lock(assigns) do
+    ~H"""
+    <span class="restricted-lock" title="Restricted: only some groups can see this">
+      <.icon name="hero-lock-closed" class={["opacity-70", @class]} />
+      <span class="sr-only">(restricted)</span>
+    </span>
+    """
+  end
+
+  @doc "A thread's tags, as links to their lists (nothing if not loaded)."
+  attr :tags, :any, required: true
+  attr :class, :string, default: nil
+
+  def tag_chips(assigns) do
+    assigns =
+      assign(assigns, :tags, if(Ecto.assoc_loaded?(assigns.tags), do: assigns.tags, else: []))
+
+    ~H"""
+    <span :if={@tags != []} class={["tags inline-flex flex-wrap gap-1", @class]}>
+      <.link
+        :for={tag <- @tags}
+        navigate={~p"/tags/#{tag.name}"}
+        class="tag badge badge-sm badge-ghost gap-0.5 hover:badge-neutral"
+      >
+        <.icon name="hero-tag" class="size-3" />{tag.name}
+      </.link>
+    </span>
+    """
+  end
+
+  @doc "The tags field of the thread forms: comma- or space-separated names."
+  attr :field, Phoenix.HTML.FormField, required: true
+  attr :value, :string, default: nil
+
+  def tags_input(assigns) do
+    ~H"""
+    <.input
+      field={@field}
+      value={@value || @field.value}
+      type="text"
+      label="Tags"
+      placeholder={"Up to #{Firefly.Discussion.Tag.max_per_thread()} tags, e.g. otp, phoenix"}
+      autocomplete="off"
+      phx-debounce="300"
+    />
+    """
+  end
+
+  @doc """
+  The tag picker under a thread form's tags field: the tags on offer by
+  group (see `Firefly.Discussion.Tags.picker/1`). Clicking one sends `pick_tag`
+  with its name.
+  """
+  attr :groups, :list, required: true
+
+  def tag_picker(assigns) do
+    ~H"""
+    <div :if={@groups != []} id="tag-picker" class="space-y-1 text-sm">
+      <div :for={{group, tags} <- @groups} class="flex flex-wrap items-center gap-1">
+        <span class="mr-1 text-base-content/70">
+          {if group, do: group.name, else: "Other"}<span :if={group && group.one_per_thread}> (pick one)</span>:
+        </span>
+        <button
+          :for={tag <- tags}
+          type="button"
+          phx-click="pick_tag"
+          phx-value-name={tag.name}
+          class="badge badge-outline cursor-pointer hover:badge-primary"
+        >
+          {tag.name}
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  @doc "A page heading with optional action buttons."
+  attr :title, :string, required: true
+  attr :navigate, :string, default: nil
+  slot :subtitle
+  slot :actions
+
+  def page_header(assigns) do
+    ~H"""
+    <header class="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight">
+          <.link :if={@navigate} navigate={@navigate}>{@title}</.link>
+          <span :if={!@navigate}>{@title}</span>
+        </h1>
+        <p :if={@subtitle != []} class="text-sm text-base-content/70">{render_slot(@subtitle)}</p>
+      </div>
+      <div :if={@actions != []} class="flex gap-2">{render_slot(@actions)}</div>
+    </header>
+    """
+  end
+
+  @doc """
+  A list of threads (each decorated with `first_post`, `posts_count` and
+  `completely_read?`).
+  """
+  attr :threads, :list, required: true
+  attr :id, :string, default: "threads"
+  attr :empty, :string, default: "No threads yet."
+
+  def thread_list(assigns) do
+    ~H"""
+    <ol id={@id} class="list rounded-box border border-base-300 bg-base-100">
+      <li :if={@threads == []} class="list-row text-base-content/60">{@empty}</li>
+      <li :for={thread <- @threads} id={"thread-#{thread.id}"} class="list-row items-start">
+        <.avatar :if={thread.first_post} user={thread.first_post.user} />
+        <div class="list-col-grow min-w-0 space-y-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <.category_badge :if={Ecto.assoc_loaded?(thread.category)} category={thread.category} />
+            <.thread_status thread={thread} />
+            <.link
+              navigate={~p"/categories/#{thread.category_id}/threads/#{thread}"}
+              class="thread-title font-semibold hover:text-primary"
+            >
+              {thread.title}
+            </.link>
+            <span :if={thread.accepted_post_id} class="solved-badge badge badge-sm badge-success">
+              <.icon name="hero-check-circle" class="size-3" /> Solved
+            </span>
+            <.tag_chips tags={thread.tags} />
+          </div>
+          <div :if={thread.first_post} class="text-xs text-base-content/60">
+            <.link navigate={~p"/users/#{thread.first_post.user}"} class="link-hover">
+              @{thread.first_post.user.username}
+            </.link>
+            · <.time_ago id={"thread-#{thread.id}-time"} at={thread.inserted_at} />
+          </div>
+          <p :if={thread.first_post} class="line-clamp-2 text-sm text-base-content/80">
+            {String.slice(thread.first_post.body, 0..139)}
+          </p>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span
+            class={[
+              "posts-count badge",
+              if(thread.completely_read?, do: "badge-ghost", else: "badge-primary")
+            ]}
+            title={if thread.completely_read?, do: "All read", else: "Unread posts"}
+          >
+            {thread.posts_count}
+          </span>
+          <span :if={thread.new?} class="new-badge badge badge-sm badge-accent">new</span>
+          <.link
+            :if={!thread.new? and thread.unread_count > 0}
+            navigate={
+              ~p"/categories/#{thread.category_id}/threads/#{thread}" <>
+                "#post-#{thread.first_unread_post_id}"
+            }
+            class="unread-badge badge badge-sm badge-outline badge-primary"
+            title="Jump to the first unread post"
+          >
+            {thread.unread_count} unread
+          </.link>
+        </div>
+      </li>
+    </ol>
+    """
+  end
+
+  @level_info %{
+    "watching" => {"hero-eye-solid", "Watching", "Notify me of every new post, and email me"},
+    "tracking" => {"hero-eye", "Tracking", "Notify me of every new post (no email)"},
+    "normal" => {"hero-bell-slash", "Normal", "Don't notify me"},
+    "muted" => {"hero-speaker-x-mark", "Muted", "Don't notify me, and hide from my lists"}
+  }
+
+  @doc """
+  A dropdown to pick a notification level. Sends `set_level` with `level`.
+  `inherited` is the level that applies when none is chosen (e.g. from the
+  category).
+  """
+  attr :id, :string, required: true
+  attr :level, :string, default: nil, doc: "the chosen level, or nil"
+  attr :inherited, :string, default: "normal"
+
+  def level_picker(assigns) do
+    effective = assigns.level || assigns.inherited
+    {icon, label, _} = Map.fetch!(@level_info, effective)
+
+    assigns =
+      assign(assigns,
+        effective: effective,
+        icon: icon,
+        label: label,
+        options: Enum.map(~w(watching tracking normal muted), &{&1, @level_info[&1]})
+      )
+
+    ~H"""
+    <div id={@id} class="dropdown dropdown-end">
+      <div
+        tabindex="0"
+        role="button"
+        class={["btn btn-ghost btn-sm", @effective in ~w(watching tracking) && "text-primary"]}
+        title="Notification level"
+      >
+        <.icon name={@icon} class="size-4" /> <span class="level-label">{@label}</span>
+      </div>
+      <ul
+        tabindex="0"
+        class="dropdown-content menu z-10 w-72 rounded-box border border-base-300 bg-base-100 p-2 shadow"
+      >
+        <li :for={{value, {opt_icon, opt_label, description}} <- @options}>
+          <button
+            type="button"
+            phx-click="set_level"
+            phx-value-level={value}
+            class={[@effective == value && "menu-active"]}
+          >
+            <.icon name={opt_icon} class="size-4" />
+            <span class="flex flex-col items-start">
+              <span class="font-medium">{opt_label}</span>
+              <span class="text-xs opacity-70">{description}</span>
+            </span>
+          </button>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
+  @doc "Icons for a pinned, closed or archived thread."
+  attr :thread, :any, required: true
+
+  def thread_status(assigns) do
+    ~H"""
+    <span
+      :if={@thread.pinned_at}
+      class="pinned text-primary"
+      title="Pinned"
+      aria-label="Pinned"
+    ><.icon name="hero-bookmark-solid" class="size-4" /></span>
+    <span
+      :if={@thread.archived_at}
+      class="archived text-base-content/60"
+      title="Archived"
+      aria-label="Archived"
+    ><.icon name="hero-archive-box" class="size-4" /></span>
+    <span
+      :if={@thread.closed_at && !@thread.archived_at}
+      class="closed text-base-content/60"
+      title="Closed"
+      aria-label="Closed"
+    ><.icon name="hero-lock-closed" class="size-4" /></span>
+    """
+  end
+
+  @doc "Tabs for the Latest / New / Unread / Top thread lists."
+  attr :current_path, :string, required: true
+  attr :current_user, :any, default: nil
+
+  def list_tabs(assigns) do
+    assigns =
+      assign(assigns, :tabs, [
+        {"Latest", "/", true},
+        {"New", "/new", !!assigns.current_user},
+        {"Unread", "/unread", !!assigns.current_user},
+        {"Top", "/top", true}
+      ])
+
+    ~H"""
+    <div id="list-tabs" role="tablist" class="tabs tabs-border">
+      <.link
+        :for={{label, path, shown?} <- @tabs}
+        :if={shown?}
+        navigate={path}
+        role="tab"
+        class={["tab", @current_path == path && "tab-active"]}
+      >
+        {label}
+      </.link>
+    </div>
+    """
+  end
+
+  @doc """
+  A post with its author, timestamp, rendered body and oEmbeds. Edited posts
+  link to their edit history.
+  """
+  attr :post, :any, required: true
+  attr :thread, :any, required: true
+  attr :headline, :boolean, default: false, doc: "show the thread title instead of the author"
+  attr :can_edit, :boolean, default: false
+  attr :accepted, :boolean, default: false, doc: "the thread's accepted answer"
+  attr :viewer, :any, default: nil, doc: "the current user, to link categories they may read"
+  attr :refs, :map, default: nil, doc: "`Firefly.Discussion.Mentions.refs/2` of the page's posts"
+
+  attr :card_target, :string,
+    default: nil,
+    doc: "the page's `FireflyWeb.UserCard`: clicking the author opens their card"
+
+  slot :actions
+  slot :poll, doc: "the post's poll, under its body"
+
+  def post(assigns) do
+    ~H"""
+    <article
+      id={"post-#{@post.id}"}
+      class={["card border border-base-300 bg-base-100", @post.deleted_at && "deleted-post opacity-60"]}
+    >
+      <div class="card-body gap-4 p-5">
+        <header class="flex items-center gap-3">
+          <button
+            :if={@card_target}
+            type="button"
+            phx-click="open"
+            phx-value-user-id={@post.user.id}
+            phx-target={@card_target}
+            class="cursor-pointer"
+            aria-label={"Show @#{@post.user.username}'s card"}
+          >
+            <.avatar user={@post.user} size="size-9" />
+          </button>
+          <.avatar :if={!@card_target} user={@post.user} size="size-9" />
+          <div class="min-w-0 flex-1 text-sm">
+            <.link
+              :if={@headline}
+              navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}"}
+              class="font-semibold hover:text-primary"
+            >
+              {@thread.title}
+            </.link>
+            <.link
+              :if={!@headline and !@card_target}
+              navigate={~p"/users/#{@post.user}"}
+              class="username font-semibold hover:text-primary"
+            >
+              @{@post.user.username}
+            </.link>
+            <button
+              :if={!@headline and @card_target}
+              type="button"
+              phx-click="open"
+              phx-value-user-id={@post.user.id}
+              phx-target={@card_target}
+              class="username cursor-pointer font-semibold hover:text-primary"
+            >
+              @{@post.user.username}
+            </button>
+            <div class="text-xs text-base-content/60">
+              <.link navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}>
+                <.time_ago id={"post-#{@post.id}-time"} at={@post.inserted_at} />
+              </.link>
+              <span
+                :if={@post.wiki}
+                class="wiki-badge badge badge-info badge-sm"
+                title="Wiki: members can edit this post"
+              >
+                <.icon name="hero-pencil-square" class="size-3" /> Wiki
+              </span>
+              <span :if={@accepted} class="accepted-badge badge badge-success badge-sm">
+                <.icon name="hero-check-circle" class="size-3" /> Accepted answer
+              </span>
+              <span
+                :if={@post.deleted_at}
+                class="badge badge-error badge-sm"
+                title={deleted_title(@post)}
+              >
+                deleted
+              </span>
+              <.link
+                :if={@post.edited_at}
+                navigate={
+                  ~p"/categories/#{@thread.category_id}/threads/#{@thread}/posts/#{@post.id}/history"
+                }
+                class="edited link-hover"
+                title="Edited: view the edit history"
+              >
+                · <.icon name="hero-pencil" class="size-3" /> edited
+              </.link>
+            </div>
+          </div>
+        </header>
+        <.markdown
+          id={"post-#{@post.id}-body"}
+          body={@post.body}
+          viewer={@viewer}
+          refs={@refs}
+          post={@post}
+          thread={@thread}
+        />
+        <.oembeds :if={@post.oembeds} oembeds={@post.oembeds} />
+        <.link_preview :for={preview <- @post.link_previews} preview={preview} />
+        {render_slot(@poll)}
+        <FireflyWeb.PluginComponents.plugin_outlet
+          outlet="post_footer"
+          key={@post.id}
+          context={%{post_id: @post.id, thread_id: @thread.id}}
+          user={@viewer}
+          post={@post}
+          thread={@thread}
+        />
+        <footer class="flex items-center justify-end gap-1">
+          {render_slot(@actions)}
+          <.link
+            :if={@can_edit}
+            navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}/posts/#{@post.id}/edit"}
+            class="btn btn-ghost btn-sm btn-square"
+            aria-label={"Edit post #{@post.id}"}
+          >
+            <.icon name="hero-pencil-square" class="size-4" />
+          </.link>
+          <.link
+            navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}" <> "#post-#{@post.id}"}
+            class="btn btn-ghost btn-sm btn-square"
+            aria-label={"link to post #{@post.id}"}
+          >
+            <.icon name="hero-link" class="size-4" />
+          </.link>
+          <.link
+            :if={quotable?(@post, @thread)}
+            id={"post-#{@post.id}-quote"}
+            navigate={quote_path(@post, @thread)}
+            phx-hook="QuoteSelection"
+            data-href={quote_path(@post, @thread)}
+            data-body={"post-#{@post.id}-body"}
+            class="quote-link btn btn-ghost btn-sm btn-square"
+            aria-label={"Quote post #{@post.id}"}
+            title="Quote (select text in the post to quote just that)"
+          >
+            <.icon name="hero-chat-bubble-bottom-center-text" class="size-4" />
+          </.link>
+          <.link
+            navigate={~p"/categories/#{@thread.category_id}/threads/#{@thread}/posts/new"}
+            class="btn btn-ghost btn-sm btn-square"
+            aria-label={"Reply to post #{@post.id}"}
+          >
+            <.icon name="hero-arrow-uturn-left" class="size-4" />
+          </.link>
+        </footer>
+      </div>
+    </article>
+    """
+  end
+
+  defp quotable?(post, thread),
+    do: is_nil(post.deleted_at) and is_nil(thread.closed_at) and is_nil(thread.archived_at)
+
+  defp quote_path(post, thread),
+    do: ~p"/categories/#{thread.category_id}/threads/#{thread}/posts/new?#{[quote: post.id]}"
+
+  defp deleted_title(%{deleted_by: %User{username: username}}), do: "Deleted by @#{username}"
+  defp deleted_title(_post), do: "Deleted"
+
+  @doc """
+  A post's likes: a toggle button with the count for members who may like it
+  (sends `toggle_like` with the post `id`), otherwise just the count. Hovering
+  shows who liked it.
+  """
+  attr :post, :any, required: true
+  attr :likers, :list, default: [], doc: "the users who liked the post, in order"
+  attr :current_user, :any, default: nil
+  attr :can_like, :boolean, default: false
+
+  def like_button(assigns) do
+    liked? =
+      !!assigns.current_user and Enum.any?(assigns.likers, &(&1.id == assigns.current_user.id))
+
+    assigns = assign(assigns, liked?: liked?, tip: likers_tip(assigns.likers))
+
+    ~H"""
+    <div
+      :if={@can_like or @likers != []}
+      id={"post-#{@post.id}-likes"}
+      class={["likes", @likers != [] && "tooltip"]}
+      data-tip={@tip}
+    >
+      <button
+        :if={@can_like}
+        type="button"
+        phx-click="toggle_like"
+        phx-value-id={@post.id}
+        class={["btn btn-ghost btn-sm", @liked? && "text-error"]}
+        aria-label={if @liked?, do: "Unlike post #{@post.id}", else: "Like post #{@post.id}"}
+        aria-pressed={to_string(@liked?)}
+      >
+        <.icon name={if @liked?, do: "hero-heart-solid", else: "hero-heart"} class="size-4" />
+        <span :if={@likers != []} class="like-count">{length(@likers)}</span>
+      </button>
+      <span :if={!@can_like} class="inline-flex items-center gap-1 px-3 text-sm text-base-content/70">
+        <.icon name="hero-heart" class="size-4" />
+        <span class="like-count">{length(@likers)}</span>
+      </span>
+    </div>
+    """
+  end
+
+  @tip_names 10
+
+  defp likers_tip([]), do: nil
+
+  defp likers_tip(likers) do
+    {named, rest} = Enum.split(likers, @tip_names)
+    names = Enum.map_join(named, ", ", &"@#{&1.username}")
+    if rest == [], do: "Liked by #{names}", else: "Liked by #{names} and #{length(rest)} more"
+  end
+
+  @doc "What members see in place of a deleted post."
+  attr :post, :any, required: true
+
+  def deleted_post(assigns) do
+    ~H"""
+    <article
+      id={"post-#{@post.id}"}
+      class="deleted-post rounded-box border border-dashed border-base-300 px-5 py-3 text-sm italic text-base-content/60"
+    >
+      <.icon name="hero-trash" class="size-4" /> This post was deleted.
+    </article>
+    """
+  end
+
+  @doc """
+  What members see in place of a post by someone they ignore (see
+  `Firefly.Accounts.Ignores`); Show sends `reveal_ignored` with the post `id`.
+  """
+  attr :post, :any, required: true
+
+  def ignored_post(assigns) do
+    ~H"""
+    <article
+      id={"post-#{@post.id}"}
+      class="ignored-post flex items-center gap-2 rounded-box border border-dashed border-base-300 px-5 py-3 text-sm italic text-base-content/60"
+    >
+      <.icon name="hero-eye-slash" class="size-4" />
+      <span class="flex-1">Ignored content</span>
+      <button
+        type="button"
+        phx-click="reveal_ignored"
+        phx-value-id={@post.id}
+        class="btn btn-ghost btn-xs not-italic"
+        aria-label={"Show ignored post #{@post.id}"}
+      >
+        Show
+      </button>
+    </article>
+    """
+  end
+
+  @doc """
+  How the viewer treats another member: normal, muted or ignored (for a
+  while; see `Firefly.Accounts.Ignores`). Submits `set_ignore` with
+  `ignore[user_id]`, `ignore[level]` and `ignore[duration]`.
+  """
+  attr :id, :string, required: true
+  attr :user, :any, required: true, doc: "the member to mute or ignore"
+  attr :level, :string, default: nil, doc: "the viewer's current choice, or nil"
+  attr :target, :any, default: nil, doc: "the component handling `set_ignore`, if any"
+
+  def ignore_form(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :form,
+        Phoenix.Component.to_form(
+          %{"level" => assigns.level || "normal", "duration" => "forever"},
+          as: :ignore
+        )
+      )
+
+    ~H"""
+    <.form
+      for={@form}
+      id={@id}
+      phx-submit="set_ignore"
+      phx-target={@target}
+      class="ignore-form flex flex-wrap items-end gap-2"
+    >
+      <input type="hidden" name="ignore[user_id]" value={@user.id} />
+      <div class="w-56">
+        <.input
+          field={@form[:level]}
+          id={"#{@id}-level"}
+          type="select"
+          label={"How you see @#{@user.username}"}
+          options={[
+            {"Normal", "normal"},
+            {"Muted: no notifications", "mute"},
+            {"Ignored: also hide their posts", "ignore"}
+          ]}
+        />
+      </div>
+      <div class="w-36">
+        <.input
+          field={@form[:duration]}
+          id={"#{@id}-duration"}
+          type="select"
+          label="Ignore for"
+          options={Firefly.Accounts.Ignores.durations()}
+        />
+      </div>
+      <button class="btn btn-sm mb-2">Save</button>
+    </.form>
+    """
+  end
+
+  @doc "What members see in place of a post hidden after flags."
+  attr :post, :any, required: true
+
+  def hidden_post(assigns) do
+    ~H"""
+    <article
+      id={"post-#{@post.id}"}
+      class="hidden-post rounded-box border border-dashed border-warning/60 px-5 py-3 text-sm italic text-base-content/60"
+    >
+      <.icon name="hero-eye-slash" class="size-4" />
+      This post was hidden after members flagged it. Staff will review it.
+    </article>
+    """
+  end
+
+  @doc """
+  Shown above a hidden post to the few who still see it (its author,
+  admins), with an Unhide button for admins.
+  """
+  attr :post, :any, required: true
+  attr :can_unhide, :boolean, default: false
+
+  def hidden_notice(assigns) do
+    ~H"""
+    <div role="status" class="hidden-notice alert alert-warning mb-2 py-2 text-sm">
+      <.icon name="hero-eye-slash" class="size-4" />
+      <span class="flex-1">
+        Hidden after members flagged it, pending staff review. Only its author and staff can see it.
+      </span>
+      <button
+        :if={@can_unhide}
+        type="button"
+        phx-click="unhide"
+        phx-value-id={@post.id}
+        data-confirm="Show this post again and dismiss its flags?"
+        class="btn btn-xs"
+      >
+        Unhide
+      </button>
+    </div>
+    """
+  end
+
+  @doc "Markdown rendered (and sanitized) to HTML, with code highlighting."
+  attr :id, :string, required: true
+  attr :body, :string, required: true
+
+  attr :viewer, :any,
+    default: nil,
+    doc: "who reads it (see `Firefly.Rendering.Markdown.render/2`)"
+
+  attr :refs, :map, default: nil, doc: "see `Firefly.Rendering.Markdown.render/2`"
+  attr :post, :any, default: nil, doc: "the post this is the body of, for plugins' content hooks"
+  attr :thread, :any, default: nil, doc: "the post's thread"
+
+  def markdown(assigns) do
+    ~H"""
+    <div id={@id} phx-hook="Highlight" class="post-body prose prose-sm max-w-none">
+      {Phoenix.HTML.raw(Markdown.render(@body, @refs || @viewer, post: @post, thread: @thread))}
+    </div>
+    """
+  end
+
+  @doc """
+  A word diff (see `Firefly.Discussion.Diff`) with insertions and deletions
+  highlighted. The text is HTML-escaped; the markup is built here so that no
+  stray template whitespace ends up inside the preformatted text.
+  """
+  attr :diff, :list, required: true
+
+  def post_diff(assigns) do
+    assigns = assign(assigns, :html, diff_html(assigns.diff))
+
+    ~H"""
+    <div class="post-diff whitespace-pre-wrap break-words rounded-box bg-base-200 p-4 font-mono text-sm">{@html}</div>
+    """
+  end
+
+  defp diff_html(diff) do
+    {:safe,
+     Enum.map(diff, fn {op, text} ->
+       {:safe, escaped} = Phoenix.HTML.html_escape(text)
+
+       case op do
+         :eq -> escaped
+         :ins -> [~s(<ins class="bg-success/25 no-underline">), escaped, "</ins>"]
+         :del -> [~s(<del class="bg-error/20 text-error">), escaped, "</del>"]
+       end
+     end)}
+  end
+
+  @doc "Rendered oEmbeds for the URLs in a post."
+  attr :oembeds, :list, required: true
+
+  def oembeds(assigns) do
+    ~H"""
+    <div :for={{url, oembed} <- @oembeds} class="oembed" data-oembed-url={url}>
+      {render_oembed(oembed)}
+    </div>
+    """
+  end
+
+  defp render_oembed(oembed), do: Phoenix.HTML.raw(Firefly.Rendering.OEmbed.to_html(oembed))
+
+  @doc """
+  A link preview card (see `Firefly.Rendering.LinkPreviews`): the page's title
+  linking to it, its site, description and image (a copy in uploads).
+  Every value is escaped text.
+  """
+  attr :preview, :any, required: true
+
+  def link_preview(assigns) do
+    ~H"""
+    <aside
+      class="link-preview flex gap-3 rounded-box border border-base-300 bg-base-200/50 p-3"
+      data-url={@preview.url}
+    >
+      <div class="min-w-0 flex-1 space-y-1">
+        <p class="truncate text-xs text-base-content/60">
+          {@preview.site_name || URI.parse(@preview.url).host}
+        </p>
+        <a
+          href={@preview.url}
+          class="link link-hover block font-semibold"
+          rel="noopener noreferrer nofollow ugc"
+          target="_blank"
+        >
+          {@preview.title}
+        </a>
+        <p :if={@preview.description} class="line-clamp-3 text-sm text-base-content/80">
+          {@preview.description}
+        </p>
+      </div>
+      <img
+        :if={@preview.image_upload}
+        src={Firefly.Uploads.url(@preview.image_upload)}
+        alt=""
+        loading="lazy"
+        class="size-20 shrink-0 rounded object-cover"
+      />
+    </aside>
+    """
+  end
+
+  @doc """
+  Pagination links for a `Scrivener.Page`, linking to `path?page=N` (plus
+  any other query `params`).
+  """
+  attr :page, Scrivener.Page, required: true
+  attr :path, :string, required: true
+  attr :params, :map, default: %{}
+
+  def pagination(assigns) do
+    assigns =
+      assign(assigns, :window, page_window(assigns.page.page_number, assigns.page.total_pages))
+
+    ~H"""
+    <nav :if={@page.total_pages > 1} class="flex justify-center" aria-label="Pagination">
+      <div class="join">
+        <.link
+          :if={@page.page_number > 1}
+          patch={page_path(@path, @params, @page.page_number - 1)}
+          class="join-item btn btn-sm"
+          aria-label="Previous page"
+        >
+          «
+        </.link>
+        <.link
+          :for={n <- @window}
+          patch={page_path(@path, @params, n)}
+          class={["join-item btn btn-sm", n == @page.page_number && "btn-active"]}
+          aria-current={n == @page.page_number && "page"}
+        >
+          {n}
+        </.link>
+        <.link
+          :if={@page.page_number < @page.total_pages}
+          patch={page_path(@path, @params, @page.page_number + 1)}
+          class="join-item btn btn-sm"
+          aria-label="Next page"
+        >
+          »
+        </.link>
+      </div>
+    </nav>
+    """
+  end
+
+  defp page_path(path, params, n), do: "#{path}?#{URI.encode_query(Map.put(params, "page", n))}"
+
+  @doc false
+  def page_window(current, total) do
+    Enum.to_list(max(1, current - 2)..min(total, current + 2)//1)
+  end
+end

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" data-user-theme={assigns[:current_user] && @current_user.theme}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <meta name="theme-color" content="#DB3440" />
+    <link rel="icon" href={~p"/favicon.ico"} sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href={~p"/images/firefly-icon.svg"} />
+    <link rel="icon" type="image/png" sizes="32x32" href={~p"/images/favicon-32.png"} />
+    <link rel="icon" type="image/png" sizes="16x16" href={~p"/images/favicon-16.png"} />
+    <link rel="apple-touch-icon" href={~p"/images/apple-touch-icon.png"} />
+    <link rel="manifest" href={~p"/manifest.json"} />
+    <% site = Firefly.SiteSettings.all() %>
+    <meta :if={site["description"] != ""} name="description" content={site["description"]} />
+    <.live_title default={site["title"]} suffix={" - " <> site["title"]} phx-no-format>{assigns[:page_title]}</.live_title>
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+    <script>
+      (() => {
+        const themes = {light: "firefly", dark: "firefly-dark"};
+        const systemTheme = () => matchMedia("(prefers-color-scheme: dark)").matches ? themes.dark : themes.light;
+
+        const setTheme = (theme) => {
+          if (theme === "system") {
+            localStorage.removeItem("phx:theme");
+            document.documentElement.setAttribute("data-theme", systemTheme());
+            document.documentElement.setAttribute("data-theme-source", "system");
+          } else {
+            localStorage.setItem("phx:theme", theme);
+            document.documentElement.setAttribute("data-theme", themes[theme] || theme);
+            document.documentElement.setAttribute("data-theme-source", "user");
+          }
+        };
+        // A logged-in user's saved theme wins over this browser's choice.
+        const userTheme = document.documentElement.dataset.userTheme;
+        if (userTheme) {
+          setTheme(userTheme);
+        } else if (!document.documentElement.hasAttribute("data-theme")) {
+          setTheme(localStorage.getItem("phx:theme") || "system");
+        }
+        window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
+        // From the toggle (data-phx-theme) or the server (push_event "set-theme").
+        window.addEventListener("phx:set-theme", (e) => setTheme((e.detail && e.detail.theme) || e.target.dataset.phxTheme));
+
+        matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+          if (document.documentElement.getAttribute("data-theme-source") === "system") {
+            document.documentElement.setAttribute("data-theme", systemTheme());
+          }
+        });
+      })();
+    </script>
+  </head>
+  <body class="bg-base-200 min-h-screen">
+    {@inner_content}
+  </body>
+</html>

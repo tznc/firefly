@@ -19,7 +19,7 @@
         #
         # You can give explicit globs or simply directories.
         # In the latter case `**/*.{ex,exs}` will be used.
-        included: ["lib/", "src/", "web/", "apps/"],
+        included: ["apps/*/lib/", "apps/*/mix.exs", "mix.exs"],
         excluded: [~r"/_build/", ~r"/deps/"]
       },
       #
@@ -75,7 +75,10 @@
         {Credo.Check.Readability.LargeNumbers},
         {Credo.Check.Readability.MaxLineLength, priority: :low, max_length: 80},
         {Credo.Check.Readability.ModuleAttributeNames},
-        {Credo.Check.Readability.ModuleDoc},
+        # Like credo's default, modules built by `use FireflyWeb, :...` (the
+        # umbrella's web module, which no longer ends in `.Web`) need no docs.
+        {Credo.Check.Readability.ModuleDoc,
+         ignore_modules_using: [Credo.Check, Ecto.Schema, Phoenix.LiveView, ~r/\.Web$/, FireflyWeb]},
         {Credo.Check.Readability.ModuleNames},
         # This was in credo's config but credo fails when I try to use it
         # {Credo.Check.Readability.ParenthesesOnZeroArityDefs},

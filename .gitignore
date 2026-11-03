@@ -16,24 +16,26 @@
 # If the VM crashes, it generates a dump, let's ignore it too.
 erl_crash.dump
 
-# Uploads stored on local disk in development (FIREFLY_UPLOAD_DIR).
+# Uploads stored on local disk in development (FIREFLY_UPLOAD_DIR, relative
+# to the app started: the root or apps/firefly_web).
 /uploads/
+/apps/*/uploads/
 
 # Also ignore archive artifacts (built via "mix archive.build").
 *.ez
 
-/apps/firestorm_web/node_modules/*
 /**/node_modules/*
 node_modules/*
 design/**/_build/*
 screenshots
 
 # Generated assets (built by `mix assets.build` / `mix assets.deploy`)
-/priv/static/assets/
-/priv/static/cache_manifest.json
-/priv/static/**/*-????????????????????????????????.*
-/priv/static/**/*.gz
+/apps/*/priv/static/assets/
+/apps/*/priv/static/cache_manifest.json
+/apps/*/priv/static/**/*-????????????????????????????????.*
+/apps/*/priv/static/**/*.gz
 /priv/plts/
 
 # ExUnit @tag :tmp_dir scratch files.
 /tmp/
+/apps/*/tmp/

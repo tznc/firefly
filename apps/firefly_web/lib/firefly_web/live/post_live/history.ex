@@ -1,0 +1,133 @@
+defmodule FireflyWeb.PostLive.History do
+  @moduledoc """
+  A post's edit history: each edit (newest first) with who made it, when, and
+  a word diff of what changed. Updates live when the post is edited again.
+  """
+  use FireflyWeb, :live_view
+
+  alias Firefly.Discussion
+  alias Firefly.Discussion.Post
+
+  @impl true
+  def mount(
+        %{"category_id" => category_id, "thread_id" => thread_id, "id" => id},
+        _session,
+        socket
+      ) do
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Discussion.get_visible_thread!(category, thread_id, socket.assigns.current_user)
+    post = thread |> Discussion.get_post!(id) |> Firefly.Repo.preload(:user)
+    socket = assign(socket, category: category, thread: thread)
+
+    # The history shows the content, so it's for those who may read that
+    # (see `Post.readable_by?/2`).
+    if Post.readable_by?(post, socket.assigns.current_user) do
+      if connected?(socket), do: Discussion.subscribe("forums:thread:#{thread.id}")
+      {:ok, socket |> assign(:page_title, "Edit history - #{thread.title}") |> load(post)}
+    else
+      {:ok,
+       socket
+       |> put_flash(:error, unreadable_message(post))
+       |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+    end
+  end
+
+  defp unreadable_message(post) do
+    cond do
+      Post.deleted?(post) -> "This post was deleted."
+      Post.queued?(post) -> "This post is awaiting approval."
+      true -> "This post is hidden pending review."
+    end
+  end
+
+  # Access is re-checked on every edit pushed: the thread may have moved
+  # into a restricted category (or the user left its group) since mount,
+  # and the post may have been hidden.
+  @impl true
+  def handle_info({:post_updated, %{id: id} = post}, %{assigns: %{post: %{id: id}}} = socket) do
+    user = socket.assigns.current_user
+    thread = Discussion.get_thread(socket.assigns.thread.id)
+
+    cond do
+      is_nil(thread) or not can?(user, :view_thread, thread) ->
+        {:noreply, leave(socket)}
+
+      not Post.readable_by?(post, user) ->
+        %{category: category} = socket.assigns
+
+        {:noreply,
+         socket
+         |> put_flash(:error, unreadable_message(post))
+         |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+
+      true ->
+        {:noreply, load(socket, Firefly.Repo.preload(post, :user))}
+    end
+  end
+
+  def handle_info({:post_deleted, %{id: id}}, %{assigns: %{post: %{id: id}}} = socket) do
+    if can?(socket.assigns.current_user, :view_deleted_posts) do
+      {:noreply, socket}
+    else
+      %{category: category, thread: thread} = socket.assigns
+
+      {:noreply,
+       socket
+       |> put_flash(:error, "This post was deleted.")
+       |> push_navigate(to: ~p"/categories/#{category}/threads/#{thread}")}
+    end
+  end
+
+  def handle_info(_event, socket), do: {:noreply, socket}
+
+  defp leave(socket) do
+    socket
+    |> put_flash(:error, "This thread is no longer available.")
+    |> push_navigate(to: ~p"/")
+  end
+
+  defp load(socket, post), do: assign(socket, post: post, edits: Discussion.post_edits(post))
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app {Layouts.shell(assigns)}>
+      <.page_header title="Edit history">
+        <:subtitle>
+          Post by @{@post.user.username} in
+          <.link
+            navigate={~p"/categories/#{@category}/threads/#{@thread}" <> "#post-#{@post.id}"}
+            class="link"
+          >
+            {@thread.title}
+          </.link>
+        </:subtitle>
+      </.page_header>
+
+      <p :if={@edits == []} class="text-base-content/60">This post hasn't been edited.</p>
+
+      <ol id="revisions" class="space-y-4">
+        <li
+          :for={{edit, index} <- Enum.with_index(@edits)}
+          id={"revision-#{length(@edits) - index}"}
+          class="card border border-base-300 bg-base-100"
+        >
+          <div class="card-body gap-3 p-5">
+            <header class="flex flex-wrap items-center gap-2 text-sm">
+              <span class="badge badge-ghost">Edit {length(@edits) - index}</span>
+              <span :if={edit.editor} class="font-semibold">@{edit.editor.username}</span>
+              <span :if={!edit.editor} class="italic text-base-content/60">a deleted user</span>
+              <.time_ago
+                id={"revision-#{length(@edits) - index}-time"}
+                at={edit.at}
+                class="text-base-content/60"
+              />
+            </header>
+            <.post_diff diff={edit.diff} />
+          </div>
+        </li>
+      </ol>
+    </Layouts.app>
+    """
+  end
+end

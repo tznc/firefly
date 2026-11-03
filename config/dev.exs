@@ -1,7 +1,7 @@
 import Config
 
 # Configure your database
-config :firestorm_web, FirestormWeb.Repo,
+config :firefly, Firefly.Repo,
   username: System.get_env("FIREFLY_POSTGRES_USER", "postgres"),
   password: System.get_env("FIREFLY_POSTGRES_PASSWORD", "postgres"),
   hostname: System.get_env("FIREFLY_POSTGRES_HOST", "localhost"),
@@ -13,26 +13,26 @@ config :firestorm_web, FirestormWeb.Repo,
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
-config :firestorm_web, FirestormWeb.Web.Endpoint,
+config :firefly_web, FireflyWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: String.to_integer(System.get_env("FIREFLY_PORT", "4000"))],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
   secret_key_base: "Q1bBtoEs8F2+MsssVU8zHXvhJBVFDI/4EFEINldDXBlVsBkNr30gi4WIGNwds+YO",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:firestorm_web, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:firestorm_web, ~w(--watch)]},
+    esbuild: {Esbuild, :install_and_run, [:firefly_web, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:firefly_web, ~w(--watch)]},
     tailwind_admin: {Tailwind, :install_and_run, [:admin, ~w(--watch)]}
   ]
 
 # Watch static and templates for browser reloading.
-config :firestorm_web, FirestormWeb.Web.Endpoint,
+config :firefly_web, FireflyWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/firestorm_web/web/(controllers|live|components)/.*(ex|heex)$"
+      ~r"lib/firefly_web/(controllers|live|components)/.*(ex|heex)$"
     ]
   ]
 
@@ -53,4 +53,4 @@ config :phoenix_live_view,
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
 
-config :firestorm_web, dev_routes: true
+config :firefly_web, dev_routes: true

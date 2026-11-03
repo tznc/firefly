@@ -1,0 +1,185 @@
+defmodule FireflyWeb.PostLive.Edit do
+  @moduledoc """
+  Edits a post's body (its author while the thread is open, or an admin;
+  a wiki post, anyone who may post in the thread, as `Posting.check/2`
+  says, slow mode included). The previous body is kept in the post's
+  revision history, with who edited it. An unsaved
+  edit is kept as a draft (see `FireflyWeb.Drafting`) until it's
+  saved or discarded.
+  """
+  use FireflyWeb, :live_view
+
+  on_mount({FireflyWeb.UserAuth, :require_user})
+
+  alias Firefly.{Accounts, Discussion}
+  alias Firefly.Moderation.Posting
+  alias Firefly.Discussion.Post
+  alias FireflyWeb.Editor
+
+  import FireflyWeb.Drafting
+
+  @impl true
+  def mount(
+        %{"category_id" => category_id, "thread_id" => thread_id, "id" => id},
+        _session,
+        socket
+      ) do
+    category = Discussion.get_visible_category!(category_id, socket.assigns.current_user)
+    thread = Discussion.get_visible_thread!(category, thread_id, socket.assigns.current_user)
+    post = Discussion.get_post!(thread, id)
+    socket = assign(socket, category: category, thread: thread, post: post)
+
+    if can_edit?(socket),
+      do: mount_form(socket),
+      else: {:ok, socket |> deny() |> push_navigate(to: thread_path(socket))}
+  end
+
+  defp mount_form(socket) do
+    socket = assign_draft(socket, {:edit, socket.assigns.post})
+    restored = if draft = socket.assigns.draft, do: %{body: draft.body}, else: %{}
+
+    {:ok,
+     socket
+     |> assign(:page_title, "Edit post - #{socket.assigns.thread.title}")
+     |> assign(:form, to_form(Post.edit_changeset(socket.assigns.post, restored)))
+     |> Editor.allow_attachments(&handle_progress/3)
+     |> Editor.mention_search()}
+  end
+
+  @impl true
+  def handle_event("validate", %{"post" => params}, socket) do
+    changeset = Post.edit_changeset(socket.assigns.post, %{body: params["body"]})
+
+    {:noreply,
+     socket
+     |> assign(:form, to_form(changeset, action: :validate))
+     |> autosave_edit(params["body"])}
+  end
+
+  def handle_event("discard_draft", _params, socket) do
+    form = to_form(Post.edit_changeset(socket.assigns.post, %{}))
+    {:noreply, socket |> discard_draft() |> assign(:form, form)}
+  end
+
+  def handle_event("save", %{"post" => params}, socket) do
+    user = socket.assigns.current_user
+    # The thread may have closed, or moved out of the user's reach, and the
+    # post stopped being a wiki, since the page opened. (The post as it was
+    # stays assigned: it's what the edit started from.)
+    thread = Discussion.get_thread!(socket.assigns.thread.id)
+    socket = assign(socket, :thread, thread)
+    current = Discussion.get_post!(thread, socket.assigns.post.id)
+
+    with {:can_view, true} <- {:can_view, can?(user, :view_thread, thread)},
+         # A deleted post goes on to `save/3`, which says so.
+         {:can_edit, true} <-
+           {:can_edit,
+            Post.deleted?(current) or can?(user, :edit_post, %{post: current, thread: thread})},
+         :ok <- posting_check(user, current, thread) do
+      save(socket, user, params)
+    else
+      {:can_view, false} -> {:noreply, leave(socket)}
+      {:can_edit, false} -> {:noreply, deny(socket)}
+      {:error, reason} -> {:noreply, put_flash(socket, :error, Posting.message(reason))}
+    end
+  end
+
+  defp save(socket, user, params) do
+    case Discussion.update_post(socket.assigns.post, user, %{body: params["body"]}) do
+      {:ok, post} ->
+        {:noreply,
+         socket
+         |> discard_draft()
+         |> put_flash(:info, "Post updated successfully.")
+         |> push_navigate(to: thread_path(socket) <> "#post-#{post.id}")}
+
+      {:error, :deleted} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "This post was deleted.")
+         |> push_navigate(to: thread_path(socket))}
+
+      {:error, :edited_elsewhere} ->
+        # Keep what they typed; saving again replaces the other edit knowingly.
+        post = Discussion.get_post!(socket.assigns.thread, socket.assigns.post.id)
+
+        {:noreply,
+         socket
+         |> assign(:post, post)
+         |> assign(:form, to_form(Post.edit_changeset(post, %{body: params["body"]})))
+         |> put_flash(
+           :error,
+           "This post was edited by someone else while you were editing. " <>
+             "Check the post's history, then save again to replace their edit."
+         )}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :form, to_form(changeset))}
+    end
+  end
+
+  # Someone else's wiki post: as if replying in the thread (slow mode too).
+  defp posting_check(user, post, thread) do
+    if Post.wiki?(post) and post.user_id != user.id and not Accounts.admin?(user),
+      do: Posting.check(user, thread),
+      else: Posting.check(user)
+  end
+
+  defp handle_progress(:attachment, entry, socket) do
+    Editor.attachment_progress(socket, entry, fn socket, markdown ->
+      body = Editor.append(socket.assigns.form[:body].value, markdown)
+      changeset = Post.edit_changeset(socket.assigns.post, %{body: body})
+      {:noreply, socket |> assign(:form, to_form(changeset)) |> autosave_edit(body)}
+    end)
+  end
+
+  # Only an actual change is worth keeping: back to the post's body, no draft.
+  defp autosave_edit(socket, body) do
+    if body == socket.assigns.post.body,
+      do: discard_draft(socket),
+      else: autosave(socket, %{body: body})
+  end
+
+  defp can_edit?(%{assigns: %{current_user: user, post: post, thread: thread}}),
+    do: can?(user, :edit_post, %{post: post, thread: thread})
+
+  defp leave(socket) do
+    socket
+    |> put_flash(:error, "This thread is no longer available.")
+    |> push_navigate(to: ~p"/")
+  end
+
+  defp deny(socket), do: put_flash(socket, :error, denied_message(socket.assigns.current_user))
+
+  defp thread_path(%{assigns: %{category: category, thread: thread}}),
+    do: ~p"/categories/#{category}/threads/#{thread}"
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <Layouts.app {Layouts.shell(assigns)}>
+      <.page_header title={if @post.wiki, do: "Edit Wiki Post", else: "Edit Post"}>
+        <:subtitle>
+          In <.link navigate={~p"/categories/#{@category}/threads/#{@thread}"} class="link">
+            {@thread.title}
+          </.link>
+        </:subtitle>
+      </.page_header>
+
+      <.form for={@form} id="post-form" phx-change="validate" phx-submit="save" class="space-y-4">
+        <Editor.body_editor field={@form[:body]} uploads={@uploads} user={@current_user} />
+        <.draft_status draft={@draft} error={@draft_error} />
+        <div class="flex justify-end gap-2">
+          <.link
+            navigate={~p"/categories/#{@category}/threads/#{@thread}" <> "#post-#{@post.id}"}
+            class="btn btn-ghost"
+          >
+            Cancel
+          </.link>
+          <.button variant="primary" phx-disable-with="Saving...">Save edit</.button>
+        </div>
+      </.form>
+    </Layouts.app>
+    """
+  end
+end

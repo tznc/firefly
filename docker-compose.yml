@@ -28,8 +28,8 @@ services:
       - .:/firestorm
       - /firestorm/deps
       - /firestorm/_build
-      - /firestorm/assets/node_modules
-    command: bash -c "mix deps.get && npm ci --prefix assets && mix ecto.create && mix ecto.migrate && mix phx.server"
+      - /firestorm/apps/firefly_web/assets/node_modules
+    command: bash -c "mix deps.get && npm ci --prefix apps/firefly_web/assets && mix ecto.create && mix ecto.migrate && mix phx.server"
     environment:
       FIREFLY_POSTGRES_USER: postgres
       FIREFLY_POSTGRES_PASSWORD: postgres
