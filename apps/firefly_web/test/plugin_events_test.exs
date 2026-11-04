@@ -478,7 +478,7 @@ defmodule FireflyWeb.PluginEventsTest do
                HTTP.fetch(["api.example.com"], %{"url" => "file:///etc/passwd"})
 
       assert {:error, :private_address, "localhost resolves to a private address"} =
-               HTTP.fetch(["localhost"], %{"url" => "http://localhost:4002/"})
+               HTTP.fetch(["localhost"], %{"url" => "#{FireflyWeb.Endpoint.url()}/"})
 
       assert HTTP.allowed?("a.b.example.com", ["*.example.com"])
       refute HTTP.allowed?("example.com", ["*.example.com"])
@@ -508,12 +508,12 @@ defmodule FireflyWeb.PluginEventsTest do
 
       try do
         assert {:ok, %{status: 200, body: body}} =
-                 HTTP.fetch(["localhost"], %{"url" => "http://localhost:4002/"})
+                 HTTP.fetch(["localhost"], %{"url" => "#{FireflyWeb.Endpoint.url()}/"})
 
         assert body =~ "<html"
 
         assert {:ok, %{status: 302}} =
-                 HTTP.fetch(["localhost"], %{"url" => "http://localhost:4002/drafts"})
+                 HTTP.fetch(["localhost"], %{"url" => "#{FireflyWeb.Endpoint.url()}/drafts"})
       after
         Application.delete_env(:firefly, HTTP)
       end

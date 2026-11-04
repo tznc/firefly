@@ -295,7 +295,7 @@ defmodule FireflyWeb.GroupsTest do
 
     test "render as links to visible groups", %{team: team, admin: admin} do
       html = Markdown.render("Ask @team or @nobody", Mentions.refs(["Ask @team or @nobody"]))
-      assert html =~ ~s{href="http://localhost:4002/groups/team"}
+      assert html =~ ~s{href="#{FireflyWeb.Endpoint.url()}/groups/team"}
 
       settings(team, %{"visibility" => "staff"}, admin)
       refute Markdown.render("Ask @team", Mentions.refs(["Ask @team"])) =~ "/groups/team"
