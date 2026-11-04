@@ -40,6 +40,11 @@ defmodule Firefly.Moderation.WatchedWords do
 
   @cache_key {__MODULE__, :matchers}
 
+  # How hard a word's regex may try on one text before it gives up: a regex
+  # that backtracks catastrophically (`(a+)+$`, written by staff in regex
+  # mode) would otherwise take a fifth of a second per post, then raise.
+  @limit "(*LIMIT_MATCH=100000)"
+
   ## Managing the list
 
   @doc "The words watched for `action`, alphabetically."
@@ -104,7 +109,9 @@ defmodule Firefly.Moderation.WatchedWords do
   def match(text, action) when is_binary(text) do
     matchers()
     |> Map.get(action, [])
-    |> Enum.flat_map(fn {_word, regex} -> Regex.scan(regex, text, return: :index) end)
+    |> Enum.flat_map(fn {_word, regex} ->
+      safely([], fn -> Regex.scan(regex, text, return: :index) end)
+    end)
     |> Enum.map(fn [{start, length} | _groups] -> {start, binary_part(text, start, length)} end)
     |> Enum.reject(fn {_start, found} -> found == "" end)
     |> Enum.sort()
@@ -121,7 +128,7 @@ defmodule Firefly.Moderation.WatchedWords do
   def compile(words) do
     words
     |> Enum.flat_map(fn word ->
-      case Regex.compile(pattern(word), "iu") do
+      case Regex.compile(@limit <> pattern(word), "iu") do
         {:ok, regex} -> [{word.action, {word, regex}}]
         {:error, _} -> []
       end
@@ -182,7 +189,7 @@ defmodule Firefly.Moderation.WatchedWords do
 
   defp mask(text, censored) do
     Enum.reduce(censored, text, fn {_word, regex}, text ->
-      Regex.replace(regex, text, &String.duplicate("■", String.length(&1)))
+      safely(text, fn -> Regex.replace(regex, text, &String.duplicate("■", String.length(&1))) end)
     end)
   end
 
@@ -206,20 +213,24 @@ defmodule Firefly.Moderation.WatchedWords do
 
   defp replace(text, words) do
     Enum.reduce(words, text, fn {word, regex}, text ->
-      Regex.replace(regex, text, fn _found -> word.replacement end)
+      safely(text, fn -> Regex.replace(regex, text, fn _found -> word.replacement end) end)
     end)
   end
 
   defp split_links(text, []), do: [{:text, text}]
 
   defp split_links(text, [{word, regex} | rest]) do
-    regex
-    |> Regex.split(text, include_captures: true, trim: true)
-    |> Enum.flat_map(fn part ->
-      if Regex.run(regex, part, capture: :first) == [part],
-        do: [{:link, part, word.replacement}],
-        else: split_links(part, rest)
-    end)
+    case safely(nil, fn -> Regex.split(regex, text, include_captures: true, trim: true) end) do
+      nil ->
+        split_links(text, rest)
+
+      parts ->
+        Enum.flat_map(parts, fn part ->
+          if safely(nil, fn -> Regex.run(regex, part, capture: :first) end) == [part],
+            do: [{:link, part, word.replacement}],
+            else: split_links(part, rest)
+        end)
+    end
   end
 
   ## Posting
@@ -318,8 +329,16 @@ defmodule Firefly.Moderation.WatchedWords do
 
     matchers()
     |> Map.get("tag", [])
-    |> Enum.filter(fn {_word, regex} -> Regex.match?(regex, text) end)
+    |> Enum.filter(fn {_word, regex} -> safely(false, fn -> Regex.match?(regex, text) end) end)
     |> Enum.flat_map(fn {word, _regex} -> WatchedWord.tag_names(word.replacement) end)
     |> Enum.uniq()
+  end
+
+  # A regex that gives up on a text (see @limit) matches nothing in it,
+  # rather than failing the post or the page showing it.
+  defp safely(fallback, fun) do
+    fun.()
+  rescue
+    SystemLimitError -> fallback
   end
 end
