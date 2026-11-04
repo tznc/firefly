@@ -71,10 +71,10 @@ defmodule FireflyWeb.SearchHardeningTest do
 
       assert search.(conn).status == 200
       assert search.(conn).status == 200
-      assert json_response(search.(conn), 429)["error"] =~ "too often"
+      assert json_response(search.(conn), 429)["detail"] =~ "too often"
 
       # A logged-in user has their own allowance, wherever they search from.
-      authed = put_req_header(conn, "authorization", "Bearer #{reader.api_token}")
+      authed = put_req_header(conn, "authorization", "Bearer #{api_token(reader)}")
       assert search.(authed).status == 200
     end
 

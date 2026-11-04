@@ -116,16 +116,14 @@ defmodule FireflyWeb.AccountTest do
       refute AccountExport.to_json(ada) =~ "carol"
     end
 
-    test "says nothing about other users beyond their usernames", %{ada: ada, bob: bob} do
+    test "says nothing about other users beyond their usernames", %{ada: ada} do
       json = AccountExport.to_json(ada)
 
       assert json =~ ~s{"bob"}
       refute json =~ "bob-secret@example.com"
       refute json =~ "Robert Secret"
-      refute json =~ bob.api_token
       refute json =~ "bob's private words"
       refute json =~ "bob's public reply"
-      refute json =~ ada.api_token
       refute json =~ "password"
     end
 
@@ -154,6 +152,7 @@ defmodule FireflyWeb.AccountTest do
         ctx
 
       reset_token = PasswordReset.token(ada)
+      token = api_token(ada)
 
       conn
       |> log_in_as(ada)
@@ -176,7 +175,6 @@ defmodule FireflyWeb.AccountTest do
       gone = Accounts.get_user!(ada.id)
       assert gone.username == "deleted-user-#{ada.id}"
       assert %{email: nil, password_hash: nil, bio: nil} = gone
-      assert gone.api_token != ada.api_token
 
       # Content stays, credited to the placeholder.
       assert Repo.get!(Post, first.id).user_id == ada.id
@@ -204,7 +202,7 @@ defmodule FireflyWeb.AccountTest do
 
       api =
         build_conn()
-        |> put_req_header("authorization", "Bearer #{ada.api_token}")
+        |> put_req_header("authorization", "Bearer #{token}")
         |> post(~p"/api/v1/posts", post: %{body: "hi"}, thread_id: thread.id)
 
       assert api.status == 401
@@ -253,7 +251,7 @@ defmodule FireflyWeb.AccountTest do
                })
 
       # A legacy account that already has the name.
-      Repo.insert!(%User{username: "deleted-user-#{ada.id}", name: "x", api_token: "t"})
+      Repo.insert!(%User{username: "deleted-user-#{ada.id}", name: "x"})
 
       assert {:error, _} = AccountDeletion.delete_account(ada, "ada-password")
       refute User.deleted?(Accounts.get_user!(ada.id))

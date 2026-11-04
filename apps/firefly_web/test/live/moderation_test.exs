@@ -70,10 +70,10 @@ defmodule FireflyWeb.ModerationTest do
 
     api =
       build_conn()
-      |> put_req_header("authorization", "Bearer #{member.api_token}")
+      |> put_req_header("authorization", "Bearer #{api_token(member)}")
       |> post(~p"/api/v1/posts", post: %{body: "too late"}, thread_id: thread.id)
 
-    assert json_response(api, 403)["error"] =~ "closed"
+    assert json_response(api, 403)["detail"] =~ "closed"
 
     conn
     |> log_in_as(admin)

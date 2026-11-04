@@ -80,10 +80,10 @@ defmodule FireflyWeb.EmailConfirmationTest do
 
     api =
       build_conn()
-      |> put_req_header("authorization", "Bearer #{user.api_token}")
+      |> put_req_header("authorization", "Bearer #{api_token(user)}")
       |> post(~p"/api/v1/posts", post: %{body: "hello"}, thread_id: thread.id)
 
-    assert json_response(api, 403)["error"] =~ "confirm your email"
+    assert json_response(api, 403)["detail"] =~ "confirm your email"
   end
 
   test "changing your email sends a new confirmation link", %{conn: conn} do

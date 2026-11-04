@@ -126,8 +126,8 @@ defmodule FireflyWeb.StaffLive.Plugin do
   end
 
   defp endpoint_auth("secret"), do: "the plugin's secret"
-  defp endpoint_auth("user"), do: "a member's API token"
-  defp endpoint_auth("either"), do: "the plugin's secret or a member's API token"
+  defp endpoint_auth("user"), do: "a member's API key"
+  defp endpoint_auth("either"), do: "the plugin's secret or a member's API key"
 
   defp fail_closed?(plugin), do: (plugin.row && plugin.row.fail_closed) || false
 

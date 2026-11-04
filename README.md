@@ -37,8 +37,8 @@ unset (the image's init scripts depend on them), and give it a few seconds on
 first start, while it sets itself up. `FIREFLY_POSTGRES_HOST`, `_PORT`, `_USER`
 and `_PASSWORD` point development and the tests at another server.
 
-The web UI is Phoenix LiveView styled with Tailwind CSS and daisyUI; the JSON
-API lives under `/api/v1`.
+The web UI is Phoenix LiveView styled with Tailwind CSS and daisyUI; the REST
+API lives under `/api/v1` (see "API" below).
 
 ```sh
 npm ci --prefix apps/firefly_web/assets
@@ -142,6 +142,32 @@ The image needs at least `FIREFLY_DATABASE_URL` and `FIREFLY_SECRET_KEY_BASE` (g
 newer with pgvector works (a managed one too); the `supabase/postgres` image
 above is the recommended one to run yourself. The other settings (GitHub
 login, email, S3 uploads) are read from the environment in `config/runtime.exs`.
+
+### API
+
+`/api/v1` is a REST API covering what the UI does: categories, threads and
+their lists, posts (likes, bookmarks, flags, polls, accepted answers), tags,
+users and the directory, notifications, private messages, chat, groups,
+search, uploads, the review queue and the admin settings, webhooks and
+badges. Its reference is at `/api/v1/docs`, rendered from the OpenAPI 3.1
+document at `/api/v1/openapi.json`.
+
+Requests authenticate with an API key, `Authorization: Bearer <key>`;
+without one they read as a visitor. A key acts as its user, with that
+user's permissions, limited to the key's scopes (`read`, `write`,
+`topics:write`, `messages:write`, `chat:write`, `uploads:write`,
+`users:write`, `notifications:write`, `admin`). Members make their own keys
+in Settings > API keys; admins see every key and make global keys at
+`/staff/api-keys`, which act as the user each request names in the
+`Api-Username` header. A key can expire, be limited to addresses or CIDR
+ranges and carry its own requests-per-minute limit (otherwise the
+`api_rate_limit` site setting), and only its hash is stored: the key itself
+is shown once. `POST /api/v1/auth/identity` trades a username and password
+for a new full-scope key.
+
+Lists are paginated with `limit` (up to 100) and `cursor` (from
+`meta.next_cursor`); errors are `application/problem+json` (RFC 9457). The
+MCP server at `/mcp` uses the same keys, with the `read` scope.
 
 ### Admin
 

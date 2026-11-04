@@ -31,7 +31,7 @@ defmodule Firefly.Plugins.UI do
   **Endpoints** at `/api/plugins/:id/*path` call `handle_request`. Callers
   authenticate as the manifest's `endpoint_auth` says: `secret` (the
   `x-plugin-secret` header, shown to staff on the plugin's page), `user` (a
-  member's API token, `Authorization: Bearer`), or `either`. Rate limited
+  member's API key, `Authorization: Bearer`), or `either`. Rate limited
   per plugin and caller.
   """
 

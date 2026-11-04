@@ -70,7 +70,7 @@ defmodule FireflyWeb.BackupsLiveTest do
     assert html =~ "read-only for maintenance right now"
 
     api = conn |> put_req_header("accept", "application/json") |> post(~p"/api/v1/posts", %{})
-    assert json_response(api, 503)["error"] =~ "read-only"
+    assert json_response(api, 503)["detail"] =~ "read-only"
 
     conn
     |> log_in_as(admin)

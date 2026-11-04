@@ -16,7 +16,6 @@ defmodule Firefly.Accounts.User do
     field(:username, :string)
     field(:password_hash, :string)
     field(:password, :string, virtual: true)
-    field(:api_token, :string)
     field(:confirmed_at, :utc_datetime)
     field(:email_notifications, :boolean, default: true)
     field(:allow_private_messages, :boolean, default: true)
@@ -73,8 +72,8 @@ defmodule Firefly.Accounts.User do
 
   def changeset(%__MODULE__{} = user, attrs \\ %{}) do
     user
-    |> cast(attrs, [:username, :email, :name, :api_token])
-    |> validate_required([:username, :name, :api_token])
+    |> cast(attrs, [:username, :email, :name])
+    |> validate_required([:username, :name])
     |> validate_change(:username, fn :username, username ->
       if reserved_username?(username), do: [username: "is reserved"], else: []
     end)

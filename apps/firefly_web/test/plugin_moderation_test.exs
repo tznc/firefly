@@ -92,7 +92,7 @@ defmodule FireflyWeb.PluginModerationTest do
 
       response =
         conn
-        |> put_req_header("authorization", "Bearer #{member.api_token}")
+        |> put_req_header("authorization", "Bearer #{api_token(member)}")
         |> post(~p"/api/v1/posts", post: %{"body" => "casino time"}, thread_id: thread.id)
         |> json_response(422)
 

@@ -1,8 +1,6 @@
 defmodule FireflyWeb.UserLiveTest do
   use FireflyWeb.ConnCase
 
-  alias Firefly.Accounts
-
   test "lists users", %{conn: conn} do
     user = user_fixture(%{username: "bob"})
 
@@ -70,21 +68,6 @@ defmodule FireflyWeb.UserLiveTest do
       |> fill_in("Username", with: "")
       |> click_button("Save")
       |> assert_has("p", text: "can't be blank")
-    end
-
-    test "can't change your API token", %{conn: conn} do
-      user = user_fixture()
-
-      conn
-      |> log_in_as(user)
-      |> visit(~p"/users/#{user}/edit")
-      |> unwrap(fn view ->
-        Phoenix.LiveViewTest.render_submit(view, "save_profile", %{
-          "user" => %{"name" => "x", "api_token" => "chosen"}
-        })
-      end)
-
-      assert Accounts.get_user!(user.id).api_token == user.api_token
     end
 
     test "can't edit someone else", %{conn: conn} do

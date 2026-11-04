@@ -98,7 +98,7 @@ defmodule Firefly.Accounts.AccountDeletion do
                         forums_posts_views forums_drafts forums_bookmarks user_ignores
                         user_visits directory_items user_identities user_totps
                         user_backup_codes webauthn_credentials magic_link_tokens group_requests
-                        user_badges push_subscriptions),
+                        user_badges push_subscriptions api_keys),
             do: Repo.delete_all(from(r in table, where: r.user_id == ^id))
 
         Repo.delete_all(from(n in Notification, where: n.user_id == ^id))
@@ -115,7 +115,6 @@ defmodule Firefly.Accounts.AccountDeletion do
           name: "Deleted user",
           email: nil,
           password_hash: nil,
-          api_token: Ecto.UUID.generate(),
           confirmed_at: nil,
           bio: nil,
           website: nil,

@@ -60,6 +60,7 @@ defmodule Firefly.Discussion.Policy do
       `:manage_tags` (tag groups and synonyms), `:manage_badges`, `:manage_plugins`,
       `:manage_uploads` (list and delete any upload), `:manage_emoji`
       (custom emoji), `:manage_watched_words`, `:manage_webhooks`,
+      `:manage_api_keys` (every API key, and global keys),
       `:manage_sso_clients` (the DiscourseConnect provider's sites),
       `:view_reports` (the dashboard and reports), `:manage_backups` (and
       read-only mode), `:manage_imports` (the import runs, see
@@ -212,6 +213,7 @@ defmodule Firefly.Discussion.Policy do
              :manage_emoji,
              :manage_watched_words,
              :manage_webhooks,
+             :manage_api_keys,
              :manage_sso_clients,
              :view_reports,
              :manage_backups,

@@ -88,7 +88,6 @@ defmodule Firefly.Import.Writer do
       username: username,
       name: blank_to_nil(attrs[:name]) || blank_to_nil(attrs[:username]) || username,
       email: email,
-      api_token: Ecto.UUID.generate(),
       confirmed_at: confirmed_at(email, attrs[:confirmed], created_at),
       bio: blank_to_nil(attrs[:bio]),
       website: web_url(attrs[:website]),
