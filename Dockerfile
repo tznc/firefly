@@ -129,7 +129,9 @@ LABEL org.opencontainers.image.title="Firefly" \
       org.opencontainers.image.vendor="tznc.dev" \
       org.opencontainers.image.licenses="Apache-2.0"
 
-EXPOSE 4000
+# HTTP; and, for clustering (FIREFLY_CLUSTER=postgres), EPMD and the node's
+# distribution port (FIREFLY_DIST_PORT). See "Running several nodes" in README.md.
+EXPOSE 4000 4369 9100
 
 # Liveness: bin/healthcheck asks GET /health over bash's /dev/tcp (no curl
 # in the image, and no second VM as `bin/firefly rpc` would start). Use
