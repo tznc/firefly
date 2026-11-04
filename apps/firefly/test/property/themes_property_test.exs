@@ -69,10 +69,11 @@ defmodule Firefly.ThemesPropertyTest do
               max_runs: runs(100)
             ) do
         css = Themes.compile(%Theme{name: name, version: 1, components: [], assets: [], css: ""})
-        [first | _] = String.split(css, "\n")
-        assert String.starts_with?(first, "/* ")
-        # The comment's only end is the one compile/1 writes.
-        assert length(String.split(first, "*/")) == 2, "the name closed the comment: #{first}"
+        assert String.starts_with?(css, "/* ")
+        # The comment's first end is the one compile/1 writes, after the
+        # version (a name may hold newlines: they're inside the comment).
+        [header | _] = String.split(css, "*/", parts: 2)
+        assert String.ends_with?(header, " v1 "), "the name closed the comment: #{inspect(css)}"
       end
     end
 
