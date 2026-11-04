@@ -283,7 +283,9 @@ defmodule FireflyWeb.StaffLive.Packages do
           <form id="upload-form" phx-submit="upload" phx-change="validate" class="flex flex-wrap items-center gap-2">
             <label for={@uploads.package.ref} class="label">Package file</label>
             <.live_file_input upload={@uploads.package} class="file-input file-input-sm" />
-            <.button variant="primary">Upload</.button>
+            <%!-- Enabled once the server has the chosen file's entry: a submit
+                  before that would find nothing to consume. --%>
+            <.button variant="primary" disabled={@uploads.package.entries == []}>Upload</.button>
             <p :for={entry <- @uploads.package.entries} class="text-sm w-full">
               {entry.client_name}
               <span :for={error <- upload_errors(@uploads.package, entry)} class="text-error">
