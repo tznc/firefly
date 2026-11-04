@@ -699,6 +699,22 @@ mix precommit              # compile --warnings-as-errors, format, credo, test
 Set `FIREFLY_CHROMIUM_PATH` to use an already-installed Chromium, and
 `FIREFLY_PW_TRACE=true` to record Playwright traces.
 
+Property-based and fuzz tests ([StreamData](https://hexdocs.pm/stream_data),
+in each app's `test/property`) check invariants over generated input: valid
+domain data and adversarial input (unicode and control characters, nested
+markup, script URLs, path traversal, huge numbers), from the shared
+generators in `Firefly.Generators`. Each property runs a few dozen cases in
+a plain `mix test` (`FIREFLY_PROPERTY_RUNS` raises that); the deep runs are
+tagged `:fuzz` and left out unless asked for:
+
+```sh
+mix test --only fuzz                          # deep fuzzing, 5000 cases per property
+FIREFLY_FUZZ_RUNS=50000 mix test --only fuzz  # deeper
+```
+
+A failing property prints the smallest input it found; that input goes into
+a plain example test next to the fix.
+
 The phpBB, vBulletin and NodeBB importers' tests read MySQL, MongoDB and
 Redis databases, so they're left out unless included (CI runs them):
 

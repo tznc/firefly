@@ -35,7 +35,7 @@ defmodule Firefly.Discussion.Quote do
       end
 
     quoted =
-      text |> String.split(~r/\R/) |> Enum.map_join("\n", &String.trim_trailing("> " <> &1))
+      text |> String.split(~r/\R/u) |> Enum.map_join("\n", &String.trim_trailing("> " <> &1))
 
     "> [@#{username} said:](#{url})\n>\n#{quoted}\n\n"
   end

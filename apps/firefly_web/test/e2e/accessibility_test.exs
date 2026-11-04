@@ -109,6 +109,25 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
 
   defp page_id("packaged", context), do: theme_package!(context.admin).id
 
+  # Kaffy's markup, with the labels FireflyWeb.Admin.Theme adds to it.
+  test "the database admin has none either, in both themes", context do
+    {:ok, _} = SiteSettings.update(%{"enable_database_admin" => "true"}, context.admin)
+    session = log_in(context.conn, "ada")
+
+    for path <- [
+          "/staff/db/content/category",
+          "/staff/db/content/category/#{context.category.id}",
+          "/staff/db/people/user"
+        ] do
+      session
+      |> visit(path)
+      |> assert_has("#database-admin-banner")
+      |> audit(context.axe, path)
+      |> evaluate("document.documentElement.setAttribute('data-theme', 'firefly-dark')")
+      |> audit(context.axe, path <> " (dark)")
+    end
+  end
+
   # Not audited: the jobs dashboard (`/staff/jobs`, see FireflyWeb.JobsDashboard)
   # is Oban Web's own markup, under its own layout and stylesheet, which axe
   # finds serious violations in (color contrast in its state counts and
