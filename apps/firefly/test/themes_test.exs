@@ -56,6 +56,15 @@ defmodule Firefly.ThemesTest do
   end
 
   describe "editing and compiling" do
+    # Found by Firefly.ThemesPropertyTest: Postgres can't store "\0" in
+    # text, so saving one raised instead of failing validation.
+    test "HTML or CSS with a null character is refused", %{admin: admin} do
+      assert {:error, changeset} =
+               Themes.create_theme(%{"name" => "Nul", "head_html" => <<"<p>", 0, "</p>">>}, admin)
+
+      assert "can't contain a null character" in errors_on(changeset).head_html
+    end
+
     # Found by Firefly.ThemesPropertyTest: taking "*/" out of the name once
     # turned "**//" into a new "*/", ending the stylesheet's first comment.
     test "the name can't end the stylesheet's header comment", %{admin: admin} do
@@ -153,15 +162,6 @@ defmodule Firefly.ThemesTest do
 
       assert %{details: %{"allow_scripts" => true}} =
                Repo.get_by!(StaffAction, action: "theme.allow_scripts")
-    end
-
-    test "NUL characters are dropped, not a database error", %{admin: admin} do
-      theme = theme(admin, %{"head_html" => "<a href='\0javascript:x()'>x</a>", "css" => "a{\0}"})
-
-      theme = Themes.get_theme(theme.id)
-      refute theme.head_html =~ "\0"
-      refute theme.css =~ "\0"
-      refute Themes.html(theme, :head, "n0nce") =~ "javascript"
     end
   end
 
