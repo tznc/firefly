@@ -120,7 +120,7 @@ jobs:
 
       - run: mix deps.get
       - run: mix deps.unlock --check-unused
-      - run: mix compile --warnings-as-errors
+      - run: mix compile --force --warnings-as-errors
       - run: mix format --check-formatted
       - run: mix credo
       - run: mix hex.audit
