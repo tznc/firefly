@@ -423,6 +423,7 @@ defmodule FireflyWeb.Layouts do
             current_path={@current_path}
             icon={page.icon}
             prefix={page.path != "/staff"}
+            live={page.live}
           >
             {page.label}
             <span
@@ -451,6 +452,7 @@ defmodule FireflyWeb.Layouts do
   attr :current_path, :string, default: nil
   attr :icon, :string, required: true
   attr :prefix, :boolean, default: false, doc: "also active on the pages under `path`"
+  attr :live, :boolean, default: true, doc: "false: a page outside the LiveView session"
   slot :inner_block, required: true
 
   defp nav_item(assigns) do
@@ -464,7 +466,11 @@ defmodule FireflyWeb.Layouts do
 
     ~H"""
     <li>
-      <.link navigate={@path} class={@active && "menu-active"} aria-current={@active && "page"}>
+      <.link
+        {if @live, do: [navigate: @path], else: [href: @path]}
+        class={@active && "menu-active"}
+        aria-current={@active && "page"}
+      >
         <.icon name={@icon} class="size-5" />
         {render_slot(@inner_block)}
       </.link>

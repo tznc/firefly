@@ -12,7 +12,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 #: lib/firefly_web/components/layouts.ex:211
-#: lib/firefly_web/components/layouts.ex:432
+#: lib/firefly_web/components/layouts.ex:433
 #, elixir-autogen, elixir-format
 msgid "%{count} to review"
 msgstr ""
@@ -44,7 +44,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/firefly_web/live/staff_live/user.ex:534
-#: lib/firefly_web/staff_nav.ex:89
+#: lib/firefly_web/staff_nav.ex:90
 #, elixir-autogen, elixir-format
 msgid "API keys"
 msgstr ""
@@ -78,19 +78,19 @@ msgstr ""
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:521
-#: lib/firefly_web/components/layouts.ex:536
+#: lib/firefly_web/components/layouts.ex:527
+#: lib/firefly_web/components/layouts.ex:542
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:211
+#: lib/firefly_web/staff_nav.ex:212
 #, elixir-autogen, elixir-format
 msgid "Backups"
 msgstr ""
 
 #: lib/firefly_web/components/layouts.ex:176
-#: lib/firefly_web/staff_nav.ex:82
+#: lib/firefly_web/staff_nav.ex:83
 #, elixir-autogen, elixir-format
 msgid "Badges"
 msgstr ""
@@ -115,7 +115,7 @@ msgstr ""
 #: lib/firefly_web/components/layouts.ex:269
 #: lib/firefly_web/live/staff_live/categories.ex:31
 #: lib/firefly_web/live/staff_live/categories.ex:316
-#: lib/firefly_web/staff_nav.ex:99
+#: lib/firefly_web/staff_nav.ex:100
 #, elixir-autogen, elixir-format
 msgid "Categories"
 msgstr ""
@@ -177,7 +177,7 @@ msgstr ""
 msgid "Dark"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:51
+#: lib/firefly_web/staff_nav.ex:52
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
 msgstr ""
@@ -209,12 +209,12 @@ msgstr ""
 msgid "Email me a login link"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:194
+#: lib/firefly_web/staff_nav.ex:195
 #, elixir-autogen, elixir-format
 msgid "Embedding"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:114
+#: lib/firefly_web/staff_nav.ex:115
 #, elixir-autogen, elixir-format
 msgid "Emoji"
 msgstr ""
@@ -258,14 +258,14 @@ msgstr ""
 #: lib/firefly_web/live/staff_live/groups.ex:20
 #: lib/firefly_web/live/staff_live/groups.ex:165
 #: lib/firefly_web/live/staff_live/user.ex:430
-#: lib/firefly_web/staff_nav.ex:75
+#: lib/firefly_web/staff_nav.ex:76
 #, elixir-autogen, elixir-format
 msgid "Groups"
 msgstr ""
 
 #: lib/firefly_web/live/staff_live/settings.ex:417
 #: lib/firefly_web/live/staff_live/themes.ex:152
-#: lib/firefly_web/staff_nav.ex:218
+#: lib/firefly_web/staff_nav.ex:219
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr ""
@@ -385,7 +385,7 @@ msgstr ""
 msgid "Password reset. Log in with your new password."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:186
+#: lib/firefly_web/staff_nav.ex:187
 #, elixir-autogen, elixir-format
 msgid "Plugins"
 msgstr ""
@@ -414,7 +414,7 @@ msgid "Reset your password"
 msgstr ""
 
 #: lib/firefly_web/components/layouts.ex:206
-#: lib/firefly_web/staff_nav.ex:124
+#: lib/firefly_web/staff_nav.ex:125
 #, elixir-autogen, elixir-format
 msgid "Review"
 msgstr ""
@@ -471,22 +471,22 @@ msgstr ""
 
 #: lib/firefly_web/live/staff_live/settings.ex:28
 #: lib/firefly_web/live/staff_live/settings.ex:255
-#: lib/firefly_web/staff_nav.ex:172
+#: lib/firefly_web/staff_nav.ex:173
 #, elixir-autogen, elixir-format
 msgid "Site settings"
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:528
+#: lib/firefly_web/components/layouts.ex:534
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:145
+#: lib/firefly_web/staff_nav.ex:146
 #, elixir-autogen, elixir-format
 msgid "Staff log"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:104
+#: lib/firefly_web/staff_nav.ex:105
 #, elixir-autogen, elixir-format
 msgid "Tag groups"
 msgstr ""
@@ -516,12 +516,12 @@ msgstr ""
 msgid "Toggle navigation"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:225
+#: lib/firefly_web/staff_nav.ex:226
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:107
+#: lib/firefly_web/staff_nav.ex:108
 #, elixir-autogen, elixir-format
 msgid "Uploads"
 msgstr ""
@@ -541,12 +541,12 @@ msgstr ""
 #: lib/firefly_web/components/layouts.ex:171
 #: lib/firefly_web/live/staff_live/users.ex:20
 #: lib/firefly_web/live/staff_live/users.ex:91
-#: lib/firefly_web/staff_nav.ex:68
+#: lib/firefly_web/staff_nav.ex:69
 #, elixir-autogen, elixir-format
 msgid "Users"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:131
+#: lib/firefly_web/staff_nav.ex:132
 #, elixir-autogen, elixir-format
 msgid "Watched words"
 msgstr ""
@@ -557,7 +557,7 @@ msgstr ""
 msgid "Watching"
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:513
+#: lib/firefly_web/components/layouts.ex:519
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr ""
@@ -572,7 +572,7 @@ msgstr ""
 msgid "We'll email you a link to choose a new one."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:162
+#: lib/firefly_web/staff_nav.ex:163
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr ""
@@ -604,7 +604,7 @@ msgid "Your profile"
 msgstr ""
 
 #: lib/firefly_web/components/layouts.ex:202
-#: lib/firefly_web/components/layouts.ex:441
+#: lib/firefly_web/components/layouts.ex:442
 #, elixir-autogen, elixir-format
 msgid "new"
 msgstr ""
@@ -635,17 +635,17 @@ msgstr ""
 msgid "Send reset link"
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:579
+#: lib/firefly_web/components/layouts.ex:585
 #, elixir-autogen, elixir-format
 msgid "Use dark theme"
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:571
+#: lib/firefly_web/components/layouts.ex:577
 #, elixir-autogen, elixir-format
 msgid "Use light theme"
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:563
+#: lib/firefly_web/components/layouts.ex:569
 #, elixir-autogen, elixir-format
 msgid "Use system theme"
 msgstr ""
@@ -830,7 +830,7 @@ msgstr ""
 msgid "Addresses that can't sign up. Use * for any run of characters, as in *@spam.example for a whole domain."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:48
+#: lib/firefly_web/staff_nav.ex:49
 #, elixir-autogen, elixir-format
 msgid "Admin home"
 msgstr ""
@@ -942,17 +942,17 @@ msgstr ""
 msgid "Category deleted."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:151
+#: lib/firefly_web/staff_nav.ex:152
 #, elixir-autogen, elixir-format
 msgid "Communication"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:168
+#: lib/firefly_web/staff_nav.ex:169
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:95
+#: lib/firefly_web/staff_nav.ex:96
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
@@ -1031,12 +1031,12 @@ msgstr ""
 #: lib/firefly_web/live/staff_live/emails.ex:23
 #: lib/firefly_web/live/staff_live/emails.ex:117
 #: lib/firefly_web/live/staff_live/screening.ex:73
-#: lib/firefly_web/staff_nav.ex:155
+#: lib/firefly_web/staff_nav.ex:156
 #, elixir-autogen, elixir-format
 msgid "Emails"
 msgstr ""
 
-#: lib/firefly_web/live/staff_live/index.ex:141
+#: lib/firefly_web/live/staff_live/index.ex:146
 #, elixir-autogen, elixir-format
 msgid "Emails failed today"
 msgstr ""
@@ -1103,7 +1103,7 @@ msgstr ""
 msgid "Impersonate"
 msgstr ""
 
-#: lib/firefly_web/live/staff_live/index.ex:135
+#: lib/firefly_web/live/staff_live/index.ex:140
 #, elixir-autogen, elixir-format
 msgid "In the review queue"
 msgstr ""
@@ -1181,7 +1181,7 @@ msgstr ""
 msgid "Logins"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:207
+#: lib/firefly_web/staff_nav.ex:208
 #, elixir-autogen, elixir-format
 msgid "Maintenance"
 msgstr ""
@@ -1211,7 +1211,7 @@ msgstr ""
 msgid "Message (optional)"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:120
+#: lib/firefly_web/staff_nav.ex:121
 #, elixir-autogen, elixir-format
 msgid "Moderation"
 msgstr ""
@@ -1350,7 +1350,7 @@ msgstr ""
 msgid "Order categories, and set who can see and post in each."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:46
+#: lib/firefly_web/staff_nav.ex:47
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr ""
@@ -1385,7 +1385,7 @@ msgstr ""
 msgid "Penalty applied."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:64
+#: lib/firefly_web/staff_nav.ex:65
 #, elixir-autogen, elixir-format
 msgid "People"
 msgstr ""
@@ -1497,7 +1497,7 @@ msgstr ""
 msgid "Renamed %{old} to %{new}."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:58
+#: lib/firefly_web/staff_nav.ex:59
 #, elixir-autogen, elixir-format
 msgid "Reports"
 msgstr ""
@@ -1585,7 +1585,7 @@ msgstr ""
 
 #: lib/firefly_web/live/staff_live/screening.ex:18
 #: lib/firefly_web/live/staff_live/screening.ex:97
-#: lib/firefly_web/staff_nav.ex:138
+#: lib/firefly_web/staff_nav.ex:139
 #, elixir-autogen, elixir-format
 msgid "Screening"
 msgstr ""
@@ -1677,7 +1677,7 @@ msgstr ""
 msgid "Silenced %{until}"
 msgstr ""
 
-#: lib/firefly_web/live/staff_live/index.ex:119
+#: lib/firefly_web/live/staff_live/index.ex:124
 #, elixir-autogen, elixir-format
 msgid "Site setting"
 msgstr ""
@@ -1859,7 +1859,7 @@ msgstr ""
 msgid "Value"
 msgstr ""
 
-#: lib/firefly_web/live/staff_live/index.ex:129
+#: lib/firefly_web/live/staff_live/index.ex:134
 #: lib/firefly_web/live/staff_live/users.ex:85
 #, elixir-autogen, elixir-format
 msgid "Waiting for approval"
@@ -2576,7 +2576,7 @@ msgstr ""
 #: lib/firefly_web/live/staff_live/themes.ex:20
 #: lib/firefly_web/live/staff_live/themes.ex:115
 #: lib/firefly_web/live/staff_live/themes.ex:124
-#: lib/firefly_web/staff_nav.ex:179
+#: lib/firefly_web/staff_nav.ex:180
 #, elixir-autogen, elixir-format
 msgid "Themes"
 msgstr ""
@@ -2685,4 +2685,39 @@ msgstr ""
 #: lib/firefly_web/live/staff_live/categories.ex:91
 #, elixir-autogen, elixir-format
 msgid "That category can't go there."
+msgstr ""
+
+#: lib/firefly_web/staff_nav.ex:232
+#, elixir-autogen, elixir-format
+msgid "Advanced"
+msgstr ""
+
+#: lib/firefly_web/admin/category_admin.ex:26
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Back to the staff admin"
+msgstr ""
+
+#: lib/firefly_web/staff_nav.ex:237
+#, elixir-autogen, elixir-format
+msgid "Database"
+msgstr ""
+
+#: lib/firefly_web/admin/theme.ex:32
+#, elixir-autogen, elixir-format
+msgid "Raw database records. The staff admin at %{path} is the primary way to run the site; edits here bypass its validation and side effects."
+msgstr ""
+
+#: lib/firefly_web/admin/theme.ex:56
+#, elixir-autogen, elixir-format
+msgid "Select"
+msgstr ""
+
+#: lib/firefly_web/admin/theme.ex:55
+#, elixir-autogen, elixir-format
+msgid "Select all"
+msgstr ""
+
+#: lib/firefly_web/admin/theme.ex:54
+#, elixir-autogen, elixir-format
+msgid "Toggle the menu"
 msgstr ""

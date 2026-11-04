@@ -14,7 +14,8 @@ defmodule FireflyWeb.StaffNav do
 
   @doc """
   The sections with the pages `user` may use: `{title, pages}`, each page
-  a map with `path`, `label`, `icon` and `keywords`. Sections left empty
+  a map with `path`, `label`, `icon`, `keywords` and `live` (false for a
+  page outside the LiveView session, which links load in full). Sections left empty
   are dropped.
   """
   def sections(user) do
@@ -227,10 +228,30 @@ defmodule FireflyWeb.StaffNav do
            :manage_upgrades,
            ~w(version update release)
          )
+       ]},
+      {gettext("Advanced"),
+       [
+         # Kaffy, a controller-rendered page outside the LiveView session.
+         page(
+           "/staff/db",
+           gettext("Database"),
+           "hero-circle-stack",
+           :manage_database,
+           ~w(records raw kaffy tables rows),
+           live: false
+         )
        ]}
     ]
   end
 
-  defp page(path, label, icon, permission, keywords),
-    do: %{path: path, label: label, icon: icon, permission: permission, keywords: keywords}
+  defp page(path, label, icon, permission, keywords, opts \\ []) do
+    %{
+      path: path,
+      label: label,
+      icon: icon,
+      permission: permission,
+      keywords: keywords,
+      live: Keyword.get(opts, :live, true)
+    }
+  end
 end

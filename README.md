@@ -293,6 +293,27 @@ log; admins also run the site. Grant either role from a user's admin page
 
 Every admin action is recorded in the staff log (`/staff/log`).
 
+#### Database admin (optional)
+
+For power admins, a secondary raw-records view
+([Kaffy](https://github.com/aesmail/kaffy)) at `/staff/db`. It's off by
+default: an admin turns on **Raw database admin**
+(`enable_database_admin`, under Site settings > Advanced), and until then
+`/staff/db` is a 404. Once on, it's for admins only (moderators and
+members are refused, checked on every request) and appears in the
+`/staff` sidebar under **Advanced > Database**. It lists and edits users,
+categories, threads and posts, tags and tag groups, groups and their
+members, badges and themes, and shows the stored site settings, installed
+plugins and the email log read-only. Secrets are never shown: password
+hashes, plugins' bundles, code, secrets and settings, secret site
+settings; API keys and two-factor secrets aren't listed at all.
+
+`/staff` stays the way to run the site: edits in `/staff/db` change rows
+directly and skip the forum's own validation and side effects (a banner
+on every page says so). Every create, update and delete there is recorded
+in the staff log. It follows the site's light/dark choice and its active
+theme's colors.
+
 ### Plugins
 
 Staff install and manage plugins at `/staff/plugins`: core plugins written

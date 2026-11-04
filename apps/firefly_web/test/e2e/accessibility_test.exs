@@ -89,6 +89,25 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
     end
   end
 
+  # Kaffy's markup, with the labels FireflyWeb.Admin.Theme adds to it.
+  test "the database admin has none either, in both themes", context do
+    {:ok, _} = SiteSettings.update(%{"enable_database_admin" => "true"}, context.admin)
+    session = log_in(context.conn, "ada")
+
+    for path <- [
+          "/staff/db/content/category",
+          "/staff/db/content/category/#{context.category.id}",
+          "/staff/db/people/user"
+        ] do
+      session
+      |> visit(path)
+      |> assert_has("#database-admin-banner")
+      |> audit(context.axe, path)
+      |> evaluate("document.documentElement.setAttribute('data-theme', 'firefly-dark')")
+      |> audit(context.axe, path <> " (dark)")
+    end
+  end
+
   test "the dark theme has no contrast violations either", context do
     %{conn: conn, category: category, thread: thread} = context
 

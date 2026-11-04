@@ -105,7 +105,12 @@ defmodule FireflyWeb.StaffLive.Index do
           <li :for={page <- @pages} class="list-row items-center">
             <.icon name={page.icon} class="size-5 opacity-70" />
             <div>
-              <.link navigate={page.path} class="link font-medium">{page.label}</.link>
+              <.link
+                {if page.live, do: [navigate: page.path], else: [href: page.path]}
+                class="link font-medium"
+              >
+                {page.label}
+              </.link>
               <p class="text-xs text-base-content/70">{page.section}</p>
             </div>
           </li>
