@@ -33,6 +33,12 @@ defmodule Firefly.Plugins.Health do
     failed = match?({:error, {kind, _}} when is_atom(kind), result)
     count(plugin.id, failed, elapsed)
 
+    Firefly.Telemetry.execute(
+      [:firefly, :plugins, :hook],
+      %{count: 1, duration: System.convert_time_unit(elapsed, :microsecond, :native)},
+      %{plugin: plugin.id, hook: hook, result: if(failed, do: "error", else: "ok")}
+    )
+
     case result do
       {:error, {kind, message}} when is_atom(kind) ->
         log_error(plugin.id, hook, kind, message)

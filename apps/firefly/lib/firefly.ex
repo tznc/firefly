@@ -44,5 +44,5 @@ defmodule Firefly do
   use Boundary,
     top_level?: true,
     check: [out: false],
-    exports: [Repo, Endpoint, URLs, Mailer, RateLimit, LocalTime, JobRuns, IPRange]
+    exports: [Repo, Endpoint, URLs, Mailer, RateLimit, LocalTime, JobRuns, IPRange, Telemetry]
 end

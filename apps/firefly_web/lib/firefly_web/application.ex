@@ -8,6 +8,8 @@ defmodule FireflyWeb.Application do
     children = [
       # Who's in which chat channel (see FireflyWeb.ChatLive)
       FireflyWeb.Presence,
+      # Metrics, when on: the reporter, the poller and their listener
+      FireflyWeb.Telemetry,
       # Start the endpoint when the application starts
       FireflyWeb.Endpoint,
       # Fails readiness probes on shutdown, before the endpoint stops
