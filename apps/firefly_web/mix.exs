@@ -45,6 +45,23 @@ defmodule FireflyWeb.MixProject do
       {:phoenix_test, "~> 0.14", only: :test, runtime: false},
       {:phoenix_test_playwright, "~> 0.19", only: :test, runtime: false},
       {:bandit, "~> 1.14"},
+      # Metrics (see FireflyWeb.Telemetry): the definitions, VM and queue
+      # measurements, and Peep, which aggregates them for Prometheus in
+      # fixed buckets (memory stays flat however rarely it's scraped).
+      {:telemetry_metrics, "~> 1.2"},
+      {:telemetry_poller, "~> 1.3"},
+      {:peep, "~> 5.0"},
+      # OpenTelemetry (see FireflyWeb.OpenTelemetry): the SDK and OTLP
+      # exporter, and spans for Bandit, Phoenix (with LiveView) and Ecto.
+      {:opentelemetry, "~> 1.7"},
+      {:opentelemetry_exporter, "~> 1.11"},
+      {:opentelemetry_bandit, "~> 0.3.0"},
+      {:opentelemetry_phoenix, "~> 2.0"},
+      {:opentelemetry_ecto, "~> 1.2"},
+      # Metrics and logs over OTLP are still experimental in the Erlang SDK:
+      # pinned, and only used with FIREFLY_OTEL_METRICS / FIREFLY_OTEL_LOGS.
+      {:opentelemetry_experimental, "== 0.6.0"},
+      {:opentelemetry_api_experimental, "== 0.6.0"},
       {:jason, "~> 1.4"},
       {:gettext, "~> 1.0"},
       # The optional raw-records admin at /staff/db (see FireflyWeb.Admin).

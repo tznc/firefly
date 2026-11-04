@@ -229,6 +229,10 @@ defmodule Firefly.Webhooks do
 
   ## Delivering
 
+  @doc "How many deliveries are waiting to be sent (or retried)."
+  @spec pending_count() :: non_neg_integer
+  def pending_count, do: Repo.aggregate(where(Delivery, status: "pending"), :count)
+
   @doc "Delivers what's due at `now`, one at a time. Returns how many succeeded."
   def deliver_due(now \\ DateTime.utc_now()), do: deliver_due(now, 0)
 
@@ -259,7 +263,14 @@ defmodule Firefly.Webhooks do
   defp deliver(row, now) do
     case Repo.get(Webhook, row.webhook_id) do
       %Webhook{active: true} = hook ->
-        attempt(hook, row, now)
+        Firefly.Telemetry.span(
+          [:firefly, :webhooks, :delivery],
+          %{type: event_type(row.event)},
+          fn ->
+            delivered = attempt(hook, row, now)
+            {delivered, %{result: if(delivered == 1, do: "success", else: "failure")}}
+          end
+        )
 
       _off ->
         Repo.update!(Ecto.Changeset.change(row, status: "skipped", error: "The webhook is off."))

@@ -1750,9 +1750,14 @@ defmodule Firefly.Discussion do
   # NOTE: This obviously doesn't need to use `with` if I'm not using the
   # else...whatever
   def create_post(%Thread{} = thread, %User{} = user, attrs) do
-    if thread_closed?(thread.id),
-      do: {:error, :closed},
-      else: insert_post(thread, user, attrs)
+    Firefly.Telemetry.span([:firefly, :discussion, :create_post], %{}, fn ->
+      result =
+        if thread_closed?(thread.id),
+          do: {:error, :closed},
+          else: insert_post(thread, user, attrs)
+
+      {result, %{result: if(match?({:ok, _}, result), do: "ok", else: "error")}}
+    end)
   end
 
   @doc "Whether the thread is closed to new replies (closed or archived)."

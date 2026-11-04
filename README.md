@@ -62,7 +62,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -112,6 +112,9 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
 | `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
+| `FIREFLY_METRICS_PORT`, `FIREFLY_METRICS_IP`, `FIREFLY_METRICS_TOKEN` | Prometheus metrics, off by default: a port of their own for `/metrics` (bound to `FIREFLY_METRICS_IP`, default `0.0.0.0`), and/or a bearer token that serves `/metrics` on the main port too (see "Metrics") |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` and the other standard `OTEL_*` variables | OpenTelemetry traces over OTLP, off without an endpoint; `FIREFLY_OTEL_METRICS=true` and `FIREFLY_OTEL_LOGS=true` add metrics and logs (experimental; see "Observability") |
+| `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
 
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see
@@ -143,6 +146,199 @@ The image needs at least `FIREFLY_DATABASE_URL` and `FIREFLY_SECRET_KEY_BASE` (g
 newer with pgvector works (a managed one too); the `supabase/postgres` image
 above is the recommended one to run yourself. The other settings (GitHub
 login, email, S3 uploads) are read from the environment in `config/runtime.exs`.
+
+The image's `HEALTHCHECK` runs `/app/bin/healthcheck`, which asks the server
+for `GET /health` over bash's `/dev/tcp`: the image has no curl, and
+`bin/firefly rpc` would start a second VM on every check. Give it a path to
+check readiness instead (`/app/bin/healthcheck /ready`), e.g. as a compose
+`healthcheck` that `depends_on: condition: service_healthy` waits for.
+
+### Monitoring
+
+Two unauthenticated JSON endpoints answer probes. They are handled at the
+top of the endpoint, before sessions, CSRF, analytics, rate limits, the
+locale and theme, and aren't logged per request:
+
+| Endpoint | Answers |
+| --- | --- |
+| `GET /health` | Liveness: `200 {"status": "ok"}` while the VM runs and serves HTTP. No database call, so a database outage doesn't get every node restarted |
+| `GET /ready` | Readiness: `200` when the node should get traffic, else `503` with `"failing"` naming the failed checks. Checks: the database answers `SELECT 1` within 2 seconds, no migration is pending, and the node isn't shutting down (draining). Read-only mode and whether the plugin sandbox is available are reported in `"checks"` but never fail it |
+
+```json
+{"status": "unavailable", "failing": ["migrations"],
+ "checks": {"database": {"ok": true}, "migrations": {"ok": false, "pending": [20261101000000]},
+            "draining": {"ok": true}, "read_only": {"ok": true, "enabled": false},
+            "plugin_sandbox": {"ok": true, "available": true}}}
+```
+
+Production redirects HTTP to HTTPS (`force_ssl`), except for these two paths,
+so a kubelet or load balancer can probe a pod's port over plain HTTP from
+inside the cluster; no `Host` header check applies to them. On `SIGTERM`
+the node flags itself as draining (`/ready` answers `503`), waits
+`FIREFLY_DRAIN_DELAY_MS`, then stops accepting connections. A Kubernetes
+example:
+
+```yaml
+livenessProbe:
+  httpGet: {path: /health, port: 4000}
+  periodSeconds: 10
+readinessProbe:
+  httpGet: {path: /ready, port: 4000}
+  periodSeconds: 5
+  failureThreshold: 2
+```
+
+### Metrics
+
+Firefly exports metrics in Prometheus' text format at `/metrics`, off by
+default. Turn it on with either:
+
+- `FIREFLY_METRICS_PORT=9568` (preferred): a listener of its own, which
+  serves only `/metrics`, so the metrics stay off the public port. Keep it
+  inside your network (or bind it with `FIREFLY_METRICS_IP=127.0.0.1` for a
+  local agent).
+- `FIREFLY_METRICS_TOKEN=<secret>`: `/metrics` on the main port too, for
+  requests with `Authorization: Bearer <secret>`. With a port as well, the
+  token is required there too.
+
+What's exported (durations are histograms in microseconds, named
+`..._microseconds`; buckets from 0.5 ms to 10 s):
+
+| Metric | Labels |
+| --- | --- |
+| `vm_memory_{total,processes,binary,ets}`, `vm_total_run_queue_lengths_{total,cpu,io}`, `vm_system_counts_{process,port}_count` | |
+| `phoenix_router_dispatch_stop_duration_microseconds`, `phoenix_router_dispatch_exception_count` | `route` (the pattern, e.g. `/categories/:category_id/threads/:id`), `method`, `status` |
+| `phoenix_live_view_mount_stop_duration_microseconds`, `phoenix_live_view_handle_event_stop_duration_microseconds`, `phoenix_live_view_handle_event_exception_count` | `view` (event names are left out: clients choose them) |
+| `firefly_repo_query_total_time_microseconds`, `firefly_repo_query_queue_time_microseconds` | `source` (table) |
+| `firefly_notifications_dispatch_stop_duration_microseconds`, `firefly_notifications_dispatch_exception_count` | `event` (`post_created`, `message_created`...) |
+| `firefly_notifications_created_count` | `kind` |
+| `firefly_plugins_hook_count`, `firefly_plugins_hook_duration_microseconds` | `plugin`, `hook`, `result`; `hook` |
+| `firefly_plugins_event_stop_count`, `firefly_plugins_event_exception_count` | `result` (`delivered`, `failed`, `dropped`) |
+| `firefly_queue_depth` | `queue` (`plugin_events`, `webhooks`) |
+| `firefly_webhooks_delivery_stop_duration_microseconds`, `firefly_webhooks_delivery_exception_count` | `type`, `result` (`success`, `failure`) |
+| `firefly_scheduler_job_stop_duration_microseconds`, `firefly_scheduler_job_exception_count` | `job` |
+
+No label carries a user id or a request path. The VM and queue gauges are
+measured every 10 seconds. The domain emits its events with `:telemetry`
+(listed in `Firefly.Telemetry`); `FireflyWeb.Telemetry` defines the metrics.
+A Prometheus scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: firefly
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["firefly:9568"]
+    # With FIREFLY_METRICS_TOKEN (needed on the main port, optional on the metrics port):
+    # authorization:
+    #   credentials: <secret>
+```
+
+### Observability
+
+Firefly exports OpenTelemetry traces, and optionally metrics and logs, over
+OTLP to a collector (the OpenTelemetry Collector, Grafana Alloy, a vendor's
+endpoint). Nothing is exported unless an endpoint is set; everything is
+configured with the standard variables, which the SDK reads itself:
+
+| Variable | |
+| --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The collector, e.g. `http://otel-collector:4318`; per signal: `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `_METRICS_ENDPOINT`, `_LOGS_ENDPOINT` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc` (port 4317) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | e.g. an API key: `x-api-key=...` |
+| `OTEL_SERVICE_NAME` | Default `firefly` (the release's name) |
+| `OTEL_RESOURCE_ATTRIBUTES` | e.g. `deployment.environment=production,service.instance.id=web-1` |
+| `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | e.g. `parentbased_traceidratio` and `0.1` to keep a tenth of traces |
+| `OTEL_TRACES_EXPORTER` | `none` turns traces off even with an endpoint |
+| `FIREFLY_OTEL_METRICS`, `FIREFLY_OTEL_LOGS` | `true` to also export metrics and logs (experimental, below); `OTEL_METRIC_EXPORT_INTERVAL` (ms, default 60000) |
+
+What's exported:
+
+- **Traces** (stable SDK: `opentelemetry` 1.7, `opentelemetry_exporter`
+  1.11): a server span per request (Bandit), with Phoenix's route and
+  LiveView mounts and events, Ecto queries, the AI client's HTTP requests
+  (Req) as child spans, and spans for the domain's operations: post
+  creation, notification fan-out, plugin hook runs and event deliveries,
+  webhook deliveries, scheduler jobs and AI requests (see
+  `Firefly.Telemetry`). Background tasks and the notification dispatcher
+  carry the trace on. Outgoing requests don't send trace headers to third
+  parties.
+- **Metrics** (`FIREFLY_OTEL_METRICS=true`, **experimental**): the same
+  metrics as Prometheus (see "Metrics" above), as OTLP counters, histograms
+  (same buckets) and gauges.
+- **Logs** (`FIREFLY_OTEL_LOGS=true`, **experimental**): log events at
+  `info` and up, with the trace and span ids of the span they were logged in.
+  Console logs print `otel_trace_id` and `otel_span_id` too.
+
+OpenTelemetry metrics and logs are still experimental in the Erlang SDK
+(`opentelemetry_experimental` and `opentelemetry_api_experimental` 0.6.0,
+pinned exactly): their APIs may change between releases, hence the opt-in.
+
+A local stack to try it with, as a `docker-compose.override.yml` next to
+Firefly (the collector sends traces to Jaeger, metrics to Prometheus; Tempo
+or Loki slot in the same way):
+
+```yaml
+services:
+  firefly:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local
+      FIREFLY_OTEL_METRICS: "true"
+      FIREFLY_OTEL_LOGS: "true"
+      FIREFLY_METRICS_PORT: "9568"   # Prometheus can also scrape Firefly directly
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.139.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otelcol.yaml:/etc/otelcol/config.yaml:ro
+
+  jaeger:
+    image: jaegertracing/jaeger:2.11.0
+    ports: ["16686:16686"]   # the UI
+
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--web.enable-otlp-receiver"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+```
+
+`otelcol.yaml`:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http: {endpoint: 0.0.0.0:4318}
+      grpc: {endpoint: 0.0.0.0:4317}
+processors:
+  batch: {}
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls: {insecure: true}
+  otlphttp/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp
+  debug: {}   # logs: swap in Loki, Elasticsearch or a vendor
+service:
+  pipelines:
+    traces: {receivers: [otlp], processors: [batch], exporters: [otlp/jaeger]}
+    metrics: {receivers: [otlp], processors: [batch], exporters: [otlphttp/prometheus]}
+    logs: {receivers: [otlp], processors: [batch], exporters: [debug]}
+```
+
+`prometheus.yml` (OTLP metrics arrive by push; the scrape job reads
+Firefly's own `/metrics` instead, if you prefer pull):
+
+```yaml
+scrape_configs:
+  - job_name: firefly
+    static_configs:
+      - targets: ["firefly:9568"]
+```
 
 ### API
 

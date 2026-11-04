@@ -42,6 +42,13 @@ defmodule Firefly.MixProject do
       # Safe HTML for rendered posts, search excerpts and emails.
       {:phoenix_html, "~> 4.4"},
       {:jason, "~> 1.4"},
+      # Events the domain emits for metrics and traces (see Firefly.Telemetry).
+      {:telemetry, "~> 1.3"},
+      # Trace spans around domain operations (see Firefly.Telemetry): the API
+      # only, a no-op until the web app starts the SDK; and the AI client's
+      # HTTP spans.
+      {:opentelemetry_api, "~> 1.5"},
+      {:opentelemetry_req, "~> 1.0"},
       # ueberauth_google 0.12 pins `ueberauth ~> 0.10.0`; 0.11 only signs the
       # state cookie, inside Ueberauth's own helpers, which strategies just call.
       {:ueberauth, "~> 0.11", override: true},

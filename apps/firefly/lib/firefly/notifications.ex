@@ -150,6 +150,10 @@ defmodule Firefly.Notifications do
       |> Repo.insert()
 
     with {:ok, notification} <- result do
+      Firefly.Telemetry.execute([:firefly, :notifications, :created], %{count: 1}, %{
+        kind: notification.kind
+      })
+
       notifications_changed(user.id)
       Firefly.Notifications.WebPush.notification_created(user, notification)
     end
