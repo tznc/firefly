@@ -14,42 +14,44 @@ defmodule Firefly.Application do
   end
 
   defp default_children do
-    [
-      # Start the Ecto repository
-      Firefly.Repo,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: Firefly.PubSub},
-      # Clears cached site settings when another node changes them
-      Firefly.SiteSettings.Cache,
-      # Rate limit buckets
-      {Firefly.RateLimit, clean_period: :timer.minutes(10)},
-      # Add an LRU Cache for storing OEmbed results for a given URL, storing at
-      # most 5000 results at a time in the cache.
-      %{id: LruCache, start: {LruCache, :start_link, [:oembed_cache, 5_000]}},
-      # Runs plugin calls, so a crashing or runaway call never takes its caller down
-      {Task.Supervisor, name: Firefly.Plugin.TaskSupervisor},
-      # Loads plugins and reloads them when another node changes them
-      Firefly.Plugins.Registry,
-      # Fetches link previews in the background
-      {Task.Supervisor, name: Firefly.Rendering.LinkPreviews.supervisor()},
-      {Task.Supervisor, name: Firefly.Notifications.WebPush.TaskSupervisor},
-      # Runs AI work in the background (triage, embeddings)
-      {Task.Supervisor, name: Firefly.AI.TaskSupervisor},
-      # Checks new content with Akismet in the background
-      {Task.Supervisor, name: Firefly.Moderation.Akismet.TaskSupervisor},
-      # Background and scheduled jobs (see Firefly.Jobs)
-      {Oban, Application.fetch_env!(:firefly, Oban)},
-      # Runs readiness probes' database checks, bounded by a timeout
-      {Task.Supervisor, name: Firefly.Health.TaskSupervisor},
-      # Posts as plugins transformed them
-      Firefly.Plugins.Content.cache_spec(),
-      # Counts traffic in memory and writes it in batches
-      Firefly.Analytics.Buffer,
-      # Reports' results for the day
-      Firefly.Reports.Cache,
-      # Runs backups and restores; applies read-only mode
-      Firefly.Backups.Runner
-    ] ++ topic_timers() ++ plugin_queue()
+    # Start the Ecto repository, then join the other nodes (when clustering
+    # is on) before anything relies on PubSub reaching them
+    [Firefly.Repo] ++
+      Firefly.Cluster.child_specs() ++
+      [
+        # Start the PubSub system
+        {Phoenix.PubSub, name: Firefly.PubSub},
+        # Clears cached site settings when another node changes them
+        Firefly.SiteSettings.Cache,
+        # Rate limit buckets
+        {Firefly.RateLimit, clean_period: :timer.minutes(10)},
+        # Add an LRU Cache for storing OEmbed results for a given URL, storing at
+        # most 5000 results at a time in the cache.
+        %{id: LruCache, start: {LruCache, :start_link, [:oembed_cache, 5_000]}},
+        # Runs plugin calls, so a crashing or runaway call never takes its caller down
+        {Task.Supervisor, name: Firefly.Plugin.TaskSupervisor},
+        # Loads plugins and reloads them when another node changes them
+        Firefly.Plugins.Registry,
+        # Fetches link previews in the background
+        {Task.Supervisor, name: Firefly.Rendering.LinkPreviews.supervisor()},
+        {Task.Supervisor, name: Firefly.Notifications.WebPush.TaskSupervisor},
+        # Runs AI work in the background (triage, embeddings)
+        {Task.Supervisor, name: Firefly.AI.TaskSupervisor},
+        # Checks new content with Akismet in the background
+        {Task.Supervisor, name: Firefly.Moderation.Akismet.TaskSupervisor},
+        # Background and scheduled jobs (see Firefly.Jobs)
+        {Oban, Application.fetch_env!(:firefly, Oban)},
+        # Runs readiness probes' database checks, bounded by a timeout
+        {Task.Supervisor, name: Firefly.Health.TaskSupervisor},
+        # Posts as plugins transformed them
+        Firefly.Plugins.Content.cache_spec(),
+        # Counts traffic in memory and writes it in batches
+        Firefly.Analytics.Buffer,
+        # Reports' results for the day
+        Firefly.Reports.Cache,
+        # Runs backups and restores; applies read-only mode
+        Firefly.Backups.Runner
+      ] ++ topic_timers() ++ plugin_queue()
   end
 
   # Delivers plugin events and runs plugins' scheduled jobs. Off in tests,

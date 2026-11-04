@@ -50,6 +50,7 @@ defmodule Firefly.BoundariesTest do
     boundaries = boundaries()
 
     for context <- [
+          Firefly.Cluster,
           Firefly.Health,
           Firefly.Jobs,
           Firefly.Packages,

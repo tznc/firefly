@@ -38,6 +38,10 @@ defmodule Firefly.MixProject do
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
       {:phoenix_pubsub, "~> 2.1"},
+      # Connects the nodes of a deployment into one Erlang cluster, finding
+      # them over Postgres LISTEN/NOTIFY (see Firefly.Cluster).
+      {:libcluster, "~> 3.5"},
+      {:libcluster_postgres, "~> 0.2.0"},
       {:plug_crypto, "~> 2.1"},
       # Safe HTML for rendered posts, search excerpts and emails.
       {:phoenix_html, "~> 4.4"},

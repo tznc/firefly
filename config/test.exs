@@ -14,9 +14,10 @@ config :firefly, Firefly.Repo,
   pool_size: System.schedulers_online() * 2,
   ownership_timeout: 30_000
 
-# The server runs during tests so Playwright end-to-end tests can drive it.
+# The server runs during tests so Playwright end-to-end tests can drive it,
+# on FIREFLY_TEST_PORT so several suites can run side by side.
 config :firefly_web, FireflyWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4002],
+  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("FIREFLY_TEST_PORT", "4002"))],
   secret_key_base: "+r1xPk7Kz3gV0h7uN6pXqM1y2dJw8dW1H5rB0oYzq6c2Wc5yR6eLx9oQp3sZt4uV",
   server: true
 
