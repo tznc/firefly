@@ -365,6 +365,19 @@ defmodule Firefly.PackagesTest do
       }
     ]
 
+    # Found by Firefly.PackagesPropertyTest: Postgres can't store "\0" in
+    # JSON, so saving one raised instead of failing validation.
+    test "refuse a null character", %{admin: admin} do
+      package = install!(theme_zip(%{"settings" => @settings}), admin)
+
+      assert {:error, %{"font" => "can't contain a null character"}} =
+               Packages.update_settings(
+                 package,
+                 %{"radius" => "4", "accent" => "#0b6bcb", "font" => <<"a", 0>>},
+                 admin
+               )
+    end
+
     # Found by Firefly.PackagesPropertyTest: an unbalanced bracket left the
     # value bare (taking in the rest of the stylesheet), and \f, which ends
     # a CSS string as a newline does, wasn't escaped.
