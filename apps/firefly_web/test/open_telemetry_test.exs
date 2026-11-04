@@ -26,6 +26,8 @@ defmodule FireflyWeb.OpenTelemetryTest do
     setup do
       # Ended spans come here when flushed (see spans/0); once this test's
       # process is gone, sending them is a no-op.
+      # Spans other tests left unexported go to the old exporter first.
+      :otel_tracer_provider.force_flush()
       :otel_batch_processor.set_exporter(:otel_exporter_pid, self())
       FireflyWeb.OpenTelemetry.instrument()
       on_exit(&uninstrument/0)
@@ -70,8 +72,10 @@ defmodule FireflyWeb.OpenTelemetryTest do
 
       spans = spans(&(span(&1, :name) == "test"))
       root = Enum.find(spans, &(span(&1, :name) == "test"))
-      post = Enum.find(spans, &(span(&1, :name) == "firefly.discussion.create_post"))
-      dispatch = Enum.find(spans, &(span(&1, :name) == "firefly.notifications.dispatch"))
+      # The flush also brings spans other tests ended: this trace's only.
+      trace = Enum.filter(spans, &(span(&1, :trace_id) == span(root, :trace_id)))
+      post = Enum.find(trace, &(span(&1, :name) == "firefly.discussion.create_post"))
+      dispatch = Enum.find(trace, &(span(&1, :name) == "firefly.notifications.dispatch"))
 
       assert span(post, :parent_span_id) == span(root, :span_id)
       assert attribute(post, "firefly.result") == "ok"
