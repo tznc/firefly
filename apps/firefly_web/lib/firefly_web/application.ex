@@ -7,6 +7,8 @@ defmodule FireflyWeb.Application do
   def start(_type, _args) do
     # Spans and log export, when on (OpenTelemetry's SDK has started: it's a dependency).
     FireflyWeb.OpenTelemetry.setup()
+    # Staff-logs what admins do in the jobs dashboard.
+    FireflyWeb.JobsDashboard.attach()
 
     children = [
       # Who's in which chat channel (see FireflyWeb.ChatLive)

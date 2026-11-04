@@ -83,6 +83,11 @@ config :firefly, site_settings_cache: false
 
 config :firefly, Firefly.Mailer, adapter: Swoosh.Adapters.Test
 
+# Jobs are only inserted; tests run them with Oban.Testing (perform_job/3,
+# drain_queue/2).
+config :firefly, Oban, testing: :manual
+config :firefly_web, :jobs_dashboard_oban, FireflyWeb.JobsDashboardOban
+
 config :firefly, :email,
   from: {"Firefly", "noreply@firefly.tznc.dev"},
   reply_domain: "reply.firefly.tznc.dev",

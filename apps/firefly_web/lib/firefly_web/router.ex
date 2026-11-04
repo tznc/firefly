@@ -4,6 +4,7 @@ defmodule FireflyWeb.Router do
   import Plug.Conn
   import Phoenix.Controller
   import Phoenix.LiveView.Router
+  import Oban.Web.Router
 
   # The raw records admin (Kaffy, see FireflyWeb.Admin), after Kaffy's own
   # browser pipeline.
@@ -46,6 +47,20 @@ defmodule FireflyWeb.Router do
     plug(FireflyWeb.Plugs.RequireAdmin)
   end
 
+  # The jobs dashboard (Oban Web, see FireflyWeb.JobsDashboard): admins,
+  # checked on every request; its own layout, under the forum's CSP (its
+  # scripts carry the nonce).
+  pipeline :jobs_admin do
+    plug(:accepts, ["html"])
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:protect_from_forgery)
+    plug(:put_secure_browser_headers)
+    plug(FireflyWeb.Plugs.ContentSecurityPolicy)
+    plug(FireflyWeb.Plugs.CurrentUser)
+    plug(FireflyWeb.Plugs.RequireAdmin)
+  end
+
   pipeline :api do
     plug(:accepts, ["json"])
     # The API authenticates with bearer tokens (not cookies), so any origin may call it.
@@ -79,6 +94,19 @@ defmodule FireflyWeb.Router do
   pipeline :plugin_api do
     plug(FireflyWeb.Plugs.ApiCurrentUser)
     plug(FireflyWeb.Plugs.ReadOnly)
+  end
+
+  scope "/staff" do
+    pipe_through(:jobs_admin)
+
+    oban_dashboard("/jobs",
+      as: :jobs_dashboard,
+      # Tests run Oban in testing mode, which the dashboard can't watch:
+      # they start an instance of their own for it (see FireflyWeb.ConnCase).
+      oban_name: Application.compile_env(:firefly_web, :jobs_dashboard_oban, Oban),
+      resolver: FireflyWeb.JobsDashboard,
+      csp_nonce_assign_key: :csp_nonce
+    )
   end
 
   # Plugins' assets and widget SDK: served to sandboxed frames, so no

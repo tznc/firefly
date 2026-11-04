@@ -47,6 +47,9 @@ defmodule FireflyWeb.MixProject do
       {:bandit, "~> 1.14"},
       # The development mailbox at /dev/mailbox (Plug.Swoosh.MailboxPreview).
       {:swoosh, "~> 1.29"},
+      # The jobs dashboard at /staff/jobs (see FireflyWeb.JobsResolver).
+      {:oban_web, "~> 2.13"},
+      {:opentelemetry_oban, "~> 1.2"},
       # Metrics (see FireflyWeb.Telemetry): the definitions, VM and queue
       # measurements, and Peep, which aggregates them for Prometheus in
       # fixed buckets (memory stays flat however rarely it's scraped).

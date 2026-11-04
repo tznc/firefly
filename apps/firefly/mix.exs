@@ -49,6 +49,10 @@ defmodule Firefly.MixProject do
       # HTTP spans.
       {:opentelemetry_api, "~> 1.5"},
       {:opentelemetry_req, "~> 1.0"},
+      # Background and scheduled jobs in PostgreSQL (see Firefly.Jobs), and
+      # their trace context carried from the enqueuer into the job.
+      {:oban, "~> 2.24"},
+      {:opentelemetry_oban, "~> 1.2"},
       # ueberauth_google 0.12 pins `ueberauth ~> 0.10.0`; 0.11 only signs the
       # state cookie, inside Ueberauth's own helpers, which strategies just call.
       {:ueberauth, "~> 0.11", override: true},

@@ -261,7 +261,7 @@ msgid "Groups"
 msgstr "群组"
 
 #: lib/firefly_web/live/staff_live/settings.ex:417
-#: lib/firefly_web/staff_nav.ex:219
+#: lib/firefly_web/staff_nav.ex:228
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr "导入"
@@ -507,7 +507,7 @@ msgstr "主题"
 msgid "Toggle navigation"
 msgstr "切换导航"
 
-#: lib/firefly_web/staff_nav.ex:226
+#: lib/firefly_web/staff_nav.ex:235
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr "升级"
@@ -2618,7 +2618,7 @@ msgstr "已取消移动。%{item} 回到第 %{position} 位，共 %{count} 位�
 msgid "That category can't go there."
 msgstr "该分类不能移到那里。"
 
-#: lib/firefly_web/staff_nav.ex:232
+#: lib/firefly_web/staff_nav.ex:241
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "高级"
@@ -2628,7 +2628,7 @@ msgstr "高级"
 msgid "Back to the staff admin"
 msgstr "返回管理后台"
 
-#: lib/firefly_web/staff_nav.ex:237
+#: lib/firefly_web/staff_nav.ex:246
 #, elixir-autogen, elixir-format
 msgid "Database"
 msgstr "数据库"
@@ -2727,3 +2727,8 @@ msgstr "邮件发送方式：%{adapter}"
 #, elixir-autogen, elixir-format
 msgid "Test email sent to %{to} with %{adapter}."
 msgstr "已通过 %{adapter} 向 %{to} 发送测试邮件。"
+
+#: lib/firefly_web/staff_nav.ex:220
+#, elixir-autogen, elixir-format
+msgid "Jobs"
+msgstr "后台任务"

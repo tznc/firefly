@@ -22,6 +22,13 @@ defmodule FireflyWeb.OpenTelemetryTest do
 
   @root Path.expand("../../..", __DIR__)
 
+  defmodule Noop do
+    @moduledoc false
+    use Oban.Worker, queue: :default
+    @impl Oban.Worker
+    def perform(_job), do: :ok
+  end
+
   describe "traces" do
     setup do
       # Ended spans come here when flushed (see spans/0); once this test's
@@ -77,6 +84,22 @@ defmodule FireflyWeb.OpenTelemetryTest do
       assert attribute(post, "firefly.result") == "ok"
       assert span(dispatch, :trace_id) == span(root, :trace_id)
       assert attribute(dispatch, "firefly.event") == "post_edited"
+    end
+
+    test "a background job joins its enqueuer's trace" do
+      Tracer.with_span "enqueue" do
+        {:ok, _job} = Firefly.Jobs.insert(Noop.new(%{}))
+      end
+
+      assert %{success: 1} = Oban.drain_queue(queue: :default)
+
+      job? = &(span(&1, :name) == "process default")
+      spans = spans(job?)
+      root = Enum.find(spans, &(span(&1, :name) == "enqueue"))
+      job = Enum.find(spans, job?)
+
+      assert span(job, :trace_id) == span(root, :trace_id)
+      assert span(job, :kind) == :consumer
     end
 
     test "a failing span records the exception" do
@@ -279,7 +302,13 @@ defmodule FireflyWeb.OpenTelemetryTest do
 
   # Detaches what FireflyWeb.OpenTelemetry.instrument/0 attached.
   defp uninstrument do
-    instrumentation = [OpentelemetryBandit, OpentelemetryPhoenix, OpentelemetryEcto]
+    instrumentation = [
+      OpentelemetryBandit,
+      OpentelemetryPhoenix,
+      OpentelemetryEcto,
+      OpentelemetryOban.JobHandler,
+      OpentelemetryOban.PluginHandler
+    ]
 
     for %{id: id, function: fun} <- :telemetry.list_handlers([]),
         Function.info(fun)[:module] in instrumentation,

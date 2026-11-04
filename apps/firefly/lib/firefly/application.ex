@@ -37,6 +37,8 @@ defmodule Firefly.Application do
       {Task.Supervisor, name: Firefly.AI.TaskSupervisor},
       # Checks new content with Akismet in the background
       {Task.Supervisor, name: Firefly.Moderation.Akismet.TaskSupervisor},
+      # Background and scheduled jobs (see Firefly.Jobs)
+      {Oban, Application.fetch_env!(:firefly, Oban)},
       # Runs readiness probes' database checks, bounded by a timeout
       {Task.Supervisor, name: Firefly.Health.TaskSupervisor},
       # Posts as plugins transformed them

@@ -117,6 +117,13 @@ defmodule FireflyWeb.StaffLive.Log do
     "backup.download" => "Downloaded backup",
     "backup.restore" => "Restored backup",
     "backup.read_only" => "Changed read-only mode",
+    "job.retry" => "Retried background jobs",
+    "job.cancel" => "Cancelled background jobs",
+    "job.delete" => "Deleted background jobs",
+    "queue.pause" => "Paused a job queue",
+    "queue.resume" => "Resumed a job queue",
+    "queue.scale" => "Changed a job queue's concurrency",
+    "queue.stop" => "Stopped a job queue",
     "embed_host.create" => "Allowed embedding host",
     "embed_host.delete" => "Removed embedding host",
     "ai_provider.create" => "Added AI provider",
@@ -212,6 +219,12 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "backup", details: %{"name" => name}}, _target),
     do: {name, ~p"/staff/backups"}
+
+  defp target_link(%{target_type: "job", details: %{"job_ids" => ids}}, _target),
+    do: {Enum.map_join(ids, ", ", &"##{&1}"), "/staff/jobs/jobs"}
+
+  defp target_link(%{target_type: "queue", details: %{"queues" => queues}}, _target),
+    do: {Enum.join(queues, ", "), "/staff/jobs/queues"}
 
   defp target_link(%{target_type: "watched_word", details: %{"word" => word}}, _target),
     do: {word, ~p"/staff/watched-words"}

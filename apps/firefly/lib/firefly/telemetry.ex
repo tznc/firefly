@@ -26,6 +26,7 @@ defmodule Firefly.Telemetry do
   | `[:firefly, :ai, :request, :start \\| :stop \\| :exception]` | `duration` | `adapter`; `result` on stop |
   | `[:firefly, :mailer, :deliver, :start \\| :stop \\| :exception]` | `duration` | `adapter` (`smtp`, `ses`...), `template`; `result` (`sent`, `failed`, `skipped`) on stop |
   | `[:firefly, :queue, :depth]` | `depth` | `queue` (`plugin_events`, `webhooks`); from `measure_queues/0` |
+  | `[:firefly, :jobs, :depth]` | `count` | `queue`, `state`: background jobs (see `Firefly.Jobs`); from `measure_queues/0` |
   """
 
   require OpenTelemetry.Tracer, as: Tracer
@@ -101,8 +102,8 @@ defmodule Firefly.Telemetry do
 
   @doc """
   Emits `[:firefly, :queue, :depth]` for each background queue: plugin
-  events and webhook deliveries waiting. Called periodically by the
-  reporter's poller (two counts).
+  events and webhook deliveries waiting, and background jobs by queue and
+  state. Called periodically by the reporter's poller (three counts).
   """
   @spec measure_queues() :: :ok
   def measure_queues do
@@ -113,5 +114,11 @@ defmodule Firefly.Telemetry do
     execute([:firefly, :queue, :depth], %{depth: Firefly.Webhooks.pending_count()}, %{
       queue: "webhooks"
     })
+
+    for {{queue, state}, count} <- Firefly.Jobs.counts() do
+      execute([:firefly, :jobs, :depth], %{count: count}, %{queue: queue, state: state})
+    end
+
+    :ok
   end
 end

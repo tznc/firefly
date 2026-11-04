@@ -214,6 +214,15 @@ defmodule FireflyWeb.StaffNav do
            :manage_backups,
            ~w(restore read-only)
          ),
+         # Oban Web, a LiveView outside the staff layout's session.
+         page(
+           "/staff/jobs",
+           gettext("Jobs"),
+           "hero-queue-list",
+           :manage_jobs,
+           ~w(oban queues background workers retry),
+           live: false
+         ),
          page(
            "/staff/import",
            gettext("Import"),

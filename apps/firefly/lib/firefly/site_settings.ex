@@ -52,7 +52,7 @@ defmodule Firefly.SiteSettings do
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
-    {"Advanced", ["Plugins", "Backups", "Updates", "Embedding", "Database"]}
+    {"Advanced", ["Plugins", "Backups", "Jobs", "Updates", "Embedding", "Database"]}
   ]
 
   @doc "The categories, in order: `{name, sections}`."
@@ -1002,6 +1002,17 @@ defmodule Firefly.SiteSettings do
         min: 0,
         max: 30,
         help: "Automatic backups, every this many days. 0: off."
+      },
+      %{
+        key: "job_retention_days",
+        section: "Jobs",
+        type: :integer,
+        label: "Keep finished jobs (days)",
+        default: 14,
+        min: 1,
+        max: 365,
+        help:
+          "How long completed, cancelled and failed background jobs stay in the job history (Staff, Jobs) before they're pruned."
       },
       %{
         key: "backup_keep",

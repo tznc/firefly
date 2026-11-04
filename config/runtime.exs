@@ -262,6 +262,18 @@ if config_env() == :prod and is_nil(mail_adapter) do
   """
 end
 
+# Each job queue's concurrency on this node (see Firefly.Jobs):
+# FIREFLY_JOBS_<QUEUE>=<n>, e.g. FIREFLY_JOBS_MAILERS=20; 0 runs none of
+# that queue's jobs here (another node does).
+if config_env() != :test do
+  queues =
+    for {queue, _default} <- Application.get_env(:firefly, Oban)[:queues],
+        limit = System.get_env("FIREFLY_JOBS_#{String.upcase(to_string(queue))}"),
+        do: {queue, String.to_integer(limit)}
+
+  if queues != [], do: config(:firefly, Oban, queues: queues)
+end
+
 # Prometheus metrics (see FireflyWeb.Metrics): off unless a port of their own
 # or a bearer token for /metrics on the main endpoint is set.
 if port = System.get_env("FIREFLY_METRICS_PORT") do
