@@ -25,6 +25,7 @@ defmodule Firefly.Telemetry do
   | `[:firefly, :plugins, :run_hook, :start \\| :stop \\| :exception]` | `duration` | `plugin`, `hook`; `result` on stop |
   | `[:firefly, :ai, :request, :start \\| :stop \\| :exception]` | `duration` | `adapter`; `result` on stop |
   | `[:firefly, :queue, :depth]` | `depth` | `queue` (`plugin_events`, `webhooks`); from `measure_queues/0` |
+  | `[:firefly, :cluster, :node]` | `count`, `connected` (other nodes now) | `event` (`up`, `down`), `node` |
   """
 
   require OpenTelemetry.Tracer, as: Tracer

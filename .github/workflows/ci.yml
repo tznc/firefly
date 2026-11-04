@@ -142,8 +142,9 @@ jobs:
 
       # Every app's tests: unit, LiveView (PhoenixTest) and end-to-end browser
       # (PhoenixTest.Playwright) tests, and the importers' against the
-      # source databases and the directory above
-      - run: mix test --include import_mysql --include import_mongo --include import_redis --include ldap
+      # source databases and the directory above, and two nodes clustering
+      # through Postgres
+      - run: mix test --include import_mysql --include import_mongo --include import_redis --include ldap --include cluster
 
   dialyzer:
     name: Dialyzer
