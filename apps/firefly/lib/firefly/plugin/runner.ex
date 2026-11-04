@@ -57,15 +57,29 @@ defmodule Firefly.Plugin.Runner do
   def put_context(context), do: Process.put(@context_key, context)
 
   defp run(plugin, hook, name, args, timeout) do
+    Firefly.Telemetry.span(
+      [:firefly, :plugins, :run_hook],
+      %{plugin: plugin.id, hook: hook},
+      fn ->
+        result = call(plugin, hook, name, args, timeout)
+        {result, %{result: if(match?({:ok, _}, result), do: "ok", else: "error")}}
+      end
+    )
+  end
+
+  defp call(plugin, hook, name, args, timeout) do
     started = System.monotonic_time(:microsecond)
     context = if hook == "call_export", do: context() || hook, else: hook
 
     task =
-      Task.Supervisor.async_nolink(Firefly.Plugin.TaskSupervisor, fn ->
-        put_context(context)
-        Process.put(:firefly_plugin_timeout, timeout)
-        apply(plugin.module, name, [plugin | args])
-      end)
+      Task.Supervisor.async_nolink(
+        Firefly.Plugin.TaskSupervisor,
+        Firefly.Telemetry.bind(fn ->
+          put_context(context)
+          Process.put(:firefly_plugin_timeout, timeout)
+          apply(plugin.module, name, [plugin | args])
+        end)
+      )
 
     result =
       case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do

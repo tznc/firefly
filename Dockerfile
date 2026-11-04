@@ -131,6 +131,13 @@ LABEL org.opencontainers.image.title="Firefly" \
 
 EXPOSE 4000
 
+# Liveness: bin/healthcheck asks GET /health over bash's /dev/tcp (no curl
+# in the image, and no second VM as `bin/firefly rpc` would start). Use
+# `/app/bin/healthcheck /ready` where readiness matters (e.g. compose's
+# depends_on: service_healthy).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["/app/bin/healthcheck"]
+
 # tini reaps zombie processes and forwards signals for a clean shutdown
 ENTRYPOINT ["/usr/bin/tini", "--"]
 

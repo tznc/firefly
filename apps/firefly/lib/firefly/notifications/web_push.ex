@@ -104,7 +104,9 @@ defmodule Firefly.Notifications.WebPush do
     if config()[:async] == false do
       fun.()
     else
-      {:ok, _pid} = Task.Supervisor.start_child(__MODULE__.TaskSupervisor, fun)
+      {:ok, _pid} =
+        Task.Supervisor.start_child(__MODULE__.TaskSupervisor, Firefly.Telemetry.bind(fun))
+
       :ok
     end
   end

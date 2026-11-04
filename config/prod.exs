@@ -7,7 +7,12 @@ import Config
 # before starting your production server. The public URL is set from
 # FIREFLY_DOMAIN in config/runtime.exs.
 config :firefly_web, FireflyWeb.Endpoint,
-  force_ssl: [rewrite_on: [:x_forwarded_proto], hsts: true],
+  # Health probes come over plain HTTP from inside the cluster: no redirect.
+  force_ssl: [
+    rewrite_on: [:x_forwarded_proto],
+    hsts: true,
+    exclude: [hosts: ["localhost", "127.0.0.1"], paths: ["/health", "/ready"]]
+  ],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Do not print debug messages in production

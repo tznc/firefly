@@ -218,7 +218,9 @@ defmodule Firefly.Moderation.TopicTimers do
       # up the other jobs.
       for job <- @jobs, not Firefly.Backups.read_only?() do
         try do
-          job.run_due()
+          Firefly.Telemetry.span([:firefly, :scheduler, :job], %{job: inspect(job)}, fn ->
+            {job.run_due(), %{}}
+          end)
         rescue
           error -> Logger.error("#{inspect(job)} failed: " <> Exception.message(error))
         end

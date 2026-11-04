@@ -28,6 +28,7 @@ defmodule FireflyWeb do
       Firefly.Discussion,
       Firefly.Embedding,
       Firefly.Groups,
+      Firefly.Health,
       Firefly.Import,
       Firefly.Messaging,
       Firefly.Moderation,

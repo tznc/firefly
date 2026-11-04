@@ -151,7 +151,10 @@ defmodule Firefly.Rendering.LinkPreviews do
   defp refresh(urls, thread_id) do
     if Application.get_env(:firefly, __MODULE__, [])[:enabled] != false do
       {:ok, _pid} =
-        Task.Supervisor.start_child(supervisor(), fn -> fetch_all(urls, thread_id) end)
+        Task.Supervisor.start_child(
+          supervisor(),
+          Firefly.Telemetry.bind(fn -> fetch_all(urls, thread_id) end)
+        )
     end
 
     :ok

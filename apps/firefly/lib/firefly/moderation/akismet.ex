@@ -157,7 +157,11 @@ defmodule Firefly.Moderation.Akismet do
     if config()[:async] == false do
       fun.()
     else
-      {:ok, _pid} = Task.Supervisor.start_child(Firefly.Moderation.Akismet.TaskSupervisor, fun)
+      {:ok, _pid} =
+        Task.Supervisor.start_child(
+          Firefly.Moderation.Akismet.TaskSupervisor,
+          Firefly.Telemetry.bind(fun)
+        )
     end
 
     :ok

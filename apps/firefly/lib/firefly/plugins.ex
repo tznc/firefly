@@ -195,6 +195,10 @@ defmodule Firefly.Plugins do
   @spec active() :: [Plugin.t()]
   def active, do: cached(&load_active/0)
 
+  @doc "How many plugin events are waiting to be delivered (see `Firefly.Plugins.Events`)."
+  @spec queue_depth() :: non_neg_integer
+  def queue_depth, do: Repo.aggregate(Firefly.Plugins.QueuedEvent, :count)
+
   defp load_active do
     snapshot = snapshot()
 
