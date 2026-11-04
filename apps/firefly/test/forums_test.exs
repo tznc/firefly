@@ -472,4 +472,20 @@ defmodule Firefly.ForumsTest do
     user = fixture(:user, @create_user_attrs)
     {:ok, user: user}
   end
+
+  # Found by Firefly.DiscussionPropertyTest: a title that slugifies to
+  # nothing (emoji, punctuation) raised (a nil slug was looked up), and
+  # Slugify kept control characters in slugs.
+  test "every title gets a URL-safe slug" do
+    user = Firefly.Fixtures.user_fixture()
+
+    for {title, slug} <- [{"🔥🔥", "untitled"}, {"!!!", "untitled-1"}, {"a\x1Ab", "ab"}] do
+      assert {:ok, %{slug: ^slug}} = Firefly.Discussion.create_category(%{title: title})
+    end
+
+    {:ok, category} = Firefly.Discussion.create_category(%{title: "Home"})
+
+    assert {:ok, %{slug: "untitled"}} =
+             Firefly.Discussion.create_thread(category, user, %{title: "🔥🔥🔥", body: "Hot."})
+  end
 end
