@@ -5,7 +5,8 @@ defmodule Firefly.AccountsPropertyTest do
   with each other, and signed tokens (password reset, email
   confirmation, API keys) round-trip and refuse anything altered.
   """
-  use Firefly.DataCase, async: true
+  # Sync: it saves site settings, which concurrent tests' transactions lock.
+  use Firefly.DataCase, async: false
   use ExUnitProperties
 
   import Firefly.Generators

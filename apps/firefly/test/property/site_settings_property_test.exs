@@ -5,7 +5,8 @@ defmodule Firefly.SiteSettingsPropertyTest do
   again); anything else is refused with a message, never a crash; and
   saving through `update/2` stores what `get/1` then returns.
   """
-  use Firefly.DataCase, async: true
+  # Sync: it saves site settings, which concurrent tests' transactions lock.
+  use Firefly.DataCase, async: false
   use ExUnitProperties
 
   import Firefly.Generators
