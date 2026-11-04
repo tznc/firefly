@@ -11,7 +11,7 @@ defmodule Firefly.Discussion.Slugs.TitleSlug do
       import Ecto.Query
 
       # Only lowercase letters, digits and dashes (Slugify keeps control
-      # characters); a title of only emoji or punctuation ("🔥🔥", "!!!")
+      # characters), at most 200 of them; a title of only emoji or punctuation ("🔥🔥", "!!!")
       # has none, and gets "untitled" (looking up a nil slug would raise).
       def build_slug(sources) do
         base_slug =
@@ -19,6 +19,9 @@ defmodule Firefly.Discussion.Slugs.TitleSlug do
           |> String.replace(~r/[^a-z0-9-]+/, "")
           |> String.replace(~r/-{2,}/, "-")
           |> String.trim("-")
+          # Room for a "-N" suffix in the 255-character column.
+          |> String.slice(0, 200)
+          |> String.trim_trailing("-")
 
         get_unused_slug(if(base_slug == "", do: "untitled", else: base_slug), 0)
       end

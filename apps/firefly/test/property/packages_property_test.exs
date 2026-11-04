@@ -7,7 +7,8 @@ defmodule Firefly.PackagesPropertyTest do
   uninstalls keeps every installed package's dependencies met, checked
   against a model.
   """
-  use Firefly.DataCase, async: true
+  # Sync: it holds the shared "admin" role (admin_fixture/1) for its whole run.
+  use Firefly.DataCase, async: false
   use ExUnitProperties
 
   # :zip logs the leading "/" it drops from hostile names.
