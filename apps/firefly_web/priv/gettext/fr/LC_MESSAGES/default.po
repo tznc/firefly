@@ -50,7 +50,7 @@ msgid "API keys"
 msgstr "Clés d'API"
 
 #: lib/firefly_web/components/layouts.ex:238
-#: lib/firefly_web/live/staff_live/theme.ex:237
+#: lib/firefly_web/live/staff_live/theme.ex:250
 #, elixir-autogen, elixir-format
 msgid "About"
 msgstr "À propos"
@@ -172,7 +172,7 @@ msgid "Creating..."
 msgstr "Création..."
 
 #: lib/firefly_web/live/settings_live/index.ex:670
-#: lib/firefly_web/live/staff_live/theme.ex:196
+#: lib/firefly_web/live/staff_live/theme.ex:205
 #, elixir-autogen, elixir-format
 msgid "Dark"
 msgstr "Sombre"
@@ -264,7 +264,6 @@ msgid "Groups"
 msgstr "Groupes"
 
 #: lib/firefly_web/live/staff_live/settings.ex:417
-#: lib/firefly_web/live/staff_live/themes.ex:152
 #: lib/firefly_web/staff_nav.ex:219
 #, elixir-autogen, elixir-format
 msgid "Import"
@@ -286,7 +285,7 @@ msgid "Latest"
 msgstr "Récents"
 
 #: lib/firefly_web/live/settings_live/index.ex:669
-#: lib/firefly_web/live/staff_live/theme.ex:195
+#: lib/firefly_web/live/staff_live/theme.ex:204
 #, elixir-autogen, elixir-format
 msgid "Light"
 msgstr "Clair"
@@ -385,11 +384,6 @@ msgstr "Mot de passe"
 msgid "Password reset. Log in with your new password."
 msgstr "Mot de passe réinitialisé. Connectez-vous avec le nouveau."
 
-#: lib/firefly_web/staff_nav.ex:187
-#, elixir-autogen, elixir-format
-msgid "Plugins"
-msgstr "Extensions"
-
 #: lib/firefly_web/components/layouts.ex:345
 #: lib/firefly_web/live/staff_live/user.ex:468
 #: lib/firefly_web/live/staff_live/user.ex:475
@@ -427,7 +421,7 @@ msgstr "Enregistrer"
 #: lib/firefly_web/live/auth_live/reset_password.ex:74
 #: lib/firefly_web/live/settings_live/index.ex:691
 #: lib/firefly_web/live/staff_live/settings.ex:398
-#: lib/firefly_web/live/staff_live/theme.ex:317
+#: lib/firefly_web/live/staff_live/theme.ex:330
 #: lib/firefly_web/live/staff_live/user.ex:369
 #: lib/firefly_web/live/staff_live/user.ex:400
 #, elixir-autogen, elixir-format
@@ -1222,8 +1216,8 @@ msgid "Muted"
 msgstr "Masqués"
 
 #: lib/firefly_web/live/staff_live/groups.ex:172
-#: lib/firefly_web/live/staff_live/theme.ex:238
-#: lib/firefly_web/live/staff_live/themes.ex:144
+#: lib/firefly_web/live/staff_live/theme.ex:251
+#: lib/firefly_web/live/staff_live/themes.ex:109
 #: lib/firefly_web/live/staff_live/user.ex:366
 #, elixir-autogen, elixir-format
 msgid "Name"
@@ -2230,254 +2224,214 @@ msgstr "le système"
 msgid "Category"
 msgstr "Catégorie"
 
-#: lib/firefly_web/live/staff_live/theme.ex:116
+#: lib/firefly_web/live/staff_live/theme.ex:125
 #, elixir-autogen, elixir-format
 msgid "%{name} is the site's theme now."
 msgstr "%{name} est désormais le thème du site."
 
-#: lib/firefly_web/live/staff_live/theme.ex:261
+#: lib/firefly_web/live/staff_live/theme.ex:274
 #, elixir-autogen, elixir-format
 msgid "%{scheme}: %{foreground} on %{background} is %{ratio}:1"
 msgstr "%{scheme} : %{foreground} sur %{background} donne %{ratio}:1"
 
-#: lib/firefly_web/live/staff_live/themes.ex:104
+#: lib/firefly_web/live/staff_live/themes.ex:69
 #, elixir-autogen, elixir-format
 msgid "1 component"
 msgid_plural "%{count} components"
 msgstr[0] "1 composant"
 msgstr[1] "%{count} composants"
 
-#: lib/firefly_web/live/staff_live/themes.ex:168
-#, elixir-autogen, elixir-format
-msgid "A GitHub repository's firefly-theme.json is read from its default branch. Imported themes never run scripts until you allow it."
-msgstr "Le fichier firefly-theme.json d'un dépôt GitHub est lu depuis sa branche par défaut. Les thèmes importés n'exécutent jamais de scripts tant que vous ne l'autorisez pas."
-
-#: lib/firefly_web/live/staff_live/theme.ex:204
+#: lib/firefly_web/live/staff_live/theme.ex:213
 #, elixir-autogen, elixir-format
 msgid "A theme"
 msgstr "Un thème"
 
-#: lib/firefly_web/live/staff_live/theme.ex:204
+#: lib/firefly_web/live/staff_live/theme.ex:213
 #, elixir-autogen, elixir-format
 msgid "A theme component"
 msgstr "Un composant de thème"
 
-#: lib/firefly_web/live/staff_live/theme.ex:384
+#: lib/firefly_web/live/staff_live/theme.ex:398
 #, elixir-autogen, elixir-format
 msgid "Add asset"
 msgstr "Ajouter une ressource"
 
-#: lib/firefly_web/live/staff_live/theme.ex:157
+#: lib/firefly_web/live/staff_live/theme.ex:166
 #, elixir-autogen, elixir-format
 msgid "Added %{name}."
 msgstr "%{name} ajouté."
 
-#: lib/firefly_web/live/staff_live/theme.ex:335
+#: lib/firefly_web/live/staff_live/theme.ex:349
 #, elixir-autogen, elixir-format
 msgid "Allow scripts"
 msgstr "Autoriser les scripts"
 
-#: lib/firefly_web/live/staff_live/theme.ex:382
+#: lib/firefly_web/live/staff_live/theme.ex:396
 #, elixir-autogen, elixir-format
 msgid "Asset name"
 msgstr "Nom de la ressource"
 
-#: lib/firefly_web/live/staff_live/theme.ex:366
+#: lib/firefly_web/live/staff_live/theme.ex:380
 #, elixir-autogen, elixir-format
 msgid "Assets"
 msgstr "Ressources"
 
-#: lib/firefly_web/live/staff_live/theme.ex:312
+#: lib/firefly_web/live/staff_live/theme.ex:325
 #, elixir-autogen, elixir-format
 msgid "At the bottom of every page"
 msgstr "En bas de chaque page"
 
-#: lib/firefly_web/live/staff_live/theme.ex:311
+#: lib/firefly_web/live/staff_live/theme.ex:324
 #, elixir-autogen, elixir-format
 msgid "At the top of every page"
 msgstr "En haut de chaque page"
 
-#: lib/firefly_web/live/staff_live/theme.ex:294
+#: lib/firefly_web/live/staff_live/theme.ex:307
 #, elixir-autogen, elixir-format
 msgid "CSS"
 msgstr "CSS"
 
-#: lib/firefly_web/live/staff_live/theme.ex:251
+#: lib/firefly_web/live/staff_live/theme.ex:264
 #, elixir-autogen, elixir-format
 msgid "Colors"
 msgstr "Couleurs"
 
-#: lib/firefly_web/live/staff_live/themes.ex:116
+#: lib/firefly_web/live/staff_live/themes.ex:81
 #, elixir-autogen, elixir-format
 msgid "Colors, CSS and HTML for the whole site. Preview a theme yourself before making it the default."
 msgstr "Couleurs, CSS et HTML pour tout le site. Prévisualisez un thème vous-même avant d'en faire celui par défaut."
 
-#: lib/firefly_web/live/staff_live/theme.ex:346
+#: lib/firefly_web/live/staff_live/theme.ex:360
 #, elixir-autogen, elixir-format
 msgid "Components"
 msgstr "Composants"
 
-#: lib/firefly_web/live/staff_live/themes.ex:134
+#: lib/firefly_web/live/staff_live/themes.ex:99
 #, elixir-autogen, elixir-format
 msgid "Components are pieces several themes can include, like a banner or a font."
 msgstr "Les composants sont des éléments que plusieurs thèmes peuvent inclure, comme une bannière ou une police."
 
-#: lib/firefly_web/live/staff_live/theme.ex:106
+#: lib/firefly_web/live/staff_live/theme.ex:115
 #, elixir-autogen, elixir-format
 msgid "Components saved."
 msgstr "Composants enregistrés."
 
-#: lib/firefly_web/live/staff_live/themes.ex:146
+#: lib/firefly_web/live/staff_live/themes.ex:111
 #, elixir-autogen, elixir-format
 msgid "Create"
 msgstr "Créer"
 
-#: lib/firefly_web/live/staff_live/theme.ex:298
+#: lib/firefly_web/live/staff_live/theme.ex:311
 #, elixir-autogen, elixir-format
 msgid "Custom CSS"
 msgstr "CSS personnalisé"
 
-#: lib/firefly_web/live/staff_live/theme.ex:395
+#: lib/firefly_web/live/staff_live/theme.ex:409
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}? This can't be undone."
 msgstr "Supprimer %{name} ? C'est irréversible."
 
-#: lib/firefly_web/live/staff_live/theme.ex:398
+#: lib/firefly_web/live/staff_live/theme.ex:412
 #, elixir-autogen, elixir-format
 msgid "Delete theme"
 msgstr "Supprimer le thème"
 
-#: lib/firefly_web/live/staff_live/theme.ex:239
+#: lib/firefly_web/live/staff_live/theme.ex:252
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr "Description"
 
-#: lib/firefly_web/live/staff_live/theme.ex:253
+#: lib/firefly_web/live/staff_live/theme.ex:266
 #, elixir-autogen, elixir-format
 msgid "Each scheme's daisyUI colors. Colors left as they are keep the built-in value."
 msgstr "Les couleurs daisyUI de chaque palette. Les couleurs laissées telles quelles gardent la valeur intégrée."
 
-#: lib/firefly_web/live/staff_live/theme.ex:222
+#: lib/firefly_web/live/staff_live/theme.ex:235
 #, elixir-autogen, elixir-format
 msgid "Every member who hasn't picked a theme will see it. Go ahead?"
 msgstr "Tous les membres qui n'ont pas choisi de thème le verront. Continuer ?"
 
-#: lib/firefly_web/live/staff_live/theme.ex:272
+#: lib/firefly_web/live/staff_live/theme.ex:285
 #, elixir-autogen, elixir-format
 msgid "Every text color meets WCAG AA."
 msgstr "Toutes les couleurs de texte respectent WCAG AA."
 
-#: lib/firefly_web/live/staff_live/theme.ex:230
-#, elixir-autogen, elixir-format
-msgid "Export"
-msgstr "Exporter"
-
-#: lib/firefly_web/live/staff_live/theme.ex:304
+#: lib/firefly_web/live/staff_live/theme.ex:317
 #, elixir-autogen, elixir-format
 msgid "HTML"
 msgstr "HTML"
 
-#: lib/firefly_web/live/staff_live/theme.ex:383
+#: lib/firefly_web/live/staff_live/theme.ex:397
 #, elixir-autogen, elixir-format
 msgid "Image or font file"
 msgstr "Image ou fichier de police"
 
-#: lib/firefly_web/live/staff_live/themes.ex:155
-#, elixir-autogen, elixir-format
-msgid "Import file"
-msgstr "Importer un fichier"
-
-#: lib/firefly_web/live/staff_live/themes.ex:165
-#, elixir-autogen, elixir-format
-msgid "Import from URL"
-msgstr "Importer depuis une URL"
-
-#: lib/firefly_web/live/staff_live/themes.ex:74
-#, elixir-autogen, elixir-format
-msgid "Imported %{name}."
-msgstr "%{name} importé."
-
-#: lib/firefly_web/live/staff_live/theme.ex:310
+#: lib/firefly_web/live/staff_live/theme.ex:323
 #, elixir-autogen, elixir-format
 msgid "In the page's head"
 msgstr "Dans le head de la page"
 
-#: lib/firefly_web/live/staff_live/themes.ex:145
+#: lib/firefly_web/live/staff_live/themes.ex:110
 #, elixir-autogen, elixir-format
 msgid "It's a component (themes include it)"
 msgstr "C'est un composant (inclus par les thèmes)"
 
-#: lib/firefly_web/live/staff_live/theme.ex:92
+#: lib/firefly_web/live/staff_live/theme.ex:97
 #, elixir-autogen, elixir-format
 msgid "Its HTML may run scripts now."
 msgstr "Son HTML peut désormais exécuter des scripts."
 
-#: lib/firefly_web/live/staff_live/theme.ex:93
+#: lib/firefly_web/live/staff_live/theme.ex:98
 #, elixir-autogen, elixir-format
 msgid "Its scripts are off."
 msgstr "Ses scripts sont désactivés."
 
-#: lib/firefly_web/live/staff_live/theme.ex:332
+#: lib/firefly_web/live/staff_live/theme.ex:346
 #, elixir-autogen, elixir-format
 msgid "Let this theme run scripts on every page?"
 msgstr "Autoriser ce thème à exécuter des scripts sur chaque page ?"
 
-#: lib/firefly_web/live/staff_live/theme.ex:225
+#: lib/firefly_web/live/staff_live/theme.ex:238
 #, elixir-autogen, elixir-format
 msgid "Make default"
 msgstr "Définir par défaut"
 
-#: lib/firefly_web/live/staff_live/theme.ex:244
+#: lib/firefly_web/live/staff_live/theme.ex:257
 #, elixir-autogen, elixir-format
 msgid "Members can pick it in their interface settings"
 msgstr "Les membres peuvent le choisir dans leurs paramètres d'interface"
 
-#: lib/firefly_web/live/staff_live/themes.ex:143
+#: lib/firefly_web/live/staff_live/themes.ex:108
 #, elixir-autogen, elixir-format
 msgid "New theme"
 msgstr "Nouveau thème"
 
-#: lib/firefly_web/live/staff_live/theme.ex:347
+#: lib/firefly_web/live/staff_live/theme.ex:361
 #, elixir-autogen, elixir-format
 msgid "No components yet."
 msgstr "Aucun composant pour l'instant."
 
-#: lib/firefly_web/live/staff_live/themes.ex:125
+#: lib/firefly_web/live/staff_live/themes.ex:90
 #, elixir-autogen, elixir-format
 msgid "No themes yet."
 msgstr "Aucun thème pour l'instant."
 
-#: lib/firefly_web/live/staff_live/themes.ex:82
-#, elixir-autogen, elixir-format
-msgid "Not imported: %{details}"
-msgstr "Non importé : %{details}"
-
-#: lib/firefly_web/live/staff_live/theme.ex:81
+#: lib/firefly_web/live/staff_live/theme.ex:83
 #, elixir-autogen, elixir-format
 msgid "Not saved: fix what's marked."
 msgstr "Non enregistré : corrigez ce qui est signalé."
 
-#: lib/firefly_web/live/staff_live/themes.ex:162
-#, elixir-autogen, elixir-format
-msgid "Or from a URL or GitHub repository"
-msgstr "Ou depuis une URL ou un dépôt GitHub"
-
-#: lib/firefly_web/live/staff_live/theme.ex:386
+#: lib/firefly_web/live/staff_live/theme.ex:400
 #, elixir-autogen, elixir-format
 msgid "PNG, JPEG, GIF or WebP images, WOFF or WOFF2 fonts."
 msgstr "Images PNG, JPEG, GIF ou WebP, polices WOFF ou WOFF2."
 
-#: lib/firefly_web/live/staff_live/theme.ex:151
+#: lib/firefly_web/live/staff_live/theme.ex:160
 #, elixir-autogen, elixir-format
 msgid "Pick a file."
 msgstr "Choisissez un fichier."
 
-#: lib/firefly_web/live/staff_live/themes.ex:64
-#, elixir-autogen, elixir-format
-msgid "Pick a theme bundle (JSON)."
-msgstr "Choisissez un paquet de thème (JSON)."
-
-#: lib/firefly_web/live/staff_live/theme.ex:216
+#: lib/firefly_web/live/staff_live/theme.ex:229
 #, elixir-autogen, elixir-format
 msgid "Preview"
 msgstr "Aperçu"
@@ -2487,32 +2441,32 @@ msgstr "Aperçu"
 msgid "Previewing %{name}: only you see it."
 msgstr "Aperçu de %{name} : vous seul le voyez."
 
-#: lib/firefly_web/live/staff_live/theme.ex:374
+#: lib/firefly_web/live/staff_live/theme.ex:388
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"
 msgstr "Retirer %{name}"
 
-#: lib/firefly_web/live/staff_live/theme.ex:360
+#: lib/firefly_web/live/staff_live/theme.ex:374
 #, elixir-autogen, elixir-format
 msgid "Save components"
 msgstr "Enregistrer les composants"
 
-#: lib/firefly_web/live/staff_live/theme.ex:317
+#: lib/firefly_web/live/staff_live/theme.ex:330
 #, elixir-autogen, elixir-format
 msgid "Save theme"
 msgstr "Enregistrer le thème"
 
-#: lib/firefly_web/live/staff_live/theme.ex:323
+#: lib/firefly_web/live/staff_live/theme.ex:336
 #, elixir-autogen, elixir-format
 msgid "Scripts"
 msgstr "Scripts"
 
-#: lib/firefly_web/live/staff_live/theme.ex:325
+#: lib/firefly_web/live/staff_live/theme.ex:338
 #, elixir-autogen, elixir-format
 msgid "Scripts in a theme's HTML run on every page, for every member, with their session. Only allow them for code you trust. The change is recorded in the staff log."
 msgstr "Les scripts du HTML d'un thème s'exécutent sur chaque page, pour chaque membre, avec sa session. Ne les autorisez que pour du code de confiance. La modification est consignée dans le journal de l'équipe."
 
-#: lib/firefly_web/live/staff_live/theme.ex:308
+#: lib/firefly_web/live/staff_live/theme.ex:321
 #, elixir-autogen, elixir-format
 msgid "Scripts, event handlers and inline styles are removed."
 msgstr "Les scripts, gestionnaires d'événements et styles en ligne sont supprimés."
@@ -2522,7 +2476,7 @@ msgstr "Les scripts, gestionnaires d'événements et styles en ligne sont suppri
 msgid "Site theme"
 msgstr "Thème du site"
 
-#: lib/firefly_web/live/staff_live/theme.ex:258
+#: lib/firefly_web/live/staff_live/theme.ex:271
 #, elixir-autogen, elixir-format
 msgid "Some text won't be readable enough (WCAG AA needs 4.5:1):"
 msgstr "Certains textes ne seront pas assez lisibles (WCAG AA exige 4.5:1) :"
@@ -2537,12 +2491,12 @@ msgstr "Arrêter l'aperçu"
 msgid "Stopped previewing."
 msgstr "Aperçu arrêté."
 
-#: lib/firefly_web/live/staff_live/theme.ex:117
+#: lib/firefly_web/live/staff_live/theme.ex:126
 #, elixir-autogen, elixir-format
 msgid "The site uses the built-in look again."
 msgstr "Le site utilise de nouveau l'apparence intégrée."
 
-#: lib/firefly_web/live/staff_live/themes.ex:120
+#: lib/firefly_web/live/staff_live/themes.ex:85
 #, elixir-autogen, elixir-format
 msgid "The site uses the built-in look: no theme is the default."
 msgstr "Le site utilise l'apparence intégrée : aucun thème n'est défini par défaut."
@@ -2552,51 +2506,46 @@ msgstr "Le site utilise l'apparence intégrée : aucun thème n'est défini par 
 msgid "The site's default"
 msgstr "Celui du site par défaut"
 
-#: lib/firefly_web/live/staff_live/themes.ex:154
-#, elixir-autogen, elixir-format
-msgid "Theme bundle"
-msgstr "Paquet de thème"
-
-#: lib/firefly_web/live/staff_live/themes.ex:132
+#: lib/firefly_web/live/staff_live/themes.ex:97
 #, elixir-autogen, elixir-format
 msgid "Theme components"
 msgstr "Composants du thème"
 
-#: lib/firefly_web/live/staff_live/theme.ex:131
+#: lib/firefly_web/live/staff_live/theme.ex:140
 #, elixir-autogen, elixir-format
 msgid "Theme deleted."
 msgstr "Thème supprimé."
 
 #: lib/firefly_web/live/settings_live/index.ex:285
-#: lib/firefly_web/live/staff_live/theme.ex:76
+#: lib/firefly_web/live/staff_live/theme.ex:78
 #, elixir-autogen, elixir-format
 msgid "Theme saved."
 msgstr "Thème enregistré."
 
 #: lib/firefly_web/live/staff_live/themes.ex:20
-#: lib/firefly_web/live/staff_live/themes.ex:115
-#: lib/firefly_web/live/staff_live/themes.ex:124
+#: lib/firefly_web/live/staff_live/themes.ex:80
+#: lib/firefly_web/live/staff_live/themes.ex:89
 #: lib/firefly_web/staff_nav.ex:180
 #, elixir-autogen, elixir-format
 msgid "Themes"
 msgstr "Thèmes"
 
-#: lib/firefly_web/live/staff_live/theme.ex:307
+#: lib/firefly_web/live/staff_live/theme.ex:320
 #, elixir-autogen, elixir-format
 msgid "This theme may run scripts: its HTML is used as written."
 msgstr "Ce thème peut exécuter des scripts : son HTML est utilisé tel quel."
 
-#: lib/firefly_web/live/staff_live/theme.ex:338
+#: lib/firefly_web/live/staff_live/theme.ex:352
 #, elixir-autogen, elixir-format
 msgid "Turn scripts off"
 msgstr "Désactiver les scripts"
 
-#: lib/firefly_web/live/staff_live/theme.ex:296
+#: lib/firefly_web/live/staff_live/theme.ex:309
 #, elixir-autogen, elixir-format
 msgid "Up to 100 KB. Name an asset as theme-asset(name), e.g. background: theme-asset(hero)."
 msgstr "Jusqu'à 100 Ko. Nommez une ressource theme-asset(nom), par ex. background: theme-asset(hero)."
 
-#: lib/firefly_web/live/staff_live/theme.ex:228
+#: lib/firefly_web/live/staff_live/theme.ex:241
 #, elixir-autogen, elixir-format
 msgid "Use the built-in look"
 msgstr "Utiliser l'apparence intégrée"
@@ -2611,36 +2560,31 @@ msgstr "Utiliser ce thème"
 msgid "You're previewing the %{name} theme. Only you see it."
 msgstr "Vous prévisualisez le thème %{name}. Vous seul le voyez."
 
-#: lib/firefly_web/live/staff_live/theme.ex:206
-#: lib/firefly_web/live/staff_live/themes.ex:100
+#: lib/firefly_web/live/staff_live/theme.ex:215
+#: lib/firefly_web/live/staff_live/themes.ex:64
 #, elixir-autogen, elixir-format
 msgid "default"
 msgstr "par défaut"
 
-#: lib/firefly_web/live/staff_live/themes.ex:101
+#: lib/firefly_web/live/staff_live/themes.ex:65
 #, elixir-autogen, elixir-format
 msgid "members can pick it"
 msgstr "au choix des membres"
 
-#: lib/firefly_web/live/staff_live/themes.ex:102
+#: lib/firefly_web/live/staff_live/themes.ex:66
 #, elixir-autogen, elixir-format
 msgid "runs scripts"
 msgstr "exécute des scripts"
 
-#: lib/firefly_web/live/staff_live/theme.ex:205
+#: lib/firefly_web/live/staff_live/theme.ex:214
 #, elixir-autogen, elixir-format
 msgid "version %{version}"
 msgstr "version %{version}"
 
-#: lib/firefly_web/live/staff_live/theme.ex:382
+#: lib/firefly_web/live/staff_live/theme.ex:396
 #, elixir-autogen, elixir-format
 msgid "hero"
 msgstr "hero"
-
-#: lib/firefly_web/live/staff_live/themes.ex:163
-#, elixir-autogen, elixir-format
-msgid "https://github.com/owner/repo"
-msgstr "https://github.com/owner/repo"
 
 #: lib/firefly_web/live/staff_live/categories.ex:334
 #, elixir-autogen, elixir-format
@@ -2721,3 +2665,48 @@ msgstr "Tout sélectionner"
 #, elixir-autogen, elixir-format
 msgid "Toggle the menu"
 msgstr "Afficher ou masquer le menu"
+
+#: lib/firefly_web/live/staff_live/theme.ex:218
+#, elixir-autogen, elixir-format
+msgid "Changed here since: upgrading the package asks before replacing the changes."
+msgstr "Modifié ici depuis : la mise à jour du paquet demandera confirmation avant de remplacer les modifications."
+
+#: lib/firefly_web/live/staff_live/theme.ex:243
+#, elixir-autogen, elixir-format
+msgid "Export as a package"
+msgstr "Exporter en paquet"
+
+#: lib/firefly_web/live/staff_live/theme.ex:217
+#, elixir-autogen, elixir-format
+msgid "From the package %{name} %{version}."
+msgstr "Issu du paquet %{name} %{version}."
+
+#: lib/firefly_web/live/staff_live/themes.ex:117
+#, elixir-autogen, elixir-format
+msgid "Install a theme"
+msgstr "Installer un thème"
+
+#: lib/firefly_web/staff_nav.ex:187
+#, elixir-autogen, elixir-format
+msgid "Packages"
+msgstr "Paquets"
+
+#: lib/firefly_web/live/staff_live/themes.ex:122
+#, elixir-autogen, elixir-format
+msgid "Theme packages"
+msgstr "Paquets de thèmes"
+
+#: lib/firefly_web/live/staff_live/themes.ex:119
+#, elixir-autogen, elixir-format
+msgid "Themes are installed as packages, like plugins: upload one, or fetch it from a URL or a GitHub repository. Old theme bundles (JSON) install there too."
+msgstr "Les thèmes s'installent comme des paquets, comme les plugins : téléversez-en un ou récupérez-le depuis une URL ou un dépôt GitHub. Les anciens paquets de thèmes (JSON) s'y installent aussi."
+
+#: lib/firefly_web/live/staff_live/theme.ex:340
+#, elixir-autogen, elixir-format
+msgid "Themes from packages never run scripts."
+msgstr "Les thèmes issus de paquets n'exécutent jamais de scripts."
+
+#: lib/firefly_web/live/staff_live/themes.ex:67
+#, elixir-autogen, elixir-format
+msgid "from a package"
+msgstr "issu d'un paquet"

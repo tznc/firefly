@@ -176,27 +176,40 @@ defmodule FireflyWeb.ThemesLiveTest do
     end
 
     @tag :tmp_dir
-    test "exports a bundle and imports it from a file", %{conn: conn, admin: admin, tmp_dir: dir} do
+    test "exports a package that installs on the packages page", %{
+      conn: conn,
+      admin: admin,
+      tmp_dir: dir
+    } do
       theme = theme(admin, %{"css" => ".exported {}"})
       conn = log_in_as(conn, admin)
 
       export = get(conn, ~p"/staff/themes/#{theme.id}/export")
 
       assert get_resp_header(export, "content-disposition") == [
-               ~s{attachment; filename="ocean.json"}
+               ~s{attachment; filename="ocean.zip"}
              ]
 
-      path = Path.join(dir, "ocean.json")
+      path = Path.join(dir, "ocean.zip")
       File.write!(path, export.resp_body)
 
       conn
-      |> visit(~p"/staff/themes")
-      |> upload("Theme bundle", path)
-      |> click_button("Import file")
-      |> assert_has("#flash-info", text: "Imported Ocean 2.")
+      |> visit(~p"/staff/packages")
+      |> upload("Package file", path)
+      |> click_button("Upload")
+      |> click_button("#install-package", "Install")
+      |> assert_has("#flash-info", text: "Ocean 1.0.0 installed.")
+
+      copy = Repo.get_by!(Themes.Theme, name: "Ocean 2")
+      assert copy.css == ".exported {}"
+
+      conn
+      |> visit(~p"/staff/themes/#{copy.id}")
+      |> assert_has("#theme-package", text: "From the package Ocean 1.0.0.")
+      |> refute_has("button", text: "Allow scripts")
     end
 
-    test "imports from a URL", %{conn: conn, admin: admin} do
+    test "an old bundle installs from a URL", %{conn: conn, admin: admin} do
       {:ok, server} = start_supervised({Bandit, plug: Bundles, ip: {127, 0, 0, 1}, port: 0})
       {:ok, {_ip, port}} = ThousandIsland.listener_info(server)
       http = Application.get_env(:firefly, Firefly.Plugins.HTTP, [])
@@ -206,13 +219,17 @@ defmodule FireflyWeb.ThemesLiveTest do
       conn
       |> log_in_as(admin)
       |> visit(~p"/staff/themes")
+      |> click_link("Theme packages")
       |> fill_in("Or from a URL or GitHub repository",
         with: "http://127.0.0.1:#{port}/theme.json"
       )
-      |> click_button("Import from URL")
-      |> assert_has("#flash-info", text: "Imported Remote.")
+      |> click_button("Fetch")
+      |> assert_has("#package-preview h2", text: "Install Remote 1.0.0")
+      |> click_button("#install-package", "Install")
+      |> assert_has("#flash-info", text: "Remote 1.0.0 installed.")
 
-      assert Repo.get_by!(Themes.Theme, name: "Remote").source_url =~ "/theme.json"
+      assert Repo.get_by!(Themes.Theme, name: "Remote").css == ".remote {}"
+      assert Firefly.Packages.get("remote").source_url =~ "/theme.json"
     end
   end
 

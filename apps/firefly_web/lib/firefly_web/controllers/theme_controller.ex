@@ -3,7 +3,7 @@ defmodule FireflyWeb.ThemeController do
   Themes outside the LiveViews (see `Firefly.Themes`): a theme's compiled
   stylesheet, public and cached for a year (its URL names its version);
   and, for admins (behind the `:admin` pipeline), previewing a theme in
-  their own session and downloading a theme's JSON bundle.
+  their own session and downloading a theme as a package.
   """
   use FireflyWeb, :controller
 
@@ -56,14 +56,13 @@ defmodule FireflyWeb.ThemeController do
     |> redirect(to: if(id, do: ~p"/staff/themes/#{id}", else: ~p"/staff/themes"))
   end
 
-  @doc "The theme's JSON bundle, to import elsewhere."
+  @doc "The theme as a package (see `Firefly.Packages`), to install elsewhere."
   def export(conn, %{"id" => id}) do
-    theme = Themes.get_theme!(id)
-    filename = String.replace(String.downcase(theme.name), ~r/[^a-z0-9]+/, "-")
+    {filename, zip} = id |> Themes.get_theme!() |> Firefly.Packages.export_theme()
 
     conn
-    |> put_resp_content_type("application/json")
-    |> put_resp_header("content-disposition", ~s{attachment; filename="#{filename}.json"})
-    |> send_resp(200, Themes.export(theme))
+    |> put_resp_content_type("application/zip")
+    |> put_resp_header("content-disposition", ~s{attachment; filename="#{filename}"})
+    |> send_resp(200, zip)
   end
 end

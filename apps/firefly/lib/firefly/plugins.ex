@@ -2,14 +2,15 @@ defmodule Firefly.Plugins do
   @moduledoc """
   Installed plugins (see `Firefly.Plugin`): which there are, which are
   active and in what order, and their lifecycle, managed by staff at
-  `/staff/plugins`.
+  `/staff/packages`.
 
   Two sources feed it: core plugins, the modules in
 
       config :firefly, Firefly.Plugins, core: [...]
 
-  (enabled unless staff disable them), and uploaded bundles stored in
-  `plugins` (installed disabled). Either kind can depend on the other.
+  (enabled unless staff disable them), and the plugin code of packages
+  (see `Firefly.Packages`, which installs them through `install/2`),
+  stored in `plugins` (installed disabled). Either kind can depend on the other.
 
   ## Dependencies
 
@@ -422,24 +423,11 @@ defmodule Firefly.Plugins do
   ## Install and upgrade
 
   @doc """
-  Reads an uploaded bundle for the install step: `{:ok, preview}` with the
-  bundle, the installed version it would upgrade (or nil) and the problems
-  that would stop it, or `{:error, message}` if it isn't a valid bundle.
+  The installed plugins as dependency graph nodes (see
+  `Firefly.Plugin.Graph`), for `Firefly.Packages` to check packages
+  against.
   """
-  def preview(zip) do
-    with {:ok, sandbox} <- sandbox(),
-         {:ok, bundle} <- sandbox.read_bundle(zip) do
-      snapshot = snapshot()
-      current = snapshot.entries[bundle.manifest.id]
-
-      {:ok,
-       %{
-         bundle: bundle,
-         current: current && describe(snapshot, current.id),
-         problems: install_problems(snapshot, bundle, current)
-       }}
-    end
-  end
+  def graph_nodes, do: snapshot().nodes
 
   defp sandbox do
     case Sandbox.implementation() do
@@ -490,8 +478,10 @@ defmodule Firefly.Plugins do
   end
 
   @doc """
-  Installs `bundle` as `admin`, or upgrades the installed plugin with its
-  id (keeping its settings and state). A new plugin starts disabled.
+  Installs `bundle` (a read package with plugin code, see
+  `Firefly.Packages`, which installs packages through here) as `admin`,
+  or upgrades the installed plugin with its id (keeping its settings and
+  state). A new plugin starts disabled.
   """
   def install(%{manifest: manifest} = bundle, %User{} = admin) do
     snapshot = snapshot()

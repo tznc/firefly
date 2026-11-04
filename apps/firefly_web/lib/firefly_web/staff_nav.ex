@@ -183,11 +183,11 @@ defmodule FireflyWeb.StaffNav do
            ~w(colors css appearance components look)
          ),
          page(
-           "/staff/plugins",
-           gettext("Plugins"),
+           "/staff/packages",
+           gettext("Packages"),
            "hero-puzzle-piece",
            :manage_plugins,
-           ~w(extensions)
+           ~w(plugins themes extensions install upload)
          ),
          page("/staff/ai", "AI", "hero-sparkles", :manage_ai, ~w(llm models providers summaries)),
          page(

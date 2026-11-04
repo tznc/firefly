@@ -31,6 +31,11 @@ defmodule Firefly.Themes.Theme do
     field(:version, :integer, default: 1)
     field(:compiled_css, :string, default: "")
     field(:source_url, :string)
+    # Set by the package that installed it (see Firefly.Packages): which
+    # of its themes this is, and a hash of what it set (local edits change it).
+    belongs_to(:package, Firefly.Packages.Package)
+    field(:package_key, :string)
+    field(:package_hash, :string)
 
     many_to_many(:components, __MODULE__,
       join_through: "theme_components",

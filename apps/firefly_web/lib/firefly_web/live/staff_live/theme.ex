@@ -14,7 +14,7 @@ defmodule FireflyWeb.StaffLive.Theme do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{SiteSettings, Themes}
+  alias Firefly.{Packages, SiteSettings, Themes}
   alias Firefly.Themes.{Palette, Theme}
 
   @impl true
@@ -44,6 +44,8 @@ defmodule FireflyWeb.StaffLive.Theme do
     socket
     |> assign(:theme, theme)
     |> assign(:default?, SiteSettings.get("default_theme_id") == theme.id)
+    |> assign(:package, Packages.for_theme(theme))
+    |> assign(:edited?, Themes.locally_edited?(theme))
     |> assign(:colors, theme.colors || %{})
     |> assign(:warnings, Themes.contrast_warnings(theme.colors))
     |> assign(:form, to_form(Themes.change_theme(theme)))
@@ -84,15 +86,22 @@ defmodule FireflyWeb.StaffLive.Theme do
   end
 
   defp theme_event("allow_scripts", %{"allow" => allow}, socket) do
-    {:ok, _} =
-      Themes.set_allow_scripts(socket.assigns.theme, allow == "true", socket.assigns.current_user)
+    case Themes.set_allow_scripts(
+           socket.assigns.theme,
+           allow == "true",
+           socket.assigns.current_user
+         ) do
+      {:ok, _} ->
+        message =
+          if allow == "true",
+            do: gettext("Its HTML may run scripts now."),
+            else: gettext("Its scripts are off.")
 
-    message =
-      if allow == "true",
-        do: gettext("Its HTML may run scripts now."),
-        else: gettext("Its scripts are off.")
+        {:noreply, socket |> put_flash(:info, message) |> reload()}
 
-    {:noreply, socket |> put_flash(:info, message) |> reload()}
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, Themes.message(reason))}
+    end
   end
 
   defp theme_event("components", params, socket) do
@@ -204,6 +213,10 @@ defmodule FireflyWeb.StaffLive.Theme do
           {if @theme.component, do: gettext("A theme component"), else: gettext("A theme")}
           · {gettext("version %{version}", version: @theme.version)}
           <span :if={@default?} class="badge badge-sm badge-primary">{gettext("default")}</span>
+          <span :if={@package} id="theme-package" class="block">
+            {gettext("From the package %{name} %{version}.", name: @package.name, version: @package.version)}
+            <span :if={@edited?}>{gettext("Changed here since: upgrading the package asks before replacing the changes.")}</span>
+          </span>
         </:subtitle>
         <:actions>
           <.link
@@ -227,7 +240,7 @@ defmodule FireflyWeb.StaffLive.Theme do
           <button :if={@default?} phx-click="make_default" phx-value-default="false" class="btn btn-sm">
             {gettext("Use the built-in look")}
           </button>
-          <.link href={~p"/staff/themes/#{@theme.id}/export"} class="btn btn-sm">{gettext("Export")}</.link>
+          <.link href={~p"/staff/themes/#{@theme.id}/export"} class="btn btn-sm">{gettext("Export as a package")}</.link>
         </:actions>
       </.page_header>
 
@@ -324,7 +337,8 @@ defmodule FireflyWeb.StaffLive.Theme do
           <p class="text-sm text-base-content/70">
             {gettext("Scripts in a theme's HTML run on every page, for every member, with their session. Only allow them for code you trust. The change is recorded in the staff log.")}
           </p>
-          <div>
+          <p :if={@package} class="text-sm">{gettext("Themes from packages never run scripts.")}</p>
+          <div :if={!@package}>
             <button
               :if={!@theme.allow_scripts}
               phx-click="allow_scripts"

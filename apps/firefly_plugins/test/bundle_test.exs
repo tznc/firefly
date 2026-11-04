@@ -4,6 +4,7 @@ defmodule FireflyPlugins.BundleTest do
   import FireflyPlugins.PluginHelpers
 
   alias Firefly.Plugin.Manifest
+  alias Firefly.Packages.Archive
   alias FireflyPlugins.Bundle
   alias FireflyPlugins.Runtime
 
@@ -26,7 +27,7 @@ defmodule FireflyPlugins.BundleTest do
         %{"index.js" => "exports.enabled = () => null;"}
       )
 
-    assert {:ok, %Bundle{manifest: manifest, checksum: checksum}} = Bundle.read(zip)
+    assert {:ok, %Archive{manifest: manifest, checksum: checksum}} = Bundle.read(zip)
     assert %Manifest{id: "test-plugin", source: "upload", permissions: ["read"]} = manifest
     assert [%{key: "color", default: "red", choices: ["red", "blue"]}] = manifest.settings
     assert manifest.dependencies == %{"other" => "~> 1.2"}
@@ -42,7 +43,7 @@ defmodule FireflyPlugins.BundleTest do
         "firefly" => "~> 1.0"
       })
 
-    assert {:ok, %Bundle{manifest: %{id: "folder"}}} =
+    assert {:ok, %Archive{manifest: %{id: "folder"}}} =
              Bundle.read(zip(%{"folder/plugin.json" => manifest, "folder/index.js" => ""}))
   end
 
@@ -63,32 +64,53 @@ defmodule FireflyPlugins.BundleTest do
   describe "malformed bundles are rejected with a reason" do
     test "not a zip, too big, no manifest, bad JSON" do
       assert {:error, "The file isn't a valid .zip."} = Bundle.read("not a zip")
-      assert {:error, "The bundle is over" <> _} = Bundle.read(:binary.copy("x", 2 * 1024 * 1024))
-      assert {:error, "The bundle has no plugin.json."} = Bundle.read(zip(%{"index.js" => ""}))
 
-      assert {:error, "plugin.json isn't valid JSON."} =
+      assert {:error, "The package is over" <> _} =
+               Bundle.read(:binary.copy("x", 6 * 1024 * 1024))
+
+      assert {:error, "The package has no firefly.json (or plugin.json)."} =
+               Bundle.read(zip(%{"index.js" => ""}))
+
+      assert {:error, "The manifest isn't valid JSON."} =
                Bundle.read(zip(%{"plugin.json" => "{", "index.js" => ""}))
     end
 
     test "unsafe paths" do
-      assert {:error, "The bundle has a file with an unsafe path" <> _} =
+      assert {:error, "The package has a file with an unsafe path" <> _} =
                Bundle.read(zip(%{"plugin.json" => "{}", "../evil.js" => ""}))
     end
 
     test "missing main file or assets, non-UTF-8 code" do
-      assert {:error, "The bundle is missing index.js."} =
+      assert {:error, "The package is missing index.js."} =
                Bundle.read(bundle_zip(%{}, %{"main.js" => ""}))
 
-      assert {:error, "The bundle is missing widget.html."} =
+      assert {:error, "The package is missing widget.html."} =
                Bundle.read(bundle_zip(%{"assets" => ["widget.html"]}))
 
       assert {:error, "index.js must be UTF-8 text."} =
                Bundle.read(bundle_zip(%{}, %{"index.js" => <<255, 254>>}))
     end
 
+    test "a package without plugin code" do
+      theme =
+        Jason.encode!(%{
+          "id" => "look",
+          "name" => "Look",
+          "version" => "1.0.0",
+          "firefly" => "~> 1.0",
+          "tags" => ["theme"],
+          "theme" => %{}
+        })
+
+      assert {:error, "The package has no plugin code."} =
+               Bundle.read(zip(%{"firefly.json" => theme}))
+    end
+
     test "too many files" do
-      files = Map.new(1..101, &{"f#{&1}.js", ""})
-      assert {:error, "The bundle has more than 100 files."} = Bundle.read(bundle_zip(%{}, files))
+      files = Map.new(1..201, &{"f#{&1}.js", ""})
+
+      assert {:error, "The package has more than 200 files."} =
+               Bundle.read(bundle_zip(%{}, files))
     end
   end
 

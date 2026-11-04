@@ -14,7 +14,7 @@ defmodule Firefly.Plugin do
           config :firefly, Firefly.Plugins, core: [MyApp.HelloPlugin]
 
       They're trusted: their permissions are granted without a prompt.
-      Staff still see them at `/staff/plugins` and can disable them.
+      Staff still see them at `/staff/packages` and can disable them.
 
     * **Uploaded plugins** are third-party JavaScript bundles (see
       `FireflyPlugins.Bundle`), all served by one implementation,
@@ -56,7 +56,10 @@ defmodule Firefly.Plugin do
   same permission checks.
   """
 
-  use Boundary, top_level?: true, check: [out: false], exports: [Host, Manifest, Runner, Sandbox]
+  use Boundary,
+    top_level?: true,
+    check: [out: false],
+    exports: [Host, Manifest, Runner, Sandbox, Graph]
 
   alias Firefly.Plugin.Manifest
 

@@ -54,11 +54,15 @@ permission checks as for sandboxed plugins.
 
 ## Uploaded plugins
 
-A `.zip` (at most 1 MB, 100 files, 5 MB unpacked) with `plugin.json` at its
-root (or in one top-level folder) and the plugin's JavaScript:
+Uploaded plugins are packages (see "Packages" in the README and
+`Firefly.Packages`): a `.zip` (at most 5 MB, 200 files, 20 MB unpacked)
+with `firefly.json` (or, as before, `plugin.json`) at its root (or in one
+top-level folder) and the plugin's JavaScript. The manifest may carry
+`tags`, shown and filtered on at `/staff/packages`. A plugin depends only
+on plugins.
 
 ```
-plugin.json
+firefly.json
 index.js
 lib/util.js
 ```

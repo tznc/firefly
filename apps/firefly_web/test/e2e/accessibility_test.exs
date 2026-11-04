@@ -51,6 +51,7 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
   test "the pages members use have no serious accessibility violations", context do
     %{conn: conn, category: category, thread: thread, channel: channel} = context
     {:ok, theme} = Firefly.Themes.create_theme(%{"name" => "Ocean"}, context.admin)
+    packaged = theme_package!(context.admin)
     # The categories admin's nested, reorderable lists.
     {:ok, _} = Discussion.create_category(%{title: "Nerves", parent_id: category.id})
 
@@ -80,7 +81,9 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
           {"email previews", "/staff/emails?tab=previews"},
           {"screening", "/staff/screening"},
           {"themes", "/staff/themes"},
-          {"theme editor", "/staff/themes/#{theme.id}"}
+          {"theme editor", "/staff/themes/#{theme.id}"},
+          {"packages", "/staff/packages"},
+          {"package theme", "/staff/themes/#{packaged.id}"}
         ] do
       session
       |> visit(path)
@@ -132,6 +135,26 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
       |> assert_has("[data-phx-main].phx-connected")
       |> audit(context.axe, "visitor #{path}")
     end
+  end
+
+  # A theme package, installed: the packages list and the theme editor show it.
+  defp theme_package!(admin) do
+    zip =
+      Firefly.Packages.Archive.build(
+        %{
+          "id" => "dusk",
+          "name" => "Dusk",
+          "version" => "1.0.0",
+          "firefly" => "~> 1.0",
+          "tags" => ["theme", "dark"],
+          "theme" => %{"css" => "theme.css"}
+        },
+        %{"theme.css" => ".dusk {}"}
+      )
+
+    {:ok, archive} = Firefly.Packages.read(zip)
+    {:ok, package} = Firefly.Packages.install(archive, admin)
+    hd(Firefly.Themes.package_themes(package.id))
   end
 
   # Injects axe (once per page) and fails with what it found. Transitions

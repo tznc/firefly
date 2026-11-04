@@ -190,7 +190,7 @@ defmodule FireflyWeb.Router do
       live("/staff/groups", StaffLive.Groups, :index)
       live("/staff/review", StaffLive.Review, :index)
       live("/staff/tags", StaffLive.Tags, :index)
-      live("/staff/plugins", StaffLive.Plugins, :index)
+      live("/staff/packages", StaffLive.Packages, :index)
       live("/staff/uploads", StaffLive.Uploads, :index)
       live("/staff/emoji", StaffLive.Emoji, :index)
       live("/staff/watched-words", StaffLive.WatchedWords, :index)
@@ -292,6 +292,8 @@ defmodule FireflyWeb.Router do
     # The admin used to be at /admin (Kaffy); it's the staff admin now.
     get("/admin", StaffController, :admin_moved)
     get("/admin/*path", StaffController, :admin_moved)
+    # Plugins are listed with themes as packages now.
+    get("/staff/plugins", StaffController, :plugins_moved)
   end
 
   scope "/email", FireflyWeb do

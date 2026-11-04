@@ -284,9 +284,8 @@ log; admins also run the site. Grant either role from a user's admin page
   get the page's CSP nonce), and image and font assets. Admins preview a
   theme in their own session before making it the default, and can let
   members pick among some (Settings, Interface). Each theme compiles to a
-  stylesheet at a versioned URL browsers cache for good. Themes export as
-  a JSON bundle and import from a file, a URL or a GitHub repository's
-  `firefly-theme.json` (fetched from public addresses only).
+  stylesheet at a versioned URL browsers cache for good. Themes are
+  installed as packages (see Packages below) and export as one.
 - **Screening** (`/staff/screening`): email addresses or patterns, IP
   addresses or ranges and URL domains that are blocked from signing up or
   posting. Each block is counted and recorded in the staff log.
@@ -316,9 +315,30 @@ theme's colors.
 
 ### Plugins
 
-Staff install and manage plugins at `/staff/plugins`: core plugins written
-in Elixir, and third-party JavaScript plugins that run sandboxed in QuickJS
-on WebAssembly. See [PLUGINS.md](PLUGINS.md) for the plugin API.
+Core plugins are written in Elixir; third-party JavaScript plugins run
+sandboxed in QuickJS on WebAssembly and are installed as packages (below).
+See [PLUGINS.md](PLUGINS.md) for the plugin API.
+
+### Packages
+
+Plugins and themes ship the same way: a package, a versioned `.zip` with
+one manifest (`firefly.json`, extending the plugin manifest) carrying
+plugin code, a `theme` section (colors per scheme, CSS, head/header/footer
+HTML, assets and the components it includes), or both, plus typed
+settings, tags and dependencies. A package with a theme carries the
+`theme` tag. Admins install, upgrade and uninstall every package at
+`/staff/packages`, one list filtered by tag: upload one, or fetch it from
+a URL or a GitHub repository (the repository is the package; fetched from
+public addresses only). The list is per site; there is no outside catalog.
+
+Installing checks the manifest, the size limits, the version (an upgrade
+must be newer) and the dependencies across every package, and is
+staff-logged. A theme package creates or updates its themes, linked to
+the package: upgrading one an admin edited since asks before replacing
+the edits, and themes from packages never run scripts. A package that is
+only a theme needs no plugin sandbox. `/staff/themes` stays the theme
+editor and picker; an admin's own theme exports as a package, and old
+theme JSON bundles still install. See `Firefly.Packages` for the format.
 
 ### Importing
 

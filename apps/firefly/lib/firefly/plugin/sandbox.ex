@@ -1,8 +1,9 @@
 defmodule Firefly.Plugin.Sandbox do
   @moduledoc """
   The runtime uploaded plugins run in: a `Firefly.Plugin` implementation
-  that loads each installed bundle, plus reading and validating uploaded
-  bundles.
+  that loads each installed bundle, and turns a bundle's files into the
+  code it runs. (Packages are read and validated by the domain, see
+  `Firefly.Packages.Archive`.)
 
   The domain has no sandbox of its own: the `:firefly_plugins` app
   registers its implementation when it starts (see
@@ -20,9 +21,6 @@ defmodule Firefly.Plugin.Sandbox do
           required(:zip) => binary,
           optional(atom) => term
         }
-
-  @doc "Reads and validates an uploaded bundle."
-  @callback read_bundle(binary) :: {:ok, bundle} | {:error, String.t()}
 
   @doc "The code stored for `bundle`, which `c:Firefly.Plugin.load/1` gets back."
   @callback bundle_code(bundle) :: String.t()
