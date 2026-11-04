@@ -80,7 +80,19 @@ defmodule Firefly.Themes.Theme do
     |> validate_bytes(:head_html, @max_html)
     |> validate_bytes(:header_html, @max_html)
     |> validate_bytes(:footer_html, @max_html)
+    |> validate_no_null([:name, :description, :css, :head_html, :header_html, :footer_html])
     |> unique_constraint(:name, name: :themes_lower_name_index, message: "is taken")
+  end
+
+  # Postgres can't store a NUL character in text.
+  defp validate_no_null(changeset, fields) do
+    Enum.reduce(fields, changeset, fn field, changeset ->
+      validate_change(changeset, field, fn ^field, value ->
+        if is_binary(value) and String.contains?(value, <<0>>),
+          do: [{field, "can't contain a null character"}],
+          else: []
+      end)
+    end)
   end
 
   # Empty strings are tokens left at their built-in value.
