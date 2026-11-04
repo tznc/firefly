@@ -47,7 +47,12 @@ config :firefly_web, FireflyWeb.Endpoint,
 # Configures Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
+  # The trace a log line belongs to (set by OpenTelemetry's API in spans).
+  metadata: [:request_id, :otel_trace_id, :otel_span_id]
+
+# OpenTelemetry exports nothing unless config/runtime.exs finds an OTLP
+# endpoint (see FireflyWeb.OpenTelemetry).
+config :opentelemetry, traces_exporter: :none
 
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
