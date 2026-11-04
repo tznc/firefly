@@ -38,6 +38,9 @@ defmodule FireflyImport.MixProject do
       {:jason, "~> 1.4"},
       # Discourse's database.
       {:postgrex, "~> 0.22"},
+      # As in firefly_web (Kaffy's optional `decimal ~> 2.2`): the umbrella's
+      # apps must agree on it, and Postgrex brings it in here too.
+      {:decimal, "~> 3.2", override: true},
       # phpBB's and vBulletin's MySQL (or MariaDB) databases.
       {:myxql, "~> 0.9.0"},
       # NodeBB's database: MongoDB or Redis.

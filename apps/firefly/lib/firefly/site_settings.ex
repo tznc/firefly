@@ -28,7 +28,7 @@ defmodule Firefly.SiteSettings do
   where each test's settings live in its own database transaction.
   """
 
-  use Boundary, top_level?: true, check: [out: false], exports: [Transfer]
+  use Boundary, top_level?: true, check: [out: false], exports: [Transfer, SiteSetting]
 
   import Ecto.Query
 
@@ -52,7 +52,7 @@ defmodule Firefly.SiteSettings do
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
-    {"Advanced", ["Plugins", "Backups", "Updates", "Embedding"]}
+    {"Advanced", ["Plugins", "Backups", "Updates", "Embedding", "Database"]}
   ]
 
   @doc "The categories, in order: `{name, sections}`."
@@ -1056,6 +1056,15 @@ defmodule Firefly.SiteSettings do
         default: "",
         help:
           "Checked hourly: each new entry on an embeddable host gets its topic. Blank: off (topics are made when a page is first viewed)."
+      },
+      %{
+        key: "enable_database_admin",
+        section: "Database",
+        type: :boolean,
+        label: "Raw database admin",
+        default: false,
+        help:
+          "Lets admins browse and edit records directly at /staff/db, for what the admin pages don't cover. Its edits skip the forum's own checks. Off: the page doesn't exist."
       },
       %{
         key: "chat_enabled",

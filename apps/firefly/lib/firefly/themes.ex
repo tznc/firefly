@@ -347,19 +347,6 @@ defmodule Firefly.Themes do
   """
   def compile(%Theme{} = theme) do
     parts = theme.components ++ [theme]
-
-    colors =
-      for scheme <- Palette.schemes(),
-          tokens = Enum.reduce(parts, %{}, &Map.merge(&2, Map.get(&1.colors || %{}, scheme, %{}))),
-          tokens != %{} do
-        variables =
-          Enum.map_join(Enum.sort(tokens), " ", fn {token, value} ->
-            "--color-#{token}: #{value};"
-          end)
-
-        "[data-theme=#{Palette.data_theme(scheme)}] { #{variables} }\n"
-      end
-
     assets = Map.new(theme.assets, &{&1.name, Uploads.url(&1.upload)})
 
     css =
@@ -372,7 +359,31 @@ defmodule Firefly.Themes do
       )
 
     "/* #{String.replace(theme.name, "*/", "")} v#{theme.version} */\n" <>
-      Enum.join(colors) <> css
+      color_css(theme) <> css
+  end
+
+  @doc """
+  Only the colors of `theme`'s stylesheet: its components' and its own
+  color tokens as CSS variables on the `firefly`/`firefly-dark`
+  data-themes. For pages the theme's CSS isn't written for (the raw
+  database admin).
+  """
+  def color_css(%Theme{} = theme) do
+    theme = Repo.preload(theme, :components)
+    parts = theme.components ++ [theme]
+
+    Enum.map_join(Palette.schemes(), fn scheme ->
+      tokens = Enum.reduce(parts, %{}, &Map.merge(&2, Map.get(&1.colors || %{}, scheme, %{})))
+
+      variables =
+        Enum.map_join(Enum.sort(tokens), " ", fn {token, value} ->
+          "--color-#{token}: #{value};"
+        end)
+
+      if tokens == %{},
+        do: "",
+        else: "[data-theme=#{Palette.data_theme(scheme)}] { #{variables} }\n"
+    end)
   end
 
   ## Import and export

@@ -47,6 +47,11 @@ defmodule FireflyWeb.MixProject do
       {:bandit, "~> 1.14"},
       {:jason, "~> 1.4"},
       {:gettext, "~> 1.0"},
+      # The optional raw-records admin at /staff/db (see FireflyWeb.Admin).
+      {:kaffy, "~> 0.11.0"},
+      # Kaffy 0.11 declares an optional `decimal ~> 2.2`; it only uses
+      # Decimal.parse/1, integer?/1 and to_integer/1, all unchanged in 3.x.
+      {:decimal, "~> 3.2", override: true},
       {:cors_plug, "~> 3.0"},
       {:esbuild, "~> 0.10", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5", runtime: Mix.env() == :dev},
@@ -75,9 +80,10 @@ defmodule FireflyWeb.MixProject do
         "test"
       ],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind firefly_web", "esbuild firefly_web"],
+      "assets.build": ["compile", "tailwind firefly_web", "tailwind admin", "esbuild firefly_web"],
       "assets.deploy": [
         "tailwind firefly_web --minify",
+        "tailwind admin --minify",
         "esbuild firefly_web --minify",
         "phx.digest"
       ]

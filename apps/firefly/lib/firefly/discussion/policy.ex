@@ -86,6 +86,8 @@ defmodule Firefly.Discussion.Policy do
       `Firefly.Import`), `:manage_upgrades` (the upgrade page),
       `:manage_embedding` (embeddable hosts), `:manage_ai` (AI providers
       and features, see `Firefly.AI`) - admins
+    * `:manage_database` (the raw records admin at `/staff/db`) - admins,
+      while the `enable_database_admin` setting is on
     * `:view_category`, `:view_thread` (in its category) - everyone, members
       or not, unless the category is restricted to roles (groups): then
       members of one of those roles, and staff. A subcategory also needs its
@@ -272,6 +274,10 @@ defmodule Firefly.Discussion.Policy do
              :set_trust_level
            ],
       do: admin(user)
+
+  def authorize(:manage_database, %User{} = user, _params) do
+    if SiteSettings.get("enable_database_admin"), do: admin(user), else: {:error, :unauthorized}
+  end
 
   # Catch-all: deny everything else
   def authorize(_action, _user, _params), do: {:error, :unauthorized}

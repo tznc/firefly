@@ -5,6 +5,10 @@ defmodule FireflyWeb.Router do
   import Phoenix.Controller
   import Phoenix.LiveView.Router
 
+  # The raw records admin (Kaffy, see FireflyWeb.Admin), after Kaffy's own
+  # browser pipeline.
+  use Kaffy.Routes, scope: "/staff/db", pipe_through: [:database_admin]
+
   pipeline :webhook do
     plug(:accepts, ["json"])
   end
@@ -29,6 +33,16 @@ defmodule FireflyWeb.Router do
 
   pipeline :admin do
     plug(FireflyWeb.Plugs.CurrentUser)
+    plug(FireflyWeb.Plugs.RequireAdmin)
+  end
+
+  # A 404 while the `enable_database_admin` setting is off; then admins
+  # only, checked against the database on every request. Kaffy's pages
+  # need their inline scripts, so they go without the forum's CSP.
+  pipeline :database_admin do
+    plug(FireflyWeb.Plugs.DatabaseAdmin)
+    plug(FireflyWeb.Plugs.CurrentUser)
+    plug(FireflyWeb.Locale)
     plug(FireflyWeb.Plugs.RequireAdmin)
   end
 

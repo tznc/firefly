@@ -7,9 +7,8 @@ defmodule Firefly.Moderation.StaffLog do
   and deletions of other people's content, category changes) call
   `record/4` inside the action's transaction, so an action is logged if and
   only if it happened. What members do to their own content is not staff
-  action and isn't logged. (`admin.create`, `admin.update` and
-  `admin.delete` entries are from the Kaffy admin Firefly once had, kept
-  so old entries still read.)
+  action and isn't logged. `admin.create`, `admin.update` and `admin.delete`
+  are raw record edits in the optional database admin at `/staff/db`.
   """
 
   import Ecto.Query
