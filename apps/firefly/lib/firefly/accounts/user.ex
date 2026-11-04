@@ -171,12 +171,15 @@ defmodule Firefly.Accounts.User do
 
   @doc "Sets a new password (password reset)."
   def password_changeset(%__MODULE__{} = user, attrs) do
+    {attrs, invalid} = take_invalid_text(attrs)
+
     user
     |> cast(attrs, [:password])
     |> validate_required([:password])
     |> validate_password_length()
     |> validate_confirmation(:password, message: "does not match password")
     |> put_password_hash()
+    |> invalid_text_errors(invalid, [:password, :password_confirmation])
   end
 
   @doc "Marks the user's email address as confirmed."
@@ -229,7 +232,7 @@ defmodule Firefly.Accounts.User do
   to the username.
   """
   def registration_changeset(%__MODULE__{} = user, attrs) do
-    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+    {attrs, invalid} = take_invalid_text(attrs)
     attrs = Map.put_new(attrs, "name", attrs["username"])
 
     user
@@ -248,6 +251,21 @@ defmodule Firefly.Accounts.User do
     |> validate_password_length()
     |> unsafe_validate_unique(:username, Firefly.Repo)
     |> put_password_hash()
+    |> invalid_text_errors(invalid, [:username, :email, :name, :password])
+  end
+
+  # Form fields that aren't UTF-8 (a form post can send any bytes): taken
+  # out before validation, which can't measure them, and errors after.
+  defp take_invalid_text(attrs) do
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+    invalid = for {k, v} <- attrs, is_binary(v), not String.valid?(v), do: k
+    {Map.drop(attrs, invalid), invalid}
+  end
+
+  defp invalid_text_errors(changeset, invalid, fields) do
+    for field <- fields, Atom.to_string(field) in invalid, reduce: changeset do
+      changeset -> add_error(changeset, field, "isn't valid text")
+    end
   end
 
   def add_roles(changeset, params) do
