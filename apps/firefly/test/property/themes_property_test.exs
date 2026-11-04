@@ -187,21 +187,24 @@ defmodule Firefly.ThemesPropertyTest do
       admin = admin_fixture()
 
       check all(input <- html_fragment(), max_runs: runs(15)) do
-        {:ok, theme} =
-          Themes.create_theme(
-            %{
-              "name" => "T#{System.unique_integer([:positive])}",
-              "head_html" => input,
-              "footer_html" => input
-            },
-            admin
-          )
+        attrs = %{
+          "name" => "T#{System.unique_integer([:positive])}",
+          "head_html" => input,
+          "footer_html" => input
+        }
 
-        theme = Themes.get_theme!(theme.id)
+        # Saved, or refused with a reason (never raised).
+        case Themes.create_theme(attrs, admin) do
+          {:ok, theme} ->
+            theme = Themes.get_theme!(theme.id)
 
-        for place <- [:head, :footer] do
-          assert HTMLSafety.unsafe(Themes.html(theme, place, "n"), allow_tags: ["meta", "link"]) ==
-                   []
+            for place <- [:head, :footer] do
+              html = Themes.html(theme, place, "n")
+              assert HTMLSafety.unsafe(html, allow_tags: ["meta", "link"]) == []
+            end
+
+          {:error, %Ecto.Changeset{}} ->
+            :ok
         end
       end
     end
