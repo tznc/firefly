@@ -17,6 +17,12 @@ defmodule FireflyWeb.CategoryLive.Show do
      socket
      |> assign(:page_title, category.title)
      |> assign(:category, category)
+     |> FireflyWeb.SEO.assign(%{
+       title: category.title,
+       description: category.description,
+       canonical: Firefly.URLs.category_url(category),
+       noindex: category.restricted or not Firefly.SEO.indexable?()
+     })
      |> assign(:level, Subscriptions.category_level(socket.assigns.current_user, category))
      |> load_threads()
      |> FireflyWeb.BulkThreads.init()}

@@ -26,15 +26,18 @@ defmodule FireflyWeb.SearchLive.Index do
     categories =
       Enum.map(Discussion.list_categories(socket.assigns.current_user), &{&1.title, &1.slug})
 
+    socket =
+      assign(socket,
+        page_title: "Search",
+        categories: categories,
+        remote_ip: FireflyWeb.ClientIP.from_socket(socket),
+        semantic_available?: SemanticSearch.enabled?(),
+        semantic?: false,
+        rate_limited?: false
+      )
+
     {:ok,
-     assign(socket,
-       page_title: "Search",
-       categories: categories,
-       remote_ip: FireflyWeb.ClientIP.from_socket(socket),
-       semantic_available?: SemanticSearch.enabled?(),
-       semantic?: false,
-       rate_limited?: false
-     )}
+     FireflyWeb.SEO.assign(socket, %{title: "Search", canonical: ~p"/search", noindex: true})}
   end
 
   @impl true

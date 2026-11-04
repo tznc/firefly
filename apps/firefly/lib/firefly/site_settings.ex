@@ -868,6 +868,34 @@ defmodule Firefly.SiteSettings do
         help: "How long each plugin's log of outgoing requests is kept."
       },
       %{
+        key: "allow_indexing",
+        section: "Search engines",
+        type: :boolean,
+        label: "Allow indexing",
+        default: true,
+        help:
+          "Off: robots.txt asks every crawler to stay away, pages say noindex and the sitemap is empty. Public content only is ever listed."
+      },
+      %{
+        key: "index_user_pages",
+        section: "Search engines",
+        type: :boolean,
+        label: "Index member pages",
+        default: false,
+        help:
+          "Whether profiles, the members directory, groups and badges may be indexed. Off: they say noindex and stay out of the sitemap."
+      },
+      %{
+        key: "robots_extra",
+        section: "Search engines",
+        type: :text,
+        label: "Extra robots.txt rules",
+        default: "",
+        max_length: 2000,
+        help:
+          "Added to robots.txt after the built-in rules, e.g. a Crawl-delay or rules for one crawler."
+      },
+      %{
         key: "analytics",
         section: "Analytics",
         type: :boolean,

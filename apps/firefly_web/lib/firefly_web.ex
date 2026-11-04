@@ -36,6 +36,7 @@ defmodule FireflyWeb do
       Firefly.Plugins,
       Firefly.Rendering,
       Firefly.Reports,
+      Firefly.SEO,
       Firefly.SiteSettings,
       Firefly.TrustLevels,
       Firefly.Upgrades,
@@ -46,7 +47,7 @@ defmodule FireflyWeb do
     exports: []
 
   def static_paths,
-    do: ~w(assets fonts images vendor favicon.ico robots.txt manifest.json service-worker.js)
+    do: ~w(assets fonts images vendor favicon.ico manifest.json service-worker.js)
 
   def router do
     quote do

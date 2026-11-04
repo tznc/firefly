@@ -9,6 +9,11 @@ defmodule FireflyWeb.GroupLive.Index do
     {:ok,
      socket
      |> assign(:page_title, "Groups")
+     |> FireflyWeb.SEO.assign(%{
+       title: "Groups",
+       canonical: ~p"/groups",
+       noindex: not Firefly.SEO.index_user_pages?()
+     })
      |> assign(:groups, Groups.list_visible(socket.assigns.current_user))}
   end
 

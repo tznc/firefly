@@ -27,6 +27,11 @@ defmodule FireflyWeb.TagLive.Show do
      socket
      |> assign(:page_title, "##{tag.name}")
      |> assign(:tag, tag)
+     |> FireflyWeb.SEO.assign(%{
+       title: "##{tag.name}",
+       description: "Topics tagged ##{tag.name}.",
+       canonical: ~p"/tags/#{tag.name}"
+     })
      |> assign(:level, Subscriptions.tag_level(socket.assigns.current_user, tag))
      |> load_threads()}
   end

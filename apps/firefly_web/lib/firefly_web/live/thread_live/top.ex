@@ -10,7 +10,10 @@ defmodule FireflyWeb.ThreadLive.Top do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :page_title, "Top")}
+    {:ok,
+     socket
+     |> assign(:page_title, "Top")
+     |> FireflyWeb.SEO.assign(%{title: "Top", canonical: ~p"/top"})}
   end
 
   @impl true
