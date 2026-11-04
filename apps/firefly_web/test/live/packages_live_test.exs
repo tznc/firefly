@@ -1,4 +1,4 @@
-defmodule FireflyWeb.PluginsLiveTest do
+defmodule FireflyWeb.PackagesLiveTest do
   use FireflyWeb.ConnCase
 
   import FireflyPlugins.PluginHelpers
@@ -18,10 +18,10 @@ defmodule FireflyWeb.PluginsLiveTest do
     path
   end
 
-  test "members can't manage plugins", %{conn: conn} do
+  test "members can't manage packages", %{conn: conn} do
     conn
     |> log_in_as(user_fixture())
-    |> visit(~p"/staff/plugins")
+    |> visit(~p"/staff/packages")
     |> assert_path(~p"/")
   end
 
@@ -39,24 +39,24 @@ defmodule FireflyWeb.PluginsLiveTest do
 
     session =
       conn
-      |> visit(~p"/staff/plugins")
-      |> upload("Bundle", write_zip(zip))
+      |> visit(~p"/staff/packages")
+      |> upload("Package file", write_zip(zip))
       |> click_button("Upload")
-      |> assert_has("#plugin-preview h2", text: "Install Hello 1.0.0")
+      |> assert_has("#package-preview h2", text: "Install Hello 1.0.0")
       |> assert_has("#preview-permissions",
         text: "Can read public posts, threads and member profiles"
       )
-      |> click_button("#install-plugin", "Install")
-      |> assert_has("#plugin-hello", text: "disabled")
-      |> assert_has("#plugin-hello", text: "base ~> 1.0: inactive")
-      |> assert_has("#plugin-base", text: "Needed by hello")
+      |> click_button("#install-package", "Install")
+      |> assert_has("#package-hello", text: "disabled")
+      |> assert_has("#package-hello", text: "base ~> 1.0: inactive")
+      |> assert_has("#package-base", text: "Needed by hello")
 
     session
-    |> within("#plugin-hello", &click_button(&1, "Enable"))
+    |> within("#package-hello", &click_button(&1, "Enable"))
     |> assert_has("#confirm-cascade", text: "base")
-    |> click_button("#confirm-plugin-action", "Enable")
-    |> assert_has("#plugin-hello", text: "enabled")
-    |> assert_has("#plugin-base", text: "enabled")
+    |> click_button("#confirm-package-action", "Enable")
+    |> assert_has("#package-hello", text: "enabled")
+    |> assert_has("#package-base", text: "enabled")
 
     assert Enum.map(Plugins.active(), & &1.id) == ["base", "hello"]
   end
@@ -65,13 +65,13 @@ defmodule FireflyWeb.PluginsLiveTest do
     zip = bundle_zip(%{"id" => "needy", "dependencies" => %{"gone" => "~> 1.0"}})
 
     conn
-    |> visit(~p"/staff/plugins")
-    |> upload("Bundle", write_zip(zip))
+    |> visit(~p"/staff/packages")
+    |> upload("Package file", write_zip(zip))
     |> click_button("Upload")
     |> assert_has("#preview-problems",
       text: "It needs plugin gone ~> 1.0, which isn't installed."
     )
-    |> assert_has("#install-plugin[disabled]")
+    |> assert_has("#install-package[disabled]")
   end
 
   test "network access is named in plain words, and an upgrade highlights what's new", %{
@@ -99,10 +99,10 @@ defmodule FireflyWeb.PluginsLiveTest do
       })
 
     conn
-    |> visit(~p"/staff/plugins")
-    |> upload("Bundle", write_zip(zip))
+    |> visit(~p"/staff/packages")
+    |> upload("Package file", write_zip(zip))
     |> click_button("Upload")
-    |> assert_has("#plugin-preview h2", text: "Upgrade Hook 1.1.0")
+    |> assert_has("#package-preview h2", text: "Upgrade Hook 1.1.0")
     |> assert_has("#preview-more-access", text: "asks for more than version 1.0.0")
     |> assert_has("#preview-permissions-http",
       text: "Can send forum content to: api.example.com, hooks.slack.com"
@@ -125,20 +125,20 @@ defmodule FireflyWeb.PluginsLiveTest do
       })
 
     conn
-    |> visit(~p"/staff/plugins")
-    |> upload("Bundle", write_zip(zip))
+    |> visit(~p"/staff/packages")
+    |> upload("Package file", write_zip(zip))
     |> click_button("Upload")
-    |> assert_has("#plugin-preview h2", text: "Upgrade Same 1.0.1")
+    |> assert_has("#package-preview h2", text: "Upgrade Same 1.0.1")
     |> refute_has("#preview-more-access")
     |> refute_has("#preview-permissions .badge")
   end
 
   test "a malformed bundle says what's wrong", %{conn: conn} do
     conn
-    |> visit(~p"/staff/plugins")
-    |> upload("Bundle", write_zip(zip(%{"index.js" => ""})))
+    |> visit(~p"/staff/packages")
+    |> upload("Package file", write_zip(zip(%{"index.js" => ""})))
     |> click_button("Upload")
-    |> assert_has(".alert", text: "The bundle has no plugin.json.")
+    |> assert_has(".alert", text: "The package has no firefly.json (or plugin.json).")
   end
 
   test "disabling lists the plugins that need it", %{conn: conn, admin: admin} do
@@ -152,11 +152,11 @@ defmodule FireflyWeb.PluginsLiveTest do
     )
 
     conn
-    |> visit(~p"/staff/plugins")
-    |> within("#plugin-base", &click_button(&1, "Disable"))
+    |> visit(~p"/staff/packages")
+    |> within("#package-base", &click_button(&1, "Disable"))
     |> assert_has("#confirm-cascade", text: "app")
-    |> click_button("#confirm-plugin-action", "Disable")
-    |> assert_has("#plugin-app", text: "disabled")
+    |> click_button("#confirm-package-action", "Disable")
+    |> assert_has("#package-app", text: "disabled")
 
     assert Plugins.active() == []
   end
@@ -171,12 +171,12 @@ defmodule FireflyWeb.PluginsLiveTest do
     })
 
     conn
-    |> visit(~p"/staff/plugins")
-    |> within("#plugin-base", &click_button(&1, "Uninstall"))
+    |> visit(~p"/staff/packages")
+    |> within("#package-base", &click_button(&1, "Uninstall"))
     |> assert_has(".alert", text: "app need it: uninstall them first.")
-    |> within("#plugin-app", &click_button(&1, "Uninstall"))
-    |> click_button("#confirm-plugin-action", "Uninstall")
-    |> refute_has("#plugin-app")
+    |> within("#package-app", &click_button(&1, "Uninstall"))
+    |> click_button("#confirm-package-action", "Uninstall")
+    |> refute_has("#package-app")
   end
 
   test "the settings form comes from the manifest", %{conn: conn, admin: admin} do
@@ -212,5 +212,95 @@ defmodule FireflyWeb.PluginsLiveTest do
 
     assert %{settings: %{"greeting" => "Hey", "times" => 3, "loud" => true, "color" => "blue"}} =
              Plugins.describe(id)
+  end
+
+  describe "themes and plugins in one list" do
+    defp theme_zip(manifest \\ %{}, css \\ ".ocean {}") do
+      Firefly.Packages.Archive.build(
+        Map.merge(
+          %{
+            "id" => "ocean",
+            "name" => "Ocean",
+            "version" => "1.0.0",
+            "firefly" => "~> 1.0",
+            "tags" => ["theme"],
+            "theme" => %{"css" => "theme.css"}
+          },
+          manifest
+        ),
+        %{"theme.css" => css}
+      )
+    end
+
+    test "the old plugins page leads here", %{conn: conn} do
+      assert redirected_to(get(conn, "/staff/plugins")) == "/staff/packages"
+    end
+
+    test "a theme package is uploaded, previewed and installed", %{conn: conn} do
+      conn
+      |> visit(~p"/staff/packages")
+      |> upload("Package file", write_zip(theme_zip(%{"description" => "Calm blues."})))
+      |> click_button("Upload")
+      |> assert_has("#package-preview h2", text: "Install Ocean 1.0.0")
+      |> assert_has("#preview-themes li", text: "Ocean")
+      |> refute_has("#preview-permissions")
+      |> click_button("#install-package", "Install")
+      |> assert_has("#flash-info", text: "Ocean 1.0.0 installed.")
+      |> assert_has("#package-ocean", text: "theme")
+      |> assert_has("#package-ocean a", text: "Ocean")
+
+      assert [%{name: "Ocean", package_id: id}] = Firefly.Themes.list_themes()
+      assert id
+    end
+
+    test "the tag filter shows themes or plugins", %{conn: conn, admin: admin} do
+      {:ok, archive} = Firefly.Packages.read(theme_zip())
+      {:ok, _} = Firefly.Packages.install(archive, admin)
+      install_plugin!(admin, %{"id" => "hello", "name" => "Hello", "tags" => ["fun"]})
+
+      conn
+      |> visit(~p"/staff/packages")
+      |> assert_has("#package-ocean")
+      |> assert_has("#package-hello")
+      |> click_link("#tag-theme", "theme")
+      |> assert_path(~p"/staff/packages", query_params: %{tag: "theme"})
+      |> assert_has("#package-ocean")
+      |> refute_has("#package-hello")
+      |> click_link("#tag-fun", "fun")
+      |> assert_has("#package-hello")
+      |> refute_has("#package-ocean")
+    end
+
+    test "upgrading a theme edited here asks to replace the changes", %{conn: conn, admin: admin} do
+      {:ok, archive} = Firefly.Packages.read(theme_zip())
+      {:ok, _} = Firefly.Packages.install(archive, admin)
+      [theme] = Firefly.Themes.list_themes()
+      {:ok, _} = Firefly.Themes.update_theme(theme, %{"css" => ".mine {}"}, admin)
+
+      conn
+      |> visit(~p"/staff/packages")
+      |> upload("Package file", write_zip(theme_zip(%{"version" => "1.1.0"}, ".v2 {}")))
+      |> click_button("Upload")
+      |> assert_has("#preview-edited", text: "Ocean")
+      |> assert_has("#install-package[disabled]")
+      |> check("Replace the changes made here")
+      |> click_button("#install-package", "Upgrade")
+      |> assert_has("#flash-info", text: "Ocean 1.1.0 upgraded.")
+
+      assert Firefly.Repo.reload!(theme).css == ".v2 {}"
+    end
+
+    test "uninstalling a theme package deletes its themes", %{conn: conn, admin: admin} do
+      {:ok, archive} = Firefly.Packages.read(theme_zip())
+      {:ok, _} = Firefly.Packages.install(archive, admin)
+
+      conn
+      |> visit(~p"/staff/packages")
+      |> within("#package-ocean", &click_button(&1, "Uninstall"))
+      |> click_button("#confirm-package-action", "Uninstall")
+      |> refute_has("#package-ocean")
+
+      assert Firefly.Themes.list_themes() == []
+    end
   end
 end

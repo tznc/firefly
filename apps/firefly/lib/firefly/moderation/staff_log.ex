@@ -41,6 +41,7 @@ defmodule Firefly.Moderation.StaffLog do
     admin.create admin.update admin.delete
     plugin.install plugin.upgrade plugin.enable plugin.disable plugin.uninstall plugin.settings
     plugin.auto_disable plugin.suspend plugin.resume plugin.secret
+    package.install package.upgrade package.uninstall
     upload.delete emoji.create emoji.delete
     badge.create badge.update badge.delete badge.grant badge.revoke
     watched_word.create watched_word.delete

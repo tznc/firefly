@@ -47,7 +47,7 @@ msgid "API keys"
 msgstr "API キー"
 
 #: lib/firefly_web/components/layouts.ex:238
-#: lib/firefly_web/live/staff_live/theme.ex:237
+#: lib/firefly_web/live/staff_live/theme.ex:250
 #, elixir-autogen, elixir-format
 msgid "About"
 msgstr "このサイトについて"
@@ -169,7 +169,7 @@ msgid "Creating..."
 msgstr "作成中..."
 
 #: lib/firefly_web/live/settings_live/index.ex:670
-#: lib/firefly_web/live/staff_live/theme.ex:196
+#: lib/firefly_web/live/staff_live/theme.ex:205
 #, elixir-autogen, elixir-format
 msgid "Dark"
 msgstr "ダーク"
@@ -261,7 +261,6 @@ msgid "Groups"
 msgstr "グループ"
 
 #: lib/firefly_web/live/staff_live/settings.ex:417
-#: lib/firefly_web/live/staff_live/themes.ex:152
 #: lib/firefly_web/staff_nav.ex:219
 #, elixir-autogen, elixir-format
 msgid "Import"
@@ -283,7 +282,7 @@ msgid "Latest"
 msgstr "最新"
 
 #: lib/firefly_web/live/settings_live/index.ex:669
-#: lib/firefly_web/live/staff_live/theme.ex:195
+#: lib/firefly_web/live/staff_live/theme.ex:204
 #, elixir-autogen, elixir-format
 msgid "Light"
 msgstr "ライト"
@@ -382,11 +381,6 @@ msgstr "パスワード"
 msgid "Password reset. Log in with your new password."
 msgstr "パスワードを再設定しました。新しいパスワードでログインしてください。"
 
-#: lib/firefly_web/staff_nav.ex:187
-#, elixir-autogen, elixir-format
-msgid "Plugins"
-msgstr "プラグイン"
-
 #: lib/firefly_web/components/layouts.ex:345
 #: lib/firefly_web/live/staff_live/user.ex:468
 #: lib/firefly_web/live/staff_live/user.ex:475
@@ -424,7 +418,7 @@ msgstr "保存"
 #: lib/firefly_web/live/auth_live/reset_password.ex:74
 #: lib/firefly_web/live/settings_live/index.ex:691
 #: lib/firefly_web/live/staff_live/settings.ex:398
-#: lib/firefly_web/live/staff_live/theme.ex:317
+#: lib/firefly_web/live/staff_live/theme.ex:330
 #: lib/firefly_web/live/staff_live/user.ex:369
 #: lib/firefly_web/live/staff_live/user.ex:400
 #, elixir-autogen, elixir-format
@@ -1218,8 +1212,8 @@ msgid "Muted"
 msgstr "ミュート"
 
 #: lib/firefly_web/live/staff_live/groups.ex:172
-#: lib/firefly_web/live/staff_live/theme.ex:238
-#: lib/firefly_web/live/staff_live/themes.ex:144
+#: lib/firefly_web/live/staff_live/theme.ex:251
+#: lib/firefly_web/live/staff_live/themes.ex:109
 #: lib/firefly_web/live/staff_live/user.ex:366
 #, elixir-autogen, elixir-format
 msgid "Name"
@@ -2226,253 +2220,213 @@ msgstr "システム"
 msgid "Category"
 msgstr "カテゴリ"
 
-#: lib/firefly_web/live/staff_live/theme.ex:116
+#: lib/firefly_web/live/staff_live/theme.ex:125
 #, elixir-autogen, elixir-format
 msgid "%{name} is the site's theme now."
 msgstr "%{name} をサイトのテーマにしました。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:261
+#: lib/firefly_web/live/staff_live/theme.ex:274
 #, elixir-autogen, elixir-format
 msgid "%{scheme}: %{foreground} on %{background} is %{ratio}:1"
 msgstr "%{scheme}: %{background} 上の %{foreground} は %{ratio}:1"
 
-#: lib/firefly_web/live/staff_live/themes.ex:104
+#: lib/firefly_web/live/staff_live/themes.ex:69
 #, elixir-autogen, elixir-format
 msgid "1 component"
 msgid_plural "%{count} components"
 msgstr[0] "%{count} 個のコンポーネント"
 
-#: lib/firefly_web/live/staff_live/themes.ex:168
-#, elixir-autogen, elixir-format
-msgid "A GitHub repository's firefly-theme.json is read from its default branch. Imported themes never run scripts until you allow it."
-msgstr "GitHub リポジトリの firefly-theme.json をデフォルトブランチから読み込みます。インポートしたテーマは、許可するまでスクリプトを実行しません。"
-
-#: lib/firefly_web/live/staff_live/theme.ex:204
+#: lib/firefly_web/live/staff_live/theme.ex:213
 #, elixir-autogen, elixir-format
 msgid "A theme"
 msgstr "テーマ"
 
-#: lib/firefly_web/live/staff_live/theme.ex:204
+#: lib/firefly_web/live/staff_live/theme.ex:213
 #, elixir-autogen, elixir-format
 msgid "A theme component"
 msgstr "テーマコンポーネント"
 
-#: lib/firefly_web/live/staff_live/theme.ex:384
+#: lib/firefly_web/live/staff_live/theme.ex:398
 #, elixir-autogen, elixir-format
 msgid "Add asset"
 msgstr "アセットを追加"
 
-#: lib/firefly_web/live/staff_live/theme.ex:157
+#: lib/firefly_web/live/staff_live/theme.ex:166
 #, elixir-autogen, elixir-format
 msgid "Added %{name}."
 msgstr "%{name} を追加しました。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:335
+#: lib/firefly_web/live/staff_live/theme.ex:349
 #, elixir-autogen, elixir-format
 msgid "Allow scripts"
 msgstr "スクリプトを許可"
 
-#: lib/firefly_web/live/staff_live/theme.ex:382
+#: lib/firefly_web/live/staff_live/theme.ex:396
 #, elixir-autogen, elixir-format
 msgid "Asset name"
 msgstr "アセット名"
 
-#: lib/firefly_web/live/staff_live/theme.ex:366
+#: lib/firefly_web/live/staff_live/theme.ex:380
 #, elixir-autogen, elixir-format
 msgid "Assets"
 msgstr "アセット"
 
-#: lib/firefly_web/live/staff_live/theme.ex:312
+#: lib/firefly_web/live/staff_live/theme.ex:325
 #, elixir-autogen, elixir-format
 msgid "At the bottom of every page"
 msgstr "各ページの下部"
 
-#: lib/firefly_web/live/staff_live/theme.ex:311
+#: lib/firefly_web/live/staff_live/theme.ex:324
 #, elixir-autogen, elixir-format
 msgid "At the top of every page"
 msgstr "各ページの上部"
 
-#: lib/firefly_web/live/staff_live/theme.ex:294
+#: lib/firefly_web/live/staff_live/theme.ex:307
 #, elixir-autogen, elixir-format
 msgid "CSS"
 msgstr "CSS"
 
-#: lib/firefly_web/live/staff_live/theme.ex:251
+#: lib/firefly_web/live/staff_live/theme.ex:264
 #, elixir-autogen, elixir-format
 msgid "Colors"
 msgstr "色"
 
-#: lib/firefly_web/live/staff_live/themes.ex:116
+#: lib/firefly_web/live/staff_live/themes.ex:81
 #, elixir-autogen, elixir-format
 msgid "Colors, CSS and HTML for the whole site. Preview a theme yourself before making it the default."
 msgstr "サイト全体の色、CSS、HTML。デフォルトにする前に、まず自分でテーマをプレビューしてください。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:346
+#: lib/firefly_web/live/staff_live/theme.ex:360
 #, elixir-autogen, elixir-format
 msgid "Components"
 msgstr "コンポーネント"
 
-#: lib/firefly_web/live/staff_live/themes.ex:134
+#: lib/firefly_web/live/staff_live/themes.ex:99
 #, elixir-autogen, elixir-format
 msgid "Components are pieces several themes can include, like a banner or a font."
 msgstr "コンポーネントは、バナーやフォントなど、複数のテーマに含められるパーツです。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:106
+#: lib/firefly_web/live/staff_live/theme.ex:115
 #, elixir-autogen, elixir-format
 msgid "Components saved."
 msgstr "コンポーネントを保存しました。"
 
-#: lib/firefly_web/live/staff_live/themes.ex:146
+#: lib/firefly_web/live/staff_live/themes.ex:111
 #, elixir-autogen, elixir-format
 msgid "Create"
 msgstr "作成"
 
-#: lib/firefly_web/live/staff_live/theme.ex:298
+#: lib/firefly_web/live/staff_live/theme.ex:311
 #, elixir-autogen, elixir-format
 msgid "Custom CSS"
 msgstr "カスタム CSS"
 
-#: lib/firefly_web/live/staff_live/theme.ex:395
+#: lib/firefly_web/live/staff_live/theme.ex:409
 #, elixir-autogen, elixir-format
 msgid "Delete %{name}? This can't be undone."
 msgstr "%{name} を削除しますか？元に戻せません。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:398
+#: lib/firefly_web/live/staff_live/theme.ex:412
 #, elixir-autogen, elixir-format
 msgid "Delete theme"
 msgstr "テーマを削除"
 
-#: lib/firefly_web/live/staff_live/theme.ex:239
+#: lib/firefly_web/live/staff_live/theme.ex:252
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr "説明"
 
-#: lib/firefly_web/live/staff_live/theme.ex:253
+#: lib/firefly_web/live/staff_live/theme.ex:266
 #, elixir-autogen, elixir-format
 msgid "Each scheme's daisyUI colors. Colors left as they are keep the built-in value."
 msgstr "各スキームの daisyUI カラー。変更しない色は組み込みの値のままです。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:222
+#: lib/firefly_web/live/staff_live/theme.ex:235
 #, elixir-autogen, elixir-format
 msgid "Every member who hasn't picked a theme will see it. Go ahead?"
 msgstr "テーマを選んでいないメンバー全員にこのテーマが表示されます。よろしいですか？"
 
-#: lib/firefly_web/live/staff_live/theme.ex:272
+#: lib/firefly_web/live/staff_live/theme.ex:285
 #, elixir-autogen, elixir-format
 msgid "Every text color meets WCAG AA."
 msgstr "すべての文字色が WCAG AA を満たしています。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:230
-#, elixir-autogen, elixir-format
-msgid "Export"
-msgstr "エクスポート"
-
-#: lib/firefly_web/live/staff_live/theme.ex:304
+#: lib/firefly_web/live/staff_live/theme.ex:317
 #, elixir-autogen, elixir-format
 msgid "HTML"
 msgstr "HTML"
 
-#: lib/firefly_web/live/staff_live/theme.ex:383
+#: lib/firefly_web/live/staff_live/theme.ex:397
 #, elixir-autogen, elixir-format
 msgid "Image or font file"
 msgstr "画像またはフォントファイル"
 
-#: lib/firefly_web/live/staff_live/themes.ex:155
-#, elixir-autogen, elixir-format
-msgid "Import file"
-msgstr "ファイルをインポート"
-
-#: lib/firefly_web/live/staff_live/themes.ex:165
-#, elixir-autogen, elixir-format
-msgid "Import from URL"
-msgstr "URL からインポート"
-
-#: lib/firefly_web/live/staff_live/themes.ex:74
-#, elixir-autogen, elixir-format
-msgid "Imported %{name}."
-msgstr "%{name} をインポートしました。"
-
-#: lib/firefly_web/live/staff_live/theme.ex:310
+#: lib/firefly_web/live/staff_live/theme.ex:323
 #, elixir-autogen, elixir-format
 msgid "In the page's head"
 msgstr "ページの head 内"
 
-#: lib/firefly_web/live/staff_live/themes.ex:145
+#: lib/firefly_web/live/staff_live/themes.ex:110
 #, elixir-autogen, elixir-format
 msgid "It's a component (themes include it)"
 msgstr "コンポーネントとして使う（テーマに含められます）"
 
-#: lib/firefly_web/live/staff_live/theme.ex:92
+#: lib/firefly_web/live/staff_live/theme.ex:97
 #, elixir-autogen, elixir-format
 msgid "Its HTML may run scripts now."
 msgstr "HTML でスクリプトを実行できるようになりました。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:93
+#: lib/firefly_web/live/staff_live/theme.ex:98
 #, elixir-autogen, elixir-format
 msgid "Its scripts are off."
 msgstr "スクリプトは無効です。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:332
+#: lib/firefly_web/live/staff_live/theme.ex:346
 #, elixir-autogen, elixir-format
 msgid "Let this theme run scripts on every page?"
 msgstr "このテーマが全ページでスクリプトを実行することを許可しますか？"
 
-#: lib/firefly_web/live/staff_live/theme.ex:225
+#: lib/firefly_web/live/staff_live/theme.ex:238
 #, elixir-autogen, elixir-format
 msgid "Make default"
 msgstr "デフォルトにする"
 
-#: lib/firefly_web/live/staff_live/theme.ex:244
+#: lib/firefly_web/live/staff_live/theme.ex:257
 #, elixir-autogen, elixir-format
 msgid "Members can pick it in their interface settings"
 msgstr "メンバーがインターフェース設定で選べる"
 
-#: lib/firefly_web/live/staff_live/themes.ex:143
+#: lib/firefly_web/live/staff_live/themes.ex:108
 #, elixir-autogen, elixir-format
 msgid "New theme"
 msgstr "新しいテーマ"
 
-#: lib/firefly_web/live/staff_live/theme.ex:347
+#: lib/firefly_web/live/staff_live/theme.ex:361
 #, elixir-autogen, elixir-format
 msgid "No components yet."
 msgstr "まだコンポーネントはありません。"
 
-#: lib/firefly_web/live/staff_live/themes.ex:125
+#: lib/firefly_web/live/staff_live/themes.ex:90
 #, elixir-autogen, elixir-format
 msgid "No themes yet."
 msgstr "まだテーマはありません。"
 
-#: lib/firefly_web/live/staff_live/themes.ex:82
-#, elixir-autogen, elixir-format
-msgid "Not imported: %{details}"
-msgstr "インポートできませんでした: %{details}"
-
-#: lib/firefly_web/live/staff_live/theme.ex:81
+#: lib/firefly_web/live/staff_live/theme.ex:83
 #, elixir-autogen, elixir-format
 msgid "Not saved: fix what's marked."
 msgstr "保存できませんでした: 指摘された箇所を修正してください。"
 
-#: lib/firefly_web/live/staff_live/themes.ex:162
-#, elixir-autogen, elixir-format
-msgid "Or from a URL or GitHub repository"
-msgstr "または URL や GitHub リポジトリから"
-
-#: lib/firefly_web/live/staff_live/theme.ex:386
+#: lib/firefly_web/live/staff_live/theme.ex:400
 #, elixir-autogen, elixir-format
 msgid "PNG, JPEG, GIF or WebP images, WOFF or WOFF2 fonts."
 msgstr "PNG、JPEG、GIF、WebP の画像、WOFF、WOFF2 のフォント。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:151
+#: lib/firefly_web/live/staff_live/theme.ex:160
 #, elixir-autogen, elixir-format
 msgid "Pick a file."
 msgstr "ファイルを選んでください。"
 
-#: lib/firefly_web/live/staff_live/themes.ex:64
-#, elixir-autogen, elixir-format
-msgid "Pick a theme bundle (JSON)."
-msgstr "テーマバンドル（JSON）を選んでください。"
-
-#: lib/firefly_web/live/staff_live/theme.ex:216
+#: lib/firefly_web/live/staff_live/theme.ex:229
 #, elixir-autogen, elixir-format
 msgid "Preview"
 msgstr "プレビュー"
@@ -2482,32 +2436,32 @@ msgstr "プレビュー"
 msgid "Previewing %{name}: only you see it."
 msgstr "%{name} をプレビュー中: あなたにだけ表示されています。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:374
+#: lib/firefly_web/live/staff_live/theme.ex:388
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"
 msgstr "%{name} を削除"
 
-#: lib/firefly_web/live/staff_live/theme.ex:360
+#: lib/firefly_web/live/staff_live/theme.ex:374
 #, elixir-autogen, elixir-format
 msgid "Save components"
 msgstr "コンポーネントを保存"
 
-#: lib/firefly_web/live/staff_live/theme.ex:317
+#: lib/firefly_web/live/staff_live/theme.ex:330
 #, elixir-autogen, elixir-format
 msgid "Save theme"
 msgstr "テーマを保存"
 
-#: lib/firefly_web/live/staff_live/theme.ex:323
+#: lib/firefly_web/live/staff_live/theme.ex:336
 #, elixir-autogen, elixir-format
 msgid "Scripts"
 msgstr "スクリプト"
 
-#: lib/firefly_web/live/staff_live/theme.ex:325
+#: lib/firefly_web/live/staff_live/theme.ex:338
 #, elixir-autogen, elixir-format
 msgid "Scripts in a theme's HTML run on every page, for every member, with their session. Only allow them for code you trust. The change is recorded in the staff log."
 msgstr "テーマの HTML 内のスクリプトは、全ページで、全メンバーに対し、そのセッションで実行されます。信頼できるコードにだけ許可してください。この変更はスタッフログに記録されます。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:308
+#: lib/firefly_web/live/staff_live/theme.ex:321
 #, elixir-autogen, elixir-format
 msgid "Scripts, event handlers and inline styles are removed."
 msgstr "スクリプト、イベントハンドラー、インラインスタイルは削除されます。"
@@ -2517,7 +2471,7 @@ msgstr "スクリプト、イベントハンドラー、インラインスタイ
 msgid "Site theme"
 msgstr "サイトのテーマ"
 
-#: lib/firefly_web/live/staff_live/theme.ex:258
+#: lib/firefly_web/live/staff_live/theme.ex:271
 #, elixir-autogen, elixir-format
 msgid "Some text won't be readable enough (WCAG AA needs 4.5:1):"
 msgstr "十分に読みやすくない文字があります（WCAG AA では 4.5:1 が必要）:"
@@ -2532,12 +2486,12 @@ msgstr "プレビューを終了"
 msgid "Stopped previewing."
 msgstr "プレビューを終了しました。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:117
+#: lib/firefly_web/live/staff_live/theme.ex:126
 #, elixir-autogen, elixir-format
 msgid "The site uses the built-in look again."
 msgstr "サイトは組み込みの見た目に戻りました。"
 
-#: lib/firefly_web/live/staff_live/themes.ex:120
+#: lib/firefly_web/live/staff_live/themes.ex:85
 #, elixir-autogen, elixir-format
 msgid "The site uses the built-in look: no theme is the default."
 msgstr "サイトは組み込みの見た目を使っています。デフォルトのテーマはありません。"
@@ -2547,51 +2501,46 @@ msgstr "サイトは組み込みの見た目を使っています。デフォル
 msgid "The site's default"
 msgstr "サイトのデフォルト"
 
-#: lib/firefly_web/live/staff_live/themes.ex:154
-#, elixir-autogen, elixir-format
-msgid "Theme bundle"
-msgstr "テーマバンドル"
-
-#: lib/firefly_web/live/staff_live/themes.ex:132
+#: lib/firefly_web/live/staff_live/themes.ex:97
 #, elixir-autogen, elixir-format
 msgid "Theme components"
 msgstr "テーマコンポーネント"
 
-#: lib/firefly_web/live/staff_live/theme.ex:131
+#: lib/firefly_web/live/staff_live/theme.ex:140
 #, elixir-autogen, elixir-format
 msgid "Theme deleted."
 msgstr "テーマを削除しました。"
 
 #: lib/firefly_web/live/settings_live/index.ex:285
-#: lib/firefly_web/live/staff_live/theme.ex:76
+#: lib/firefly_web/live/staff_live/theme.ex:78
 #, elixir-autogen, elixir-format
 msgid "Theme saved."
 msgstr "テーマを保存しました。"
 
 #: lib/firefly_web/live/staff_live/themes.ex:20
-#: lib/firefly_web/live/staff_live/themes.ex:115
-#: lib/firefly_web/live/staff_live/themes.ex:124
+#: lib/firefly_web/live/staff_live/themes.ex:80
+#: lib/firefly_web/live/staff_live/themes.ex:89
 #: lib/firefly_web/staff_nav.ex:180
 #, elixir-autogen, elixir-format
 msgid "Themes"
 msgstr "テーマ"
 
-#: lib/firefly_web/live/staff_live/theme.ex:307
+#: lib/firefly_web/live/staff_live/theme.ex:320
 #, elixir-autogen, elixir-format
 msgid "This theme may run scripts: its HTML is used as written."
 msgstr "このテーマはスクリプトを実行できます。HTML はそのまま使われます。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:338
+#: lib/firefly_web/live/staff_live/theme.ex:352
 #, elixir-autogen, elixir-format
 msgid "Turn scripts off"
 msgstr "スクリプトを無効にする"
 
-#: lib/firefly_web/live/staff_live/theme.ex:296
+#: lib/firefly_web/live/staff_live/theme.ex:309
 #, elixir-autogen, elixir-format
 msgid "Up to 100 KB. Name an asset as theme-asset(name), e.g. background: theme-asset(hero)."
 msgstr "100 KB まで。アセットは theme-asset(名前) で参照します。例: background: theme-asset(hero)。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:228
+#: lib/firefly_web/live/staff_live/theme.ex:241
 #, elixir-autogen, elixir-format
 msgid "Use the built-in look"
 msgstr "組み込みの見た目を使う"
@@ -2606,36 +2555,31 @@ msgstr "このテーマを使う"
 msgid "You're previewing the %{name} theme. Only you see it."
 msgstr "テーマ %{name} をプレビュー中です。あなたにだけ表示されています。"
 
-#: lib/firefly_web/live/staff_live/theme.ex:206
-#: lib/firefly_web/live/staff_live/themes.ex:100
+#: lib/firefly_web/live/staff_live/theme.ex:215
+#: lib/firefly_web/live/staff_live/themes.ex:64
 #, elixir-autogen, elixir-format
 msgid "default"
 msgstr "デフォルト"
 
-#: lib/firefly_web/live/staff_live/themes.ex:101
+#: lib/firefly_web/live/staff_live/themes.ex:65
 #, elixir-autogen, elixir-format
 msgid "members can pick it"
 msgstr "メンバーが選択可"
 
-#: lib/firefly_web/live/staff_live/themes.ex:102
+#: lib/firefly_web/live/staff_live/themes.ex:66
 #, elixir-autogen, elixir-format
 msgid "runs scripts"
 msgstr "スクリプトを実行"
 
-#: lib/firefly_web/live/staff_live/theme.ex:205
+#: lib/firefly_web/live/staff_live/theme.ex:214
 #, elixir-autogen, elixir-format
 msgid "version %{version}"
 msgstr "バージョン %{version}"
 
-#: lib/firefly_web/live/staff_live/theme.ex:382
+#: lib/firefly_web/live/staff_live/theme.ex:396
 #, elixir-autogen, elixir-format
 msgid "hero"
 msgstr "hero"
-
-#: lib/firefly_web/live/staff_live/themes.ex:163
-#, elixir-autogen, elixir-format
-msgid "https://github.com/owner/repo"
-msgstr "https://github.com/owner/repo"
 
 #: lib/firefly_web/live/staff_live/categories.ex:334
 #, elixir-autogen, elixir-format
@@ -2716,3 +2660,48 @@ msgstr "すべて選択"
 #, elixir-autogen, elixir-format
 msgid "Toggle the menu"
 msgstr "メニューの表示を切り替える"
+
+#: lib/firefly_web/live/staff_live/theme.ex:218
+#, elixir-autogen, elixir-format
+msgid "Changed here since: upgrading the package asks before replacing the changes."
+msgstr "その後ここで変更されています。パッケージを更新すると、変更を置き換える前に確認します。"
+
+#: lib/firefly_web/live/staff_live/theme.ex:243
+#, elixir-autogen, elixir-format
+msgid "Export as a package"
+msgstr "パッケージとしてエクスポート"
+
+#: lib/firefly_web/live/staff_live/theme.ex:217
+#, elixir-autogen, elixir-format
+msgid "From the package %{name} %{version}."
+msgstr "パッケージ %{name} %{version} から。"
+
+#: lib/firefly_web/live/staff_live/themes.ex:117
+#, elixir-autogen, elixir-format
+msgid "Install a theme"
+msgstr "テーマをインストール"
+
+#: lib/firefly_web/staff_nav.ex:187
+#, elixir-autogen, elixir-format
+msgid "Packages"
+msgstr "パッケージ"
+
+#: lib/firefly_web/live/staff_live/themes.ex:122
+#, elixir-autogen, elixir-format
+msgid "Theme packages"
+msgstr "テーマパッケージ"
+
+#: lib/firefly_web/live/staff_live/themes.ex:119
+#, elixir-autogen, elixir-format
+msgid "Themes are installed as packages, like plugins: upload one, or fetch it from a URL or a GitHub repository. Old theme bundles (JSON) install there too."
+msgstr "テーマはプラグインと同じくパッケージとしてインストールします。アップロードするか、URL や GitHub リポジトリから取得してください。古いテーマバンドル（JSON）もそこでインストールできます。"
+
+#: lib/firefly_web/live/staff_live/theme.ex:340
+#, elixir-autogen, elixir-format
+msgid "Themes from packages never run scripts."
+msgstr "パッケージのテーマはスクリプトを実行しません。"
+
+#: lib/firefly_web/live/staff_live/themes.ex:67
+#, elixir-autogen, elixir-format
+msgid "from a package"
+msgstr "パッケージから"

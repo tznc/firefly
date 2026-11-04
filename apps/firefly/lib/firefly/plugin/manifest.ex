@@ -34,8 +34,17 @@ defmodule Firefly.Plugin.Manifest do
         "widgets": [{"outlet": "post_footer", "asset": "widget.html", "height": 80}],
         "endpoint_auth": "secret",          // or "user", "either"
         "priority": 100,                    // lower runs first among peers
-        "source": "upload"                  // "upload" for bundles, "core" for core plugins
+        "source": "upload",                 // "upload" for bundles, "core" for core plugins
+        "tags": ["moderation"],             // lowercase; "theme" for packages with a theme
+        "theme": {...}                      // see Firefly.Packages
       }
+
+  The manifest is also a package's (see `Firefly.Packages`): a package
+  carries plugin code, a `theme` section, or both. A package with a
+  `theme` section carries the `theme` tag, and the other way round; it has
+  plugin code only if it names its `main` file (without a `theme`, `main`
+  defaults to `index.js`, as it always did). The keys that are about
+  plugin code (hooks, permissions, widgets...) need that code.
 
   `source` and `registry` are there for the Firefly Cloud registry to come:
   a registry plugin will say `"source": "registry"` and carry where it came
@@ -78,19 +87,32 @@ defmodule Firefly.Plugin.Manifest do
     widgets: [],
     endpoint_auth: "secret",
     priority: 100,
-    source: "upload"
+    source: "upload",
+    tags: [],
+    theme: nil
   ]
 
   @type t :: %__MODULE__{}
 
   @keys ~w(id name version firefly description author url license main hooks permissions
            settings assets dependencies optional_dependencies exports shortcodes composer_buttons
-           events jobs http_hosts fields widgets endpoint_auth priority source registry)
+           events jobs http_hosts fields widgets endpoint_auth priority source registry tags
+           theme)
   @required ~w(id name version firefly)
   @id_format ~r/^[a-z][a-z0-9_-]{1,39}$/
   @path_format ~r{^[A-Za-z0-9_-][A-Za-z0-9._/-]*$}
   @name_format ~r/^[A-Za-z_][A-Za-z0-9_]*$/
   @outlets ~w(post_footer thread_header sidebar user_profile composer)
+  @tag_format ~r/^[a-z0-9][a-z0-9-]{0,29}$/
+  # What only plugin code uses.
+  @code_keys ~w(hooks permissions exports shortcodes composer_buttons events jobs http_hosts
+                fields widgets endpoint_auth)
+
+  @doc "Whether `manifest` has plugin code (a `main` file to run)."
+  def plugin?(%__MODULE__{main: main}), do: is_binary(main)
+
+  @doc "Whether `manifest` carries a theme."
+  def theme?(%__MODULE__{theme: theme}), do: is_map(theme)
 
   @doc "The places widgets can go."
   def outlets, do: @outlets
@@ -118,7 +140,7 @@ defmodule Firefly.Plugin.Manifest do
         end
       end)
 
-    errors = if errors == [], do: consistency(attrs), else: errors
+    errors = if errors == [], do: package_problems(attrs) ++ consistency(attrs), else: errors
 
     if errors == [] do
       {:ok, build(attrs, source)}
@@ -128,6 +150,27 @@ defmodule Firefly.Plugin.Manifest do
   end
 
   def parse(_attrs, _source), do: {:error, "Invalid manifest: it must be a JSON object."}
+
+  # A package's parts: a theme goes with its tag, plugin keys with code.
+  defp package_problems(attrs) do
+    theme? = Map.has_key?(attrs, "theme")
+    code? = not theme? or Map.has_key?(attrs, "main")
+
+    tag =
+      if theme? != "theme" in Map.get(attrs, "tags", []),
+        do: ["a package with a \"theme\" carries the theme tag, and only then"],
+        else: []
+
+    tag ++
+      for key <- @code_keys,
+          not code?,
+          Map.has_key?(attrs, key),
+          # A stored manifest (`to_map/1`) spells out the defaults.
+          attrs[key] != Map.get(blank(), String.to_existing_atom(key)),
+          do: "\"#{key}\" needs plugin code: name its \"main\" file"
+  end
+
+  defp blank, do: %__MODULE__{id: nil, name: nil, version: nil, firefly: nil}
 
   # Keys that only make sense together.
   defp consistency(attrs) do
@@ -167,6 +210,7 @@ defmodule Firefly.Plugin.Manifest do
       __MODULE__,
       Map.merge(fields, %{
         source: source,
+        main: Map.get(attrs, "main", if(Map.has_key?(attrs, "theme"), do: nil, else: "index.js")),
         settings: Enum.map(Map.get(attrs, "settings", []), &Settings.definition/1)
       })
     )
@@ -311,6 +355,17 @@ defmodule Firefly.Plugin.Manifest do
       ["\"#{key}\" must be an object of plugin ids to version requirements"]
     end
   end
+
+  defp check("tags", value, _source) do
+    if is_list(value) and length(value) <= 10 and
+         Enum.all?(value, &(is_binary(&1) and &1 =~ @tag_format)),
+       do: duplicates("tags", value),
+       else: ["\"tags\" must be a list of at most 10 lowercase tags (letters, digits and -)"]
+  end
+
+  # Its contents are checked with the package's files (see Firefly.Packages.Archive).
+  defp check("theme", value, _source),
+    do: if(is_map(value), do: [], else: ["\"theme\" must be an object"])
 
   defp check("priority", value, _source) do
     if is_integer(value) and value in 0..1000,

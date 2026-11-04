@@ -46,6 +46,19 @@ defmodule Firefly.BoundariesTest do
              Enum.join(Enum.uniq(violations), "\n")
   end
 
+  test "every context is a boundary" do
+    boundaries = boundaries()
+
+    for context <- [Firefly.Packages, Firefly.Plugins, Firefly.Plugin, Firefly.Themes] do
+      assert Map.has_key?(boundaries, context), "#{inspect(context)} isn't a boundary"
+    end
+
+    assert MapSet.equal?(
+             boundaries[Firefly.Packages],
+             MapSet.new([Firefly.Packages.Package, Firefly.Packages.Archive])
+           )
+  end
+
   # Every compiled boundary of the domain, with its exports (full names).
   defp boundaries do
     {:ok, modules} = :application.get_key(:firefly, :modules)

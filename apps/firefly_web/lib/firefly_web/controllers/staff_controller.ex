@@ -67,4 +67,7 @@ defmodule FireflyWeb.StaffController do
 
   @doc "The old admin at `/admin` (and its pages) is the staff admin now."
   def admin_moved(conn, _params), do: redirect(conn, to: ~p"/staff")
+
+  @doc "The plugins list is the packages list now."
+  def plugins_moved(conn, _params), do: redirect(conn, to: ~p"/staff/packages")
 end

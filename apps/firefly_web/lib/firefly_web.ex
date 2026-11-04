@@ -32,6 +32,7 @@ defmodule FireflyWeb do
       Firefly.Messaging,
       Firefly.Moderation,
       Firefly.Notifications,
+      Firefly.Packages,
       Firefly.Plugin,
       Firefly.Plugins,
       Firefly.Rendering,

@@ -19,7 +19,7 @@ defmodule Firefly do
   | `Firefly.Groups`, `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory` | groups, trust levels, badges, the user directory |
   | `Firefly.Uploads`, `Firefly.Rendering` | uploaded files; Markdown/BBCode, emoji, embeds and link previews |
   | `Firefly.SiteSettings` | site settings |
-  | `Firefly.Themes` | themes and theme components: color schemes, CSS, head/header/footer HTML, assets, previews, import/export |
+  | `Firefly.Themes` | themes and theme components: color schemes, CSS, head/header/footer HTML, assets, previews; the themes packages install |
   | `Firefly.Analytics` | first-party traffic counts: page views, topic views, referrers, link clicks |
   | `Firefly.Reports` | the admin dashboard's overview and reports |
   | `Firefly.Backups` | backups and restores, read-only mode |
@@ -29,6 +29,7 @@ defmodule Firefly do
   | `Firefly.AI` | AI model providers (pluggable adapters), per-feature provider selection, quotas and the usage log |
   | `Firefly.Import` | imports from other forums and platforms: runs, the imported id map, writing imported records, permalinks (the importers are the `firefly_import` app) |
   | `Firefly.Plugins` (with `Firefly.Plugin`) | the plugin API, hook runner, host functions and installed plugins |
+  | `Firefly.Packages` | how plugins and themes ship: the package format, upload/URL/GitHub install, versions, dependencies, uninstall, the per-site list |
 
   A context's public API is its root module plus the modules its `use
   Boundary` exports (schemas and feature modules); everything else in it is

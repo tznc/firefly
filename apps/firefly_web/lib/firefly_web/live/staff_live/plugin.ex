@@ -4,13 +4,13 @@ defmodule FireflyWeb.StaffLive.Plugin do
   generated from its manifest's settings schema), statistics, error log and
   egress log (its recent outgoing requests, see
   `Firefly.Plugins.Egress`, filtered by host and allowed or blocked).
-  Enabling and disabling are on the plugins page, which confirms cascades.
+  Enabling and disabling are on the packages page, which confirms cascades.
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  import FireflyWeb.StaffLive.Plugins,
+  import FireflyWeb.StaffLive.Packages,
     only: [status_badge: 1, dependency_list: 1, permission_list: 1]
 
   import FireflyWeb.PluginComponents
@@ -36,7 +36,7 @@ defmodule FireflyWeb.StaffLive.Plugin do
         {:ok,
          socket
          |> put_flash(:error, "No plugin #{id} is installed.")
-         |> push_navigate(to: ~p"/staff/plugins")}
+         |> push_navigate(to: ~p"/staff/packages")}
     end
   end
 
@@ -148,7 +148,7 @@ defmodule FireflyWeb.StaffLive.Plugin do
             else: "uploaded plugin"}
         </:subtitle>
         <:actions>
-          <.link navigate={~p"/staff/plugins"} class="btn btn-sm btn-ghost">All plugins</.link>
+          <.link navigate={~p"/staff/packages"} class="btn btn-sm btn-ghost">All packages</.link>
         </:actions>
       </.page_header>
 

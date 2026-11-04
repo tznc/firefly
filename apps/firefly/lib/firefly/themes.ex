@@ -22,8 +22,14 @@ defmodule Firefly.Themes do
   `active/2`), else the member's pick among the `user_selectable` themes,
   else the `default_theme_id` site setting's (0: none, the built-in
   look). Color schemes are checked for contrast (`Firefly.Themes.Contrast`);
-  shortfalls are warnings, not errors. Themes export to and import from a
-  JSON bundle, also fetched from a URL or a GitHub repository (SSRF-guarded).
+  shortfalls are warnings, not errors.
+
+  Themes are shipped as packages, like plugins (see `Firefly.Packages`):
+  installing one with a `theme` section creates or updates its themes
+  here (`install_package/4`), linked to the package and stamped with a
+  hash of what it set, so an upgrade can tell when an admin edited them
+  since. A package's themes never run scripts; an admin's own themes can
+  be exported as a package (`package_section/1`).
 
   Every change is staff-logged.
   """
@@ -38,7 +44,6 @@ defmodule Firefly.Themes do
   alias Firefly.{Repo, SiteSettings, Uploads}
   alias Firefly.Accounts.User
   alias Firefly.Moderation.StaffLog
-  alias Firefly.Rendering.LinkPreviews.Fetcher
   alias Firefly.Themes.{Contrast, Palette, Scrubber, Theme, ThemeAsset}
 
   @cache {__MODULE__, :css}
@@ -212,6 +217,9 @@ defmodule Firefly.Themes do
   Lets `theme`'s HTML run scripts or not, as `admin` (an admin decision,
   staff-logged as `theme.allow_scripts`).
   """
+  def set_allow_scripts(%Theme{package_id: id}, true, _admin) when is_integer(id),
+    do: {:error, :package}
+
   def set_allow_scripts(%Theme{} = theme, allow?, %User{} = admin) when is_boolean(allow?) do
     Repo.transact(fn ->
       {:ok, updated} = theme |> Ecto.Changeset.change(allow_scripts: allow?) |> Repo.update()
@@ -386,107 +394,221 @@ defmodule Firefly.Themes do
     end)
   end
 
-  ## Import and export
+  ## Packages
 
-  @bundle_fields ~w(name description component colors css head_html header_html footer_html)
+  @package_fields ~w(description colors css head_html header_html footer_html)a
 
   @doc """
-  `theme` as a JSON bundle: its fields, its components (as bundles) and its
-  assets (inline, base64). Never whether it may run scripts: an import
-  decides that again.
+  A hash of what a package sets on `theme`: its description, colors, CSS,
+  HTML, components and asset names. It's stored when a package installs
+  the theme, so a different one later means an admin edited it.
   """
-  def export(%Theme{} = theme) do
-    theme = Repo.preload(theme, [:components, assets: :upload], force: true)
-    Jason.encode!(bundle(theme), pretty: true)
+  def content_hash(%Theme{} = theme) do
+    theme = Repo.preload(theme, [:components, :assets], force: true)
+
+    content = {
+      Map.take(theme, @package_fields),
+      theme.components |> Enum.map(& &1.id) |> Enum.sort(),
+      theme.assets |> Enum.map(& &1.name) |> Enum.sort()
+    }
+
+    Base.encode16(:crypto.hash(:sha256, :erlang.term_to_binary(content)), case: :lower)
   end
 
-  defp bundle(theme) do
-    theme
-    |> Map.take(Enum.map(@bundle_fields, &String.to_existing_atom/1))
-    |> Map.put(
-      :components,
-      Enum.map(Repo.preload(theme.components, [:components, assets: :upload]), &bundle/1)
+  @doc "Whether an admin changed `theme` since its package installed it."
+  def locally_edited?(%Theme{package_hash: nil}), do: false
+  def locally_edited?(%Theme{package_hash: hash} = theme), do: content_hash(theme) != hash
+
+  @doc "The themes and components the package with row id `package_id` installed."
+  def package_themes(package_id) do
+    Repo.all(
+      from(t in Theme, where: t.package_id == ^package_id, order_by: [t.component, t.name])
     )
-    |> Map.put(
-      :assets,
-      for asset <- Repo.preload(theme, assets: :upload).assets,
-          {:ok, data} <- [Uploads.contents(asset.upload)] do
-        %{name: asset.name, filename: asset.upload.filename, data: Base.encode64(data)}
+  end
+
+  @doc """
+  Creates or updates the themes a package's `theme` section describes (see
+  `Firefly.Packages`), for `package` (its row), as `admin`: its components
+  first, then the theme including them. CSS, HTML and asset files come
+  from `files`. Themes the package no longer has are deleted. A package's
+  themes never run scripts. Run inside the install's transaction.
+  """
+  def install_package(section, files, package, %User{} = admin) do
+    existing = Map.new(package_themes(package.id), &{&1.package_key, &1})
+
+    components =
+      for spec <- section["components"] || [] do
+        name = spec["name"] || "#{section["name"] || package.name} component"
+        spec = Map.put(spec, "component", true)
+
+        put_package_theme(
+          Map.put(spec, "name", name),
+          "component:" <> name,
+          files,
+          package,
+          existing,
+          admin
+        )
       end
-    )
+
+    spec = Map.put_new(section, "name", package.name)
+    theme = put_package_theme(spec, "theme", files, package, existing, admin)
+
+    theme =
+      if theme.component do
+        theme
+      else
+        {:ok, theme} = set_components(theme, Enum.map(components, & &1.id), admin)
+        theme
+      end
+
+    kept = MapSet.new([theme | components], & &1.id)
+
+    for {_key, old} <- existing,
+        not MapSet.member?(kept, old.id),
+        do: {:ok, _} = delete_theme(old, admin)
+
+    Enum.map([theme | components], &stamp!/1)
   end
 
-  @doc """
-  Imports a JSON bundle (see `export/1`) as `admin`: the theme, its
-  components (made new each time) and assets. Its scripts stay off.
-  `{:ok, theme}` or `{:error, message or changeset}`.
-  """
-  def import(json, %User{} = admin, source_url \\ nil) when is_binary(json) do
-    with {:ok, %{} = bundle} <- decode(json) do
-      Repo.transact(fn -> import_bundle(bundle, admin, source_url) end)
-    end
-  end
-
-  defp decode(json) do
-    case Jason.decode(json) do
-      {:ok, %{"name" => name} = bundle} when is_binary(name) -> {:ok, bundle}
-      _invalid -> {:error, "That isn't a theme bundle (JSON with at least a name)."}
-    end
-  end
-
-  defp import_bundle(bundle, admin, source_url) do
+  defp put_package_theme(spec, key, files, package, existing, admin) do
     attrs =
-      bundle
-      |> Map.take(@bundle_fields)
-      |> Map.put("name", unique_name(bundle["name"]))
-      |> Map.put("source_url", source_url)
+      %{
+        "description" => spec["description"] || "",
+        "component" => spec["component"] || false,
+        "colors" => spec["colors"] || %{}
+      }
+      |> Map.merge(
+        for(
+          field <- ~w(css head_html header_html footer_html),
+          into: %{},
+          do: {field, files[spec[field]] || ""}
+        )
+      )
 
-    with {:ok, theme} <- create_theme(attrs, admin),
-         :ok <- import_assets(theme, bundle["assets"] || [], admin),
-         {:ok, components} <- import_components(bundle["components"] || [], admin) do
-      theme =
-        if components == [],
-          do: theme,
-          else: elem(set_components(theme, Enum.map(components, & &1.id), admin), 1)
+    theme =
+      case existing[key] do
+        nil ->
+          attrs = Map.put(attrs, "name", unique_name(spec["name"]))
 
-      log(admin, "theme.import", theme, %{source: source_url})
-      {:ok, get_theme!(theme.id)}
-    end
-  end
+          %Theme{package_id: package.id, package_key: key}
+          |> Theme.changeset(attrs)
+          |> Repo.insert()
+          |> package_saved!(admin, "theme.create", package)
 
-  defp import_components(bundles, admin) do
-    Enum.reduce_while(bundles, {:ok, []}, fn bundle, {:ok, acc} ->
-      case import_bundle(Map.put(bundle, "component", true), admin, nil) do
-        {:ok, component} -> {:cont, {:ok, [component | acc]}}
-        error -> {:halt, error}
+        %Theme{} = theme ->
+          theme
+          |> Theme.changeset(attrs)
+          |> Ecto.Changeset.change(allow_scripts: false)
+          |> Repo.update()
+          |> package_saved!(admin, "theme.update", package)
       end
-    end)
+
+    replace_assets!(theme, spec["assets"] || %{}, files, admin)
+    recompile!(theme)
   end
 
-  defp import_assets(theme, assets, admin) do
-    dir = Path.join(System.tmp_dir!(), "firefly-theme-#{System.unique_integer([:positive])}")
+  defp package_saved!({:ok, theme}, admin, action, package) do
+    log(admin, action, theme, %{package: package.package_id, version: package.version})
+    theme
+  end
+
+  defp package_saved!({:error, changeset}, _admin, _action, _package) do
+    details =
+      Enum.map_join(changeset.errors, "; ", fn {field, {text, _}} -> "#{field} #{text}" end)
+
+    Repo.rollback("Its theme isn't valid: #{details}.")
+  end
+
+  defp replace_assets!(theme, assets, files, admin) do
+    Repo.delete_all(from(a in ThemeAsset, where: a.theme_id == ^theme.id))
+    dir = Path.join(System.tmp_dir!(), "firefly-package-#{System.unique_integer([:positive])}")
     File.mkdir_p!(dir)
 
     try do
-      Enum.reduce_while(assets, :ok, fn asset, :ok ->
-        with %{"name" => name, "filename" => filename, "data" => data} <- asset,
-             {:ok, bytes} <- Base.decode64(data),
-             path = Path.join(dir, Path.basename(filename)),
-             :ok <- File.write(path, bytes),
-             {:ok, _asset} <- add_asset(theme, name, path, filename, admin) do
-          {:cont, :ok}
+      for {name, path} <- assets do
+        file = Path.join(dir, Path.basename(path))
+        File.write!(file, Map.fetch!(files, path))
+
+        with {:ok, upload} <- Uploads.create(admin, file, Path.basename(path), variant: "theme"),
+             {:ok, _asset} <-
+               %ThemeAsset{theme_id: theme.id, upload_id: upload.id}
+               |> ThemeAsset.changeset(%{name: name})
+               |> Repo.insert() do
+          :ok
         else
-          {:error, %Ecto.Changeset{}} -> {:halt, {:error, "An asset's name isn't valid."}}
-          {:error, message} when is_binary(message) -> {:halt, {:error, message}}
-          _invalid -> {:halt, {:error, "An asset in the bundle isn't valid."}}
+          _invalid -> Repo.rollback("Its asset #{name} isn't an image or font Firefly takes.")
         end
-      end)
+      end
     after
       File.rm_rf(dir)
     end
   end
 
-  # An imported theme named like an existing one gets a number.
+  # Records what the package set, to tell local edits apart later.
+  defp stamp!(theme) do
+    {:ok, theme} =
+      theme |> Ecto.Changeset.change(package_hash: content_hash(theme)) |> Repo.update()
+
+    theme
+  end
+
+  @doc "Deletes the themes the package with row id `package_id` installed, as `admin`."
+  def delete_package_themes(package_id, %User{} = admin) do
+    for theme <- package_themes(package_id), do: {:ok, _} = delete_theme(theme, admin)
+    :ok
+  end
+
+  @doc """
+  `theme` as a package's theme section, with its files (CSS, HTML and
+  assets): its components inline. Never whether it may run scripts.
+  """
+  def package_section(%Theme{} = theme) do
+    theme = Repo.preload(theme, [components: [assets: :upload], assets: :upload], force: true)
+    {section, files} = section(theme, "")
+
+    {components, component_files} =
+      theme.components
+      |> Enum.with_index(1)
+      |> Enum.map(fn {component, n} -> section(component, "components/#{n}/") end)
+      |> Enum.unzip()
+
+    section = if components == [], do: section, else: Map.put(section, "components", components)
+    {section, Enum.reduce(component_files, files, &Map.merge(&2, &1))}
+  end
+
+  defp section(theme, dir) do
+    texts =
+      for {field, file} <- [
+            css: "theme.css",
+            head_html: "head.html",
+            header_html: "header.html",
+            footer_html: "footer.html"
+          ],
+          text = Map.fetch!(theme, field),
+          text not in [nil, ""],
+          do: {to_string(field), dir <> file, text}
+
+    assets =
+      for asset <- theme.assets,
+          {:ok, data} <- [Uploads.contents(asset.upload)],
+          do: {asset.name, "#{dir}assets/#{asset.name}/#{asset.upload.filename}", data}
+
+    section =
+      %{
+        "name" => theme.name,
+        "description" => theme.description || "",
+        "component" => theme.component,
+        "colors" => theme.colors || %{}
+      }
+      |> Map.merge(Map.new(texts, fn {key, path, _text} -> {key, path} end))
+      |> Map.put("assets", Map.new(assets, fn {name, path, _data} -> {name, path} end))
+
+    files = Map.new(texts, fn {_key, path, text} -> {path, text} end)
+    {section, Map.merge(files, Map.new(assets, fn {_name, path, data} -> {path, data} end))}
+  end
+
+  # A theme named like an existing one gets a number.
   defp unique_name(name) do
     name = String.slice(String.trim(name), 0, 50)
     taken = MapSet.new(Repo.all(from(t in Theme, select: fragment("lower(?)", t.name))))
@@ -497,49 +619,14 @@ defmodule Firefly.Themes do
     end)
   end
 
-  @doc """
-  Imports the bundle at `url` as `admin`: a JSON bundle's URL, or a GitHub
-  repository's (`https://github.com/owner/repo`, whose default branch's
-  `firefly-theme.json` is fetched). The fetch is SSRF-guarded (public
-  addresses only, see `Firefly.Rendering.LinkPreviews.Fetcher`) and
-  capped at 5 MB.
-  """
-  def import_from_url(url, %User{} = admin) do
-    with {:ok, bundle_url} <- bundle_url(String.trim(url || "")),
-         {:ok, %{body: body}} <- fetch(bundle_url) do
-      __MODULE__.import(body, admin, String.trim(url))
-    end
-  end
-
-  defp bundle_url(url) do
-    case URI.parse(url) do
-      %URI{scheme: "https", host: "github.com", path: "/" <> path} ->
-        case String.split(String.trim_trailing(path, ".git"), "/", trim: true) do
-          [owner, repo] ->
-            {:ok, "https://raw.githubusercontent.com/#{owner}/#{repo}/HEAD/firefly-theme.json"}
-
-          _other ->
-            {:error, "Give the repository's address, like https://github.com/owner/repo."}
-        end
-
-      %URI{scheme: scheme, host: host} when scheme in ["http", "https"] and is_binary(host) ->
-        {:ok, url}
-
-      _invalid ->
-        {:error, "Give an http(s) URL."}
-    end
-  end
-
-  defp fetch(url) do
-    case Fetcher.get(url, types: ["application/json", "text/plain"], max_bytes: 5_000_000) do
-      {:ok, response} -> {:ok, response}
-      {:error, reason} -> {:error, "The bundle couldn't be fetched (#{inspect(reason)})."}
-    end
-  end
-
   @doc "A message for an error from this module."
   def message(:component), do: "That's a component: include it in a theme instead."
   def message(:not_selectable), do: "That theme can't be picked."
   def message(:not_found), do: "That's gone already."
+
+  def message(:package),
+    do:
+      "Themes from packages never run scripts: export it and import it as your own to allow them."
+
   def message(message) when is_binary(message), do: message
 end

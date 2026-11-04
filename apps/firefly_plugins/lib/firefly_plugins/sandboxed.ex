@@ -47,9 +47,6 @@ defmodule FireflyPlugins.Sandboxed do
   end
 
   @impl Firefly.Plugin.Sandbox
-  def read_bundle(zip), do: Bundle.read(zip)
-
-  @impl Firefly.Plugin.Sandbox
   def bundle_code(bundle), do: Bundle.code(bundle)
 
   @impl Firefly.Plugin.Sandbox

@@ -2,8 +2,8 @@ defmodule FireflyWeb.StaffLive.Themes do
   @moduledoc """
   The themes admin (admins only; see `Firefly.Themes`): the themes and
   theme components, which theme is the site's default and which members
-  may pick, creating new ones, and importing a JSON bundle from a file, a
-  URL or a GitHub repository.
+  may pick, and creating new ones. Themes are installed as packages, with
+  plugins, at `/staff/packages` (see `Firefly.Packages`).
   """
   use FireflyWeb, :live_view
 
@@ -19,8 +19,6 @@ defmodule FireflyWeb.StaffLive.Themes do
        socket
        |> assign(:page_title, gettext("Themes"))
        |> assign(:form, to_form(Themes.change_theme(%Theme{})))
-       # JSON, told apart by its content.
-       |> allow_upload(:bundle, accept: :any, max_entries: 1, max_file_size: 10_000_000)
        |> load()}
     else
       {:ok,
@@ -51,40 +49,6 @@ defmodule FireflyWeb.StaffLive.Themes do
     end
   end
 
-  defp theme_event("validate_upload", _params, socket), do: {:noreply, socket}
-
-  defp theme_event("import_file", _params, socket) do
-    json =
-      consume_uploaded_entries(socket, :bundle, fn %{path: path}, _entry ->
-        {:ok, File.read!(path)}
-      end)
-
-    case json do
-      [json] -> imported(socket, Themes.import(json, socket.assigns.current_user))
-      [] -> {:noreply, put_flash(socket, :error, gettext("Pick a theme bundle (JSON)."))}
-    end
-  end
-
-  defp theme_event("import_url", %{"url" => url}, socket),
-    do: imported(socket, Themes.import_from_url(url, socket.assigns.current_user))
-
-  defp imported(socket, {:ok, theme}) do
-    {:noreply,
-     socket
-     |> put_flash(:info, gettext("Imported %{name}.", name: theme.name))
-     |> push_navigate(to: ~p"/staff/themes/#{theme.id}")}
-  end
-
-  defp imported(socket, {:error, %Ecto.Changeset{} = changeset}) do
-    details =
-      Enum.map_join(changeset.errors, "; ", fn {field, {text, _}} -> "#{field} #{text}" end)
-
-    {:noreply, put_flash(socket, :error, gettext("Not imported: %{details}", details: details))}
-  end
-
-  defp imported(socket, {:error, message}),
-    do: {:noreply, put_flash(socket, :error, Themes.message(message))}
-
   attr :theme, :any, required: true
   attr :default_id, :integer, default: nil
 
@@ -100,6 +64,7 @@ defmodule FireflyWeb.StaffLive.Themes do
         <span :if={@theme.id == @default_id} class="badge badge-sm badge-primary">{gettext("default")}</span>
         <span :if={@theme.user_selectable} class="badge badge-sm">{gettext("members can pick it")}</span>
         <span :if={@theme.allow_scripts} class="badge badge-sm badge-warning">{gettext("runs scripts")}</span>
+        <span :if={@theme.package_id} class="badge badge-sm badge-outline">{gettext("from a package")}</span>
         <span :if={@theme.components != []} class="badge badge-sm badge-ghost">
           {ngettext("1 component", "%{count} components", length(@theme.components))}
         </span>
@@ -147,26 +112,15 @@ defmodule FireflyWeb.StaffLive.Themes do
         </.form>
       </section>
 
-      <section class="card border border-base-300 bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title">{gettext("Import")}</h2>
-          <form id="import-file-form" phx-submit="import_file" phx-change="validate_upload" class="flex flex-wrap items-end gap-2">
-            <.live_file_input upload={@uploads.bundle} class="file-input" aria-label={gettext("Theme bundle")} />
-            <.button variant="primary">{gettext("Import file")}</.button>
-          </form>
-          <form id="import-url-form" phx-submit="import_url" class="flex flex-wrap items-end gap-2">
-            <.input
-              name="url"
-              value=""
-              type="url"
-              label={gettext("Or from a URL or GitHub repository")}
-              placeholder={gettext("https://github.com/owner/repo")}
-            />
-            <.button variant="primary" class="mb-2">{gettext("Import from URL")}</.button>
-          </form>
-          <p class="text-xs text-base-content/70">
-            {gettext("A GitHub repository's firefly-theme.json is read from its default branch. Imported themes never run scripts until you allow it.")}
+      <section id="theme-packages" class="card border border-base-300 bg-base-100">
+        <div class="card-body gap-2">
+          <h2 class="card-title">{gettext("Install a theme")}</h2>
+          <p class="text-sm text-base-content/70">
+            {gettext("Themes are installed as packages, like plugins: upload one, or fetch it from a URL or a GitHub repository. Old theme bundles (JSON) install there too.")}
           </p>
+          <div>
+            <.link navigate={~p"/staff/packages?tag=theme"} class="btn btn-sm btn-primary">{gettext("Theme packages")}</.link>
+          </div>
         </div>
       </section>
     </Layouts.app>
