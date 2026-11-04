@@ -6,9 +6,10 @@ defmodule Firefly.Moderation.StaffLog do
   The context functions that perform staff actions (thread moderation, edits
   and deletions of other people's content, category changes) call
   `record/4` inside the action's transaction, so an action is logged if and
-  only if it happened. Edits made in the Kaffy admin at `/admin` are logged
-  by `FireflyWeb.Admin.Logged`. What members do to their own content is
-  not staff action and isn't logged.
+  only if it happened. What members do to their own content is not staff
+  action and isn't logged. (`admin.create`, `admin.update` and
+  `admin.delete` entries are from the Kaffy admin Firefly once had, kept
+  so old entries still read.)
   """
 
   import Ecto.Query
@@ -24,13 +25,18 @@ defmodule Firefly.Moderation.StaffLog do
     thread.timer thread.timer_cancel thread.slow_mode
     thread.accept_answer thread.unaccept_answer
     post.edit post.delete post.restore post.unhide post.approve post.reject post.wiki post.unwiki
+    post.change_owner
     poll.close poll.open
     flag.agree flag.disagree flag.defer
     category.create category.update category.delete
     tag_group.create tag_group.update tag_group.delete tag.synonym tag.unsynonym
-    role.create role.update role.grant role.revoke role.owner role.unowner
+    role.create role.update role.delete role.grant role.revoke role.owner role.unowner
     user.silence user.unsilence user.suspend user.unsuspend user.reset_two_factor
-    user.trust_level
+    user.trust_level user.edit user.approve user.reject user.anonymize user.delete user.merge
+    user.impersonate user.impersonate_stop user.password_reset
+    notification.send notification.delete email.test
+    screening.create screening.delete screening.block
+    category.permissions category.defaults
     setting.update
     admin.create admin.update admin.delete
     plugin.install plugin.upgrade plugin.enable plugin.disable plugin.uninstall plugin.settings
@@ -94,8 +100,8 @@ defmodule Firefly.Moderation.StaffLog do
   defp target_ref(%User{id: id}), do: {"user", id}
   defp target_ref({type, id}) when is_binary(type), do: {type, id}
 
-  # The user fields an entry about a user may hold (Kaffy snapshots and
-  # edits, role changes) that would say who a deleted account was.
+  # The user fields an entry about a user may hold (edits, old Kaffy
+  # snapshots, role changes) that would say who a deleted account was.
   @personal_fields ~w(username name email bio website location)
 
   @doc """
@@ -191,8 +197,8 @@ defmodule Firefly.Moderation.StaffLog do
   end
 
   @doc """
-  The target types `targets/1` looks up. Others (e.g. roles edited in the
-  Kaffy admin) have no page of their own.
+  The target types `targets/1` looks up. Others (e.g. screened items)
+  have no page of their own.
   """
   def linked_types, do: ~w(thread post category user tag)
 

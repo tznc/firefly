@@ -35,7 +35,8 @@ defmodule FireflyWeb.DashboardLiveTest do
     conn
     |> log_in_as(admin)
     |> visit(~p"/")
-    |> click_link("nav a", "Dashboard")
+    |> click_link("nav a", "Admin")
+    |> click_link("#staff-nav a", "Dashboard")
     |> assert_path(~p"/staff/dashboard")
   end
 

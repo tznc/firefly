@@ -23,7 +23,8 @@ defmodule Firefly.Notifications.Emails do
         "The #{escape(site())} thread #{link(thread.title, thread_url(thread))} has received #{link("a reply", reply)}:",
       text:
         "The #{site()} thread #{thread.title} [#{thread_url(thread)}] has received a reply [#{reply}]:",
-      reason: @watching
+      reason: @watching,
+      template: "thread_new_post_notification"
     )
   end
 
@@ -32,7 +33,8 @@ defmodule Firefly.Notifications.Emails do
       subject: "A new thread was started in a category you are watching on Firefly",
       html: "A new Firefly thread was started: #{link(thread.title, thread_url(thread))}",
       text: "A new Firefly thread was started: #{thread.title} [#{thread_url(thread)}]",
-      reason: @watching_category
+      reason: @watching_category,
+      template: "thread_created_notification"
     )
   end
 
@@ -46,6 +48,7 @@ defmodule Firefly.Notifications.Emails do
     url = post_url(thread, post)
 
     new_email()
+    |> put_private(:template, "mailing_list_post")
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("[#{site()}] #{thread.title}")
@@ -80,12 +83,14 @@ defmodule Firefly.Notifications.Emails do
         "#{escape(author)} #{link("mentioned you", mention)} in the #{escape(site())} thread #{link(thread.title, thread_url(thread))}:",
       text:
         "#{author} mentioned you [#{mention}] in the #{site()} thread #{thread.title} [#{thread_url(thread)}]:",
-      reason: @mentioned
+      reason: @mentioned,
+      template: "mention_notification"
     )
   end
 
   defp post_notification(user, thread, post, parts) do
     new_email()
+    |> put_private(:template, parts[:template])
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject(parts[:subject])
@@ -121,6 +126,7 @@ defmodule Firefly.Notifications.Emails do
     url = "#{Firefly.URLs.conversation_url(conversation)}#message-#{message.id}"
 
     new_email()
+    |> put_private(:template, "message_notification")
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("#{subject} on #{site()}")
@@ -148,6 +154,7 @@ defmodule Firefly.Notifications.Emails do
   """
   def chat_notification(%User{} = user, subject, body, url) do
     new_email()
+    |> put_private(:template, "chat_notification")
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("#{subject} on #{site()}")
@@ -172,6 +179,7 @@ defmodule Firefly.Notifications.Emails do
   @doc "Tells `user` they were silenced or suspended (`subject` says which and until when)."
   def penalty(%User{} = user, subject, reason) do
     new_email()
+    |> put_private(:template, "penalty")
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("#{subject} on #{site()}")
@@ -192,6 +200,7 @@ defmodule Firefly.Notifications.Emails do
   @doc "An invitation to join, for `invite.email` (with its inviter loaded)."
   def invite(%{email: email, invited_by: %User{} = inviter}, url) do
     new_email()
+    |> put_private(:template, "invite")
     |> to(email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("#{inviter.username} invited you to join #{site()}")
@@ -211,6 +220,7 @@ defmodule Firefly.Notifications.Emails do
 
   def confirmation(%User{} = user, url) do
     new_email()
+    |> put_private(:template, "confirmation")
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("Confirm your email address for #{site()}")
@@ -232,6 +242,7 @@ defmodule Firefly.Notifications.Emails do
 
   def password_reset(%User{} = user, url) do
     new_email()
+    |> put_private(:template, "password_reset")
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("Reset your #{site()} password")
@@ -260,6 +271,7 @@ defmodule Firefly.Notifications.Emails do
       end
 
     new_email()
+    |> put_private(:template, "magic_link")
     |> to(address)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("Your #{site()} login link")
@@ -289,6 +301,7 @@ defmodule Firefly.Notifications.Emails do
     since = Calendar.strftime(digest.since, "%b %-d")
 
     new_email()
+    |> put_private(:template, "digest")
     |> to(user.email)
     |> from(Application.fetch_env!(:firefly, :email)[:from])
     |> subject("[#{site()}] Summary since #{since}")
@@ -329,6 +342,78 @@ defmodule Firefly.Notifications.Emails do
 
   defp digest_section_text(title, items, item),
     do: "\n#{title}:\n" <> Enum.map_join(items, &"- #{item.(&1)}\n")
+
+  @doc "A test email to `address`, which staff send from `/staff/emails` to check delivery."
+  def test_email(address) do
+    new_email()
+    |> put_private(:template, "test_email")
+    |> to(address)
+    |> from(Application.fetch_env!(:firefly, :email)[:from])
+    |> subject("Test email from #{site()}")
+    |> html_body("""
+    <p>This is a test email from #{link(site(), Firefly.Endpoint.url())}.</p>
+    <p>If you're reading it, email delivery works.</p>
+    """)
+    |> text_body("""
+    This is a test email from #{site()} (#{Firefly.Endpoint.url()}).
+
+    If you're reading it, email delivery works.
+    """)
+  end
+
+  @doc """
+  Every template built with sample data (no database), for staff to
+  preview at `/staff/emails`: `{template, email}` pairs, in the order the
+  templates appear here.
+  """
+  def previews do
+    user = %User{id: 1, username: "ada", name: "Ada", email: "ada@example.com"}
+    author = %User{id: 2, username: "grace", name: "Grace", email: "grace@example.com"}
+    category = %Firefly.Discussion.Category{id: 1, title: "General"}
+
+    thread = %Thread{id: 1, category_id: 1, title: "Welcome to the forum", category: category}
+
+    post = %Post{
+      id: 2,
+      thread_id: 1,
+      body: "Hello **everyone**! Glad to be here. Has anyone tried @ada's tip yet?",
+      user: author,
+      thread: thread
+    }
+
+    conversation = %Conversation{id: 1, title: "Meetup plans"}
+    message = %Message{id: 1, body: "Are you coming on **Friday**?"}
+    url = Firefly.Endpoint.url() <> "/example-link"
+
+    digest = %{
+      since: DateTime.add(DateTime.utc_now(:second), -7, :day),
+      threads: [thread],
+      new_posts: 12,
+      replies: [post],
+      notifications:
+        {3,
+         [%Firefly.Notifications.Notification{subject: "@grace replied in Welcome to the forum"}]}
+    }
+
+    [
+      {"thread_new_post_notification", thread_new_post_notification(user, thread, post)},
+      {"thread_created_notification", thread_created_notification(user, thread, post)},
+      {"mailing_list_post", mailing_list_post(user, thread, post)},
+      {"mention_notification", mention_notification(user, thread, post)},
+      {"message_notification",
+       message_notification(user, conversation, message, "@grace sent you a message")},
+      {"chat_notification",
+       chat_notification(user, "@grace mentioned you in #general", "Hi @ada, look at this!", url)},
+      {"penalty",
+       penalty(user, "You were silenced for 1 day", "Posting the same link everywhere.")},
+      {"invite", invite(%{email: "friend@example.com", invited_by: author}, url)},
+      {"confirmation", confirmation(user, url)},
+      {"password_reset", password_reset(user, url)},
+      {"magic_link", magic_link(user, url)},
+      {"digest", digest(user, digest, url)},
+      {"test_email", test_email(user.email)}
+    ]
+  end
 
   defdelegate thread_url(thread), to: Firefly.URLs
 

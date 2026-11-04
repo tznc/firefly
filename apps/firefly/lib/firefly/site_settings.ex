@@ -110,6 +110,15 @@ defmodule Firefly.SiteSettings do
         help: "How long an invitation can be used."
       },
       %{
+        key: "must_approve_users",
+        section: "Registration",
+        type: :boolean,
+        label: "Staff approve new accounts",
+        default: false,
+        help:
+          "On: new accounts can read but not post until a staff member approves them (Users, Pending). Invited people are approved by their invitation."
+      },
+      %{
         key: "require_email_confirmation",
         section: "Registration",
         type: :boolean,
@@ -734,6 +743,16 @@ defmodule Firefly.SiteSettings do
         max: 10_000,
         help:
           "Posts beyond this many in a day aren't emailed to that member (they're still on the site)."
+      },
+      %{
+        key: "email_log_days",
+        section: "Email",
+        type: :integer,
+        label: "Keep the email log (days)",
+        default: 30,
+        min: 1,
+        max: 365,
+        help: "How long the log of sent emails (Staff, Emails) keeps each entry."
       },
       %{
         key: "digests_enabled",

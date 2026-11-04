@@ -35,9 +35,6 @@ defmodule FireflyWeb.Endpoint do
   #
   # You should set gzip to true if you are running phoenix.digest
   # when deploying your static files in production.
-  # Kaffy's admin UI assets
-  plug(Plug.Static, at: "/kaffy", from: :kaffy, gzip: false, only: ~w(assets))
-
   plug(
     Plug.Static,
     at: "/",

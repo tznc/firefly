@@ -44,7 +44,7 @@ defmodule FireflyWeb.StaffLive.Webhooks do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Webhooks" navigate={~p"/staff/webhooks"}>
         <:subtitle>Send events to other services as they happen.</:subtitle>
       </.page_header>

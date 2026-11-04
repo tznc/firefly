@@ -64,7 +64,7 @@ defmodule FireflyWeb.StaffLive.Dashboard do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Dashboard" navigate={~p"/staff/dashboard"}>
         <:subtitle>
           How the forum is doing, {@range.from} to {@range.to}, compared with the period before.

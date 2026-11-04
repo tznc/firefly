@@ -96,7 +96,7 @@ defmodule FireflyWeb.StaffLive.Backups do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Backups" navigate={~p"/staff/backups"}>
         <:subtitle>
           The database{if @local_uploads?, do: " and uploaded files"}, kept {storage_text(@storage)}.

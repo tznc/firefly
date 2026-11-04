@@ -186,7 +186,7 @@ defmodule FireflyWeb.StaffLive.Review do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Review" navigate={~p"/staff/review"}>
         <:subtitle>Flagged posts and posts awaiting approval. Every decision goes to the staff log.</:subtitle>
       </.page_header>

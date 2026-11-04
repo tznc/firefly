@@ -57,7 +57,7 @@ defmodule FireflyWeb.StaffLive.Uploads do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Uploads" navigate={~p"/staff/uploads"}>
         <:subtitle>Files members uploaded, newest first.</:subtitle>
       </.page_header>

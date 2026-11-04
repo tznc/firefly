@@ -28,6 +28,14 @@ defmodule FireflyWeb.Layouts do
     default: false,
     doc: "the page fills the space next to the navigation (no margins, as chat)"
 
+  attr :staff, :boolean,
+    default: false,
+    doc: "a page of the staff admin: the sidebar shows the admin's sections"
+
+  attr :impersonator, :any,
+    default: nil,
+    doc: "the admin seeing the site as `current_user`, if any (a banner offers to stop)"
+
   attr :update_available, :boolean,
     default: false,
     doc: "a newer Firefly is out (admins; see `Firefly.Upgrades`)"
@@ -93,6 +101,7 @@ defmodule FireflyWeb.Layouts do
                 {gettext("The forum is read-only for maintenance (%{reason}). You can read, but not post or change anything for now.", reason: @read_only.reason)}
               </span>
             </div>
+            <.impersonation_banner :if={@impersonator} current_user={@current_user} />
             <.confirm_email_notice current_user={@current_user} />
             <.silenced_notice current_user={@current_user} />
             {render_slot(@inner_block)}
@@ -102,7 +111,14 @@ defmodule FireflyWeb.Layouts do
 
       <div class="drawer-side z-40">
         <label for="nav-drawer" aria-hidden="true" class="drawer-overlay"></label>
-        <nav aria-label={gettext("Forum navigation")} class="min-h-full w-64 border-r border-base-300 bg-base-100 p-4">
+        <.staff_nav
+          :if={@staff}
+          current_user={@current_user}
+          current_path={@current_path}
+          review_count={@review_count}
+          update_available={@update_available}
+        />
+        <nav :if={!@staff} aria-label={gettext("Forum navigation")} class="min-h-full w-64 border-r border-base-300 bg-base-100 p-4">
           <label for="nav-drawer" class="btn btn-ghost btn-sm mb-2 lg:hidden">
             <.icon name="hero-x-mark" class="size-5" /> {gettext("Close menu")}
           </label>
@@ -179,13 +195,12 @@ defmodule FireflyWeb.Layouts do
             >
               {gettext("Invites")}
             </.nav_item>
-            <%= if Firefly.Accounts.admin?(@current_user) do %>
-              <.nav_item
-                path={~p"/staff/dashboard"}
-                current_path={@current_path}
-                icon="hero-chart-bar"
-              >
-                {gettext("Dashboard")}
+            <%= if Firefly.Accounts.staff?(@current_user) do %>
+              <.nav_item path={~p"/staff"} current_path={@current_path} icon="hero-wrench-screwdriver">
+                {gettext("Admin")}
+                <span :if={@update_available} id="update-badge" class="badge badge-sm badge-info">
+                  {gettext("new")}
+                </span>
               </.nav_item>
               <.nav_item path={~p"/staff/review"} current_path={@current_path} icon="hero-inbox-stack">
                 {gettext("Review")}
@@ -198,99 +213,6 @@ defmodule FireflyWeb.Layouts do
                   {@review_count}
                 </span>
               </.nav_item>
-              <.nav_item
-                path={~p"/staff/log"}
-                current_path={@current_path}
-                icon="hero-clipboard-document-list"
-              >
-                {gettext("Staff log")}
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/settings"}
-                current_path={@current_path}
-                icon="hero-adjustments-horizontal"
-              >
-                {gettext("Site settings")}
-              </.nav_item>
-              <.nav_item path={~p"/staff/groups"} current_path={@current_path} icon="hero-user-group">
-                {gettext("Groups")}
-              </.nav_item>
-              <.nav_item path={~p"/staff/tags"} current_path={@current_path} icon="hero-tag">
-                {gettext("Tag groups")}
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/plugins"}
-                current_path={@current_path}
-                icon="hero-puzzle-piece"
-              >
-                {gettext("Plugins")}
-              </.nav_item>
-              <.nav_item path={~p"/staff/uploads"} current_path={@current_path} icon="hero-photo">
-                {gettext("Uploads")}
-              </.nav_item>
-              <.nav_item path={~p"/staff/emoji"} current_path={@current_path} icon="hero-face-smile">
-                {gettext("Emoji")}
-              </.nav_item>
-              <.nav_item path={~p"/staff/badges"} current_path={@current_path} icon="hero-trophy">
-                {gettext("Badges")}
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/watched-words"}
-                current_path={@current_path}
-                icon="hero-eye"
-              >
-                {gettext("Watched words")}
-              </.nav_item>
-              <.nav_item path={~p"/staff/webhooks"} current_path={@current_path} icon="hero-bolt">
-                {gettext("Webhooks")}
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/api-keys"}
-                current_path={@current_path}
-                icon="hero-command-line"
-              >
-                {gettext("API keys")}
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/discourse-connect"}
-                current_path={@current_path}
-                icon="hero-key"
-              >
-                DiscourseConnect
-              </.nav_item>
-              <.nav_item path={~p"/staff/embedding"} current_path={@current_path} icon="hero-code-bracket">
-                {gettext("Embedding")}
-              </.nav_item>
-              <.nav_item path={~p"/staff/ai"} current_path={@current_path} icon="hero-sparkles">
-                AI
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/backups"}
-                current_path={@current_path}
-                icon="hero-archive-box-arrow-down"
-              >
-                {gettext("Backups")}
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/import"}
-                current_path={@current_path}
-                icon="hero-arrow-down-tray"
-              >
-                {gettext("Import")}
-              </.nav_item>
-              <.nav_item
-                path={~p"/staff/upgrade"}
-                current_path={@current_path}
-                icon="hero-arrow-up-circle"
-              >
-                {gettext("Upgrade")}
-                <span :if={@update_available} id="update-badge" class="badge badge-sm badge-info">
-                  {gettext("new")}
-                </span>
-              </.nav_item>
-              <li>
-                <a href="/admin"><.icon name="hero-wrench-screwdriver" class="size-5" /> {gettext("Admin")}</a>
-              </li>
             <% end %>
             <li>
               <.link href={~p"/auth/logout"} method="delete">
@@ -442,19 +364,107 @@ defmodule FireflyWeb.Layouts do
       :read_only,
       :update_available,
       :chat,
-      :shortcuts
+      :shortcuts,
+      :impersonator
     ])
+  end
+
+  attr :current_user, :any, required: true
+
+  @doc """
+  Tells an admin seeing the site as another member (see
+  `FireflyWeb.StaffController`) who they are now, with a way back.
+  """
+  def impersonation_banner(assigns) do
+    ~H"""
+    <div id="impersonation-banner" role="alert" class="alert alert-info">
+      <.icon name="hero-user-circle" class="size-5" />
+      <span>{gettext("You're seeing the site as @%{username}.", username: @current_user.username)}</span>
+      <.link href={~p"/impersonate"} method="delete" class="btn btn-sm">
+        {gettext("Stop impersonating")}
+      </.link>
+    </div>
+    """
+  end
+
+  attr :current_user, :any, required: true
+  attr :current_path, :string, default: nil
+  attr :review_count, :integer, default: 0
+  attr :update_available, :boolean, default: false
+
+  @doc """
+  The staff admin's sidebar: back to the forum, a search of the admin, and
+  its sections (see `FireflyWeb.StaffNav`), showing the pages the viewer
+  may use.
+  """
+  def staff_nav(assigns) do
+    assigns = assign(assigns, :sections, FireflyWeb.StaffNav.sections(assigns.current_user))
+
+    ~H"""
+    <nav id="staff-nav" aria-label={gettext("Admin navigation")} class="min-h-full w-64 border-r border-base-300 bg-base-100 p-4">
+      <label for="nav-drawer" class="btn btn-ghost btn-sm mb-2 lg:hidden">
+        <.icon name="hero-x-mark" class="size-5" /> {gettext("Close menu")}
+      </label>
+      <.link navigate={~p"/"} class="btn btn-ghost btn-sm mb-2 w-full justify-start">
+        <.icon name="hero-arrow-left" class="size-4" /> {gettext("Back to the forum")}
+      </.link>
+      <form action={~p"/staff"} method="get" role="search" class="mb-2">
+        <label class="input input-sm w-full">
+          <.icon name="hero-magnifying-glass" class="size-4 opacity-60" />
+          <input type="search" name="q" placeholder={gettext("Search the admin")} aria-label={gettext("Search the admin")} />
+        </label>
+      </form>
+      <ul class="menu w-full gap-1 p-0">
+        <%= for {title, pages} <- @sections do %>
+          <li class="menu-title">{title}</li>
+          <.nav_item
+            :for={page <- pages}
+            path={page.path}
+            current_path={@current_path}
+            icon={page.icon}
+            prefix={page.path != "/staff"}
+          >
+            {page.label}
+            <span
+              :if={page.path == "/staff/review" and @review_count > 0}
+              id="review-count"
+              class="badge badge-sm badge-warning"
+              aria-label={gettext("%{count} to review", count: @review_count)}
+            >
+              {@review_count}
+            </span>
+            <span
+              :if={page.path == "/staff/upgrade" and @update_available}
+              id="update-badge"
+              class="badge badge-sm badge-info"
+            >
+              {gettext("new")}
+            </span>
+          </.nav_item>
+        <% end %>
+      </ul>
+    </nav>
+    """
   end
 
   attr :path, :string, required: true
   attr :current_path, :string, default: nil
   attr :icon, :string, required: true
+  attr :prefix, :boolean, default: false, doc: "also active on the pages under `path`"
   slot :inner_block, required: true
 
   defp nav_item(assigns) do
+    assigns =
+      assign(
+        assigns,
+        :active,
+        assigns.current_path == assigns.path or
+          (assigns.prefix and String.starts_with?(assigns.current_path || "", assigns.path <> "/"))
+      )
+
     ~H"""
     <li>
-      <.link navigate={@path} class={@current_path == @path && "menu-active"}>
+      <.link navigate={@path} class={@active && "menu-active"} aria-current={@active && "page"}>
         <.icon name={@icon} class="size-5" />
         {render_slot(@inner_block)}
       </.link>

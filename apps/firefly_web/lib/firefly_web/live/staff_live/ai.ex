@@ -148,7 +148,7 @@ defmodule FireflyWeb.StaffLive.AI do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="AI" navigate={~p"/staff/ai"}>
         <:subtitle>Model providers, the features they serve, and what they've used.</:subtitle>
         <:actions>

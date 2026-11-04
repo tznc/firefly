@@ -390,6 +390,143 @@ defmodule Firefly.Discussion do
   end
 
   @doc """
+  Moves `category` one place `:up` or `:down` among its siblings (the
+  top-level categories, or its parent's subcategories), as `actor`.
+  Siblings are numbered 0, 1, 2... in their current order first, so
+  categories that all had the default position get distinct ones.
+  Staff-logged as `category.update` with the new position.
+  """
+  def move_category(%Category{} = category, direction, %User{} = actor)
+      when direction in [:up, :down] do
+    result =
+      Repo.transact(fn ->
+        siblings =
+          Category
+          |> where_parent(category.parent_id)
+          |> order_by([c], asc: c.position, asc: c.title, asc: c.id)
+          |> lock("FOR UPDATE")
+          |> Repo.all()
+
+        index = Enum.find_index(siblings, &(&1.id == category.id))
+        other = if direction == :up, do: index - 1, else: index + 1
+
+        if other < 0 or other >= length(siblings) do
+          {:ok, category}
+        else
+          siblings
+          |> List.replace_at(index, Enum.at(siblings, other))
+          |> List.replace_at(other, Enum.at(siblings, index))
+          |> renumber()
+
+          StaffLog.record(actor, "category.update", category, %{
+            title: category.title,
+            position: %{before: index, after: other}
+          })
+
+          {:ok, %{category | position: other}}
+        end
+      end)
+
+    tap_ok(result, &category_changed(:category_updated, &1, actor))
+  end
+
+  # Gives the categories positions 0, 1, 2... in this order.
+  defp renumber(categories) do
+    for {category, position} <- Enum.with_index(categories), category.position != position do
+      Repo.update_all(where(Category, [c], c.id == ^category.id), set: [position: position])
+    end
+  end
+
+  defp where_parent(query, nil), do: where(query, [c], is_nil(c.parent_id))
+  defp where_parent(query, id), do: where(query, [c], c.parent_id == ^id)
+
+  @doc """
+  The groups `category` is restricted to with each one's permission there
+  (`full`, `create_post` or `readonly`), by group name.
+  """
+  def category_permissions(%Category{id: id}) do
+    Repo.all(
+      from(cr in "forums_category_roles",
+        join: r in Role,
+        on: r.id == cr.role_id,
+        where: cr.category_id == ^id,
+        order_by: r.name,
+        select: {r, cr.permission}
+      )
+    )
+  end
+
+  @doc "The permissions a group can have in a restricted category."
+  def category_permission_levels, do: ~w(full create_post readonly)
+
+  @doc """
+  Sets which groups `category` is restricted to and what each may do there
+  (`permissions`: role id to `full`, `create_post` or `readonly`; other
+  values, such as `""`, leave the group out), as `actor`. No groups left:
+  the category is open to everyone. Staff-logged as `category.permissions`
+  with each group's permission before and after.
+  """
+  def set_category_permissions(%Category{} = category, permissions, %User{} = actor) do
+    wanted =
+      for {role_id, permission} <- permissions,
+          permission in category_permission_levels(),
+          {id, ""} <- [Integer.parse(to_string(role_id))],
+          into: %{},
+          do: {id, permission}
+
+    roles = Map.new(Repo.all(from(r in Role, where: r.id in ^Map.keys(wanted))), &{&1.id, &1})
+    wanted = Map.filter(wanted, fn {id, _permission} -> Map.has_key?(roles, id) end)
+
+    result =
+      Repo.transact(fn ->
+        before = Map.new(category_permissions(category), fn {role, p} -> {role.name, p} end)
+
+        Repo.delete_all(
+          from(cr in "forums_category_roles", where: cr.category_id == ^category.id)
+        )
+
+        Repo.insert_all(
+          "forums_category_roles",
+          for {role_id, permission} <- wanted do
+            %{category_id: category.id, role_id: role_id, permission: permission}
+          end
+        )
+
+        now = Map.new(wanted, fn {id, permission} -> {roles[id].name, permission} end)
+
+        if now != before,
+          do:
+            StaffLog.record(actor, "category.permissions", category, %{
+              title: category.title,
+              permissions: %{before: before, after: now}
+            })
+
+        {:ok, Repo.preload(category, :roles, force: true)}
+      end)
+
+    tap_ok(result, &category_changed(:category_updated, &1, actor))
+  end
+
+  @doc """
+  Gives every member who hasn't chosen a level for `category` its default
+  notification level, as `actor` (staff-logged as `category.defaults`).
+  Returns `{:ok, count}`.
+  """
+  def apply_category_default(%Category{} = category, %User{} = actor) do
+    Repo.transact(fn ->
+      count = Subscriptions.apply_category_default(category)
+
+      StaffLog.record(actor, "category.defaults", category, %{
+        title: category.title,
+        level: category.default_notification_level,
+        members: count
+      })
+
+      {:ok, count}
+    end)
+  end
+
+  @doc """
   Returns an `%Ecto.Changeset{}` for tracking category changes.
 
   ## Examples
@@ -1023,6 +1160,7 @@ defmodule Firefly.Discussion do
       |> put_tags(attrs[:tags], user)
       |> WatchedWords.validate(user)
       |> ModerationHooks.validate_thread(user, category)
+      |> may_start_thread(user, category)
       |> Repo.insert()
 
     case thread_result do
@@ -1545,6 +1683,13 @@ defmodule Firefly.Discussion do
       title: thread.title,
       category: category.title
     })
+  end
+
+  # The category's group permissions (see Policy's `:create_thread`).
+  defp may_start_thread(changeset, user, category) do
+    if Bodyguard.permit?(__MODULE__, :create_thread, user, category),
+      do: changeset,
+      else: Ecto.Changeset.add_error(changeset, :title, "can't be started in this category")
   end
 
   @doc """

@@ -83,7 +83,7 @@ defmodule FireflyWeb.UserLive.Show do
   end
 
   defp staff?(nil), do: false
-  defp staff?(viewer), do: Accounts.admin?(viewer)
+  defp staff?(viewer), do: Accounts.staff?(viewer)
 
   @filters Enum.map(Profiles.activity_filters(), &elem(&1, 0))
 

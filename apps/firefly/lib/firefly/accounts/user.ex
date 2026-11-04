@@ -66,6 +66,11 @@ defmodule Firefly.Accounts.User do
     belongs_to(:title_badge, Firefly.Badges.Badge)
     # The plugin this account acts for (see Firefly.Plugins.Bots), if any.
     field(:plugin_bot, :string)
+    # False while the account waits for staff approval (the
+    # `must_approve_users` setting, see Firefly.Accounts.UserAdmin).
+    field(:approved, :boolean, default: true)
+    field(:approved_at, :utc_datetime)
+    belongs_to(:approved_by, __MODULE__)
 
     has_many(:posts, Post)
     has_many(:identities, UserIdentity)
@@ -149,6 +154,9 @@ defmodule Firefly.Accounts.User do
 
   defp in_force?(nil), do: false
   defp in_force?(until), do: DateTime.after?(until, DateTime.utc_now())
+
+  @doc "Whether the account still waits for staff to approve it."
+  def pending_approval?(%__MODULE__{approved: approved}), do: approved == false
 
   @doc "Whether the user has confirmed their email address."
   def confirmed?(%__MODULE__{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)

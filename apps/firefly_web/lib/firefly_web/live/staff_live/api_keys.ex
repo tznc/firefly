@@ -23,7 +23,7 @@ defmodule FireflyWeb.StaffLive.ApiKeys do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="API keys" navigate={~p"/staff/api-keys"}>
         <:subtitle>Members' keys and global keys for the API.</:subtitle>
       </.page_header>

@@ -72,7 +72,12 @@ defmodule Firefly.Moderation.Akismet do
   """
   def put_client(client), do: Process.put(@client_key, client)
 
-  defp client, do: Process.get(@client_key, %{})
+  @doc """
+  The client `put_client/1` remembered for this process (`%{}` if none),
+  also what screened IPs are checked against (see
+  `Firefly.Moderation.Screening`).
+  """
+  def client, do: Process.get(@client_key, %{})
 
   ## Checking
 

@@ -115,6 +115,62 @@ defmodule Firefly.Notifications.Subscriptions do
     upsert(%CategoryWatch{user_id: user.id, assoc_id: category.id, level: level}, level)
   end
 
+  @doc """
+  Gives a new account the default level of each category that has one
+  (`default_notification_level`, set in the categories admin).
+  """
+  def apply_category_defaults(%User{id: user_id}) do
+    now = NaiveDateTime.utc_now()
+
+    rows =
+      for {category_id, level} <-
+            Repo.all(
+              from(c in Category,
+                where: c.default_notification_level in ^@levels,
+                select: {c.id, c.default_notification_level}
+              )
+            ) do
+        %{
+          user_id: user_id,
+          assoc_id: category_id,
+          level: level,
+          inserted_at: now,
+          updated_at: now
+        }
+      end
+
+    Repo.insert_all(CategoryWatch, rows, on_conflict: :nothing)
+    :ok
+  end
+
+  @doc """
+  Gives every member who hasn't set a level for `category` its default
+  level (staff do it from the categories admin, for members who joined
+  before the default was set). Returns how many got it.
+  """
+  def apply_category_default(%Category{id: id, default_notification_level: level})
+      when level in @levels do
+    now = NaiveDateTime.utc_now()
+    set = from(w in CategoryWatch, where: w.assoc_id == ^id, select: w.user_id)
+
+    members =
+      from(u in User,
+        where: is_nil(u.deleted_at) and is_nil(u.plugin_bot) and u.id not in subquery(set),
+        select: %{
+          user_id: u.id,
+          assoc_id: ^id,
+          level: ^level,
+          inserted_at: ^now,
+          updated_at: ^now
+        }
+      )
+
+    {count, _} = Repo.insert_all(CategoryWatch, members, on_conflict: :nothing)
+    count
+  end
+
+  def apply_category_default(%Category{}), do: 0
+
   def set_tag_level(%User{} = user, %Tag{} = tag, level) when level in @levels do
     upsert(%TagWatch{user_id: user.id, assoc_id: tag.id, level: level}, level)
   end

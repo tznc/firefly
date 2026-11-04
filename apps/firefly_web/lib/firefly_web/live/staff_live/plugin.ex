@@ -140,7 +140,7 @@ defmodule FireflyWeb.StaffLive.Plugin do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title={@plugin.name} navigate={~p"/staff/plugins/#{@plugin.id}"}>
         <:subtitle>
           {@plugin.id} {@plugin.version} · {if @plugin.source == "core",

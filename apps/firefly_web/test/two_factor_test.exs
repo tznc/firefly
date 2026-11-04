@@ -337,7 +337,8 @@ defmodule FireflyWeb.TwoFactorTest do
       |> assert_path(~p"/settings/security")
       |> assert_has("#flash-error", text: "Set up two-factor authentication")
 
-      assert redirected_to(get(log_in_as(build_conn(), admin), "/admin")) == "/settings/security"
+      assert redirected_to(get(log_in_as(build_conn(), admin), "/staff/reports/signups/export")) ==
+               "/settings/security"
 
       # Members aren't asked.
       build_conn() |> log_in_as(user_fixture()) |> visit(~p"/") |> assert_path(~p"/")

@@ -52,7 +52,7 @@ defmodule FireflyWeb.StaffLive.Imports do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Import" navigate={~p"/staff/import"}>
         <:subtitle>
           Content imported from other forums and platforms: Discourse, phpBB, vBulletin, NodeBB, Slack,

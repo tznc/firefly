@@ -87,7 +87,7 @@ defmodule FireflyWeb.StaffLive.DiscourseConnect do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="DiscourseConnect" navigate={~p"/staff/discourse-connect"}>
         <:subtitle>Other sites that log people in with their accounts here.</:subtitle>
       </.page_header>

@@ -46,11 +46,23 @@ defmodule Firefly.Accounts.PasswordReset do
     :ok
   end
 
-  defp deliver(user) do
-    user |> Emails.password_reset(url(user)) |> Mailer.deliver_now()
+  @doc """
+  Emails `user` a reset link, as staff do from the users admin (no rate
+  limit: staff chose to). `:ok`, or `{:error, reason}` when it couldn't be
+  sent.
+  """
+  def deliver(%User{email: email} = user) when is_binary(email) do
+    case user |> Emails.password_reset(url(user)) |> Mailer.deliver_now() do
+      {:error, error} -> {:error, error}
+      _sent -> :ok
+    end
   rescue
-    error -> Logger.error("Failed to send password reset email: #{Exception.message(error)}")
+    error ->
+      Logger.error("Failed to send password reset email: #{Exception.message(error)}")
+      {:error, error}
   end
+
+  def deliver(%User{}), do: {:error, :no_email}
 
   defp fingerprint(%User{password_hash: hash}) do
     digest = :crypto.hash(:sha256, hash || "")

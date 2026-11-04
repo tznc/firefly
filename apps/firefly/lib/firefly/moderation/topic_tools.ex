@@ -9,6 +9,8 @@ defmodule Firefly.Moderation.TopicTools do
     * `split/4`: chosen replies (never the first post) move to a new thread,
       with a title and category, or into an existing one. Their authors are
       told where their posts went.
+    * `change_owner/4`: chosen posts of a thread (the first one too) get
+      another author.
 
   Moved posts keep their place in time among the target's posts (threads
   are ordered by `inserted_at`), except that the target's first post stays
@@ -133,6 +135,44 @@ defmodule Firefly.Moderation.TopicTools do
   end
 
   @doc """
+  Makes `new_owner` the author of the posts with `post_ids` in `thread`, as
+  `actor` (staff-logged as `post.change_owner` on the thread, with the
+  previous authors). Returns `{:ok, count}`, or `{:error, :no_posts}`.
+  Deleted accounts can't become authors (`{:error, :no_such_user}`).
+  """
+  def change_owner(%Thread{} = thread, post_ids, %User{} = new_owner, %User{} = actor) do
+    post_ids = for id <- List.wrap(post_ids), {id, ""} <- [Integer.parse(to_string(id))], do: id
+    query = from(p in Post, where: p.thread_id == ^thread.id and p.id in ^post_ids)
+
+    cond do
+      User.deleted?(new_owner) ->
+        {:error, :no_such_user}
+
+      post_ids == [] ->
+        {:error, :no_posts}
+
+      true ->
+        Repo.transact(fn ->
+          previous =
+            Repo.all(
+              from(p in query, join: u in assoc(p, :user), distinct: true, select: u.username)
+            )
+
+          {count, _} = Repo.update_all(query, set: [user_id: new_owner.id])
+
+          StaffLog.record(actor, "post.change_owner", thread, %{
+            title: thread.title,
+            from: Enum.sort(previous),
+            to: new_owner.username,
+            posts: count
+          })
+
+          {:ok, count}
+        end)
+    end
+  end
+
+  @doc """
   Sets `thread`'s slow mode as `actor`: members may reply at most once per
   `seconds` (nil or 0: off). Enforced by `Firefly.Moderation.Posting.check/2`.
   """
@@ -164,6 +204,7 @@ defmodule Firefly.Moderation.TopicTools do
   end
 
   def message(:same_thread), do: "Pick a different thread."
+  def message(:no_such_user), do: "No member with that username."
   def message(:merged), do: "That thread was merged into another one: pick that one."
   def message(:no_thread), do: "No such thread."
   def message(:no_posts), do: "Select at least one reply."

@@ -131,15 +131,16 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     conn
     |> log_in("root")
     |> click_link("Admin")
-    |> visit("/admin/forums/category")
-    |> assert_has("td", text: "Elixir")
+    |> click_link("#staff-nav a", "Categories")
+    |> assert_has("#categories", text: "Elixir")
 
+    # The old admin's URL leads to the staff admin, which members can't use.
     another_browser(context)
     |> log_in("alice")
     |> refute_has("nav a", text: "Admin")
     |> visit("/admin")
     |> assert_path("/")
-    |> assert_has("#flash-error", text: "You must be an administrator to access this page.")
+    |> assert_has("#flash-error", text: "You are not allowed to do that.")
   end
 
   test "selecting text in a post and clicking Quote quotes just the selection", %{conn: conn} do

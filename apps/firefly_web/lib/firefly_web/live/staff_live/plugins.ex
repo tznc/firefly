@@ -191,7 +191,7 @@ defmodule FireflyWeb.StaffLive.Plugins do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Plugins" navigate={~p"/staff/plugins"}>
         <:subtitle>
           Core plugins ship with Firefly; uploaded plugins run sandboxed, with only the permissions they request.

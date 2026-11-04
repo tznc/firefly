@@ -18,6 +18,8 @@ defmodule Firefly.Accounts do
     * `Firefly.Accounts.Ignores`, `Profiles`, `Visits`, `UserSessions`
     * `Firefly.Accounts.Invites` (with the schemas `Invite`,
       `InviteRedemption`) - invitations to join
+    * `Firefly.Accounts.UserAdmin`, `UserIPs` - what staff do to accounts
+      at `/staff/users`, and the addresses members came from
 
   Other contexts and the web interface use only these (see `Firefly`).
   """
@@ -49,13 +51,16 @@ defmodule Firefly.Accounts do
       UserSessions,
       Invites,
       Invite,
-      InviteRedemption
+      InviteRedemption,
+      UserAdmin,
+      UserIPs
     ]
 
   import Ecto.Query, warn: false
 
   alias Firefly.{Repo, SiteSettings}
   alias Firefly.Accounts.User
+  alias Firefly.Moderation.Screening
   alias Firefly.Plugins.Events
 
   @doc """
@@ -168,7 +173,7 @@ defmodule Firefly.Accounts do
     # setting's job (see `Firefly.Moderation.Posting`): `confirmed_at` only ever
     # means the address was proven.
     if registration_open?(),
-      do: insert_registration(attrs, nil),
+      do: insert_registration(attrs, nil, false),
       else: {:error, :registration_closed}
   end
 
@@ -178,14 +183,38 @@ defmodule Firefly.Accounts do
   allowed): `confirmed?` when the invite was emailed to the address.
   """
   def register_invited_user(attrs, confirmed?),
-    do: insert_registration(attrs, if(confirmed?, do: DateTime.utc_now(:second)))
+    do: insert_registration(attrs, if(confirmed?, do: DateTime.utc_now(:second)), true)
 
-  defp insert_registration(attrs, confirmed_at) do
-    %User{confirmed_at: confirmed_at}
-    |> User.registration_changeset(attrs)
-    |> Repo.insert()
-    |> tap_ok(&Events.emit("user_registered", %{user: %{id: &1.id, username: &1.username}}))
+  # Screened addresses (see Firefly.Moderation.Screening) are refused like
+  # any invalid field, so every registration form shows why.
+  defp insert_registration(attrs, confirmed_at, invited?) do
+    changeset =
+      %User{confirmed_at: confirmed_at, approved: approved_on_signup?(invited?)}
+      |> User.registration_changeset(attrs)
+
+    case Screening.check_signup(Ecto.Changeset.get_field(changeset, :email)) do
+      :ok ->
+        changeset
+        |> Repo.insert()
+        |> tap_ok(&registered/1)
+
+      {:error, reason} ->
+        {:error, Ecto.Changeset.add_error(changeset, :email, Screening.message(reason))}
+    end
   end
+
+  defp registered(user) do
+    :ok = Firefly.Notifications.Subscriptions.apply_category_defaults(user)
+    Events.emit("user_registered", %{user: %{id: user.id, username: user.username}})
+  end
+
+  @doc """
+  Whether a new account starts approved: yes, unless the
+  `must_approve_users` site setting is on and they weren't invited (an
+  invitation is a member's approval). Staff approve the others at
+  `/staff/users` (see `Firefly.Accounts.UserAdmin`).
+  """
+  def approved_on_signup?(invited?), do: invited? or not SiteSettings.get("must_approve_users")
 
   @doc """
   Whether anyone may create an account: the `allow_registrations` site
@@ -313,16 +342,21 @@ defmodule Firefly.Accounts do
   @doc "When `user` last had a page open (see `Firefly.Accounts.Visits`), or nil."
   def user_last_seen(%User{last_seen_at: at}), do: at
 
-  def admin?(%User{} = user) do
-    user =
-      user
-      |> Repo.preload(:roles)
+  @doc "Whether `user` has the admin role."
+  def admin?(%User{} = user), do: "admin" in role_names(user)
 
-    user.roles
-    |> Enum.any?(fn role ->
-      role.name == "admin"
-    end)
-  end
+  @doc """
+  Whether `user` has the moderator role: staff who handle the review
+  queue, flags, penalties and new accounts, but not the site's
+  configuration (see `Firefly.Discussion.Policy`).
+  """
+  def moderator?(%User{} = user), do: "moderator" in role_names(user)
+
+  @doc "Whether `user` is staff: an admin or a moderator."
+  def staff?(%User{} = user), do: Enum.any?(role_names(user), &(&1 in ~w(admin moderator)))
+
+  defp role_names(user),
+    do: user |> Repo.preload(:roles) |> Map.fetch!(:roles) |> Enum.map(& &1.name)
 
   defp tap_ok({:ok, value} = result, fun) do
     fun.(value)

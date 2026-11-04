@@ -55,7 +55,7 @@ and the shared configuration is in `config/`:
 | --- | --- | --- |
 | `apps/firefly` | `Firefly.*` | The domain: the `Firefly.Repo`, schemas and bounded contexts, jobs, email, authentication, the plugin layer and core plugins. Migrations and seeds are in `apps/firefly/priv/repo`. Depends on neither of the others |
 | `apps/firefly_plugins` | `FireflyPlugins.*` | The sandbox uploaded plugins run in: QuickJS on WebAssembly via Wasmex (`priv/plugins/quickjs.wasm`, built from `wasm/quickjs`), and bundle validation. Registers itself with the domain at start |
-| `apps/firefly_web` | `FireflyWeb.*` | The web interface: endpoint, router, LiveViews, controllers, channels, JSON API, Kaffy admin, assets and static files |
+| `apps/firefly_web` | `FireflyWeb.*` | The web interface: endpoint, router, LiveViews (the staff admin included), controllers, channels, JSON API, assets and static files |
 | `apps/firefly_import` | `FireflyImport.*` | Importers from other forums and platforms (see "Importing"): each reads its source and hands the records to the domain's `Firefly.Import`. Apart so their database drivers stay out of the domain |
 
 Inside `apps/firefly`, the domain is split into bounded contexts
@@ -240,8 +240,40 @@ before, whose first render is server-rendered too.
 
 ### Admin
 
-`/admin` is a [Kaffy](https://github.com/aesmail/kaffy) admin UI, available to
-users with the `admin` role (the seeds create `admin` / `password`).
+Staff run the forum from `/staff` (the seeds create `admin` / `password`;
+the old `/admin` URLs redirect there). Its sidebar groups every admin page
+into sections (overview, people, content, moderation, communication,
+configuration, maintenance), and its search finds pages and site settings.
+
+Staff are admins and moderators. Moderators handle the review queue,
+flags, penalties, new accounts and the screening lists, and see the staff
+log; admins also run the site. Grant either role from a user's admin page
+(or with DiscourseConnect's flags).
+
+- **Users** (`/staff/users`): every account, filtered (active, new, staff,
+  suspended, silenced, waiting for approval) and searched by username,
+  name, email or IP address. Each account's page shows its email and
+  logins, trust level, groups, penalties, the IP addresses it used (and
+  other accounts seen there), API keys and notifications, and lets staff
+  edit it, approve or reject it (with "Staff approve new accounts" on),
+  silence or suspend it, reset its two-factor, send a password reset or a
+  notice, grant or revoke admin and moderator, anonymize it, delete it
+  with its posts, merge it into another account, or impersonate it.
+  Impersonating shows a banner on every page to stop; admins and
+  moderators can't be impersonated.
+- **Categories** (`/staff/categories`): order them, and set which groups
+  may see each and whether they may start threads, only reply or only
+  read, and the notification level new members start at.
+- **Groups**, **Badges**, **Plugins**, **Webhooks** and the rest are in the
+  sidebar.
+- **Emails** (`/staff/emails`): the log of every email sent, skipped or
+  failed (kept `email_log_days`), a test email, and each template
+  previewed with sample data.
+- **Screening** (`/staff/screening`): email addresses or patterns, IP
+  addresses or ranges and URL domains that are blocked from signing up or
+  posting. Each block is counted and recorded in the staff log.
+
+Every admin action is recorded in the staff log (`/staff/log`).
 
 ### Plugins
 

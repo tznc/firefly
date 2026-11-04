@@ -10,14 +10,15 @@ defmodule Firefly.Moderation.SpamGuard do
   Every post, whoever writes it, may mention at most
   `Firefly.Discussion.Mentions.max_mentions/0` users, so mentions can't be used to
   ping crowds, and is checked for watched words (see
-  `Firefly.Moderation.WatchedWords.validate/3`; `opts` are passed on).
+  `Firefly.Moderation.WatchedWords.validate/3`; `opts` are passed on) and the
+  screening lists (see `Firefly.Moderation.Screening`).
   """
   import Ecto.Changeset
 
   alias Firefly.{SiteSettings, TrustLevels}
   alias Firefly.Discussion.Mentions
   alias Firefly.Accounts.User
-  alias Firefly.Moderation.WatchedWords
+  alias Firefly.Moderation.{Screening, WatchedWords}
 
   @link_regex ~r{\bhttps?://|\bwww\.}i
   @image_regex ~r{!\[[^\]]*\]\(|<img\b}i
@@ -37,7 +38,9 @@ defmodule Firefly.Moderation.SpamGuard do
         Mentions.validate_count(changeset, Mentions.max_mentions())
       end
 
-    WatchedWords.validate(changeset, user, opts)
+    changeset
+    |> WatchedWords.validate(user, opts)
+    |> Screening.validate_post(user)
   end
 
   defp new_user_limits(:body, body) do

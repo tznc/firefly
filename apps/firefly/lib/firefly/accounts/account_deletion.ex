@@ -85,7 +85,12 @@ defmodule Firefly.Accounts.AccountDeletion do
     user.id in admins and length(admins) <= 1
   end
 
-  defp anonymize(%User{id: id} = user) do
+  @doc """
+  Anonymizes the account as described above, without asking for a
+  confirmation: for staff deleting an account (see
+  `Firefly.Accounts.UserAdmin`). The last admin still can't be removed.
+  """
+  def anonymize(%User{id: id} = user) do
     liked_post_ids =
       Repo.all(from(l in "forums_post_likes", where: l.user_id == ^id, select: l.post_id))
 

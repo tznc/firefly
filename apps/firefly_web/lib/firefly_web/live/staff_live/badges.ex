@@ -77,7 +77,7 @@ defmodule FireflyWeb.StaffLive.Badges do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app {Layouts.shell(assigns)}>
+    <Layouts.app {Layouts.shell(assigns)} staff>
       <.page_header title="Badges" navigate={~p"/staff/badges"}>
         <:subtitle>
           System badges are granted automatically; grant custom ones from their
