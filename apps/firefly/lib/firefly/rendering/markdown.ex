@@ -46,7 +46,9 @@ defmodule Firefly.Rendering.Markdown do
   the steps above need: the `emoji` class on images, `data-math-style`
   set to `inline` or `display` on spans, `<section>` and `id`s on links
   and list items for footnotes), so scripts, event handlers and
-  `javascript:` URLs are stripped.
+  `javascript:` URLs are stripped. Inline styles are dropped too
+  (`safe_styles/1`), except BBCode's color and size: a post can't restyle
+  or cover the page.
 
   A post's body (rendered with the `:post` and `:thread` options) also goes
   through the plugins' content hooks (see `Firefly.Plugins.Content`),
@@ -91,6 +93,10 @@ defmodule Firefly.Rendering.Markdown do
   # "@user said:" (see `Firefly.Discussion.Quote`).
   @quote_header ~r{<blockquote>\n<p>(<a href="[^"]*"[^>]*>@[^<]+ said:</a>)</p>}
 
+  # The styles BBCode writes (see Firefly.Rendering.BBCode): a named or
+  # hex color, a font size in percent.
+  @bbcode_style ~r/\A(?:color: (?:#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|[a-z]+)|font-size: [0-9]{2,3}%)\z/
+
   @doc "The MDEx options, with the extensions the site settings turn on."
   def options do
     @options
@@ -103,6 +109,23 @@ defmodule Firefly.Rendering.Markdown do
   return (see `Firefly.Plugins.Content.sanitize/1`).
   """
   def sanitize_options, do: @sanitize
+
+  @doc """
+  Sanitized `html` without its `style` attributes, but for BBCode's
+  colors and sizes. MDEx's allow-list keeps `style` on `div`, `span`,
+  `pre` and `code` (for its syntax highlighting), and the page's CSP
+  allows inline styles, so a post could otherwise cover the whole page
+  (`position: fixed`) with lookalike content. Only for sanitized HTML,
+  where a quote is always the end of an attribute.
+  """
+  def safe_styles(html) do
+    if String.contains?(html, " style=\""),
+      do:
+        Regex.replace(~r/ style="([^"]*)"/, html, fn whole, style ->
+          if style =~ @bbcode_style, do: whole, else: ""
+        end),
+      else: html
+  end
 
   @spec render(String.t() | nil, Mentions.refs() | term, keyword) :: String.t()
   def render(body, refs_or_viewer \\ nil, opts \\ [])
@@ -122,6 +145,7 @@ defmodule Firefly.Rendering.Markdown do
     |> custom_emoji(Emoji.custom())
     |> footnotes(opts[:post])
     |> MDEx.to_html!(options)
+    |> safe_styles()
     |> footnote_links()
     |> plugins(opts[:post], opts[:thread])
     # Safe to do after sanitizing: any literal `<pre>` in user text is escaped.
