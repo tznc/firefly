@@ -1,8 +1,11 @@
 defmodule Firefly.Plugins.InstalledPlugin do
   @moduledoc """
   A plugin's stored state (see `Firefly.Plugins`): whether it's
-  enabled, its settings, and for an uploaded plugin its bundle (the zip and
-  its SHA-256 `checksum`), parsed `manifest` and joined `code`. A plugin the
+  enabled, its settings, and for an uploaded plugin the package it came in
+  (`package`, which holds the zip and its checksum, see
+  `Firefly.Packages`), its parsed `manifest` and its JavaScript joined
+  into the one script the sandbox runs (`code`, derived from the zip at
+  install so loading needn't rebuild it). A plugin the
   circuit breaker turned off has `disabled_reason`. `fail_closed`: whether
   posting is refused when the plugin's moderation hook fails (see
   `Firefly.Plugins.ModerationHooks`). `secret` authenticates calls to its
@@ -18,8 +21,6 @@ defmodule Firefly.Plugins.InstalledPlugin do
     field(:source, :string)
     field(:version, :string)
     field(:manifest, :map)
-    field(:bundle, :binary, redact: true)
-    field(:checksum, :string)
     field(:code, :string, redact: true)
     field(:enabled, :boolean, default: false)
     field(:disabled_reason, :string)
@@ -27,6 +28,7 @@ defmodule Firefly.Plugins.InstalledPlugin do
     field(:fail_closed, :boolean, default: false)
     field(:secret, :string, redact: true)
     belongs_to(:installed_by, User)
+    belongs_to(:package, Firefly.Packages.Package)
 
     timestamps(type: :naive_datetime_usec)
   end

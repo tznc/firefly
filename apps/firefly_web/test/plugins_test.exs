@@ -9,7 +9,7 @@ defmodule FireflyWeb.PluginsTest do
   import Firefly.Fixtures,
     only: [admin_fixture: 0, user_fixture: 0, category_fixture: 1, thread_fixture: 2]
 
-  alias Firefly.{Discussion, Groups, Plugin, Plugins}
+  alias Firefly.{Discussion, Groups, Packages, Plugin, Plugins}
   alias Firefly.Moderation.StaffAction
   alias Firefly.Notifications.Notification
   alias Firefly.Plugin.{Host, Runner}
@@ -35,7 +35,14 @@ defmodule FireflyWeb.PluginsTest do
 
       row = Repo.get_by!(InstalledPlugin, plugin_id: id)
       assert %{enabled: false, source: "upload", version: "1.0.0"} = row
-      assert row.checksum == Base.encode16(:crypto.hash(:sha256, row.bundle), case: :lower)
+      # The zip and its checksum are the package's, stored once.
+      package = Repo.preload(row, :package).package
+      assert package.package_id == id
+      refute Map.has_key?(row, :bundle)
+
+      assert package.checksum ==
+               Base.encode16(:crypto.hash(:sha256, package.archive), case: :lower)
+
       assert ids() == []
 
       assert [%{actor_id: actor, details: %{"plugin" => ^id, "permissions" => "read"}}] =
@@ -48,12 +55,12 @@ defmodule FireflyWeb.PluginsTest do
       {:ok, bundle} = Bundle.read(bundle_zip(plugin("needy", %{"base" => "~> 1.0"})))
 
       assert {:error, "It needs plugin base ~> 1.0, which isn't installed."} =
-               Plugins.install(bundle, admin)
+               Packages.install(bundle, admin)
 
       install_plugin!(admin, plugin("base", %{}, %{"version" => "2.0.0"}))
 
       assert {:error, "It needs plugin base ~> 1.0, but 2.0.0 is installed."} =
-               Plugins.install(bundle, admin)
+               Packages.install(bundle, admin)
     end
 
     test "rejects a cycle, naming it", %{admin: admin} do
@@ -64,7 +71,7 @@ defmodule FireflyWeb.PluginsTest do
 
       {:ok, bundle} = Bundle.read(bundle_zip(plugin("beta", %{"alpha" => ">= 0.0.0"})))
 
-      assert {:error, message} = Plugins.install(bundle, admin)
+      assert {:error, message} = Packages.install(bundle, admin)
       assert message =~ "dependency cycle: alpha → beta → alpha"
     end
   end
@@ -76,7 +83,7 @@ defmodule FireflyWeb.PluginsTest do
       {:ok, _} = Plugins.update_settings(id, %{"n" => "5"}, admin)
 
       {:ok, bundle} = Bundle.read(bundle_zip(Map.put(settings, "version", "1.1.0")))
-      {:ok, _} = Plugins.install(bundle, admin)
+      {:ok, _} = Packages.install(bundle, admin)
 
       assert [%Plugin{manifest: %{version: "1.1.0"}, settings: %{"n" => 5}}] = Plugins.active()
 
@@ -87,7 +94,7 @@ defmodule FireflyWeb.PluginsTest do
     test "needs a newer version", %{admin: admin} do
       install_plugin!(admin, %{"version" => "1.2.0"})
       {:ok, bundle} = Bundle.read(bundle_zip(%{"version" => "1.1.0"}))
-      assert {:error, "Version 1.2.0 is installed" <> _} = Plugins.install(bundle, admin)
+      assert {:error, "Version 1.2.0 is installed" <> _} = Packages.install(bundle, admin)
     end
 
     test "is refused when it would break a dependent", %{admin: admin} do
@@ -96,8 +103,8 @@ defmodule FireflyWeb.PluginsTest do
 
       {:ok, bundle} = Bundle.read(bundle_zip(plugin("base", %{}, %{"version" => "2.0.0"})))
 
-      assert {:error, "Plugin app needs plugin base ~> 1.0, but this is 2.0.0."} =
-               Plugins.install(bundle, admin)
+      assert {:error, "Package app needs plugin base ~> 1.0, but this is 2.0.0."} =
+               Packages.install(bundle, admin)
     end
   end
 
@@ -410,7 +417,7 @@ defmodule FireflyWeb.PluginsTest do
         assert message =~ "boom"
         # Uploading over a core plugin's id is refused.
         {:ok, bundle} = Bundle.read(bundle_zip(plugin("crashing", %{}, %{"version" => "9.0.0"})))
-        assert {:error, "crashing is a core plugin" <> _} = Plugins.install(bundle, admin)
+        assert {:error, "crashing is a core plugin" <> _} = Packages.install(bundle, admin)
       end)
     end
   end

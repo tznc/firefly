@@ -176,8 +176,8 @@ defmodule FireflyWeb.StaffLive.Plugin do
             <p :if={@plugin.dependents != []} class="text-sm">
               <span class="font-medium">Needed by</span> {Enum.join(@plugin.dependents, ", ")}
             </p>
-            <p :if={@plugin.row && @plugin.row.checksum} class="text-xs text-base-content/60">
-              Bundle SHA-256 {@plugin.row.checksum}
+            <p :if={@plugin.row && @plugin.row.package} class="text-xs text-base-content/60">
+              Package SHA-256 {@plugin.row.package.checksum}
             </p>
           </div>
         </section>

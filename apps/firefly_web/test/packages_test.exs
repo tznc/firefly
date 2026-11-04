@@ -53,38 +53,34 @@ defmodule FireflyWeb.PackagesTest do
     assert [%{"package" => "hello", "tags" => "fun"}] = logged("package.install")
     assert [_] = logged("plugin.install")
 
+    # Its zip is stored once: on the package, which the plugin row points at.
+    row = Repo.get_by!(InstalledPlugin, plugin_id: "hello")
+    assert row.package_id == package.id
+    refute Map.has_key?(row, :bundle)
+    assert package.archive == zip
+
     assert {:error, "This exact package is already installed."} = install(zip, admin)
 
-    {:ok, _} =
-      install(
-        bundle_zip(%{
-          "id" => "hello",
-          "name" => "Hello",
-          "version" => "1.1.0",
-          "tags" => ["fun"]
-        }),
-        admin
-      )
+    upgrade =
+      bundle_zip(%{"id" => "hello", "name" => "Hello", "version" => "1.1.0", "tags" => ["fun"]})
 
-    assert Repo.get_by!(InstalledPlugin, plugin_id: "hello").version == "1.1.0"
-    assert Packages.get("hello").version == "1.1.0"
+    {:ok, upgraded} = install(upgrade, admin)
+    # The upgrade replaced the one zip, on the same package row.
+    assert upgraded.id == package.id
+    assert upgraded.archive == upgrade
+    assert Repo.aggregate(Package, :count) == 1
+
+    assert %{version: "1.1.0", package_id: package_id} =
+             Repo.get_by!(InstalledPlugin, plugin_id: "hello")
+
+    assert package_id == package.id
 
     assert [%{id: "hello", kind: :plugin, plugin: %{status: :disabled}}] = Packages.list("fun")
 
     :ok = Packages.uninstall("hello", admin)
     assert Repo.all(InstalledPlugin) == []
     assert Packages.get("hello") == nil
-  end
-
-  test "a plugin installed before packages upgrades as one", %{admin: admin} do
-    install_plugin!(admin, %{"id" => "old", "name" => "Old"})
-
-    {:ok, archive} =
-      Packages.read(bundle_zip(%{"id" => "old", "name" => "Old", "version" => "2.0.0"}))
-
-    assert %{current: %{version: "1.0.0"}, problems: []} = Packages.preview(archive)
-    {:ok, _} = Packages.install(archive, admin)
-    assert Packages.get("old").version == "2.0.0"
+    assert Repo.all(Package) == []
   end
 
   test "themes may need plugins; plugins may only need plugins", %{admin: admin} do

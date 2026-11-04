@@ -130,20 +130,35 @@ defmodule FireflyWeb.DatabaseAdminTest do
     shown = get(conn, "/staff/db/configuration/site_setting/#{setting.id}")
     assert redirected_to(shown) == "/staff/db/configuration/site_setting"
 
+    package =
+      Repo.insert!(%Firefly.Packages.Package{
+        package_id: "demo",
+        name: "Demo",
+        version: "1.0.0",
+        manifest: %{"id" => "demo"},
+        archive: "archive-bytes-xyz",
+        checksum: "abc",
+        settings: %{"token" => "package-token-xyz"}
+      })
+
     plugin =
       Repo.insert!(%Firefly.Plugins.InstalledPlugin{
         plugin_id: "demo",
         source: "upload",
         version: "1.0.0",
         manifest: %{"id" => "demo"},
-        bundle: "bundle-bytes-xyz",
-        checksum: "abc",
+        package_id: package.id,
         code: "plugin-code-xyz",
         secret: "plugin-secret-xyz",
         settings: %{"token" => "settings-token-xyz"}
       })
 
-    for path <- ["/staff/db/configuration/plugin", "/staff/db/configuration/plugin/#{plugin.id}"] do
+    for path <- [
+          "/staff/db/configuration/plugin",
+          "/staff/db/configuration/plugin/#{plugin.id}",
+          "/staff/db/configuration/package",
+          "/staff/db/configuration/package/#{package.id}"
+        ] do
       html = conn |> get(path) |> html_response(200)
       assert html =~ "demo"
       refute html =~ "-xyz"

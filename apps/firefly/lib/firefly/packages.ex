@@ -182,7 +182,7 @@ defmodule Firefly.Packages do
   the installed version (an upgrade replaces their edits).
   """
   def preview(%Archive{manifest: manifest} = archive) do
-    current = get(manifest.id) || uploaded_plugin(manifest.id)
+    current = get(manifest.id)
 
     %{
       archive: archive,
@@ -193,32 +193,11 @@ defmodule Firefly.Packages do
     }
   end
 
-  # A plugin uploaded before packages, or installed by `Firefly.Plugins`
-  # directly: its row stands in for its package, which an upgrade saves.
-  defp uploaded_plugin(id) do
-    case Plugins.describe(id) do
-      %{source: "upload", row: %{manifest: %{} = attrs} = row} ->
-        %Package{
-          package_id: id,
-          name: attrs["name"] || id,
-          version: row.version,
-          tags: attrs["tags"] || [],
-          manifest: attrs,
-          checksum: row.checksum
-        }
-
-      _core_or_none ->
-        nil
-    end
-  end
-
   # A plugin's theme components need staff's grant, once.
   defp grant_needed?(manifest, current) do
     Manifest.plugin?(manifest) and Manifest.theme?(manifest) and
       is_nil(current && current.theme_granted_at)
   end
-
-  defp edited_themes(%Package{id: nil}), do: []
 
   defp edited_themes(package) do
     for theme <- Themes.package_themes(package.id), Themes.locally_edited?(theme), do: theme.name
@@ -379,7 +358,7 @@ defmodule Firefly.Packages do
           components: Enum.join(theme_names(manifest), ", ")
         })
 
-    with :ok <- install_plugin(archive, admin),
+    with :ok <- install_plugin(archive, package, admin),
          :ok <- install_theme(archive, package, admin) do
       {action, version} =
         if current,
@@ -398,9 +377,9 @@ defmodule Firefly.Packages do
     end
   end
 
-  defp install_plugin(%Archive{manifest: manifest} = archive, admin) do
+  defp install_plugin(%Archive{manifest: manifest} = archive, package, admin) do
     if Manifest.plugin?(manifest) do
-      case Plugins.install(archive, admin) do
+      case Plugins.install(archive, package, admin) do
         {:ok, _row} -> :ok
         {:error, message} -> {:error, message}
       end

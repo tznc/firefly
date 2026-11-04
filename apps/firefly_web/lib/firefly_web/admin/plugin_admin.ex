@@ -1,8 +1,10 @@
 defmodule FireflyWeb.Admin.PluginAdmin do
   @moduledoc """
-  Installed plugins in the database admin, to read: their bundles, code,
-  secrets and settings (which can hold API keys) aren't shown. They're
-  installed, configured and switched on or off at `/staff/plugins`.
+  Installed plugins in the database admin, to read: their code, secrets
+  and settings (which can hold API keys) aren't shown; an uploaded
+  plugin's zip is its package's (see `FireflyWeb.Admin.PackageAdmin`).
+  They're installed, configured and switched on or off at
+  `/staff/packages`.
   """
   use FireflyWeb.Admin.Logged, as: "plugin"
 
@@ -15,7 +17,7 @@ defmodule FireflyWeb.Admin.PluginAdmin do
       source: nil,
       enabled: nil,
       disabled_reason: nil,
-      checksum: nil
+      package_id: nil
     ]
 
   def search_fields(_), do: [:plugin_id]
