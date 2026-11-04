@@ -283,4 +283,78 @@ defmodule Firefly.PackagesTest do
       assert message =~ "couldn't be fetched"
     end
   end
+
+  describe "theme settings" do
+    @settings [
+      %{
+        "key" => "radius",
+        "type" => "integer",
+        "default" => 4,
+        "min" => 0,
+        "max" => 40,
+        "label" => "Radius",
+        "help" => ""
+      },
+      %{
+        "key" => "accent",
+        "type" => "string",
+        "default" => "#0b6bcb",
+        "label" => "Accent",
+        "help" => ""
+      },
+      %{
+        "key" => "font",
+        "type" => "string",
+        "default" => "Inter, sans-serif",
+        "label" => "Font",
+        "help" => ""
+      },
+      %{
+        "key" => "shadow",
+        "type" => "boolean",
+        "default" => false,
+        "label" => "Shadow",
+        "help" => ""
+      }
+    ]
+
+    test "reach the CSS as custom properties, and a change compiles it again", %{admin: admin} do
+      package = install!(theme_zip(%{"settings" => @settings}), admin)
+      theme = Repo.get_by!(Theme, name: "Ocean")
+
+      assert theme.compiled_css =~
+               ":root { --ocean-radius: 4; --ocean-accent: #0b6bcb; --ocean-font: Inter, sans-serif; --ocean-shadow: 0; }"
+
+      assert {:error, %{"radius" => "must be at most 40"}} =
+               Packages.update_settings(package, %{"radius" => "99"}, admin)
+
+      {:ok, package} =
+        Packages.update_settings(
+          package,
+          %{
+            "radius" => "12",
+            "accent" => "#ff0000",
+            "font" => "x; } body { display: none",
+            "shadow" => "true"
+          },
+          admin
+        )
+
+      assert package.settings["radius"] == 12
+      theme = Repo.reload!(theme)
+      assert theme.version > 1
+      assert theme.compiled_css =~ "--ocean-radius: 12;"
+      assert theme.compiled_css =~ "--ocean-shadow: 1;"
+      # Text that could end the declaration is a CSS string.
+      assert theme.compiled_css =~ ~s|--ocean-font: "x; } body { display: none";|
+      refute Themes.locally_edited?(theme)
+      assert "package.settings" in actions()
+    end
+
+    test "a plugin's package keeps its settings with the plugin", %{admin: admin} do
+      package = install!(theme_zip(), admin)
+      assert Packages.settings(package) == {[], %{}}
+      assert Packages.css_variables(package.id) == ""
+    end
+  end
 end

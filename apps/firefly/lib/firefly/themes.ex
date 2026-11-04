@@ -41,7 +41,7 @@ defmodule Firefly.Themes do
 
   import Ecto.Query
 
-  alias Firefly.{Repo, SiteSettings, Uploads}
+  alias Firefly.{Packages, Repo, SiteSettings, Uploads}
   alias Firefly.Accounts.User
   alias Firefly.Moderation.StaffLog
   alias Firefly.Themes.{Contrast, Palette, Scrubber, Theme, ThemeAsset}
@@ -367,7 +367,19 @@ defmodule Firefly.Themes do
       )
 
     "/* #{String.replace(theme.name, "*/", "")} v#{theme.version} */\n" <>
-      color_css(theme) <> css
+      color_css(theme) <> settings_css(parts) <> css
+  end
+
+  # Package themes' settings, as custom properties (see Firefly.Packages).
+  defp settings_css(parts) do
+    case parts
+         |> Enum.map(& &1.package_id)
+         |> Enum.uniq()
+         |> Enum.map(&Packages.css_variables/1)
+         |> Enum.reject(&(&1 == "")) do
+      [] -> ""
+      variables -> ":root { #{Enum.join(variables, " ")} }\n"
+    end
   end
 
   @doc """
@@ -551,6 +563,11 @@ defmodule Firefly.Themes do
       theme |> Ecto.Changeset.change(package_hash: content_hash(theme)) |> Repo.update()
 
     theme
+  end
+
+  @doc "Compiles the themes of the package with row id `package_id` again (its settings changed)."
+  def recompile_package(package_id) do
+    package_id |> package_themes() |> Enum.each(&recompile!/1)
   end
 
   @doc "Deletes the themes the package with row id `package_id` installed, as `admin`."

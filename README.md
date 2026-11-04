@@ -340,6 +340,13 @@ only a theme needs no plugin sandbox. `/staff/themes` stays the theme
 editor and picker; an admin's own theme exports as a package, and old
 theme JSON bundles still install. See `Firefly.Packages` for the format.
 
+A plugin's package may also ship theme components (colors and CSS that
+themes include; HTML cleaned, never scripts), which installing needs a
+separate, staff-logged grant for. Running scripts stays an admin's choice
+on their own themes; no package can ask for it. A theme package's typed
+settings (the plugin settings schema) are edited on its theme's page and
+reach its CSS as custom properties, `--<package id>-<key>`.
+
 ### Importing
 
 `mix firefly.import <source> [options]` imports another site's content:

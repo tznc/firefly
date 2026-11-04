@@ -28,7 +28,7 @@ defmodule FireflyWeb.StaffLive.Packages do
       {:ok,
        socket
        |> assign(:page_title, "Packages")
-       |> assign(preview: nil, confirm: nil, overwrite: false)
+       |> assign(preview: nil, confirm: nil, overwrite: false, grant: false)
        # A .zip, or an old theme bundle's JSON: told apart by content.
        |> allow_upload(:package, accept: :any, max_entries: 1, max_file_size: Archive.max_size())}
     else
@@ -72,13 +72,16 @@ defmodule FireflyWeb.StaffLive.Packages do
   defp package_event("fetch", %{"url" => url}, socket),
     do: previewed(socket, Packages.fetch(url), String.trim(url))
 
-  defp package_event("overwrite", params, socket),
-    do: {:noreply, assign(socket, :overwrite, params["overwrite"] == "true")}
+  defp package_event("confirm_options", params, socket) do
+    {:noreply,
+     assign(socket, overwrite: params["overwrite"] == "true", grant: params["grant"] == "true")}
+  end
 
   defp package_event("install", _params, %{assigns: %{preview: %{archive: archive}}} = socket) do
-    %{current_user: admin, preview: preview, overwrite: overwrite} = socket.assigns
+    %{current_user: admin, preview: preview, overwrite: overwrite, grant: grant} = socket.assigns
+    opts = [overwrite: overwrite, grant_theme: grant, source_url: preview.source_url]
 
-    case Packages.install(archive, admin, overwrite: overwrite, source_url: preview.source_url) do
+    case Packages.install(archive, admin, opts) do
       {:ok, _package} ->
         manifest = archive.manifest
 
@@ -153,6 +156,7 @@ defmodule FireflyWeb.StaffLive.Packages do
        manifest: archive.manifest,
        previous: match?({:ok, _}, previous) && elem(previous, 1),
        overwrite: false,
+       grant: false,
        confirm: nil
      )}
   end
@@ -164,15 +168,35 @@ defmodule FireflyWeb.StaffLive.Packages do
   defp past("disable"), do: "Disabled"
   defp past("uninstall"), do: "Uninstalled"
 
-  # The themes a package's theme section creates or updates.
-  defp theme_names(%Manifest{theme: nil}), do: []
+  @doc """
+  The inputs for a settings schema (see `Firefly.Plugin.Settings`): a
+  plugin's, or a theme package's.
+  """
+  attr(:form, :any, required: true)
+  attr(:settings, :list, required: true)
 
-  defp theme_names(%Manifest{theme: theme, name: name}) do
-    [
-      theme["name"] || name
-      | Enum.map(theme["components"] || [], &(&1["name"] || "#{name} component"))
-    ]
+  def setting_fields(assigns) do
+    ~H"""
+    <div :for={setting <- @settings}>
+      <.input
+        field={@form[setting.key]}
+        type={input_type(setting.type)}
+        label={setting.label}
+        options={setting.choices}
+        checked={setting.type == "boolean" && @form.params[setting.key] == "true"}
+        min={setting.min}
+        max={setting.max}
+      />
+      <p :if={setting.help != ""} class="-mt-1 text-xs text-base-content/60">{setting.help}</p>
+    </div>
+    """
   end
+
+  defp input_type("boolean"), do: "checkbox"
+  defp input_type("integer"), do: "number"
+  defp input_type("text"), do: "textarea"
+  defp input_type("enum"), do: "select"
+  defp input_type("string"), do: "text"
 
   @doc false
   def status_badge(assigns) do
@@ -308,7 +332,7 @@ defmodule FireflyWeb.StaffLive.Packages do
           <div :if={Manifest.theme?(@manifest)} id="preview-themes">
             <h3 class="font-medium">Themes it {if @preview.current, do: "updates", else: "adds"}</h3>
             <ul class="text-sm list-disc pl-5">
-              <li :for={name <- theme_names(@manifest)}>{name}</li>
+              <li :for={name <- Packages.theme_names(@manifest)}>{name}</li>
             </ul>
             <p class="text-xs text-base-content/60">Themes from packages never run scripts: their HTML is cleaned.</p>
           </div>
@@ -321,18 +345,33 @@ defmodule FireflyWeb.StaffLive.Packages do
               </li>
             </ul>
           </div>
-          <div :if={@preview.edited != []} id="preview-edited" class="alert alert-warning flex-col items-start">
-            <p>
-              Changed here since version {@preview.current.version}: <strong>{Enum.join(@preview.edited, ", ")}</strong>. Upgrading replaces those changes.
-            </p>
-            <form id="overwrite-form" phx-change="overwrite">
-              <input type="hidden" name="overwrite" value="false" />
+          <form
+            :if={@preview.edited != [] or @preview.grant_needed}
+            id="confirm-options"
+            phx-change="confirm_options"
+            class="space-y-2"
+          >
+            <div :if={@preview.edited != []} id="preview-edited" class="alert alert-warning flex-col items-start">
+              <p>
+                Changed here since version {@preview.current.version}: <strong>{Enum.join(@preview.edited, ", ")}</strong>. Upgrading replaces those changes.
+              </p>
               <label class="flex items-center gap-2" for="overwrite">
+                <input type="hidden" name="overwrite" value="false" />
                 <input type="checkbox" id="overwrite" name="overwrite" value="true" checked={@overwrite} class="checkbox checkbox-sm" />
                 Replace the changes made here
               </label>
-            </form>
-          </div>
+            </div>
+            <div :if={@preview.grant_needed} id="preview-grant" class="alert alert-info flex-col items-start">
+              <p>
+                Its plugin also ships theme components: colors and CSS that themes can include. Their HTML is cleaned and they never run scripts.
+              </p>
+              <label class="flex items-center gap-2" for="grant">
+                <input type="hidden" name="grant" value="false" />
+                <input type="checkbox" id="grant" name="grant" value="true" checked={@grant} class="checkbox checkbox-sm" />
+                Allow its theme components
+              </label>
+            </div>
+          </form>
           <div :if={@preview.problems != []} id="preview-problems" class="alert alert-error">
             <ul>
               <li :for={problem <- @preview.problems}>{problem}</li>
@@ -343,7 +382,10 @@ defmodule FireflyWeb.StaffLive.Packages do
               id="install-package"
               phx-click="install"
               class="btn btn-primary"
-              disabled={@preview.problems != [] or (@preview.edited != [] and !@overwrite)}
+              disabled={
+                @preview.problems != [] or (@preview.edited != [] and !@overwrite) or
+                  (@preview.grant_needed and !@grant)
+              }
             >
               {if @preview.current, do: "Upgrade", else: "Install"}
             </button>

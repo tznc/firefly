@@ -102,22 +102,79 @@ defmodule FireflyWeb.PackagesTest do
     assert :ok = Packages.uninstall("widgets", admin)
   end
 
-  test "plugin code and a theme in one package aren't supported yet", %{admin: admin} do
-    zip =
-      bundle_zip(
+  defp styled_plugin(manifest \\ %{}) do
+    bundle_zip(
+      Map.merge(
         %{
-          "id" => "both",
+          "id" => "styled",
+          "name" => "Styled",
           "main" => "index.js",
           "tags" => ["theme"],
-          "theme" => %{"css" => "t.css"}
+          "theme" => %{
+            "name" => "Styled bits",
+            "component" => true,
+            "colors" => %{"light" => %{"accent" => "#123456"}},
+            "css" => "styled.css",
+            "footer_html" => "footer.html"
+          }
         },
-        %{"index.js" => "", "t.css" => ".t {}"}
-      )
+        manifest
+      ),
+      %{
+        "index.js" => "exports.enabled = () => null;",
+        "styled.css" => ".styled-widget { color: red; }",
+        "footer.html" => ~s{<p onclick="steal()">Hi</p><script>steal()</script>}
+      }
+    )
+  end
 
-    assert {:error, "A package with plugin code can't carry a theme yet" <> _} =
-             install(zip, admin)
+  describe "theme components from plugins" do
+    test "need staff's grant, which is logged; their HTML is cleaned", %{admin: admin} do
+      {:ok, archive} = Packages.read(styled_plugin())
+      assert %{grant_needed: true, problems: []} = Packages.preview(archive)
 
-    assert Plugins.describe("both") == nil
+      assert {:error, "Its plugin ships theme components: allow them to install it."} =
+               Packages.install(archive, admin)
+
+      assert Plugins.describe("styled") == nil
+
+      {:ok, package} = Packages.install(archive, admin, grant_theme: true)
+      assert package.theme_granted_at
+      assert package.theme_granted_by_id == admin.id
+
+      assert [%{"package" => "styled", "components" => "Styled bits"}] =
+               logged("package.theme_grant")
+
+      assert %{source: "upload"} = Plugins.describe("styled")
+
+      [component] = Firefly.Themes.package_themes(package.id) |> Repo.preload(:components)
+      assert %{component: true, allow_scripts: false, name: "Styled bits"} = component
+      assert component.compiled_css =~ ".styled-widget"
+      assert component.compiled_css =~ "--color-accent: #123456;"
+      html = Firefly.Themes.html(component, :footer, "nonce")
+      assert html =~ "Hi"
+      refute html =~ "script"
+      refute html =~ "onclick"
+      assert {:error, :package} = Firefly.Themes.set_allow_scripts(component, true, admin)
+
+      assert [%{themes: [_]}] = Packages.list("theme")
+
+      # An upgrade keeps the grant.
+      {:ok, archive} = Packages.read(styled_plugin(%{"version" => "1.1.0"}))
+      assert %{grant_needed: false} = Packages.preview(archive)
+      {:ok, _} = Packages.install(archive, admin)
+      assert length(logged("package.theme_grant")) == 1
+
+      :ok = Packages.uninstall("styled", admin)
+      assert Firefly.Themes.list_components() == []
+    end
+
+    test "are components only", %{admin: admin} do
+      zip = styled_plugin(%{"theme" => %{"css" => "styled.css"}})
+      {:error, message} = install(zip, admin)
+      assert message =~ "its theme must be a component"
+      assert Plugins.describe("styled") == nil
+    end
   end
 
   test "core plugins can't be replaced or uninstalled", %{admin: admin} do

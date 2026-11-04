@@ -11,7 +11,7 @@ defmodule FireflyWeb.StaffLive.Plugin do
   on_mount({FireflyWeb.UserAuth, :require_user})
 
   import FireflyWeb.StaffLive.Packages,
-    only: [status_badge: 1, dependency_list: 1, permission_list: 1]
+    only: [status_badge: 1, dependency_list: 1, permission_list: 1, setting_fields: 1]
 
   import FireflyWeb.PluginComponents
 
@@ -131,12 +131,6 @@ defmodule FireflyWeb.StaffLive.Plugin do
 
   defp fail_closed?(plugin), do: (plugin.row && plugin.row.fail_closed) || false
 
-  defp input_type("boolean"), do: "checkbox"
-  defp input_type("integer"), do: "number"
-  defp input_type("text"), do: "textarea"
-  defp input_type("enum"), do: "select"
-  defp input_type("string"), do: "text"
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -195,18 +189,7 @@ defmodule FireflyWeb.StaffLive.Plugin do
         >
           <.form for={@form} id="plugin-settings-form" phx-submit="save" class="card-body gap-2">
             <h2 class="card-title">Settings</h2>
-            <div :for={setting <- @plugin.manifest.settings}>
-              <.input
-                field={@form[setting.key]}
-                type={input_type(setting.type)}
-                label={setting.label}
-                options={setting.choices}
-                checked={setting.type == "boolean" && @form.params[setting.key] == "true"}
-                min={setting.min}
-                max={setting.max}
-              />
-              <p :if={setting.help != ""} class="-mt-1 text-xs text-base-content/60">{setting.help}</p>
-            </div>
+            <.setting_fields form={@form} settings={@plugin.manifest.settings} />
             <div><.button variant="primary" phx-disable-with="Saving...">Save settings</.button></div>
           </.form>
         </section>

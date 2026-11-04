@@ -147,6 +147,22 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
           "version" => "1.0.0",
           "firefly" => "~> 1.0",
           "tags" => ["theme", "dark"],
+          "settings" => [
+            %{
+              "key" => "radius",
+              "type" => "integer",
+              "default" => 4,
+              "label" => "Radius",
+              "help" => ""
+            },
+            %{
+              "key" => "shadow",
+              "type" => "boolean",
+              "default" => false,
+              "label" => "Shadow",
+              "help" => ""
+            }
+          ],
           "theme" => %{"css" => "theme.css"}
         },
         %{"theme.css" => ".dusk {}"}
