@@ -221,16 +221,15 @@ defmodule Firefly.Moderation.WatchedWords do
 
   defp split_links(text, [{word, regex} | rest]) do
     case safely(nil, fn -> Regex.split(regex, text, include_captures: true, trim: true) end) do
-      nil ->
-        split_links(text, rest)
-
-      parts ->
-        Enum.flat_map(parts, fn part ->
-          if safely(nil, fn -> Regex.run(regex, part, capture: :first) end) == [part],
-            do: [{:link, part, word.replacement}],
-            else: split_links(part, rest)
-        end)
+      nil -> split_links(text, rest)
+      parts -> Enum.flat_map(parts, &link_part(&1, word, regex, rest))
     end
+  end
+
+  defp link_part(part, word, regex, rest) do
+    if safely(nil, fn -> Regex.run(regex, part, capture: :first) end) == [part],
+      do: [{:link, part, word.replacement}],
+      else: split_links(part, rest)
   end
 
   ## Posting
