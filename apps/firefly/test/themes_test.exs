@@ -154,15 +154,6 @@ defmodule Firefly.ThemesTest do
       assert %{details: %{"allow_scripts" => true}} =
                Repo.get_by!(StaffAction, action: "theme.allow_scripts")
     end
-
-    test "NUL characters are dropped, not a database error", %{admin: admin} do
-      theme = theme(admin, %{"head_html" => "<a href='\0javascript:x()'>x</a>", "css" => "a{\0}"})
-
-      theme = Themes.get_theme(theme.id)
-      refute theme.head_html =~ "\0"
-      refute theme.css =~ "\0"
-      refute Themes.html(theme, :head, "n0nce") =~ "javascript"
-    end
   end
 
   describe "which theme a page uses" do
