@@ -46,7 +46,7 @@ defmodule FireflyWeb.MetricsTest do
       assert body =~ "# EOF"
     end
 
-    test "reports the VM, web, database and domain metrics", %{conn: conn} do
+    test "reports the VM, web, database, domain and cluster metrics, by node", %{conn: conn} do
       category = category_fixture()
       thread = thread_fixture(category, user_fixture())
       path = "/categories/#{category.id}/threads/#{thread.id}"
@@ -55,6 +55,11 @@ defmodule FireflyWeb.MetricsTest do
       :telemetry.execute([:vm, :memory], %{total: 1024, processes: 1, binary: 1, ets: 1}, %{})
       :telemetry.execute([:vm, :system_counts], %{process_count: 42, port_count: 3}, %{})
       Firefly.Telemetry.measure_queues()
+
+      Firefly.Telemetry.execute([:firefly, :cluster, :node], %{count: 1, connected: 2}, %{
+        event: :up,
+        node: :"firefly@10.0.0.8"
+      })
 
       Firefly.Telemetry.span([:firefly, :scheduler, :job], %{job: "Firefly.Badges"}, fn ->
         {:ok, %{}}
@@ -66,14 +71,19 @@ defmodule FireflyWeb.MetricsTest do
         |> get("/metrics")
         |> response(200)
 
-      assert body =~ ~S|vm_memory_total 1024|
-      assert body =~ ~S|vm_system_counts_process_count 42|
-      assert body =~ ~S|firefly_queue_depth{queue="plugin_events"} 0|
-      assert body =~ ~S|firefly_queue_depth{queue="webhooks"} 0|
+      # Every series names the node it was measured on.
+      node = ~s{node="#{node()}"}
+      assert body =~ ~s|vm_memory_total{#{node}} 1024|
+      assert body =~ ~s|vm_system_counts_process_count{#{node}} 42|
+      assert body =~ ~s|firefly_queue_depth{#{node},queue="plugin_events"} 0|
+      assert body =~ ~s|firefly_queue_depth{#{node},queue="webhooks"} 0|
       assert body =~ "firefly_repo_query_total_time_microseconds_bucket"
 
       assert body =~
-               ~S|firefly_scheduler_job_stop_duration_microseconds_count{job="Firefly.Badges"} 1|
+               ~s|firefly_scheduler_job_stop_duration_microseconds_count{job="Firefly.Badges",#{node}} 1|
+
+      assert body =~ ~s|firefly_cluster_node_count{event="up",#{node}} 1|
+      assert body =~ ~s|firefly_cluster_nodes_connected{#{node}} 2|
 
       # Routes by pattern, not path.
       assert body =~ ~S|route="/categories/:category_id/threads/:id"|
