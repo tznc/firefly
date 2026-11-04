@@ -18,7 +18,8 @@ defmodule Firefly.HTMLSafety do
   @doc """
   The problems in `html` as a list of strings (empty when it's safe).
   `opts`: `allow_tags` (tags the caller does allow, such as `meta` and
-  `link` in a theme's head), `allow_style` (inline styles allowed).
+  `link` in a theme's head), `allow_style` (a function that says which
+  inline styles are allowed; none by default).
   """
   def unsafe(html, opts \\ []) when is_binary(html) do
     allowed = Keyword.get(opts, :allow_tags, [])
@@ -63,7 +64,7 @@ defmodule Firefly.HTMLSafety do
       String.starts_with?(name, "on") ->
         ["#{name} handler on <#{tag}>"]
 
-      name == "style" and not Keyword.get(opts, :allow_style, false) ->
+      name == "style" and not Keyword.get(opts, :allow_style, fn _ -> false end).(value) ->
         ["style attribute on <#{tag}>"]
 
       name == "srcdoc" ->
