@@ -602,6 +602,13 @@ at `/mcp`, with a member's API token as `Authorization: Bearer <token>`:
 tools `search`, `read_topic`, `list_latest` and `get_user_profile`, which
 see only what that member may read.
 
+### Multi-tenancy (planned)
+
+Firefly runs one forum per deployment today. The design for hosting many
+forums on one server (a database per forum, routing by hostname, and a
+management API for the server admin) is in
+[docs/multitenancy.md](docs/multitenancy.md), with the plan to implement it.
+
 ### Tests
 
 Page tests use [PhoenixTest](https://hexdocs.pm/phoenix_test); critical user
