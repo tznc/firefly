@@ -37,16 +37,14 @@ defmodule Firefly.Accounts.Auth.DiscourseConnect do
 
   import Ecto.Query
 
-  alias Firefly.{Groups, Repo, SiteSettings, Uploads}
+  alias Firefly.{Repo, SiteSettings, Uploads}
   alias Firefly.Accounts.Auth
-  alias Firefly.Moderation.StaffLog
+  alias Firefly.Accounts.Auth.GroupSync
   alias Firefly.Accounts.{User, UserIdentity}
-  alias Firefly.Groups.{Role, RoleMembership}
   alias Firefly.Rendering.LinkPreviews.Fetcher
 
   @nonce_seconds 600
   @image_types ~w(image/png image/jpeg image/gif image/webp)
-  @staff_groups ~w(admin moderator)
 
   defp config, do: Application.get_env(:firefly, __MODULE__, [])
 
@@ -263,7 +261,7 @@ defmodule Firefly.Accounts.Auth.DiscourseConnect do
     if SiteSettings.get("discourse_connect_sync_staff") do
       for {flag, group} <- [{"admin", "admin"}, {"moderator", "moderator"}],
           params[flag] in ["true", "false"] do
-        set_member(user, group, params[flag] == "true")
+        GroupSync.set_member(user, group, params[flag] == "true")
       end
     end
   end
@@ -272,65 +270,20 @@ defmodule Firefly.Accounts.Auth.DiscourseConnect do
   # here, staff groups aside); `add_groups` and `remove_groups` change it.
   defp sync_groups(user, params) do
     if SiteSettings.get("discourse_connect_overrides_groups") do
-      listed = names(params["groups"])
-
-      for name <- unlisted(user, params["groups"], listed), do: set_member(user, name, false)
-      for name <- listed ++ names(params["add_groups"]), do: set_member(user, name, true)
-      for name <- names(params["remove_groups"]), do: set_member(user, name, false)
+      if params["groups"], do: GroupSync.mirror(user, names(params["groups"]))
+      for name <- names(params["add_groups"]), do: GroupSync.set_member(user, name, true)
+      for name <- names(params["remove_groups"]), do: GroupSync.set_member(user, name, false)
     end
-  end
-
-  # The user's groups `groups` (when given) leaves out.
-  defp unlisted(_user, nil, _listed), do: []
-
-  defp unlisted(user, _groups, listed) do
-    Repo.all(
-      from(r in Role,
-        join: m in RoleMembership,
-        on: m.role_id == r.id and m.user_id == ^user.id,
-        where: r.name not in ^(@staff_groups ++ listed),
-        select: r.name
-      )
-    )
   end
 
   defp names(list) when is_binary(list) do
     list
     |> String.split(",", trim: true)
     |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == "" or &1 in @staff_groups))
+    |> Enum.reject(&(&1 == "" or &1 in GroupSync.staff_groups()))
   end
 
   defp names(_list), do: []
-
-  # Staff groups are created when first granted; others must exist.
-  defp set_member(user, name, member?) do
-    role =
-      Repo.get_by(Role, name: name) ||
-        if(member? and name in @staff_groups, do: elem(Groups.create_role(name), 1))
-
-    if role, do: set_membership(user, role, member?)
-  end
-
-  defp set_membership(user, role, member?) do
-    membership =
-      Repo.one(from(m in RoleMembership, where: m.role_id == ^role.id and m.user_id == ^user.id))
-
-    details = %{role: role.name, username: user.username}
-
-    cond do
-      member? and is_nil(membership) ->
-        {:ok, _} = Groups.add_role(user, role)
-        StaffLog.record_system("role.grant", user, details)
-
-      not member? and membership != nil ->
-        Repo.delete!(membership)
-        StaffLog.record_system("role.revoke", user, details)
-
-      true ->
-        :ok
-    end
-  end
 
   defp stored(user) do
     case Repo.get_by(UserIdentity, user_id: user.id, provider: "discourse_connect") do

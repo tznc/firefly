@@ -52,6 +52,13 @@ defmodule FireflyWeb.Router do
     plug(:accepts, ["html", "text"])
   end
 
+  # A SAML identity provider's response, posted from its page: no session
+  # (the browser doesn't send it) and no CSRF token; the signed response is
+  # the authorization (see FireflyWeb.SAMLController).
+  pipeline :saml_acs do
+    plug(:accepts, ["html"])
+  end
+
   pipeline :plugin_api do
     plug(FireflyWeb.Plugs.ApiCurrentUser)
     plug(FireflyWeb.Plugs.ReadOnly)
@@ -254,10 +261,22 @@ defmodule FireflyWeb.Router do
     delete("/logout", AuthController, :delete)
     get("/discourse_connect", DiscourseConnectController, :request)
     get("/discourse_connect/callback", DiscourseConnectController, :callback)
+    get("/saml", SAMLController, :request)
+    get("/saml/finish", SAMLController, :finish)
     get("/:provider", AuthController, :request)
     get("/:provider/callback", AuthController, :callback)
     post("/:provider/callback", AuthController, :callback)
   end
+
+  scope "/auth/saml", FireflyWeb do
+    pipe_through(:saml_acs)
+
+    post("/acs", SAMLController, :acs)
+  end
+
+  # SAML service provider metadata, for setting up the identity provider
+  # (so before SAML logins are on, too).
+  get("/saml/metadata", FireflyWeb.SAMLController, :metadata)
 
   # JSON API
   scope "/api/v1", FireflyWeb.Api.V1 do

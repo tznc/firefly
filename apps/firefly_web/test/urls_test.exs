@@ -16,6 +16,8 @@ defmodule FireflyWeb.URLsTest do
     assert URLs.notification_settings_url() == url(~p"/settings/notifications")
     assert URLs.user_url(%{id: 7}) == url(~p"/users/7")
     assert URLs.invite_url("aB-_1") == url(~p"/invites/aB-_1")
+    assert URLs.saml_acs_url() == url(~p"/auth/saml/acs")
+    assert URLs.saml_metadata_url() == url(~p"/saml/metadata")
     assert URLs.group_url(group) == url(~p"/groups/#{group.name}")
     assert URLs.group_url(group, "requests") == url(~p"/groups/#{group.name}/requests")
     assert URLs.badge_url(%{id: 3}) == url(~p"/badges/3")

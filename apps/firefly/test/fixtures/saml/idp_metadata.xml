@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://idp.example.com/saml">
+  <md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="encryption"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIBogus</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor>
+    <md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>
+MIIDGTCCAgGgAwIBAgIUdo1obp4bT/tpsGY1LRzyYZaOcgIwDQYJKoZIhvcNAQELBQAwGzEZMBcGA1UEAwwQRmlyZWZseSB0ZXN0IElkUDAgFw0yNjExMDMxNDMyNTdaGA8yMTI2MTAxMDE0MzI1N1owGzEZMBcGA1UEAwwQRmlyZWZseSB0ZXN0IElkUDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAK/AoPN0uPvlPUovNPHKyJFXgACMvBSzWnxOqsdgjURN7xiYm1nK+OOPGp2LVidHXazf3nMx7kR8FGAZCHfm3JouOd7hX/g33HpUNwM2rBTnZqXue7RzJ6Wsl6Je8Dh5gDE7axpPm0a9+YXEO4ozT6PVLMDstRovmL6e+hpenOrjR9IcaxvCiE1HlWDxJFjLA67bpwwfIvyHzy428J9kOcGKhZfbCciTIFpaiaaUJzHDjVvWVpnm05+FNih6Egjil7YHWnxkEB5/C5+LwALsYSbNagnmDWtISMdBW3Y1jHYPkiKg2BfUIrhexcThDt5TKbep8engFfDcEowzWW7jE/UCAwEAAaNTMFEwHQYDVR0OBBYEFISIRZRb9ECBRW6DrZp+/qEa40poMB8GA1UdIwQYMBaAFISIRZRb9ECBRW6DrZp+/qEa40poMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAFXvmvj5xw41E8dCDhgRxWyb6j/PLmL386EfO/NK/y971M8F+S6db82kRW7sgJ6ftX50shrfG5v5eORYcPVZnPH0vP+ni7i6Ns94m4p6W/QmFE59zFGQuPMf26WhaaVAIawvKmFPG2fAhN8SD/ikQy2YWs2abFChKok6WxKgpXBUwaF2nBe0pNnUCnMKHYrQb2p1kZiB6gw1ddmlOdwoEw13jU/Nq66nus6Q+1Z+i4i1naEbu5sEjquleIPIlzyWRZUbdicjyxXGUoZaA15zpuGZ++32+qsfMKXqRses8b36GKTTG6Q7DyIjGHlmaTPJ7clGK2B4LxqrWpYxOe5GlJU=
+</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://idp.example.com/saml/sso/post"/>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://idp.example.com/saml/sso"/>
+  </md:IDPSSODescriptor>
+</md:EntityDescriptor>

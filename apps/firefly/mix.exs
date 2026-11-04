@@ -70,6 +70,9 @@ defmodule Firefly.MixProject do
       {:image, "~> 0.72"},
       # AI providers' HTTP APIs (see Firefly.AI): timeouts, retries, streaming.
       {:req, "~> 0.7.5"},
+      # SAML responses and metadata (see Firefly.Accounts.Auth.SAML): a parser
+      # that makes no atoms and expands no external entities.
+      {:saxy, "~> 1.6.1"},
       # Embeddings for semantic search, in a pgvector column.
       {:pgvector, "~> 0.4.2"},
       # Tests fake AI providers with a local HTTP server (see Firefly.AI.FakeProvider).
