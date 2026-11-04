@@ -10,6 +10,9 @@ defmodule Firefly.PackagesPropertyTest do
   use Firefly.DataCase, async: true
   use ExUnitProperties
 
+  # :zip logs the leading "/" it drops from hostile names.
+  @moduletag :capture_log
+
   import Firefly.Generators
   import Firefly.Fixtures
 
