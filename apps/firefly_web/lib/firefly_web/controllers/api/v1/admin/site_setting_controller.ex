@@ -1,8 +1,9 @@
 defmodule FireflyWeb.Api.V1.Admin.SiteSettingController do
   @moduledoc """
-  Site settings (admins; `admin` scope): every setting with its section,
-  type and value (secret ones masked), and saving some (`{"key":
-  value}`), validated and logged as on `/staff/settings`.
+  Site settings (admins; `admin` scope): every setting with its category,
+  section, type and value (secret ones masked), and the environment
+  variable pinning it if any, and saving some (`{"key": value}`, a list
+  for list settings), validated and logged as on `/staff/settings`.
   """
   use FireflyWeb, :controller
   import FireflyWeb.Api.Helpers
@@ -41,11 +42,14 @@ defmodule FireflyWeb.Api.V1.Admin.SiteSettingController do
 
       %{
         key: definition.key,
+        category: definition.category,
         section: definition.section,
         type: definition.type,
         label: definition.label,
         value: if(definition[:secret] && value not in [nil, ""], do: "[secret]", else: value),
-        default: definition.default
+        default: if(definition[:secret], do: nil, else: definition.default),
+        # The environment variable pinning it, if set (it can't be changed then).
+        env_override: SiteSettings.env_override(definition.key)
       }
     end
   end

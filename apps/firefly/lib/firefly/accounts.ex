@@ -190,6 +190,7 @@ defmodule Firefly.Accounts do
   defp insert_registration(attrs, confirmed_at, invited?) do
     changeset =
       %User{confirmed_at: confirmed_at, approved: approved_on_signup?(invited?)}
+      |> struct(new_member_defaults())
       |> User.registration_changeset(attrs)
 
     case Screening.check_signup(Ecto.Changeset.get_field(changeset, :email)) do
@@ -206,6 +207,23 @@ defmodule Firefly.Accounts do
   defp registered(user) do
     :ok = Firefly.Notifications.Subscriptions.apply_category_defaults(user)
     Events.emit("user_registered", %{user: %{id: user.id, username: user.username}})
+  end
+
+  @doc """
+  The preferences a new account starts with: the New members site
+  settings (notification emails, private messages, keyboard shortcuts,
+  browser notifications, and the notification levels of threads they
+  start and reply to). Members change them in their settings.
+  """
+  def new_member_defaults do
+    %{
+      email_notifications: SiteSettings.get("default_email_notifications"),
+      allow_private_messages: SiteSettings.get("default_allow_private_messages"),
+      keyboard_shortcuts: SiteSettings.get("default_keyboard_shortcuts"),
+      push_only_when_away: SiteSettings.get("default_push_only_when_away"),
+      reply_level: SiteSettings.get("default_reply_level"),
+      new_thread_level: SiteSettings.get("default_new_thread_level")
+    }
   end
 
   @doc """

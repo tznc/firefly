@@ -62,7 +62,7 @@ msgstr "Cuenta"
 
 #: lib/firefly_web/components/layouts.ex:200
 #: lib/firefly_web/live/staff_live/index.ex:25
-#: lib/firefly_web/live/staff_live/index.ex:84
+#: lib/firefly_web/live/staff_live/index.ex:81
 #, elixir-autogen, elixir-format
 msgid "Admin"
 msgstr "Administración"
@@ -77,8 +77,8 @@ msgstr "¿Ya tienes una?"
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr "Se aplica en todas tus sesiones. El botón de la barra superior también lo cambia."
 
-#: lib/firefly_web/components/layouts.ex:512
-#: lib/firefly_web/components/layouts.ex:527
+#: lib/firefly_web/components/layouts.ex:521
+#: lib/firefly_web/components/layouts.ex:536
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "Intentando reconectar"
@@ -261,6 +261,7 @@ msgstr "Foro"
 msgid "Groups"
 msgstr "Grupos"
 
+#: lib/firefly_web/live/staff_live/settings.ex:417
 #: lib/firefly_web/staff_nav.ex:211
 #, elixir-autogen, elixir-format
 msgid "Import"
@@ -421,6 +422,7 @@ msgstr "Guardar"
 
 #: lib/firefly_web/live/auth_live/reset_password.ex:74
 #: lib/firefly_web/live/settings_live/index.ex:674
+#: lib/firefly_web/live/staff_live/settings.ex:398
 #: lib/firefly_web/live/staff_live/user.ex:369
 #: lib/firefly_web/live/staff_live/user.ex:400
 #, elixir-autogen, elixir-format
@@ -462,12 +464,14 @@ msgstr "Ajustes"
 msgid "Sign in"
 msgstr "Entrar con contraseña"
 
+#: lib/firefly_web/live/staff_live/settings.ex:28
+#: lib/firefly_web/live/staff_live/settings.ex:255
 #: lib/firefly_web/staff_nav.ex:172
 #, elixir-autogen, elixir-format
 msgid "Site settings"
 msgstr "Ajustes del sitio"
 
-#: lib/firefly_web/components/layouts.ex:519
+#: lib/firefly_web/components/layouts.ex:528
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr "¡Algo ha ido mal!"
@@ -548,7 +552,7 @@ msgstr "Palabras vigiladas"
 msgid "Watching"
 msgstr "Siguiendo"
 
-#: lib/firefly_web/components/layouts.ex:504
+#: lib/firefly_web/components/layouts.ex:513
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr "No encontramos la conexión"
@@ -626,17 +630,17 @@ msgstr "Restablecer la contraseña"
 msgid "Send reset link"
 msgstr "Enviar el enlace"
 
-#: lib/firefly_web/components/layouts.ex:570
+#: lib/firefly_web/components/layouts.ex:579
 #, elixir-autogen, elixir-format
 msgid "Use dark theme"
 msgstr "Usar el tema oscuro"
 
-#: lib/firefly_web/components/layouts.ex:562
+#: lib/firefly_web/components/layouts.ex:571
 #, elixir-autogen, elixir-format
 msgid "Use light theme"
 msgstr "Usar el tema claro"
 
-#: lib/firefly_web/components/layouts.ex:554
+#: lib/firefly_web/components/layouts.ex:563
 #, elixir-autogen, elixir-format
 msgid "Use system theme"
 msgstr "Usar el tema del sistema"
@@ -831,6 +835,7 @@ msgstr "Admin home"
 msgid "Admin navigation"
 msgstr "Admin navigation"
 
+#: lib/firefly_web/live/staff_live/settings.ex:268
 #: lib/firefly_web/live/staff_live/users.ex:79
 #, elixir-autogen, elixir-format, fuzzy
 msgid "All"
@@ -1026,7 +1031,7 @@ msgstr "Email this member a password reset link?"
 msgid "Emails"
 msgstr "Emails"
 
-#: lib/firefly_web/live/staff_live/index.ex:144
+#: lib/firefly_web/live/staff_live/index.ex:141
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Emails failed today"
 msgstr "Emails failed today"
@@ -1037,7 +1042,7 @@ msgstr "Emails failed today"
 msgid "Everyone"
 msgstr "Everyone"
 
-#: lib/firefly_web/live/staff_live/index.ex:85
+#: lib/firefly_web/live/staff_live/index.ex:82
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Everything staff run the forum with, in one place."
 msgstr "Everything staff run the forum with, in one place."
@@ -1093,7 +1098,7 @@ msgstr "IP addresses"
 msgid "Impersonate"
 msgstr "Impersonate"
 
-#: lib/firefly_web/live/staff_live/index.ex:138
+#: lib/firefly_web/live/staff_live/index.ex:135
 #, elixir-autogen, elixir-format, fuzzy
 msgid "In the review queue"
 msgstr "In the review queue"
@@ -1323,7 +1328,7 @@ msgstr "Not renamed: name %{message}"
 msgid "Not saved: %{message}"
 msgstr "Not saved: %{message}"
 
-#: lib/firefly_web/live/staff_live/index.ex:105
+#: lib/firefly_web/live/staff_live/index.ex:102
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Nothing matches. Try another word."
 msgstr "Nothing matches. Try another word."
@@ -1505,7 +1510,7 @@ msgstr "Reports"
 msgid "Reset two-factor"
 msgstr "Reset two-factor"
 
-#: lib/firefly_web/live/staff_live/index.ex:103
+#: lib/firefly_web/live/staff_live/index.ex:100
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Results for “%{q}”"
 msgstr "Results for “%{q}”"
@@ -1551,6 +1556,7 @@ msgid "Save permissions"
 msgstr "Save permissions"
 
 #: lib/firefly_web/live/staff_live/groups.ex:224
+#: lib/firefly_web/live/staff_live/settings.ex:398
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Save settings"
 msgstr "Save settings"
@@ -1587,8 +1593,8 @@ msgstr "Screened %{value}."
 msgid "Screening"
 msgstr "Screening"
 
-#: lib/firefly_web/live/staff_live/index.ex:96
-#: lib/firefly_web/live/staff_live/index.ex:97
+#: lib/firefly_web/live/staff_live/index.ex:93
+#: lib/firefly_web/live/staff_live/index.ex:94
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Search admin pages and settings"
 msgstr "Search admin pages and settings"
@@ -1674,7 +1680,7 @@ msgstr "Silenced"
 msgid "Silenced %{until}"
 msgstr "Silenced %{until}"
 
-#: lib/firefly_web/live/staff_live/index.ex:122
+#: lib/firefly_web/live/staff_live/index.ex:119
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Site setting"
 msgstr "Site setting"
@@ -1856,7 +1862,7 @@ msgstr "Username, name, email or IP address"
 msgid "Value"
 msgstr "Value"
 
-#: lib/firefly_web/live/staff_live/index.ex:132
+#: lib/firefly_web/live/staff_live/index.ex:129
 #: lib/firefly_web/live/staff_live/users.ex:85
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Waiting for approval"
@@ -2022,3 +2028,207 @@ msgstr "New author's username"
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Posts to give another author"
 msgstr "Posts to give another author"
+
+#: lib/firefly_web/live/staff_live/settings.ex:126
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{key} is back to its default."
+msgstr "%{key} is back to its default."
+
+#: lib/firefly_web/live/staff_live/settings.ex:414
+#, elixir-autogen, elixir-format, fuzzy
+msgid "A JSON or YAML export (of this site or another). Every value is checked first, and each change is logged. Secrets and settings pinned by the environment are skipped."
+msgstr "A JSON or YAML export (of this site or another). Every value is checked first, and each change is logged. Secrets and settings pinned by the environment are skipped."
+
+#: lib/firefly_web/live/staff_live/settings.ex:296
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Changed only"
+msgstr "Changed only"
+
+#: lib/firefly_web/live/staff_live/settings.ex:256
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Changes apply at once and are recorded in the staff log."
+msgstr "Changes apply at once and are recorded in the staff log."
+
+#: lib/firefly_web/live/staff_live/settings.ex:391
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Current %{label}"
+msgstr "Current %{label}"
+
+#: lib/firefly_web/live/staff_live/settings.ex:349
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Default: %{value}"
+msgstr "Default: %{value}"
+
+#: lib/firefly_web/live/staff_live/settings.ex:258
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Export JSON"
+msgstr "Export JSON"
+
+#: lib/firefly_web/live/staff_live/settings.ex:259
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Export YAML"
+msgstr "Export YAML"
+
+#: lib/firefly_web/live/staff_live/settings.ex:372
+#, elixir-autogen, elixir-format, fuzzy
+msgid "History"
+msgstr "History"
+
+#: lib/firefly_web/live/staff_live/settings.ex:412
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Import settings"
+msgstr "Import settings"
+
+#: lib/firefly_web/live/staff_live/settings.ex:183
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Imported %{changed} changed settings."
+msgstr "Imported %{changed} changed settings."
+
+#: lib/firefly_web/live/staff_live/settings.ex:314
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Login providers are configured in the server's environment (FIREFLY_* variables)."
+msgstr "Login providers are configured in the server's environment (FIREFLY_* variables)."
+
+#: lib/firefly_web/live/staff_live/settings.ex:405
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Logo image"
+msgstr "Logo image"
+
+#: lib/firefly_web/live/staff_live/settings.ex:165
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Logo saved."
+msgstr "Logo saved."
+
+#: lib/firefly_web/live/staff_live/settings.ex:380
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Never changed."
+msgstr "Never changed."
+
+#: lib/firefly_web/live/staff_live/settings.ex:301
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No settings match."
+msgstr "No settings match."
+
+#: lib/firefly_web/live/staff_live/settings.ex:108
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing changed."
+msgstr "Nothing changed."
+
+#: lib/firefly_web/live/staff_live/settings.ex:201
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing was imported: %{details}"
+msgstr "Nothing was imported: %{details}"
+
+#: lib/firefly_web/live/staff_live/settings.ex:192
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Pick a JSON or YAML file."
+msgstr "Pick a JSON or YAML file."
+
+#: lib/firefly_web/live/staff_live/settings.ex:160
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Pick an image."
+msgstr "Pick an image."
+
+#: lib/firefly_web/live/staff_live/settings.ex:360
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reset %{label} to its default?"
+msgstr "Reset %{label} to its default?"
+
+#: lib/firefly_web/live/staff_live/settings.ex:363
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reset to default"
+msgstr "Reset to default"
+
+#: lib/firefly_web/live/staff_live/settings.ex:289
+#: lib/firefly_web/live/staff_live/settings.ex:290
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search settings"
+msgstr "Search settings"
+
+#: lib/firefly_web/live/staff_live/settings.ex:353
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Set by %{env}"
+msgstr "Set by %{env}"
+
+#: lib/firefly_web/live/staff_live/settings.ex:344
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Set: leave blank to keep it"
+msgstr "Set: leave blank to keep it"
+
+#: lib/firefly_web/live/staff_live/settings.ex:416
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Settings file"
+msgstr "Settings file"
+
+#: lib/firefly_web/live/staff_live/settings.ex:109
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Settings saved: %{keys}."
+msgstr "Settings saved: %{keys}."
+
+#: lib/firefly_web/live/staff_live/settings.ex:315
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Single sign-on is the only way to log in."
+msgstr "Single sign-on is the only way to log in."
+
+#: lib/firefly_web/live/staff_live/settings.ex:186
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Skipped: %{keys}."
+msgstr "Skipped: %{keys}."
+
+#: lib/firefly_web/live/staff_live/settings.ex:116
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Some settings are invalid; nothing was saved."
+msgstr "Some settings are invalid; nothing was saved."
+
+#: lib/firefly_web/live/staff_live/settings.ex:168
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The logo couldn't be saved."
+msgstr "The logo couldn't be saved."
+
+#: lib/firefly_web/live/staff_live/settings.ex:404
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Upload a logo"
+msgstr "Upload a logo"
+
+#: lib/firefly_web/live/staff_live/settings.ex:406
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Use as logo"
+msgstr "Use as logo"
+
+#: lib/firefly_web/live/staff_live/settings.ex:240
+#: lib/firefly_web/live/staff_live/settings.ex:245
+#, elixir-autogen, elixir-format, fuzzy
+msgid "blank"
+msgstr "blank"
+
+#: lib/firefly_web/live/staff_live/settings.ex:351
+#, elixir-autogen, elixir-format, fuzzy
+msgid "changed"
+msgstr "changed"
+
+#: lib/firefly_web/live/staff_live/settings.ex:242
+#: lib/firefly_web/live/staff_live/settings.ex:324
+#, elixir-autogen, elixir-format, fuzzy
+msgid "off"
+msgstr "off"
+
+#: lib/firefly_web/live/staff_live/settings.ex:241
+#: lib/firefly_web/live/staff_live/settings.ex:323
+#, elixir-autogen, elixir-format, fuzzy
+msgid "on"
+msgstr "on"
+
+#: lib/firefly_web/live/staff_live/settings.ex:385
+#, elixir-autogen, elixir-format, fuzzy
+msgid "reset"
+msgstr "reset"
+
+#: lib/firefly_web/live/staff_live/settings.ex:383
+#, elixir-autogen, elixir-format, fuzzy
+msgid "the system"
+msgstr "the system"
+
+#: lib/firefly_web/live/staff_live/settings.ex:265
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Category"
+msgstr "Category"

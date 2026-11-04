@@ -472,15 +472,24 @@ defmodule FireflyWeb.Layouts do
     """
   end
 
-  @doc "The Firefly icon and wordmark (the icon swaps for the dark theme)."
+  @doc """
+  The site's logo (the `logo_url` setting; else the Firefly icon, which
+  swaps for the dark theme) and title.
+  """
   attr :class, :string, default: nil
   attr :size, :string, default: "size-8"
 
   def logo(assigns) do
+    assigns = assign(assigns, :logo_url, Firefly.SiteSettings.get("logo_url"))
+
     ~H"""
     <span class={["flex items-center gap-2", @class]}>
-      <img src={~p"/images/firefly-icon.svg"} alt="" class={[@size, "dark:hidden"]} />
-      <img src={~p"/images/firefly-icon-dark.svg"} alt="" class={[@size, "hidden dark:block"]} />
+      <%= if @logo_url != "" do %>
+        <img id="site-logo" src={@logo_url} alt="" class={[@size, "w-auto"]} />
+      <% else %>
+        <img src={~p"/images/firefly-icon.svg"} alt="" class={[@size, "dark:hidden"]} />
+        <img src={~p"/images/firefly-icon-dark.svg"} alt="" class={[@size, "hidden dark:block"]} />
+      <% end %>
       <span class="text-xl font-bold tracking-tight">{Firefly.SiteSettings.get("title")}</span>
     </span>
     """

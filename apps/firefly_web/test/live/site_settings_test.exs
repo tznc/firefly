@@ -45,9 +45,10 @@ defmodule FireflyWeb.SiteSettingsTest do
 
     # Seeded from the deployment's config
     assert SiteSettings.get("posts_per_minute") == 1_000
-    Application.put_env(:firefly, :tags_admin_only, true)
-    on_exit(fn -> Application.delete_env(:firefly, :tags_admin_only) end)
+    System.put_env("FIREFLY_TAGS_ADMIN_ONLY", "1")
+    on_exit(fn -> System.delete_env("FIREFLY_TAGS_ADMIN_ONLY") end)
     assert SiteSettings.get("tags_admin_only")
+    assert SiteSettings.env_override("tags_admin_only") == "FIREFLY_TAGS_ADMIN_ONLY"
   end
 
   describe "the settings page" do
@@ -102,6 +103,121 @@ defmodule FireflyWeb.SiteSettingsTest do
 
       assert SiteSettings.get("title") == "Firefly"
       assert Repo.all(StaffAction) == []
+    end
+  end
+
+  describe "the settings page's tools" do
+    test "filters by category, search and changed only", %{conn: conn, admin: admin} do
+      set(admin, %{"max_mentions" => "4"})
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/settings?category=Chat")
+      |> assert_has("#setting-chat_enabled")
+      |> refute_has("#setting-title")
+      |> visit(~p"/staff/settings?q=mentions per post")
+      |> assert_has("#setting-max_mentions")
+      |> refute_has("#setting-chat_enabled")
+      |> visit(~p"/staff/settings?changed=1")
+      |> assert_has("#setting-max_mentions", text: "changed")
+      |> refute_has("#setting-title")
+      |> visit(~p"/staff/settings?q=zzzz")
+      |> assert_has("#no-settings")
+    end
+
+    test "resets a setting and shows its history", %{conn: conn, admin: admin} do
+      set(admin, %{"title" => "Glowworm"})
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/settings?q=title")
+      |> click_button("#setting-title button", "History")
+      |> assert_has("#history-title", text: "Firefly → Glowworm")
+      |> click_button("#setting-title button", "Reset to default")
+      |> assert_has("#flash-info", text: "title is back to its default.")
+
+      assert SiteSettings.get("title") == "Firefly"
+    end
+
+    test "shows settings pinned by the environment read-only", %{conn: conn, admin: admin} do
+      System.put_env("FIREFLY_SETTING_CONTACT_EMAIL", "ops@example.com")
+      on_exit(fn -> System.delete_env("FIREFLY_SETTING_CONTACT_EMAIL") end)
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/settings?category=Basic")
+      |> assert_has("#pinned-contact_email", text: "Set by FIREFLY_SETTING_CONTACT_EMAIL")
+      |> assert_has("#settings_contact_email[disabled]")
+    end
+
+    test "keeps secrets out of the page, and a blank secret keeps it", %{conn: conn, admin: admin} do
+      set(admin, %{"akismet_api_key" => "sekrit-key"})
+
+      html = conn |> log_in_as(admin) |> get(~p"/staff/settings") |> html_response(200)
+      refute html =~ "sekrit-key"
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/settings?category=Posting")
+      |> click_button("Save settings")
+
+      assert SiteSettings.get("akismet_api_key") == "sekrit-key"
+    end
+
+    test "exports JSON and YAML for admins only", %{conn: conn, admin: admin} do
+      set(admin, %{"title" => "Glowworm", "akismet_api_key" => "sekrit"})
+
+      json = conn |> log_in_as(admin) |> get(~p"/staff/settings/export/json")
+      assert json.resp_body =~ ~s{"title": "Glowworm"}
+      refute json.resp_body =~ "sekrit"
+      assert get_resp_header(json, "content-disposition") |> hd() =~ ".json"
+
+      yaml = conn |> log_in_as(admin) |> get(~p"/staff/settings/export/yaml")
+      assert yaml.resp_body =~ ~s{title: "Glowworm"}
+
+      refused = conn |> log_in_as(user_fixture()) |> get(~p"/staff/settings/export/json")
+      assert redirected_to(refused) == "/"
+    end
+
+    @tag :tmp_dir
+    test "imports a YAML file", %{conn: conn, admin: admin, tmp_dir: dir} do
+      path = Path.join(dir, "settings.yaml")
+      File.write!(path, "# from the old site\ntitle: \"Imported\"\nmax_mentions: 3\n")
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/settings")
+      |> upload("Settings file", path)
+      |> click_button("#import-form button", "Import")
+      |> assert_has("#flash-info", text: "Imported 2 changed settings.")
+
+      assert SiteSettings.get("title") == "Imported"
+      assert SiteSettings.get("max_mentions") == 3
+    end
+  end
+
+  describe "appearance" do
+    @tag :tmp_dir
+    test "admins upload a logo", %{conn: conn, admin: admin, tmp_dir: dir} do
+      path = Firefly.UploadHelpers.image_file(dir, "logo.png")
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/settings?category=Basic")
+      |> upload("Logo image", path)
+      |> click_button("Use as logo")
+      |> assert_has("#flash-info", text: "Logo saved.")
+      |> assert_has("#site-logo")
+
+      assert "/uploads/" <> _ = SiteSettings.get("logo_url")
+    end
+
+    test "the theme color and logo show on every page", %{conn: conn, admin: admin} do
+      set(admin, %{"theme_color" => "#112233", "logo_url" => "/uploads/abc/logo.png"})
+
+      html = conn |> get(~p"/") |> html_response(200)
+      assert html =~ ~s{<meta name="theme-color" content="#112233">}
+      conn |> visit(~p"/") |> assert_has("#site-logo[src='/uploads/abc/logo.png']")
     end
   end
 

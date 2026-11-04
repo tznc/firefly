@@ -43,12 +43,13 @@ defmodule Firefly.Discussion.Post do
     timestamps(type: :naive_datetime_usec)
   end
 
-  # Discourse's default: long enough for any real post, short enough that
-  # one can't fill pages (or a draft, see Firefly.Discussion.Drafts) with junk.
-  @max_body_length 32_000
-
-  @doc "The longest a post body (or a draft's) may be, in characters."
-  def max_body_length, do: @max_body_length
+  @doc """
+  The longest a post body (or a draft's) may be, in characters: the
+  `max_post_length` site setting (32,000 by default, Discourse's: long
+  enough for any real post, short enough that one can't fill pages, or a
+  draft, see `Firefly.Discussion.Drafts`, with junk).
+  """
+  def max_body_length, do: Firefly.SiteSettings.get("max_post_length")
 
   def changeset(%__MODULE__{} = post, attrs \\ %{}) do
     post
@@ -75,7 +76,7 @@ defmodule Firefly.Discussion.Post do
 
   @doc "Validates that the changeset's `:body` fits `max_body_length/0`."
   def validate_body_length(changeset),
-    do: validate_length(changeset, :body, max: @max_body_length)
+    do: validate_length(changeset, :body, max: max_body_length())
 
   @doc "Whether the post is a wiki: editable by anyone who may post in its thread."
   def wiki?(%__MODULE__{wiki: wiki}), do: wiki == true

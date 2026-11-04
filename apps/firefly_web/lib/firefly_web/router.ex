@@ -247,13 +247,15 @@ defmodule FireflyWeb.Router do
     post("/click", AnalyticsController, :click)
   end
 
-  # Reports as CSV, backup downloads and starting to impersonate, for admins.
+  # Reports as CSV, backup downloads, settings exports and starting to
+  # impersonate, for admins.
   scope "/staff", FireflyWeb do
     pipe_through([:browser, :admin])
 
     get("/reports/:id/export", ReportController, :export)
     get("/backups/download/:token", BackupController, :download)
     post("/users/:id/impersonate", StaffController, :impersonate)
+    get("/settings/export/:format", SettingsController, :export)
   end
 
   scope "/", FireflyWeb do

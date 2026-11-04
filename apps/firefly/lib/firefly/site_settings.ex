@@ -5,8 +5,19 @@ defmodule Firefly.SiteSettings do
 
   The settings, their types and defaults are defined here; a row exists only
   for a setting an admin changed, so every default is the behavior the site
-  had before settings existed (two defaults come from the deployment's
-  config: `FIREFLY_TAGS_ADMIN_ONLY` and the `:post` rate limit).
+  had before settings existed (the rate limits' defaults come from the
+  deployment's `Firefly.RateLimit` config). Each setting belongs to a
+  `category` (the settings page's tabs) and a `subcategory` (its `section`).
+
+  The deployment can pin any setting with an environment variable,
+  `FIREFLY_SETTING_<KEY>` (`FIREFLY_SETTING_TITLE`; `tags_admin_only` keeps
+  its older `FIREFLY_TAGS_ADMIN_ONLY`): its value wins over the stored one,
+  and the settings page shows it read-only with the variable's name.
+
+  Settings can be reset to their default, each one's history is read from
+  the staff log (`history/1`), and they're exported and imported as JSON
+  or YAML (see `Firefly.SiteSettings.Transfer`). Secrets are never shown,
+  logged or exported.
 
   Reads are served from `:persistent_term`. An update clears the cache on
   this node at once, and on every node through PubSub (see
@@ -17,7 +28,7 @@ defmodule Firefly.SiteSettings do
   where each test's settings live in its own database transaction.
   """
 
-  use Boundary, top_level?: true, check: [out: false], exports: []
+  use Boundary, top_level?: true, check: [out: false], exports: [Transfer]
 
   import Ecto.Query
 
@@ -30,14 +41,53 @@ defmodule Firefly.SiteSettings do
   @cache_key {__MODULE__, :values}
   @generation_key {__MODULE__, :generation}
 
+  # The settings page's tabs, and the sections (subcategories) in each.
+  @categories [
+    {"Basic", ["Site", "Appearance"]},
+    {"Users", ["Registration", "Logins", "New members", "Directory", "SAML", "Trust levels"]},
+    {"Posting",
+     ["Content", "Spam and new users", "Akismet", "Uploads", "Link previews", "Search"]},
+    {"Email", ["Email"]},
+    {"Security", ["Rate limits", "API"]},
+    {"Chat", ["Chat"]},
+    {"AI", ["AI", "AI prompts"]},
+    {"Search engines", ["Search engines", "Analytics"]},
+    {"Advanced", ["Plugins", "Backups", "Updates", "Embedding"]}
+  ]
+
+  @doc "The categories, in order: `{name, sections}`."
+  def categories, do: @categories
+
   @doc """
-  Every setting, in display order: `key`, `section`, `type` (`:string`,
-  `:text`, `:email`, `:boolean`, `:integer` or `:select`), `label`, `help`,
-  `default`, for integers `min`/`max`, for texts optionally `max_length`
-  (500 characters by default) and `secret` (the staff log doesn't record
-  the value), and for selects `options` (`{label, value}` pairs).
+  Every setting, in display order (by category and section): `key`,
+  `category`, `subcategory` (and
+  `section`, the same), `type` (`:string`, `:text`, `:email`,
+  `:boolean`, `:integer`, `:select`, `:list`, `:color` or `:upload`),
+  `label`, `help`, `default`, `env` (the environment variable that pins
+  it), for integers `min`/`max`, for texts optionally `max_length` (500
+  characters by default) and `secret` (never shown, logged or exported),
+  for selects `options` (`{label, value}` pairs), and for lists
+  optionally `options` (the values allowed).
   """
   def definitions do
+    sections = Enum.flat_map(@categories, &elem(&1, 1))
+
+    (core_definitions() ++ extra_definitions())
+    |> Enum.map(&finish/1)
+    |> Enum.sort_by(&Enum.find_index(sections, fn section -> section == &1.section end))
+  end
+
+  defp finish(%{section: section, key: key} = definition) do
+    {category, _sections} =
+      Enum.find(@categories, fn {_name, sections} -> section in sections end)
+
+    definition
+    |> Map.put(:category, category)
+    |> Map.put(:subcategory, section)
+    |> Map.put_new(:env, "FIREFLY_SETTING_" <> String.upcase(key))
+  end
+
+  defp core_definitions do
     [
       %{
         key: "title",
@@ -516,7 +566,8 @@ defmodule Firefly.SiteSettings do
         section: "Spam and new users",
         type: :boolean,
         label: "Only admins create tags",
-        default: Application.get_env(:firefly, :tags_admin_only, false),
+        default: false,
+        env: "FIREFLY_TAGS_ADMIN_ONLY",
         help: "On: members can only use existing tags."
       },
       %{
@@ -1017,18 +1068,18 @@ defmodule Firefly.SiteSettings do
       %{
         key: "chat_allowed_groups",
         section: "Chat",
-        type: :text,
+        type: :list,
         label: "Groups that can chat",
-        default: "trust_level_0",
+        default: ["trust_level_0"],
         help:
           "Group names, separated by commas (trust_level_0 is every member). Admins always can. Blank: admins only."
       },
       %{
         key: "direct_message_enabled_groups",
         section: "Chat",
-        type: :text,
+        type: :list,
         label: "Groups that can start direct messages",
-        default: "trust_level_1",
+        default: ["trust_level_1"],
         help:
           "Group names, separated by commas. Anyone in a direct message can reply to it. Blank: admins only."
       },
@@ -1307,6 +1358,289 @@ defmodule Firefly.SiteSettings do
     ]
   end
 
+  # Tunables that were constants or deployment config before.
+  defp extra_definitions do
+    appearance_definitions() ++
+      account_definitions() ++
+      member_default_definitions() ++
+      limit_definitions() ++ rate_limit_definitions()
+  end
+
+  defp appearance_definitions do
+    [
+      %{
+        key: "theme_color",
+        section: "Appearance",
+        type: :color,
+        label: "Browser theme color",
+        default: "#db3440",
+        help: "The color mobile browsers tint their toolbar with (the theme-color meta tag)."
+      },
+      %{
+        key: "logo_url",
+        section: "Appearance",
+        type: :upload,
+        label: "Logo",
+        default: "",
+        help:
+          "An image shown in the header instead of the Firefly icon (next to the title). Blank: the Firefly icon."
+      }
+    ]
+  end
+
+  defp account_definitions do
+    [
+      %{
+        key: "min_username_length",
+        section: "Registration",
+        type: :integer,
+        label: "Shortest username",
+        default: 2,
+        min: 1,
+        max: 20,
+        help: "How many characters a new username must have at least."
+      },
+      %{
+        key: "max_username_length",
+        section: "Registration",
+        type: :integer,
+        label: "Longest username",
+        default: 32,
+        min: 10,
+        max: 60,
+        help: "How many characters a new username may have at most."
+      },
+      %{
+        key: "min_password_length",
+        section: "Registration",
+        type: :integer,
+        label: "Shortest password",
+        default: 8,
+        min: 8,
+        max: 72,
+        help:
+          "How many characters a new password must have at least (72 is the most passwords can have)."
+      },
+      %{
+        key: "reserved_usernames",
+        section: "Registration",
+        type: :list,
+        label: "Reserved usernames",
+        default: [],
+        help:
+          "Usernames nobody can sign up with (any case), separated by commas, e.g. support, staff."
+      },
+      %{
+        key: "email_confirmation_days",
+        section: "Logins",
+        type: :integer,
+        label: "Confirmation links last (days)",
+        default: 7,
+        min: 1,
+        max: 30,
+        help: "How long the link that confirms an email address works."
+      },
+      %{
+        key: "password_reset_hours",
+        section: "Logins",
+        type: :integer,
+        label: "Password reset links last (hours)",
+        default: 1,
+        min: 1,
+        max: 72,
+        help: "How long a password reset link works (once)."
+      },
+      %{
+        key: "magic_link_minutes",
+        section: "Logins",
+        type: :integer,
+        label: "Email login links last (minutes)",
+        default: 15,
+        min: 5,
+        max: 1440,
+        help: "How long an emailed login link works (once)."
+      },
+      %{
+        key: "directory_page_size",
+        section: "Directory",
+        type: :integer,
+        label: "Members per page",
+        default: 20,
+        min: 5,
+        max: 100,
+        help: "How many members the users directory lists a page."
+      }
+    ]
+  end
+
+  defp member_default_definitions do
+    [
+      default(
+        "default_email_notifications",
+        :boolean,
+        "Email notifications",
+        true,
+        "Whether new members get notification emails until they change it."
+      ),
+      default(
+        "default_allow_private_messages",
+        :boolean,
+        "Accept private messages",
+        true,
+        "Whether new members can be sent private messages until they change it."
+      ),
+      default(
+        "default_keyboard_shortcuts",
+        :boolean,
+        "Keyboard shortcuts",
+        true,
+        "Whether keyboard shortcuts are on for new members."
+      ),
+      default(
+        "default_push_only_when_away",
+        :boolean,
+        "Browser notifications only when away",
+        true,
+        "Whether new members' browser notifications wait until they're away from the site."
+      ),
+      Map.put(
+        default(
+          "default_reply_level",
+          :select,
+          "Level for threads they reply to",
+          "tracking",
+          "The notification level new members' replies set on a thread."
+        ),
+        :options,
+        [{"Tracking", "tracking"}, {"Normal", "normal"}]
+      ),
+      Map.put(
+        default(
+          "default_new_thread_level",
+          :select,
+          "Level for threads they start",
+          "watching",
+          "The notification level new members' own threads start at."
+        ),
+        :options,
+        [{"Watching", "watching"}, {"Tracking", "tracking"}]
+      )
+    ]
+  end
+
+  defp default(key, type, label, default, help),
+    do: %{
+      key: key,
+      section: "New members",
+      type: type,
+      label: label,
+      default: default,
+      help: help
+    }
+
+  defp limit_definitions do
+    [
+      %{
+        key: "max_post_length",
+        section: "Content",
+        type: :integer,
+        label: "Longest post (characters)",
+        default: 32_000,
+        min: 500,
+        max: 100_000,
+        help: "How long a thread's first post, a reply or a private message may be."
+      },
+      %{
+        key: "max_chat_message_length",
+        section: "Chat",
+        type: :integer,
+        label: "Longest chat message (characters)",
+        default: 6000,
+        min: 100,
+        max: 20_000,
+        help: "How long one chat message may be."
+      },
+      %{
+        key: "search_results_per_page",
+        section: "Search",
+        type: :integer,
+        label: "Results per page",
+        default: 20,
+        min: 5,
+        max: 100,
+        help: "How many results a search page shows (keyword and semantic search)."
+      },
+      %{
+        key: "authorized_extensions",
+        section: "Uploads",
+        type: :list,
+        label: "Allowed file types",
+        default: ~w(png jpg gif webp pdf txt),
+        options: ~w(png jpg gif webp pdf txt),
+        help:
+          "Which kinds of file members may attach (by extension; the content is checked too). Firefly accepts at most these: png, jpg, gif, webp, pdf, txt."
+      },
+      %{
+        key: "email_from_name",
+        section: "Email",
+        type: :string,
+        label: "Sender name",
+        default: elem(Application.get_env(:firefly, :email, [])[:from] || {"Firefly", nil}, 0),
+        help: "The name emails come from (the address is the deployment's)."
+      },
+      %{
+        key: "digest_max_notifications",
+        section: "Email",
+        type: :integer,
+        label: "Notifications in a digest",
+        default: 5,
+        min: 0,
+        max: 50,
+        help: "How many unread notifications a digest email lists."
+      }
+    ]
+  end
+
+  # Each limit's count; its window stays the deployment's (see Firefly.RateLimit).
+  @rate_limits [
+    {"login", "Login attempts per username", "per 5 minutes"},
+    {"login_ip", "Login attempts per IP address", "per 5 minutes"},
+    {"register", "Sign-ups per IP address", "per hour"},
+    {"upload", "Uploads per member", "per hour"},
+    {"like", "Likes per member", "per 5 minutes"},
+    {"message", "New private conversations per member", "per hour"},
+    {"chat", "Chat messages per member", "per minute"},
+    {"export", "Account exports per member", "per hour"},
+    {"email", "Account emails per member", "per hour"},
+    {"two_factor", "Second-factor attempts per member", "per 5 minutes"},
+    {"magic_link", "Email login link requests", "per hour"},
+    {"password_reset", "Password reset requests per IP address", "per hour"},
+    {"search", "Searches per member or visitor", "per minute"},
+    {"ai", "AI requests per member", "per minute"},
+    {"mcp", "MCP requests per member", "per minute"},
+    {"flag", "Flags per member", "per hour"},
+    {"invite", "Invitations per member", "per hour"},
+    {"plugin_notify", "Notifications per plugin", "per hour"},
+    {"plugin_call", "Plugin widget calls per member", "per minute"},
+    {"plugin_api", "Plugin endpoint requests per IP address", "per minute"},
+    {"plugin_storage", "Plugin storage writes per member", "per minute"}
+  ]
+
+  defp rate_limit_definitions do
+    for {bucket, label, window} <- @rate_limits do
+      %{
+        key: "rate_limit_" <> bucket,
+        section: "Rate limits",
+        type: :integer,
+        label: label,
+        default: RateLimit.configured_limit(String.to_existing_atom(bucket)),
+        min: 1,
+        max: 100_000,
+        help: "How many are allowed #{window} (the window is the deployment's)."
+      }
+    end
+  end
+
   @doc "The setting's current value."
   def get(key), do: Map.fetch!(all(), key)
 
@@ -1347,7 +1681,7 @@ defmodule Firefly.SiteSettings do
     values =
       Map.new(definitions(), fn definition ->
         value =
-          with raw when is_binary(raw) <- stored[definition.key],
+          with raw when is_binary(raw) <- env_value(definition) || stored[definition.key],
                {:ok, value} <- cast(definition, raw) do
             value
           else
@@ -1358,6 +1692,81 @@ defmodule Firefly.SiteSettings do
       end)
 
     {values, MapSet.new(Map.keys(stored))}
+  end
+
+  defp env_value(%{env: env}) do
+    case System.get_env(env) do
+      nil -> nil
+      value -> value
+    end
+  end
+
+  @doc """
+  The environment variable pinning `key`'s value, when it's set (the
+  setting can't be changed here then), else nil.
+  """
+  def env_override(key) do
+    case Enum.find(definitions(), &(&1.key == key)) do
+      %{env: env} -> if System.get_env(env), do: env
+      nil -> nil
+    end
+  end
+
+  @doc "The definition of `key`, or nil."
+  def definition(key), do: Enum.find(definitions(), &(&1.key == key))
+
+  @doc """
+  Resets `key` to its default as `admin`: its stored value goes, and the
+  staff log records the change (`reset: true`). A setting already at its
+  default is left as it is (`{:ok, :unchanged}`).
+  """
+  def reset(key, admin) do
+    definition = definition(key)
+
+    cond do
+      is_nil(definition) ->
+        {:error, :unknown}
+
+      not customized?(key) ->
+        {:ok, :unchanged}
+
+      true ->
+        before = get(key)
+
+        {:ok, _} =
+          Repo.transact(fn ->
+            Repo.delete_all(from(s in SiteSetting, where: s.key == ^key))
+
+            StaffLog.record(admin, "setting.update", {"setting", nil}, %{
+              key: key,
+              reset: true,
+              value: logged_value(key, before, definition.default)
+            })
+
+            {:ok, key}
+          end)
+
+        invalidate()
+        {:ok, :reset}
+    end
+  end
+
+  @doc """
+  The staff log's changes to `key`, newest first: maps with `at`, `actor`
+  (a user or nil), `before`, `after` and `reset`.
+  """
+  def history(key, limit \\ 20) do
+    for entry <- StaffLog.setting_history(key, limit) do
+      value = entry.details["value"] || %{}
+
+      %{
+        at: entry.inserted_at,
+        actor: entry.actor,
+        before: value["before"],
+        after: value["after"],
+        reset: entry.details["reset"] == true
+      }
+    end
   end
 
   @doc """
@@ -1379,10 +1788,18 @@ defmodule Firefly.SiteSettings do
 
   # Adds the setting to the changes (if its value changed) or the errors.
   defp collect(%{key: key} = definition, raw, current, {changes, errors}) do
-    case cast(definition, raw) do
-      {:ok, value} when value == :erlang.map_get(key, current) -> {changes, errors}
-      {:ok, value} -> {Map.put(changes, key, value), errors}
-      {:error, message} -> {changes, Map.put(errors, key, message)}
+    case {cast(definition, raw), System.get_env(definition.env)} do
+      {{:ok, value}, _pinned} when value == :erlang.map_get(key, current) ->
+        {changes, errors}
+
+      {_changed_or_invalid, pinned} when is_binary(pinned) ->
+        {changes, Map.put(errors, key, "is set by #{definition.env}")}
+
+      {{:ok, value}, nil} ->
+        {Map.put(changes, key, value), errors}
+
+      {{:error, message}, nil} ->
+        {changes, Map.put(errors, key, message)}
     end
   end
 
@@ -1432,11 +1849,12 @@ defmodule Firefly.SiteSettings do
   @doc false
   def clear_cache, do: :persistent_term.put(@generation_key, make_ref())
 
+  defp encode(value) when is_list(value), do: Enum.join(value, ",")
   defp encode(value), do: to_string(value)
 
   @doc "Casts a form value for the setting's type: `{:ok, value}` or `{:error, message}`."
-  def cast(%{type: :boolean}, value) when value in ["true", true], do: {:ok, true}
-  def cast(%{type: :boolean}, value) when value in ["false", false], do: {:ok, false}
+  def cast(%{type: :boolean}, value) when value in ["true", "1", true], do: {:ok, true}
+  def cast(%{type: :boolean}, value) when value in ["false", "0", false], do: {:ok, false}
   def cast(%{type: :boolean}, _value), do: {:error, "must be on or off"}
 
   def cast(%{type: :integer} = definition, value) when is_binary(value) do
@@ -1481,6 +1899,54 @@ defmodule Firefly.SiteSettings do
     if Enum.any?(options, fn {_label, option} -> option == value end),
       do: {:ok, value},
       else: {:error, "is invalid"}
+  end
+
+  def cast(%{type: :list} = definition, value) when is_binary(value),
+    do: cast(definition, String.split(value, ~r/[,\n]/))
+
+  def cast(%{type: :list} = definition, values) when is_list(values) do
+    values =
+      values
+      |> Enum.map(&(&1 |> to_string() |> String.trim()))
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.uniq()
+
+    allowed = definition[:options]
+
+    cond do
+      Enum.any?(values, &(String.length(&1) > 100)) ->
+        {:error, "has an item longer than 100 characters"}
+
+      allowed && Enum.any?(values, &(&1 not in allowed)) ->
+        {:error, "may only hold #{Enum.join(allowed, ", ")}"}
+
+      true ->
+        {:ok, values}
+    end
+  end
+
+  def cast(%{type: :color}, value) when is_binary(value) do
+    value = value |> String.trim() |> String.downcase()
+
+    if value =~ ~r/^#[0-9a-f]{6}$/,
+      do: {:ok, value},
+      else: {:error, "must be a color like #3b82f6"}
+  end
+
+  # An upload's path (see Firefly.Uploads), or blank for none.
+  def cast(%{type: :upload}, value) when is_binary(value) do
+    case String.trim(value) do
+      "" ->
+        {:ok, ""}
+
+      "/uploads/" <> _ = path ->
+        if path =~ ~r{^/uploads/[A-Za-z0-9_-]+/[^/\s]+$},
+          do: {:ok, path},
+          else: {:error, "is invalid"}
+
+      _other ->
+        {:error, "must be an uploaded file"}
+    end
   end
 
   def cast(_definition, _value), do: {:error, "is invalid"}

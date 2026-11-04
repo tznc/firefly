@@ -38,15 +38,21 @@ defmodule Firefly.Uploads do
   alias Firefly.Messaging.Message
   alias Firefly.Uploads.{Processor, Storage, Upload}
 
-  # Uploads stored processed their own way, attached as soon as they're made.
-  @variants ~w(avatar background emoji preview)
+  # Uploads stored processed their own way, attached as soon as they're made
+  # (`site`: an image a site setting uses, such as the logo).
+  @variants ~w(avatar background emoji preview site)
   @token_pattern ~r"/uploads/([A-Za-z0-9_-]{22})/"
 
   @doc "The largest file accepted, in bytes (the `max_upload_kb` setting)."
   def max_size, do: SiteSettings.get("max_upload_kb") * 1024
 
-  @doc "File extensions the composer's picker offers."
-  def accept, do: ~w(.png .jpg .jpeg .gif .webp .pdf .txt)
+  @doc "File extensions the composer's picker offers (the `authorized_extensions` setting)."
+  def accept do
+    Enum.flat_map(SiteSettings.get("authorized_extensions"), fn
+      "jpg" -> [".jpg", ".jpeg"]
+      extension -> ["." <> extension]
+    end)
+  end
 
   @doc """
   Stores the file at `path` (named `filename` by its uploader) as `user`'s.
@@ -77,7 +83,8 @@ defmodule Firefly.Uploads do
   defp create_from_data(user, data, filename, opts) do
     filename = safe_filename(filename)
 
-    with {:ok, content_type} <- Processor.detect(data, filename) do
+    with {:ok, content_type} <- Processor.detect(data, filename),
+         :ok <- authorized(content_type, opts) do
       sha256 = Base.encode16(:crypto.hash(:sha256, data), case: :lower)
       variant = opts[:variant]
 
@@ -85,6 +92,18 @@ defmodule Firefly.Uploads do
         do: {:error, "An #{variant} must be an image."},
         else: store(user, data, filename, content_type, sha256, opts)
     end
+  end
+
+  # Members' attachments must be of a type the `authorized_extensions`
+  # setting allows; images the site processes itself (avatars, emoji...)
+  # and imported files are checked for what they are only.
+  defp authorized(content_type, opts) do
+    if opts[:variant] != nil or opts[:quota] == false or
+         String.trim_leading(Processor.extension(content_type), ".") in SiteSettings.get(
+           "authorized_extensions"
+         ),
+       do: :ok,
+       else: {:error, "That file type isn't allowed here."}
   end
 
   defp read(path) do

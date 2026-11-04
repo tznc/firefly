@@ -80,8 +80,8 @@ defmodule Firefly.TagsTest do
     category: category,
     author: author
   } do
-    Application.put_env(:firefly, :tags_admin_only, true)
-    on_exit(fn -> Application.delete_env(:firefly, :tags_admin_only) end)
+    System.put_env("FIREFLY_TAGS_ADMIN_ONLY", "true")
+    on_exit(fn -> System.delete_env("FIREFLY_TAGS_ADMIN_ONLY") end)
 
     assert {:error, changeset} =
              Discussion.create_thread(category, author, %{

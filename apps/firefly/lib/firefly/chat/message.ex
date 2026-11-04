@@ -15,8 +15,6 @@ defmodule Firefly.Chat.Message do
   alias Firefly.Accounts.User
   alias Firefly.Chat.{Channel, Flag, Reaction, Thread}
 
-  @max_length 6000
-
   schema "chat_messages" do
     field(:body, :string)
     field(:edited_at, :utc_datetime)
@@ -38,15 +36,15 @@ defmodule Firefly.Chat.Message do
     timestamps(type: :naive_datetime_usec)
   end
 
-  @doc "The longest message allowed, in characters."
-  def max_length, do: @max_length
+  @doc "The longest message allowed, in characters (the `max_chat_message_length` setting)."
+  def max_length, do: Firefly.SiteSettings.get("max_chat_message_length")
 
   def changeset(%__MODULE__{} = message, attrs) do
     message
     |> cast(attrs, [:body])
     |> update_change(:body, &String.trim/1)
     |> validate_required([:body])
-    |> validate_length(:body, max: @max_length)
+    |> validate_length(:body, max: max_length())
   end
 
   def deleted?(%__MODULE__{deleted_at: deleted_at}), do: not is_nil(deleted_at)

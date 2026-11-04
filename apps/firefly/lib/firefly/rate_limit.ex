@@ -10,7 +10,8 @@ defmodule Firefly.RateLimit do
     * `:register` - account registrations per client IP
     * `:post` - new threads and posts per user (web, API and email). Its
       count per minute is the `posts_per_minute` site setting, which
-      defaults to the configured count.
+      defaults to the configured count. Every other limit's count is its
+      `rate_limit_<name>` site setting in the same way.
     * `:magic_link` - email login link requests, per client IP and per address
     * `:two_factor` - second-factor attempts (codes, security keys) per user
     * `:email` - account emails (confirmation, password reset) per user
@@ -120,7 +121,17 @@ defmodule Firefly.RateLimit do
       else: configured(:post)
   end
 
-  def limit(bucket), do: configured(bucket)
+  # Every other bucket's count is its `rate_limit_<bucket>` setting once an
+  # admin sets it (its default is the configured count), in the configured
+  # window.
+  def limit(bucket) do
+    {count, window} = configured(bucket)
+    key = "rate_limit_#{bucket}"
+
+    if Firefly.SiteSettings.customized?(key) or Firefly.SiteSettings.env_override(key),
+      do: {Firefly.SiteSettings.get(key), window},
+      else: {count, window}
+  end
 
   defp configured(bucket) do
     configured = Application.get_env(:firefly, __MODULE__, [])[:limits] || []

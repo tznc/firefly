@@ -188,6 +188,16 @@ defmodule Firefly.Moderation.StaffLog do
   defp filter_by(query, _field, blank) when blank in [nil, ""], do: query
   defp filter_by(query, field, value), do: where(query, [a], field(a, ^field) == ^value)
 
+  @doc "The `setting.update` entries about the site setting `key`, newest first, with actors."
+  def setting_history(key, limit) do
+    StaffAction
+    |> where([a], a.action == "setting.update" and fragment("?->>'key' = ?", a.details, ^key))
+    |> order_by(desc: :id)
+    |> limit(^limit)
+    |> preload(:actor)
+    |> Repo.all()
+  end
+
   @doc "The users who have log entries (for the actor filter), by username."
   def actors do
     User

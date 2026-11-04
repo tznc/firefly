@@ -107,7 +107,8 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_PG_BIN_DIR` | Where `pg_dump` and `pg_restore` are, for backups; they must be the database's major version or newer (the Docker image has PostgreSQL 18's, for servers up to 18). Default: the newest `/usr/lib/postgresql/*/bin`, else the `PATH` |
 | `FIREFLY_GIT_SHA` | The commit the code was built from, shown with the version (the Docker image sets it from the `FIREFLY_GIT_SHA` build argument) |
 | `FIREFLY_UPDATE_REPO` | The GitHub repository whose latest release the daily version check compares with (default `tznc/firefly`); the check is off with the `version_check` site setting |
-| `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones) |
+| `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones); pins the "Only admins create tags" site setting |
+| `FIREFLY_SETTING_<KEY>` | Pins any site setting (e.g. `FIREFLY_SETTING_TITLE`, `FIREFLY_SETTING_ALLOW_REGISTRATIONS=false`): the value wins over the admin's, shown read-only at `/staff/settings` |
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
 | `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
@@ -269,6 +270,13 @@ log; admins also run the site. Grant either role from a user's admin page
 - **Emails** (`/staff/emails`): the log of every email sent, skipped or
   failed (kept `email_log_days`), a test email, and each template
   previewed with sample data.
+- **Site settings** (`/staff/settings`): over 180 typed settings (text,
+  numbers, switches, choices, lists, colors, uploads) in categories and
+  sections, searchable, filterable to the ones changed from their
+  default, each with its default, a reset and its history from the staff
+  log. Any setting can be pinned by the deployment with
+  `FIREFLY_SETTING_<KEY>` (shown read-only). Export them as JSON or YAML
+  and import either; secrets are never shown or exported.
 - **Screening** (`/staff/screening`): email addresses or patterns, IP
   addresses or ranges and URL domains that are blocked from signing up or
   posting. Each block is counted and recorded in the staff log.

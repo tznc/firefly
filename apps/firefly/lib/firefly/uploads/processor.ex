@@ -86,6 +86,7 @@ defmodule Firefly.Uploads.Processor do
         "emoji" -> image(data, image, content_type, @emoji_size)
         "background" -> image(data, image, content_type, @background_size)
         "preview" -> image(data, image, content_type, @thumbnail_size)
+        "site" -> image(data, image, content_type, @background_size)
         nil -> image(data, image, content_type, opts[:max_dimension])
       end
     end

@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
-    <meta name="theme-color" content="#DB3440" />
+    <meta name="theme-color" content={Firefly.SiteSettings.get("theme_color")} />
     <link rel="icon" href={~p"/favicon.ico"} sizes="48x48" />
     <link rel="icon" type="image/svg+xml" href={~p"/images/firefly-icon.svg"} />
     <link rel="icon" type="image/png" sizes="32x32" href={~p"/images/favicon-32.png"} />
