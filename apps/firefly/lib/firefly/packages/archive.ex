@@ -123,7 +123,7 @@ defmodule Firefly.Packages.Archive do
   defp inflate_all(zip, entries) do
     entries
     |> Enum.reduce_while({%{}, @max_unpacked}, fn {name, _size, offset, compressed},
-                                                   {files, left} ->
+                                                  {files, left} ->
       with {:ok, method, data} <- entry_data(zip, offset, compressed),
            {:ok, inflated} <- inflate(method, data, left) do
         {:cont, {Map.put(files, name, inflated), left - byte_size(inflated)}}
@@ -150,7 +150,8 @@ defmodule Firefly.Packages.Archive do
         method::little-16, _times_crc_sizes::binary-16, name_length::little-16,
         extra_length::little-16, rest::binary>> ->
         case rest do
-          <<_::binary-size(^name_length + ^extra_length), data::binary-size(^compressed), _::binary>> ->
+          <<_::binary-size(^name_length + ^extra_length), data::binary-size(^compressed),
+            _::binary>> ->
             {:ok, method, data}
 
           _truncated ->
