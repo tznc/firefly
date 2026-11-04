@@ -7,7 +7,8 @@ defmodule Firefly.DiscussionPropertyTest do
   each thread's first post; unread counts never go negative; slugs are
   always URL-safe.
   """
-  use Firefly.DataCase, async: true
+  # Sync: it holds the shared "admin" role (admin_fixture/1) for its whole run.
+  use Firefly.DataCase, async: false
   use ExUnitProperties
 
   import Firefly.Generators
