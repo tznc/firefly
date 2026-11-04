@@ -1,19 +1,23 @@
 services:
   postgres:
     container_name: firestorm-pg
-    # PostgreSQL 18 with the pgvector extension (semantic search).
-    image: pgvector/pgvector:pg18
+    # supabase/postgres: PostgreSQL 17 with pgvector (semantic search). Its
+    # superuser is supabase_admin (don't set POSTGRES_USER or POSTGRES_DB:
+    # its init scripts rely on the defaults); POSTGRES_PASSWORD also sets
+    # the password of the `postgres` role Firefly connects as, which can
+    # create the database and the extension. Only the database image: no
+    # other Supabase services.
+    image: supabase/postgres:17.11.0.018
     environment:
-      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: firestorm_web_dev
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      # Over TCP: the first start initialises under a socket-only server.
+      test: ["CMD-SHELL", "pg_isready -U postgres -h localhost"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
 
   firestorm:
     container_name: firestorm

@@ -23,17 +23,22 @@ jobs:
 
     services:
       postgres:
-        # PostgreSQL 18 with the pgvector extension (semantic search).
-        image: pgvector/pgvector:pg18
+        # supabase/postgres: PostgreSQL 17 with pgvector (semantic search).
+        # Its superuser is supabase_admin (leave POSTGRES_USER alone: its
+        # init scripts rely on it); POSTGRES_PASSWORD also sets the password
+        # of the `postgres` role the tests connect as, which isn't a
+        # superuser but can create databases and (through supautils)
+        # extensions. On first start it runs its own migrations under a
+        # temporary socket-only server, so the health check goes over TCP.
+        image: supabase/postgres:17.11.0.018
         env:
-          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U postgres -h localhost"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 30
       # The importers' source databases (see apps/firefly_import's tests
       # tagged import_mysql, import_mongo and import_redis).
       mariadb:
@@ -76,7 +81,8 @@ jobs:
       - name: Install libvips
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
 
-      # Backup tests run pg_dump/pg_restore, which must match the server (18).
+      # Backup tests run pg_dump/pg_restore, which must be at least the
+      # server's major version (17); 18 is what the release image ships.
       - name: Install postgresql-client-18
         run: |
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
@@ -185,5 +191,5 @@ jobs:
             -e FIREFLY_DATABASE_URL=ecto://user:pass@localhost/firefly \
             -e FIREFLY_SECRET_KEY_BASE="$(openssl rand -base64 48)" \
             firefly:ci /app/bin/firefly eval 'IO.puts(Application.spec(:firefly_web, :vsn))'
-          # Backups need the PostgreSQL 18 client tools.
+          # Backups need PostgreSQL client tools at least as new as the server (17).
           docker run --rm --entrypoint /usr/lib/postgresql/18/bin/pg_restore firefly:ci --version

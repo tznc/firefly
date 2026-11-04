@@ -6,7 +6,7 @@ defmodule Firefly.Backups.Archive do
   local upload directory under `uploads/`.
 
   Runs PostgreSQL's own client tools (`pg_dump`, `pg_restore`), which must
-  match the server's major version: they're taken from `:pg_bin_dir` (the
+  be the server's major version or newer: they're taken from `:pg_bin_dir` (the
   `Firefly.Backups` config, `FIREFLY_PG_BIN_DIR`), else the newest
   `/usr/lib/postgresql/<version>/bin` (where Debian and Ubuntu install
   each version), else the `PATH`. The database is the repo's unless a
