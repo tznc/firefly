@@ -88,6 +88,9 @@ defmodule FireflyWeb.StaffLive.Log do
     "webhook.update" => "Changed webhook",
     "webhook.delete" => "Deleted webhook",
     "webhook.auto_disable" => "Turned off failing webhook",
+    "discourse_connect_client.create" => "Added DiscourseConnect site",
+    "discourse_connect_client.update" => "Changed DiscourseConnect site",
+    "discourse_connect_client.delete" => "Removed DiscourseConnect site",
     "backup.create" => "Made backup",
     "backup.delete" => "Deleted backup",
     "backup.download" => "Downloaded backup",
@@ -167,6 +170,12 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "webhook", target_id: id, details: %{"url" => url}}, _target),
     do: {url, ~p"/staff/webhooks/#{id}"}
+
+  defp target_link(
+         %{target_type: "discourse_connect_client", details: %{"name" => name}},
+         _target
+       ),
+       do: {name, ~p"/staff/discourse-connect"}
 
   defp target_link(%{target_type: "embed_host", details: %{"host" => host}}, _target),
     do: {host, ~p"/staff/embedding"}

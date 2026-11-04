@@ -9,7 +9,8 @@ defmodule Firefly.Accounts do
 
     * `Firefly.Accounts.User`, `UserIdentity`, `UserIgnore` - the schemas
     * `Firefly.Accounts.Auth` - social logins and single sign-on (OIDC,
-      SAML, LDAP, DiscourseConnect) and their Ueberauth strategies
+      SAML, LDAP, DiscourseConnect) and their Ueberauth strategies, and
+      `Auth.DiscourseConnectProvider` (other sites logging in through ours)
     * `Firefly.Accounts.TwoFactor`, `Passkeys`, `WebAuthn` - second factors
     * `Firefly.Accounts.MagicLinks`, `PasswordReset`, `EmailConfirmation`
     * `Firefly.Accounts.AccountDeletion`, `AccountExport`
@@ -29,6 +30,8 @@ defmodule Firefly.Accounts do
       Auth.DiscourseConnect,
       Auth.SAML,
       Auth.LDAP,
+      Auth.DiscourseConnectProvider,
+      Auth.DiscourseConnectClient,
       TwoFactor,
       Passkeys,
       WebAuthn,

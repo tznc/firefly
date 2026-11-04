@@ -206,6 +206,24 @@ defmodule Firefly.SiteSettings do
           "The provider's groups, add_groups and remove_groups set the member's groups (only groups that exist here)."
       },
       %{
+        key: "discourse_connect_provider_enabled",
+        section: "Logins",
+        type: :boolean,
+        label: "Be a DiscourseConnect provider",
+        default: false,
+        help:
+          "Other sites log people in with their accounts here, through DiscourseConnect (add each site at Staff, DiscourseConnect)."
+      },
+      %{
+        key: "discourse_connect_provider_require_two_factor",
+        section: "Logins",
+        type: :boolean,
+        label: "Two-factor for DiscourseConnect provider logins",
+        default: false,
+        help:
+          "Members must turn on two-factor authentication before logging in to other sites through this one."
+      },
+      %{
         key: "saml_enabled",
         section: "SAML",
         type: :boolean,
