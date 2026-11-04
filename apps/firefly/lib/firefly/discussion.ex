@@ -390,44 +390,72 @@ defmodule Firefly.Discussion do
   end
 
   @doc """
-  Moves `category` one place `:up` or `:down` among its siblings (the
-  top-level categories, or its parent's subcategories), as `actor`.
-  Siblings are numbered 0, 1, 2... in their current order first, so
-  categories that all had the default position get distinct ones.
-  Staff-logged as `category.update` with the new position.
+  Puts `category` at `index` (0-based, clamped) among the subcategories of
+  `parent_id`, or among the top-level categories when it's nil, as
+  `actor`: the categories admin's drag and drop. Moving to another parent
+  goes through `Category.changeset/2`, so categories stay one level deep
+  (a category with subcategories can't become one, and a parent must be
+  top-level). Both sibling lists are renumbered 0, 1, 2... in one
+  transaction, with the categories locked so concurrent moves serialize.
+  Staff-logged as `category.update` with the position (and parent) before
+  and after.
   """
-  def move_category(%Category{} = category, direction, %User{} = actor)
-      when direction in [:up, :down] do
-    result =
-      Repo.transact(fn ->
-        siblings =
-          Category
-          |> where_parent(category.parent_id)
-          |> order_by([c], asc: c.position, asc: c.title, asc: c.id)
-          |> lock("FOR UPDATE")
-          |> Repo.all()
-
-        index = Enum.find_index(siblings, &(&1.id == category.id))
-        other = if direction == :up, do: index - 1, else: index + 1
-
-        if other < 0 or other >= length(siblings) do
-          {:ok, category}
-        else
-          siblings
-          |> List.replace_at(index, Enum.at(siblings, other))
-          |> List.replace_at(other, Enum.at(siblings, index))
-          |> renumber()
-
-          StaffLog.record(actor, "category.update", category, %{
-            title: category.title,
-            position: %{before: index, after: other}
-          })
-
-          {:ok, %{category | position: other}}
-        end
-      end)
-
+  def place_category(%Category{} = category, parent_id, index, %User{} = actor)
+      when (is_integer(parent_id) or is_nil(parent_id)) and is_integer(index) do
+    result = Repo.transact(fn -> do_place_category(category.id, parent_id, index, actor) end)
     tap_ok(result, &category_changed(:category_updated, &1, actor))
+  end
+
+  defp do_place_category(id, parent_id, index, actor) do
+    # Every category, locked: the sibling lists below can't change under
+    # us, and the move is atomic for everyone watching.
+    all = Category |> order_by([c], asc: c.id) |> lock("FOR UPDATE") |> Repo.all()
+    category = Enum.find(all, &(&1.id == id)) || raise Ecto.NoResultsError, queryable: Category
+    before = {category.parent_id, sibling_ids(all, category.parent_id)}
+
+    with {:ok, moved} <- reparent(category, parent_id) do
+      siblings = all |> siblings(parent_id) |> Enum.reject(&(&1.id == moved.id))
+      index = index |> max(0) |> min(length(siblings))
+      renumber(List.insert_at(siblings, index, moved))
+
+      if category.parent_id != parent_id,
+        do: renumber(siblings(all, category.parent_id) -- [category])
+
+      log_placement(actor, moved, before, index)
+      {:ok, %{moved | position: index}}
+    end
+  end
+
+  defp reparent(%Category{parent_id: parent_id} = category, parent_id), do: {:ok, category}
+
+  defp reparent(category, parent_id) do
+    category
+    |> Category.changeset(%{parent_id: parent_id})
+    |> Repo.update()
+  end
+
+  defp siblings(categories, parent_id) do
+    categories
+    |> Enum.filter(&(&1.parent_id == parent_id))
+    |> Enum.sort_by(&{&1.position, &1.title, &1.id})
+  end
+
+  defp sibling_ids(categories, parent_id),
+    do: categories |> siblings(parent_id) |> Enum.map(& &1.id)
+
+  defp log_placement(actor, category, {parent_before, ids_before}, index) do
+    position = %{before: Enum.find_index(ids_before, &(&1 == category.id)), after: index}
+
+    details =
+      if parent_before == category.parent_id,
+        do: %{title: category.title, position: position},
+        else: %{
+          title: category.title,
+          position: position,
+          parent_id: %{before: parent_before, after: category.parent_id}
+        }
+
+    StaffLog.record(actor, "category.update", category, details)
   end
 
   # Gives the categories positions 0, 1, 2... in this order.
@@ -436,9 +464,6 @@ defmodule Firefly.Discussion do
       Repo.update_all(where(Category, [c], c.id == ^category.id), set: [position: position])
     end
   end
-
-  defp where_parent(query, nil), do: where(query, [c], is_nil(c.parent_id))
-  defp where_parent(query, id), do: where(query, [c], c.parent_id == ^id)
 
   @doc """
   The groups `category` is restricted to with each one's permission there

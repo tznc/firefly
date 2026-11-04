@@ -1,23 +1,31 @@
 defmodule FireflyWeb.StaffLive.Categories do
   @moduledoc """
   The categories admin (admins only): every category in order with its
-  subcategories, moved up and down among its siblings, created, edited
+  subcategories, reordered by drag and drop or from the keyboard (the
+  `Sortable` hook: Space picks a row up, arrows move it, Space drops it,
+  Escape cancels), within a parent or into another one, created, edited
   (at `FireflyWeb.CategoryLive.Form`) and deleted; for each, which
   groups it's restricted to and what each may do there (start threads and
   reply, reply, or only read; see `Firefly.Discussion.Policy`), and the
   notification level new members start at, which can also be given to
   existing members who haven't chosen one. Every change is staff-logged.
+
+  The hook moves the row at once and reverts it if the server says no
+  (`place` replies `%{ok: false}`). Other staff with the page open see
+  changes live, through the `"forums:categories"` broadcasts.
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
-  alias Firefly.{Discussion, Groups}
+  alias Firefly.{Accounts, Discussion, Groups}
   alias Firefly.Notifications.Subscriptions
 
   @impl true
   def mount(_params, _session, socket) do
     if can?(socket.assigns.current_user, :manage_category) do
+      if connected?(socket), do: Discussion.subscribe("forums:categories")
+
       {:ok,
        socket
        |> assign(:page_title, gettext("Categories"))
@@ -48,23 +56,41 @@ defmodule FireflyWeb.StaffLive.Categories do
 
   @impl true
   def handle_event(event, params, socket) do
-    if can?(socket.assigns.current_user, :manage_category),
+    # Checked against the account as it is now, so an admin demoted while
+    # the page is open can't keep changing things from it.
+    user = Accounts.get_user!(socket.assigns.current_user.id)
+
+    if can?(user, :manage_category),
       do: category_event(event, params, socket),
-      else: {:noreply, put_flash(socket, :error, denied_message(socket.assigns.current_user))}
+      else: denied(event, socket)
   end
 
-  defp category_event("move", %{"id" => id, "direction" => direction}, socket)
-       when direction in ["up", "down"] do
-    category = Discussion.get_category!(id)
+  @impl true
+  def handle_info({event, _category}, socket)
+      when event in [:category_created, :category_updated, :category_deleted],
+      do: {:noreply, load(socket)}
 
-    {:ok, _} =
-      Discussion.move_category(
-        category,
-        String.to_existing_atom(direction),
-        socket.assigns.current_user
-      )
+  def handle_info(_message, socket), do: {:noreply, socket}
 
-    {:noreply, load(socket)}
+  defp denied(event, socket) do
+    socket = put_flash(socket, :error, denied_message(socket.assigns.current_user))
+    if event == "place", do: {:reply, %{ok: false}, socket}, else: {:noreply, socket}
+  end
+
+  # A drop: `id` goes to `index` under `parent_id` (nil for top level).
+  defp category_event("place", %{"id" => id, "parent_id" => parent_id, "index" => index}, socket)
+       when is_integer(id) and (is_integer(parent_id) or is_nil(parent_id)) and is_integer(index) do
+    with %Discussion.Category{} = category <- Discussion.get_category(id),
+         {:ok, _} <-
+           Discussion.place_category(category, parent_id, index, socket.assigns.current_user) do
+      {:reply, %{ok: true}, load(socket)}
+    else
+      _ ->
+        {:reply, %{ok: false},
+         socket
+         |> put_flash(:error, gettext("That category can't go there."))
+         |> load()}
+    end
   end
 
   defp category_event("toggle", %{"id" => id}, socket) do
@@ -139,6 +165,10 @@ defmodule FireflyWeb.StaffLive.Categories do
     end
   end
 
+  # The live region's messages go to the hook with their placeholders
+  # kept, for it to fill in.
+  defp slots, do: Map.new(~w(item parent position count)a, &{&1, "%{#{&1}}"})
+
   defp permission_label("full"), do: gettext("Start threads and reply")
   defp permission_label("create_post"), do: gettext("Reply")
   defp permission_label("readonly"), do: gettext("Read only")
@@ -149,8 +179,6 @@ defmodule FireflyWeb.StaffLive.Categories do
   defp level_label("muted"), do: gettext("Muted")
 
   attr :category, :any, required: true
-  attr :first, :boolean, required: true
-  attr :last, :boolean, required: true
   attr :open, :any, required: true
   attr :groups, :list, required: true
   attr :permissions, :map, required: true
@@ -158,30 +186,25 @@ defmodule FireflyWeb.StaffLive.Categories do
 
   defp category_row(assigns) do
     ~H"""
-    <li id={"category-#{@category.id}"} class={["rounded-box border border-base-300 bg-base-100 p-3", @sub && "ml-6"]}>
+    <li
+      id={"category-#{@category.id}"}
+      data-sortable-item
+      data-id={@category.id}
+      data-label={@category.title}
+      data-has-children={to_string(!@sub and @category.children != [])}
+    >
+      <div data-sortable-row class="rounded-box border border-base-300 bg-base-100 p-3">
       <div class="flex flex-wrap items-center gap-2">
-        <div class="join">
-          <button
-            phx-click="move"
-            phx-value-id={@category.id}
-            phx-value-direction="up"
-            disabled={@first}
-            class="btn btn-xs join-item"
-            aria-label={gettext("Move %{title} up", title: @category.title)}
-          >
-            <.icon name="hero-chevron-up" class="size-4" />
-          </button>
-          <button
-            phx-click="move"
-            phx-value-id={@category.id}
-            phx-value-direction="down"
-            disabled={@last}
-            class="btn btn-xs join-item"
-            aria-label={gettext("Move %{title} down", title: @category.title)}
-          >
-            <.icon name="hero-chevron-down" class="size-4" />
-          </button>
-        </div>
+        <button
+          type="button"
+          draggable="true"
+          data-sortable-handle
+          class="btn btn-xs btn-ghost cursor-grab"
+          aria-label={gettext("Move %{title}", title: @category.title)}
+          aria-describedby="category-order-help"
+        >
+          <.icon name="hero-arrows-up-down" class="size-4" />
+        </button>
         <.category_badge category={@category} />
         <span :if={@permissions[@category.id] != %{}} class="badge badge-sm badge-ghost">
           <.icon name="hero-lock-closed" class="size-3" /> {gettext("restricted")}
@@ -264,6 +287,24 @@ defmodule FireflyWeb.StaffLive.Categories do
           </button>
         </div>
       </div>
+      </div>
+      <ol
+        :if={!@sub}
+        id={"subcategories-#{@category.id}"}
+        data-sortable-list
+        data-parent={@category.id}
+        data-parent-label={@category.title}
+        class="ml-6 space-y-2 pt-2 empty:pt-0 group-data-dragging:empty:min-h-10 group-data-dragging:empty:rounded-box group-data-dragging:empty:border group-data-dragging:empty:border-dashed group-data-dragging:empty:border-base-300"
+      >
+        <.category_row
+          :for={child <- @category.children}
+          category={child}
+          open={@open}
+          groups={@groups}
+          permissions={@permissions}
+          sub
+        />
+      </ol>
     </li>
     """
   end
@@ -281,28 +322,32 @@ defmodule FireflyWeb.StaffLive.Categories do
 
       <p :if={@tree == []} class="text-base-content/70">{gettext("No categories yet.")}</p>
 
-      <ol id="categories" class="space-y-2">
-        <%= for {category, index} <- Enum.with_index(@tree) do %>
+      <div
+        id="category-order"
+        phx-hook="Sortable"
+        data-event="place"
+        data-msg-grabbed={gettext("%{item} picked up, position %{position} of %{count}.", slots())}
+        data-msg-moved={gettext("%{item}: position %{position} of %{count}.", slots())}
+        data-msg-moved-into={gettext("%{item} is now in %{parent}, position %{position} of %{count}.", slots())}
+        data-msg-dropped={gettext("%{item} dropped at position %{position} of %{count}.", slots())}
+        data-msg-cancelled={gettext("Move cancelled. %{item} is back at position %{position} of %{count}.", slots())}
+        data-msg-failed={gettext("%{item} couldn't be moved there.", slots())}
+        class="group"
+      >
+        <p id="category-order-help" class="mb-3 text-sm text-base-content/70">
+          {gettext("Drag a category by its handle to reorder it, or into another category to make it a subcategory. With the keyboard: focus the handle, press Space to pick it up, the arrow keys to move it and Space to drop it, or Escape to cancel.")}
+        </p>
+        <ol id="categories" data-sortable-list data-parent="" class="space-y-2">
           <.category_row
+            :for={category <- @tree}
             category={category}
-            first={index == 0}
-            last={index == length(@tree) - 1}
             open={@open}
             groups={@groups}
             permissions={@permissions}
           />
-          <.category_row
-            :for={{child, child_index} <- Enum.with_index(category.children)}
-            category={child}
-            first={child_index == 0}
-            last={child_index == length(category.children) - 1}
-            open={@open}
-            groups={@groups}
-            permissions={@permissions}
-            sub
-          />
-        <% end %>
-      </ol>
+        </ol>
+        <div id="category-order-status" data-sortable-status role="status" aria-live="polite" class="sr-only" phx-update="ignore"></div>
+      </div>
     </Layouts.app>
     """
   end

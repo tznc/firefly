@@ -824,4 +824,200 @@ const KeyboardShortcuts = {
   },
 }
 
-export default {KeyboardShortcuts, ChatComposer, ChatScroll, ReactionPicker, PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}
+// Reorderable nested lists (the categories admin): drag a row by its
+// handle (native HTML5 drag and drop), or focus the handle, press Space to
+// pick the row up, the arrow keys to move it and Space to drop it (Escape
+// cancels). Rows are `[data-sortable-item]` with `data-id` and
+// `data-label`, inside `[data-sortable-list]`s with `data-parent` ("" for
+// the top level); an item with `data-has-children="true"` stays top-level.
+// The move shows at once; the server gets `data-event` with
+// {id, parent_id, index} and the row goes back if it replies without ok.
+// What's announced (to the `[data-sortable-status]` live region) comes
+// translated from the `data-msg-*` attributes.
+const fill = (template, values) =>
+  (template || "").replace(/%\{(\w+)\}/g, (_, key) => String(values[key] ?? ""))
+
+const Sortable = {
+  mounted() {
+    this.el.addEventListener("dragstart", e => this.dragStart(e))
+    this.el.addEventListener("dragover", e => this.dragOver(e))
+    this.el.addEventListener("drop", e => this.drop(e))
+    this.el.addEventListener("dragend", () => this.dragEnd())
+    this.el.addEventListener("keydown", e => this.keydown(e))
+  },
+  item(node) { return node && node.closest("[data-sortable-item]") },
+  items(list) { return [...list.children].filter(child => child.matches("[data-sortable-item]")) },
+  handle(item) {
+    return [...item.querySelectorAll("[data-sortable-handle]")].find(h => this.item(h) === item)
+  },
+  sublist(item) {
+    return [...item.querySelectorAll("[data-sortable-list]")].find(l => this.item(l) === item)
+  },
+  // Where an item may go: anywhere at the top; into another item's
+  // sublist only if it has no subcategories itself.
+  allowed(item, list) {
+    return !item.contains(list) && (list.dataset.parent === "" || item.dataset.hasChildren !== "true")
+  },
+  place(item) {
+    const list = item.parentElement
+    return {list, next: item.nextElementSibling}
+  },
+  where(item) {
+    const list = item.parentElement
+    const items = this.items(list)
+    return {
+      item: item.dataset.label,
+      position: items.indexOf(item) + 1,
+      count: items.length,
+      parent: list.dataset.parentLabel || "",
+    }
+  },
+  announce(message, item) {
+    const status = this.el.querySelector("[data-sortable-status]")
+    if (status) { status.textContent = fill(this.el.dataset[message], this.where(item)) }
+  },
+  moved(item, from) {
+    const {list, next} = this.place(item)
+    return list !== from.list || next !== from.next
+  },
+  restore(item, from) { from.list.insertBefore(item, from.next) },
+  // Sends the move; puts the row back if the server refuses it.
+  commit(item, from) {
+    if (!this.moved(item, from)) { return }
+    const list = item.parentElement
+    const payload = {
+      id: Number(item.dataset.id),
+      parent_id: list.dataset.parent === "" ? null : Number(list.dataset.parent),
+      index: this.items(list).indexOf(item),
+    }
+    this.pushEvent(this.el.dataset.event, payload, reply => {
+      if (reply && reply.ok) { return }
+      this.restore(item, from)
+      this.announce("msgFailed", item)
+    })
+  },
+
+  dragStart(e) {
+    const handle = e.target.closest && e.target.closest("[data-sortable-handle]")
+    if (!handle) { return }
+    const item = this.item(handle)
+    this.dragging = {item, from: this.place(item), dropped: false}
+    e.dataTransfer.effectAllowed = "move"
+    e.dataTransfer.setData("text/plain", item.dataset.label)
+    e.dataTransfer.setDragImage(item, 16, 16)
+    this.el.setAttribute("data-dragging", "")
+    item.classList.add("opacity-60")
+  },
+  dragOver(e) {
+    if (!this.dragging) { return }
+    const {item} = this.dragging
+    const list = e.target.closest("[data-sortable-list]")
+    const target = this.item(e.target)
+    if (!list || !this.el.contains(list)) { return }
+
+    if (target && target !== item && list.contains(target) && !item.contains(target)) {
+      // Over a row: before it in its upper half, after it in its lower.
+      const targetList = target.parentElement
+      if (!this.allowed(item, targetList)) { return }
+      e.preventDefault()
+      const row = target.querySelector("[data-sortable-row]") || target
+      const box = row.getBoundingClientRect()
+      const before = e.clientY < box.top + box.height / 2
+      const next = before ? target : target.nextElementSibling
+      if (item.nextElementSibling !== next || item.parentElement !== targetList) {
+        targetList.insertBefore(item, next)
+      }
+    } else if (!target || target === this.item(list)) {
+      // Over a list's own space (an empty sublist): to its end.
+      if (!this.allowed(item, list)) { return }
+      e.preventDefault()
+      if (item.parentElement !== list) { list.appendChild(item) }
+    } else if (target === item || item.contains(target)) {
+      e.preventDefault()
+    }
+  },
+  drop(e) {
+    if (!this.dragging) { return }
+    e.preventDefault()
+    this.dragging.dropped = true
+    this.commit(this.dragging.item, this.dragging.from)
+    this.announce("msgDropped", this.dragging.item)
+  },
+  dragEnd() {
+    if (!this.dragging) { return }
+    const {item, from, dropped} = this.dragging
+    // Dropped outside, or cancelled with Escape.
+    if (!dropped) { this.restore(item, from) }
+    item.classList.remove("opacity-60")
+    this.el.removeAttribute("data-dragging")
+    this.dragging = null
+  },
+
+  keydown(e) {
+    const handle = e.target.closest && e.target.closest("[data-sortable-handle]")
+    if (!handle) { return }
+    const item = this.item(handle)
+
+    if (!this.held) {
+      if (e.key !== " ") { return }
+      e.preventDefault()
+      this.held = {item, from: this.place(item)}
+      handle.setAttribute("aria-pressed", "true")
+      this.announce("msgGrabbed", item)
+      return
+    }
+    if (this.held.item !== item) { return }
+
+    switch (e.key) {
+      case "ArrowUp":
+      case "ArrowDown":
+        e.preventDefault()
+        this.step(item, e.key === "ArrowUp" ? -1 : 1)
+        handle.focus()
+        break
+      case " ":
+      case "Enter":
+        e.preventDefault()
+        this.release(handle)
+        this.commit(item, this.held.from)
+        this.announce("msgDropped", item)
+        this.held = null
+        break
+      case "Escape":
+      case "Tab":
+        if (e.key === "Escape") { e.preventDefault() }
+        this.restore(item, this.held.from)
+        this.release(handle)
+        handle.focus()
+        this.announce("msgCancelled", item)
+        this.held = null
+        break
+    }
+  },
+  release(handle) { handle.removeAttribute("aria-pressed") },
+  // One place up or down among its siblings; past either end of a
+  // sublist, into the neighbouring category's.
+  step(item, direction) {
+    const list = item.parentElement
+    const siblings = this.items(list)
+    const index = siblings.indexOf(item)
+    const neighbour = siblings[index + direction]
+
+    if (neighbour) {
+      list.insertBefore(item, direction < 0 ? neighbour : neighbour.nextElementSibling)
+      this.announce("msgMoved", item)
+      return
+    }
+    if (list.dataset.parent === "") { return }
+
+    const parent = this.item(list)
+    const parents = this.items(parent.parentElement)
+    const other = parents[parents.indexOf(parent) + direction]
+    const into = other && this.sublist(other)
+    if (!into) { return }
+    into.insertBefore(item, direction < 0 ? null : into.firstElementChild)
+    this.announce("msgMovedInto", item)
+  },
+}
+
+export default {KeyboardShortcuts, Sortable, ChatComposer, ChatScroll, ReactionPicker, PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

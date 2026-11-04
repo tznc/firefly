@@ -51,6 +51,8 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
   test "the pages members use have no serious accessibility violations", context do
     %{conn: conn, category: category, thread: thread, channel: channel} = context
     {:ok, theme} = Firefly.Themes.create_theme(%{"name" => "Ocean"}, context.admin)
+    # The categories admin's nested, reorderable lists.
+    {:ok, _} = Discussion.create_category(%{title: "Nerves", parent_id: category.id})
 
     session = log_in(conn, "ada")
 

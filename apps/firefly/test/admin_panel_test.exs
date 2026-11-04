@@ -348,22 +348,47 @@ defmodule Firefly.AdminPanelTest do
       assert Posting.check(reader, thread) == :ok
     end
 
-    test "moving categories renumbers their siblings", %{admin: admin} do
+    test "placing a category renumbers its siblings, in one logged move", %{admin: admin} do
       category_fixture("B")
       c = category_fixture("C")
-      {:ok, _} = Discussion.move_category(c, :up, admin)
+      Discussion.subscribe("forums:categories")
 
-      titles =
-        Repo.all(
-          from(cat in Category,
-            where: is_nil(cat.parent_id),
-            order_by: [cat.position, cat.title],
-            select: cat.title
-          )
-        )
+      {:ok, placed} = Discussion.place_category(c, nil, 0, admin)
+      assert placed.position == 0
+      assert top_level_titles() == ["C", "B", "General"]
+      assert_received {:category_updated, %Category{id: id}} when id == c.id
 
-      assert titles == ["C", "B", "General"]
-      assert "category.update" in actions()
+      assert %{details: %{"position" => %{"before" => 1, "after" => 0}}} =
+               Repo.get_by!(StaffAction, action: "category.update")
+
+      # Out of range clamps to the end.
+      {:ok, _} = Discussion.place_category(c, nil, 99, admin)
+      assert top_level_titles() == ["B", "General", "C"]
+    end
+
+    test "a category moves between parents, one level deep", %{admin: admin, category: general} do
+      news = category_fixture("News")
+      a = subcategory("A", general)
+      b = subcategory("B", general)
+
+      {:ok, _} = Discussion.place_category(b, news.id, 0, admin)
+      assert Discussion.get_category!(b.id).parent_id == news.id
+      assert child_titles(general) == ["A"]
+
+      # Into another subcategory, under itself, or a parent into a parent: refused.
+      assert {:error, _} = Discussion.place_category(a, b.id, 0, admin)
+      assert {:error, _} = Discussion.place_category(news, news.id, 0, admin)
+      assert {:error, _} = Discussion.place_category(news, general.id, 0, admin)
+      assert Discussion.get_category!(news.id).parent_id == nil
+
+      # And back out to the top.
+      {:ok, _} = Discussion.place_category(b, nil, 1, admin)
+      assert top_level_titles() == ["General", "B", "News"]
+
+      assert %{details: %{"parent_id" => %{"before" => before, "after" => nil}}} =
+               StaffAction |> Repo.all() |> Enum.find(&(&1.details["parent_id"]["after"] == nil))
+
+      assert before == news.id
     end
 
     test "new members start at a category's default level", %{admin: admin, category: category} do
@@ -409,5 +434,30 @@ defmodule Firefly.AdminPanelTest do
         assert email.subject != "" and email.html_body =~ "<"
       end
     end
+  end
+
+  defp subcategory(title, parent) do
+    {:ok, category} = Discussion.create_category(%{title: title, parent_id: parent.id})
+    category
+  end
+
+  defp top_level_titles do
+    Repo.all(
+      from(c in Category,
+        where: is_nil(c.parent_id),
+        order_by: [c.position, c.title],
+        select: c.title
+      )
+    )
+  end
+
+  defp child_titles(parent) do
+    Repo.all(
+      from(c in Category,
+        where: c.parent_id == ^parent.id,
+        order_by: [c.position, c.title],
+        select: c.title
+      )
+    )
   end
 end

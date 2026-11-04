@@ -125,8 +125,8 @@ msgstr ""
 
 #: lib/firefly_web/components/layouts.ex:168
 #: lib/firefly_web/components/layouts.ex:269
-#: lib/firefly_web/live/staff_live/categories.ex:23
-#: lib/firefly_web/live/staff_live/categories.ex:275
+#: lib/firefly_web/live/staff_live/categories.ex:31
+#: lib/firefly_web/live/staff_live/categories.ex:316
 #: lib/firefly_web/staff_nav.ex:99
 #, elixir-autogen, elixir-format
 msgid "Categories"
@@ -564,7 +564,7 @@ msgid "Watched words"
 msgstr "الكلمات المراقبة"
 
 #: lib/firefly_web/components/layouts.ex:129
-#: lib/firefly_web/live/staff_live/categories.ex:146
+#: lib/firefly_web/live/staff_live/categories.ex:176
 #, elixir-autogen, elixir-format
 msgid "Watching"
 msgstr "أتابعها"
@@ -708,7 +708,7 @@ msgid "Next / previous topic or post"
 msgstr ""
 
 #: lib/firefly_web/components/layouts.ex:276
-#: lib/firefly_web/live/staff_live/categories.ex:143
+#: lib/firefly_web/live/staff_live/categories.ex:173
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "رد"
@@ -749,7 +749,7 @@ msgstr "حسنًا"
 msgid "%{posts} posts in %{threads} threads they started"
 msgstr "%{posts} مشاركة في %{threads} موضوعًا بدأها"
 
-#: lib/firefly_web/live/staff_live/categories.ex:121
+#: lib/firefly_web/live/staff_live/categories.ex:147
 #, elixir-autogen, elixir-format
 msgid "1 member got the default."
 msgid_plural "%{count} members got the default."
@@ -907,7 +907,7 @@ msgstr "يمكن لأي شخص الانضمام"
 msgid "Apply penalty"
 msgstr "تطبيق العقوبة"
 
-#: lib/firefly_web/live/staff_live/categories.ex:263
+#: lib/firefly_web/live/staff_live/categories.ex:286
 #, elixir-autogen, elixir-format
 msgid "Apply to existing members"
 msgstr "تطبيق على الأعضاء الحاليين"
@@ -953,7 +953,7 @@ msgstr "المحظورة"
 msgid "Can read"
 msgstr "يمكنه القراءة"
 
-#: lib/firefly_web/live/staff_live/categories.ex:130
+#: lib/firefly_web/live/staff_live/categories.ex:156
 #, elixir-autogen, elixir-format
 msgid "Category deleted."
 msgstr "حُذفت الفئة."
@@ -978,12 +978,12 @@ msgstr "المحتوى"
 msgid "Create group"
 msgstr "إنشاء مجموعة"
 
-#: lib/firefly_web/live/staff_live/categories.ex:240
+#: lib/firefly_web/live/staff_live/categories.ex:263
 #, elixir-autogen, elixir-format
 msgid "Defaults for members"
 msgstr "الإعدادات الافتراضية للأعضاء"
 
-#: lib/firefly_web/live/staff_live/categories.ex:208
+#: lib/firefly_web/live/staff_live/categories.ex:231
 #: lib/firefly_web/live/staff_live/groups.ex:208
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -994,7 +994,7 @@ msgstr "حذف"
 msgid "Delete %{name}? Its members leave it."
 msgstr "حذف %{name}؟ سيغادرها أعضاؤها."
 
-#: lib/firefly_web/live/staff_live/categories.ex:205
+#: lib/firefly_web/live/staff_live/categories.ex:228
 #, elixir-autogen, elixir-format
 msgid "Delete %{title}?"
 msgstr "حذف %{title}؟"
@@ -1029,7 +1029,7 @@ msgstr "نطاقات لا يمكن وضع روابط لها في المشارك�
 msgid "Duration"
 msgstr "المدة"
 
-#: lib/firefly_web/live/staff_live/categories.ex:201
+#: lib/firefly_web/live/staff_live/categories.ex:224
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "تعديل"
@@ -1078,7 +1078,7 @@ msgstr "ابحث عن حساب لإدارته. كل تغيير يُسجَّل ف
 msgid "First seen"
 msgstr "أول ظهور"
 
-#: lib/firefly_web/live/staff_live/categories.ex:260
+#: lib/firefly_web/live/staff_live/categories.ex:283
 #, elixir-autogen, elixir-format
 msgid "Give this level to every member who hasn't chosen one for this category?"
 msgstr "منح هذا المستوى لكل عضو لم يختر مستوى لهذه الفئة؟"
@@ -1124,7 +1124,7 @@ msgstr "انتحال الهوية"
 msgid "In the review queue"
 msgstr "في قائمة المراجعة"
 
-#: lib/firefly_web/live/staff_live/categories.ex:137
+#: lib/firefly_web/live/staff_live/categories.ex:163
 #, elixir-autogen, elixir-format
 msgid "It couldn't be deleted: move its threads and subcategories out first."
 msgstr "تعذر الحذف: انقل مواضيعها وفئاتها الفرعية أولًا."
@@ -1232,17 +1232,7 @@ msgstr "رسالة (اختياري)"
 msgid "Moderation"
 msgstr "الإشراف"
 
-#: lib/firefly_web/live/staff_live/categories.ex:180
-#, elixir-autogen, elixir-format
-msgid "Move %{title} down"
-msgstr "نقل %{title} إلى الأسفل"
-
-#: lib/firefly_web/live/staff_live/categories.ex:170
-#, elixir-autogen, elixir-format
-msgid "Move %{title} up"
-msgstr "نقل %{title} إلى الأعلى"
-
-#: lib/firefly_web/live/staff_live/categories.ex:149
+#: lib/firefly_web/live/staff_live/categories.ex:179
 #, elixir-autogen, elixir-format
 msgid "Muted"
 msgstr "مكتوم"
@@ -1260,7 +1250,7 @@ msgstr "الاسم"
 msgid "New"
 msgstr "الجدد"
 
-#: lib/firefly_web/live/staff_live/categories.ex:278
+#: lib/firefly_web/live/staff_live/categories.ex:319
 #, elixir-autogen, elixir-format
 msgid "New category"
 msgstr "فئة جديدة"
@@ -1270,7 +1260,7 @@ msgstr "فئة جديدة"
 msgid "New group"
 msgstr "مجموعة جديدة"
 
-#: lib/firefly_web/live/staff_live/categories.ex:242
+#: lib/firefly_web/live/staff_live/categories.ex:265
 #, elixir-autogen, elixir-format
 msgid "New members' notification level"
 msgstr "مستوى إشعارات الأعضاء الجدد"
@@ -1280,12 +1270,12 @@ msgstr "مستوى إشعارات الأعضاء الجدد"
 msgid "New name for %{name}"
 msgstr "اسم جديد لـ %{name}"
 
-#: lib/firefly_web/live/staff_live/categories.ex:225
+#: lib/firefly_web/live/staff_live/categories.ex:248
 #, elixir-autogen, elixir-format
 msgid "No access"
 msgstr "بلا وصول"
 
-#: lib/firefly_web/live/staff_live/categories.ex:282
+#: lib/firefly_web/live/staff_live/categories.ex:323
 #, elixir-autogen, elixir-format
 msgid "No categories yet."
 msgstr "لا توجد فئات بعد."
@@ -1305,7 +1295,7 @@ msgstr "لا توجد مجموعة بهذا الاسم."
 msgid "No groups yet."
 msgstr "لا توجد مجموعات بعد."
 
-#: lib/firefly_web/live/staff_live/categories.ex:216
+#: lib/firefly_web/live/staff_live/categories.ex:239
 #, elixir-autogen, elixir-format
 msgid "No groups: everyone can see it and post. Otherwise only these groups (and staff) can see it, each as allowed."
 msgstr "بلا مجموعات: يمكن للجميع رؤيتها والنشر فيها. وإلا فلا يراها إلا هذه المجموعات (والفريق)، كلٌّ حسب ما يُسمح له."
@@ -1315,7 +1305,7 @@ msgstr "بلا مجموعات: يمكن للجميع رؤيتها والنشر �
 msgid "No users match."
 msgstr "لا يوجد أعضاء مطابقون."
 
-#: lib/firefly_web/live/staff_live/categories.ex:245
+#: lib/firefly_web/live/staff_live/categories.ex:268
 #, elixir-autogen, elixir-format
 msgid "None (they choose)"
 msgstr "لا شيء (يختارون بأنفسهم)"
@@ -1336,7 +1326,7 @@ msgstr "لم يُسجَّل شيء بعد."
 msgid "None."
 msgstr "لا شيء."
 
-#: lib/firefly_web/live/staff_live/categories.ex:148
+#: lib/firefly_web/live/staff_live/categories.ex:178
 #, elixir-autogen, elixir-format
 msgid "Normal"
 msgstr "عادي"
@@ -1371,7 +1361,7 @@ msgstr "أُرسل التنبيه."
 msgid "Notification deleted."
 msgstr "حُذف الإشعار."
 
-#: lib/firefly_web/live/staff_live/categories.ex:276
+#: lib/firefly_web/live/staff_live/categories.ex:317
 #, elixir-autogen, elixir-format
 msgid "Order categories, and set who can see and post in each."
 msgstr "رتّب الفئات، وحدّد من يمكنه الرؤية والنشر في كل منها."
@@ -1416,12 +1406,12 @@ msgstr "طُبّقت العقوبة."
 msgid "People"
 msgstr "الأشخاص"
 
-#: lib/firefly_web/live/staff_live/categories.ex:199
+#: lib/firefly_web/live/staff_live/categories.ex:222
 #, elixir-autogen, elixir-format
 msgid "Permissions and defaults"
 msgstr "الصلاحيات والإعدادات الافتراضية"
 
-#: lib/firefly_web/live/staff_live/categories.ex:109
+#: lib/firefly_web/live/staff_live/categories.ex:135
 #, elixir-autogen, elixir-format
 msgid "Pick a notification level."
 msgstr "اختر مستوى إشعارات."
@@ -1446,7 +1436,7 @@ msgstr "المشاركات"
 msgid "Public profile"
 msgstr "الملف الشخصي العام"
 
-#: lib/firefly_web/live/staff_live/categories.ex:144
+#: lib/firefly_web/live/staff_live/categories.ex:174
 #, elixir-autogen, elixir-format
 msgid "Read only"
 msgstr "قراءة فقط"
@@ -1568,12 +1558,12 @@ msgstr "حُفظت الأدوار."
 msgid "Save account"
 msgstr "حفظ الحساب"
 
-#: lib/firefly_web/live/staff_live/categories.ex:254
+#: lib/firefly_web/live/staff_live/categories.ex:277
 #, elixir-autogen, elixir-format
 msgid "Save default"
 msgstr "حفظ القيمة الافتراضية"
 
-#: lib/firefly_web/live/staff_live/categories.ex:235
+#: lib/firefly_web/live/staff_live/categories.ex:258
 #, elixir-autogen, elixir-format
 msgid "Save permissions"
 msgstr "حفظ الصلاحيات"
@@ -1589,12 +1579,12 @@ msgstr "حفظ الإعدادات"
 msgid "Saved %{name}'s settings."
 msgstr "حُفظت إعدادات %{name}."
 
-#: lib/firefly_web/live/staff_live/categories.ex:105
+#: lib/firefly_web/live/staff_live/categories.ex:131
 #, elixir-autogen, elixir-format
 msgid "Saved %{title}'s default."
 msgstr "حُفظت القيمة الافتراضية لـ %{title}."
 
-#: lib/firefly_web/live/staff_live/categories.ex:89
+#: lib/firefly_web/live/staff_live/categories.ex:115
 #, elixir-autogen, elixir-format
 msgid "Saved who can see and post in %{title}."
 msgstr "حُفظ من يمكنه الرؤية والنشر في %{title}."
@@ -1719,7 +1709,7 @@ msgstr "الفريق"
 msgid "Staff only"
 msgstr "الفريق فقط"
 
-#: lib/firefly_web/live/staff_live/categories.ex:142
+#: lib/firefly_web/live/staff_live/categories.ex:172
 #, elixir-autogen, elixir-format
 msgid "Start threads and reply"
 msgstr "بدء المواضيع والرد"
@@ -1829,7 +1819,7 @@ msgstr "إلى"
 msgid "Today: %{sent} sent, %{skipped} skipped, %{failed} failed."
 msgstr "اليوم: أُرسل %{sent}، وتُخطّي %{skipped}، وفشل %{failed}."
 
-#: lib/firefly_web/live/staff_live/categories.ex:147
+#: lib/firefly_web/live/staff_live/categories.ex:177
 #, elixir-autogen, elixir-format
 msgid "Tracking"
 msgstr "أتتبعها"
@@ -1906,7 +1896,7 @@ msgstr "من يمكنه @الإشارة إليها"
 msgid "Who can message it"
 msgstr "من يمكنه مراسلتها"
 
-#: lib/firefly_web/live/staff_live/categories.ex:214
+#: lib/firefly_web/live/staff_live/categories.ex:237
 #, elixir-autogen, elixir-format
 msgid "Who can see and post"
 msgstr "من يمكنه الرؤية والنشر"
@@ -1937,7 +1927,7 @@ msgstr "عدت إلى حسابك."
 msgid "confirmed"
 msgstr "مؤكَّد"
 
-#: lib/firefly_web/live/staff_live/categories.ex:190
+#: lib/firefly_web/live/staff_live/categories.ex:213
 #, elixir-autogen, elixir-format
 msgid "default: %{level}"
 msgstr "الافتراضي: %{level}"
@@ -1969,7 +1959,7 @@ msgstr "كلمة المرور"
 msgid "pending"
 msgstr "معلّق"
 
-#: lib/firefly_web/live/staff_live/categories.ex:187
+#: lib/firefly_web/live/staff_live/categories.ex:210
 #, elixir-autogen, elixir-format
 msgid "restricted"
 msgstr "مقيّدة"
@@ -2671,3 +2661,48 @@ msgstr "hero"
 #, elixir-autogen, elixir-format
 msgid "https://github.com/owner/repo"
 msgstr "https://github.com/owner/repo"
+
+#: lib/firefly_web/live/staff_live/categories.ex:334
+#, elixir-autogen, elixir-format
+msgid "%{item} couldn't be moved there."
+msgstr "تعذر نقل %{item} إلى هناك."
+
+#: lib/firefly_web/live/staff_live/categories.ex:332
+#, elixir-autogen, elixir-format
+msgid "%{item} dropped at position %{position} of %{count}."
+msgstr "وُضعت %{item} في الموضع %{position} من %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:331
+#, elixir-autogen, elixir-format
+msgid "%{item} is now in %{parent}, position %{position} of %{count}."
+msgstr "أصبحت %{item} داخل %{parent}، الموضع %{position} من %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:329
+#, elixir-autogen, elixir-format
+msgid "%{item} picked up, position %{position} of %{count}."
+msgstr "تم التقاط %{item}، الموضع %{position} من %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:330
+#, elixir-autogen, elixir-format
+msgid "%{item}: position %{position} of %{count}."
+msgstr "%{item}: الموضع %{position} من %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:338
+#, elixir-autogen, elixir-format
+msgid "Drag a category by its handle to reorder it, or into another category to make it a subcategory. With the keyboard: focus the handle, press Space to pick it up, the arrow keys to move it and Space to drop it, or Escape to cancel."
+msgstr "اسحب الفئة من مقبضها لإعادة ترتيبها، أو إلى داخل فئة أخرى لجعلها فئة فرعية. باستخدام لوحة المفاتيح: ركّز على المقبض، واضغط مسافة لالتقاطها، والأسهم لتحريكها، ومسافة لإفلاتها، أو Escape للإلغاء."
+
+#: lib/firefly_web/live/staff_live/categories.ex:203
+#, elixir-autogen, elixir-format
+msgid "Move %{title}"
+msgstr "نقل %{title}"
+
+#: lib/firefly_web/live/staff_live/categories.ex:333
+#, elixir-autogen, elixir-format
+msgid "Move cancelled. %{item} is back at position %{position} of %{count}."
+msgstr "أُلغي النقل. عادت %{item} إلى الموضع %{position} من %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:91
+#, elixir-autogen, elixir-format
+msgid "That category can't go there."
+msgstr "لا يمكن نقل هذه الفئة إلى هناك."
