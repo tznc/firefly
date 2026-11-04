@@ -522,12 +522,25 @@ content is enough and works everywhere.
 
 * Links: through `Firefly.URLs`, so per tenant (3.4). Jobs that send mail
   run inside their tenant (1.2).
-* Sender: the server-wide Swoosh adapter. The default `From` is
-  `"<tenant title>" <FIREFLY_EMAIL_FROM>` (a server address on a domain the
-  operator authenticated with SPF/DKIM), so tenants don't need DNS work. A
-  tenant may get its own `email_from` through a settings override (4.1, 6.3),
-  set only by the server admin, who vouches for that domain's
-  authentication.
+* Sender (**decided: mail credentials per tenant**): each tenant may set its
+  own mail adapter and credentials (SMTP, SES, SendGrid, Mailgun, Postmark:
+  the same set as #111) as secret tenant settings, editable by the tenant's
+  admins at `/staff/settings` and by the server admin through the
+  management API (6.3). They are encrypted at rest (10.3) and never shown
+  back, only replaced.
+  * `Firefly.Mailer` builds the Swoosh config per send from the current
+    tenant (`Swoosh.Mailer.deliver/2` takes a config), so the `mailers`
+    queue's jobs resolve the tenant's adapter when they run (1.2).
+  * A tenant without its own adapter uses the server-wide one from env,
+    with the default `From` `"<tenant title>" <FIREFLY_EMAIL_FROM>` (a server
+    address on a domain the operator authenticated with SPF/DKIM), so
+    tenants need no DNS work. With its own adapter, the tenant also sets its
+    own `email_from` and owns its domain's SPF/DKIM.
+  * SMTP hosts and API endpoints a tenant enters go through the egress
+    guard (4.4): no private, loopback or cluster addresses, so tenant mail
+    settings can't be used to reach internal services.
+  * The staff "send test email" and the email log work per tenant as today;
+    a tenant's adapter errors show only to that tenant.
 * `Firefly.Notifications.EmailLog` stays per tenant database.
 
 ### 3.6 Inbound email
@@ -785,8 +798,8 @@ multiplies series by hundreds and makes Prometheus slow and costly.
 * **Webhooks** (`Firefly.Webhooks`): definitions and deliveries are tenant
   data; deliveries become Oban jobs with the tenant (1.2). The egress guard
   gains the cluster's addresses (4.4).
-* **Mailer**: one server-wide adapter (env, from #111) plus per-tenant
-  `From` override (3.5). Per-tenant adapter credentials are open question 2.
+* **Mailer**: per-tenant adapter and credentials, falling back to the
+  server-wide adapter (env, from #111) (3.5).
 * **Backups** (`Firefly.Backups`): one tenant database each. `pg_dump` and
   `pg_restore` get the tenant's connection; files go to
   `<FIREFLY_BACKUP_DIR>/t/<public id>/` or `backups/t/<public id>/` in S3
@@ -817,11 +830,23 @@ moves (6.8).
 Both are dangerous: Kaffy edits raw rows; Oban Web on the global Oban shows
 every tenant's job args and can retry or cancel them.
 
-* **Kaffy** runs in the request process, so with the tenant's repo selected
-  it only sees that tenant's database. In multi-tenant mode it is available
-  only when the server grants `features.database_admin` to the tenant
-  (default off), and then still behind `enable_database_admin` and
-  `RequireAdmin`, as today (`FireflyWeb.Plugs.DatabaseAdmin`).
+* **Kaffy** (**decided: always enabled in multi-tenant mode, strictly for
+  the tenant's own data**). It runs in the request process with the
+  tenant's repo selected, so it only ever reads and writes that tenant's
+  database; the control database is never configured as a Kaffy resource
+  and has no repo in the request.
+  * Every tenant's admins get it at `/staff/db`; the `enable_database_admin`
+    setting is forced on in multi-tenant mode. `RequireAdmin` still
+    re-checks the user on every request, and every write is staff-logged in
+    the tenant (as today).
+  * The resource list, field redactions (password hashes, secrets, plugin
+    bundles) and read-only resources stay as in #103. Tenant secret
+    settings, including the new mail credentials (3.5), are never listed.
+  * The isolation test (10.5) covers Kaffy: from host A, no Kaffy page or
+    write can touch tenant B's rows.
+  * Kaffy pages still run without the forum's CSP (its inline scripts), as
+    in #103; that risk now applies to every tenant's admins, not only
+    single-site operators.
 * **Oban Web** is not mounted on tenant hosts in multi-tenant mode. It is
   mounted on the management endpoint at `/_mgmt/jobs`. Server admins have
   no browser login, so `POST /_mgmt/v1/console-sessions` (scope
@@ -888,8 +913,9 @@ server API keys; there is no server-admin user table, password or UI.
 ### 5.2 Tenant admins
 
 Unchanged: users with role `admin` in the tenant database, using `/staff`.
-What they lose in multi-tenant mode, unless the server grants it: Kaffy,
-Oban Web (they get the read-only jobs page), the upgrade page, database
+They keep Kaffy, scoped to their own database (4.14). What they lose in
+multi-tenant mode, unless the server grants it: Oban Web (they get the
+read-only jobs page), the upgrade page, database
 importers, server-only settings, and plugin uploads outside the catalog.
 
 ### 5.3 Support access (a server admin inside a tenant)
@@ -921,7 +947,14 @@ body `{"reason": "...", "ttl_minutes": 30, "as_user": null}`:
 5. `DELETE /_mgmt/v1/support-sessions/{id}` ends it early and disconnects
    its pages.
 
-Whether tenants must approve support sessions is open question 6.
+**Decided: no tenant approval, and the server admin can always see what is
+happening.** Support sessions start without asking the tenant. Beyond them,
+the management API gives server admins read access to any tenant's
+activity without entering it: `GET /_mgmt/v1/tenants/{id}/staff-log`,
+`/email-log`, `/jobs` and `/health` (scope `tenants:read`), plus the
+control audit log. The tenant's own staff log still records support
+sessions and every action taken in them, and the banner stays, so tenant
+admins can see that an operator was in.
 
 ---
 
@@ -1530,9 +1563,9 @@ replaced `Firefly.Plugins.Queue`, the `Firefly.Notifications` GenServer and
 | 4 | **Host resolution.** `FireflyWeb.Plugs.Tenant`, `Firefly.Tenancy.Hosts` (ETS plus `"control:tenants"`), 404/503 pages, `FireflyWeb.TenantHook`, socket `connect`, `check_origin` MFA, session tenant binding, `__Host-` cookie, `put_router_url`, `Firefly.Endpoint.url/0` per tenant, bare `url(~p)` test | L | Two tenants served by host in tests and e2e; replayed cookies rejected; unknown host 404; suspended 503 |
 | 5 | **Per-tenant caches and state.** `Firefly.Tenancy.Cache`; settings, emoji, watched words, plugins, plugin health, themes, reports, OEmbed, SAML/OIDC/Apple, AI key, analytics buffer and salt, read-only mode; rate-limit keys; `:persistent_term` inventory test | L | Isolation tests for each cache; no tenant data in `:persistent_term` |
 | 6 | **PubSub namespacing.** `Firefly.Broadcast`, every subscribe and broadcast moved, channels, Presence, `live_socket_id`; Credo rule | M | e2e: a post on t2 never reaches a t1 page |
-| 7 | **Tokens, uploads, backups, mail.** Per-tenant salts and derivations (legacy kept), upload and backup prefixes, `From` per tenant, reply addresses with tenant, inbound routing on the server host | M | Replay tests (10.5 item 3); files of two tenants with the same digest are independent |
+| 7 | **Tokens, uploads, backups, mail.** Per-tenant salts and derivations (legacy kept), upload and backup prefixes, per-tenant mail adapter and credentials (3.5), reply addresses with tenant, inbound routing on the server host | M | Replay tests (10.5 item 3); files of two tenants with the same digest are independent |
 | 8 | **Oban and cluster in multi-tenant mode.** Oban on the control repo, `Firefly.Jobs.Worker`, deferred insert in `Firefly.Repo.transact/2`, cron fan-out, fairness, `job_retention_days` as server setting, tenant jobs page, Oban Web on the management side, libcluster channel on the control DB | L | Jobs run in the right tenant; a suspended tenant's jobs snooze; a busy tenant can't take more than its share in a test |
-| 9 | **Settings layering and server-only surfaces.** `tenant_setting_overrides`, precedence and sources at `/staff/settings`, `pin_scope`, `scope: :server_only`, feature gates (Kaffy, importers, LDAP, plugin policy and server catalog, upgrade page) | M | Precedence matrix tested; gated pages 404 without the feature |
+| 9 | **Settings layering and server-only surfaces.** `tenant_setting_overrides`, precedence and sources at `/staff/settings`, `pin_scope`, `scope: :server_only`, feature gates (importers, LDAP, plugin policy and server catalog, upgrade page) | M | Precedence matrix tested; gated pages 404 without the feature |
 | 10 | **Per-tenant authentication providers.** OAuth/OIDC/DiscourseConnect/LDAP/SAML config as secret settings with legacy env pins; `FireflyWeb.Plugs.TenantAuth` on `Ueberauth.run_request/run_callback`; per-tenant SAML SP keys | L | Each provider's login works on two tenants with different credentials (faked providers, as today's tests do) |
 | 11 | **Management API foundation.** `FireflyWeb.Management.Endpoint` and router, server key auth and scopes, rotation and revocation, bootstrap env key, problem+json, idempotency, audit log, OpenAPI 3.1 and docs, key endpoints, console sessions | M | OpenAPI test passes; key lifecycle and scope checks tested; listener separate from tenant hosts |
 | 12 | **Tenant lifecycle and provisioning.** `db_servers`, template DB, `Provision` job and operations resource, tenants CRUD, hostnames (with TXT verification), admin invites, suspend and resume, delete, undelete, purge | L | A tenant is created through the API, reachable by host, its admin accepts the invite; delete and purge leave nothing behind |
@@ -1573,20 +1606,18 @@ otherwise.
    per-tenant concurrency properly. *Recommendation:* stay on open-source
    Oban with the snooze-based share in v1; revisit if one tenant's backlog
    delays others in practice.
-2. **Per-tenant mail credentials** (their own SMTP or SES)? *Recommendation:*
-   no in v1: a server-wide adapter, a per-tenant `From` set by the server
-   admin. Add per-tenant adapter credentials as a settings override later.
+2. **Per-tenant mail credentials?** **Decided: yes.** Each tenant may set
+   its own adapter and credentials, falling back to the server-wide one
+   (3.5).
 3. **Per-tenant S3 buckets?** *Recommendation:* a prefix in one bucket for
    v1; the storage layer leaves room for a bucket per tenant later.
 4. **May tenant admins upload arbitrary plugins?** *Recommendation:* in
    multi-tenant mode default to the server catalog only (`features.plugins
    = "catalog"`), with `"any"` granted per tenant.
-5. **Kaffy in multi-tenant mode?** *Recommendation:* off unless the server
-   grants `features.database_admin` to a tenant.
-6. **Must a tenant approve support sessions?** *Recommendation:* no
-   approval in v1, but always visible to the tenant's admins (staff log
-   and banner) with a mandatory reason; add an optional "require approval"
-   tenant setting later.
+5. **Kaffy in multi-tenant mode?** **Decided: always enabled, strictly for
+   the tenant's own data** (4.14).
+6. **Must a tenant approve support sessions?** **Decided: no.** Server
+   admins can always see what is happening in any tenant (5.3).
 7. **A `tenant` label on Prometheus metrics?** *Recommendation:* off by
    default; a flag adds a few per-tenant series for clusters of up to a few
    hundred tenants.
