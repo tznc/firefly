@@ -69,7 +69,6 @@ defmodule Firefly.Themes.Theme do
       :user_selectable,
       :source_url
     ])
-    |> strip_nul([:name, :description, :css, :head_html, :header_html, :footer_html])
     |> update_change(:name, &String.trim/1)
     |> validate_required([:name])
     |> validate_length(:name, max: 60)
@@ -81,7 +80,23 @@ defmodule Firefly.Themes.Theme do
     |> validate_bytes(:head_html, @max_html)
     |> validate_bytes(:header_html, @max_html)
     |> validate_bytes(:footer_html, @max_html)
+    |> validate_no_null([:name, :description, :css, :head_html, :header_html, :footer_html])
     |> unique_constraint(:name, name: :themes_lower_name_index, message: "is taken")
+  end
+
+  # Postgres can't store a NUL character in text.
+  defp validate_no_null(changeset, fields),
+    do:
+      Enum.reduce(
+        fields,
+        changeset,
+        &validate_change(&2, &1, fn field, value -> null_error(field, value) end)
+      )
+
+  defp null_error(field, value) do
+    if is_binary(value) and String.contains?(value, <<0>>),
+      do: [{field, "can't contain a null character"}],
+      else: []
   end
 
   # Empty strings are tokens left at their built-in value.
@@ -110,18 +125,6 @@ defmodule Firefly.Themes.Theme do
   end
 
   defp validate_colors(:colors, _other), do: [colors: "is invalid"]
-
-  # Postgres text can't hold NUL, and browsers drop it from HTML and CSS
-  # anyway: a pasted one is removed, not a database error.
-  defp strip_nul(changeset, fields) do
-    Enum.reduce(fields, changeset, fn field, changeset ->
-      update_change(
-        changeset,
-        field,
-        &if(is_binary(&1), do: String.replace(&1, "\0", ""), else: &1)
-      )
-    end)
-  end
 
   defp validate_bytes(changeset, field, max) do
     validate_change(changeset, field, fn ^field, value ->
