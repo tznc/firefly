@@ -117,9 +117,10 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_JOBS_<QUEUE>` | Background job concurrency on this node per queue (`DEFAULT`, `MAILERS`, `NOTIFICATIONS`, `WEBHOOKS`, `PLUGINS`, `AI`, `MAINTENANCE`), e.g. `FIREFLY_JOBS_MAILERS=20`; `0` leaves that queue to other nodes (see "Background jobs") |
 | `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
+| `FIREFLY_CLUSTER`, `FIREFLY_CLUSTER_NAME`, `FIREFLY_CLUSTER_HEARTBEAT_MS`, `FIREFLY_NODE_HOST`, `FIREFLY_DIST_PORT`, `RELEASE_COOKIE` | Running several nodes as one cluster, off by default (see "Running several nodes") |
 
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see
-`Firefly.RateLimit`.
+`Firefly.RateLimit` and "Running several nodes".
 
 Image uploads are processed with [libvips](https://www.libvips.org) (through
 [Vix](https://github.com/akash-akya/vix)), built against the system library:
@@ -154,6 +155,93 @@ for `GET /health` over bash's `/dev/tcp`: the image has no curl, and
 check readiness instead (`/app/bin/healthcheck /ready`), e.g. as a compose
 `healthcheck` that `depends_on: condition: service_healthy` waits for.
 
+### Running several nodes
+
+Several Firefly nodes can serve one forum behind a load balancer. They share
+the database and uploads (use `FIREFLY_UPLOAD_STORAGE=s3`, or one shared
+volume), and with clustering on they form one Erlang cluster, so what one
+node broadcasts reaches the others: live updates (new posts, notifications,
+chat, presence) and cache invalidation (site settings, emoji, watched words,
+plugins, read-only mode). Without clustering, each node only sees its own
+changes until it restarts.
+
+Nodes find each other through the database (libcluster's Postgres strategy):
+each `LISTEN`s on a Postgres channel and `NOTIFY`s its node name there every
+few seconds; the others connect to it. No DNS, headless service or
+Kubernetes API access is needed. It connects with the repo's settings
+(`FIREFLY_DATABASE_URL`, `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`)
+over two extra connections per node, outside the pool. A connection pooler
+in transaction mode (PgBouncer, Supavisor) drops `LISTEN`: point Firefly at
+the database itself, or at a session-mode port.
+
+| Variable | Purpose |
+| --- | --- |
+| `FIREFLY_CLUSTER` | `postgres` turns clustering on; unset (or `none`) leaves each node on its own |
+| `FIREFLY_CLUSTER_NAME` | Deployments sharing a database server use their own channel, `firefly_cluster_<name>` (`a-z`, `0-9`, `_`); default `firefly_cluster` |
+| `FIREFLY_CLUSTER_HEARTBEAT_MS` | How often a node announces itself (default 5000): how soon a new node is found |
+| `RELEASE_COOKIE` | Required with clustering: the secret nodes authenticate each other with, the same on every node, at least 32 characters (`openssl rand -hex 32`). The release refuses to start clustered without one, or with the one built into the image |
+| `FIREFLY_NODE_HOST` | The address other nodes reach this one at (its node name is `firefly@<host>`). Default: the machine's first address (`hostname -i`); in Kubernetes, the pod IP |
+| `FIREFLY_DIST_PORT` | The port the node listens on for other nodes (default 9100) |
+
+Each node listens on EPMD's port 4369 (the Erlang port mapper) and on
+`FIREFLY_DIST_PORT`; both must be open between the nodes, and only between
+them: anyone who can reach those ports with the cookie controls the node.
+Erlang distribution isn't encrypted, so keep the nodes on a private network.
+Remote consoles (`bin/firefly remote`) and `bin/firefly rpc` work as before
+from inside a node's container.
+
+What is and isn't cluster-wide:
+
+| | |
+| --- | --- |
+| Cluster-wide | PubSub: live pages, notifications, chat and presence; cache invalidation; the database and everything in it (sessions are cookies, so any node serves any request) |
+| Per node | Rate limits (Hammer's in-memory buckets): with N nodes behind a round-robin balancer, a client gets up to N times each limit. Lower the limits (the `rate_limit_*` site settings) or use sticky sessions if that matters. Also per node: metrics, the in-memory link preview and report caches, and the plugin sandbox's instances |
+| Not needed | Background work (thread timers and reminders, periodic jobs, plugin events and jobs, webhook deliveries) is claimed through the database (`SKIP LOCKED`, `Firefly.JobRuns`), so it runs once whichever nodes are up, clustered or not. Backups and restores are one at a time per node: start them from one node |
+
+A node that was cut off from the others while settings changed keeps its
+stale caches until the next change or a restart. `/ready` reports
+`"cluster": {"enabled": true, "nodes": 2}` (the other nodes this one is
+connected to) without ever failing on it, and nodes joining and leaving are
+logged and counted (`firefly_cluster_node_count`,
+`firefly_cluster_nodes_connected`).
+
+A Kubernetes example (no headless service needed):
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: firefly}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: firefly}}
+  template:
+    metadata: {labels: {app: firefly}}
+    spec:
+      containers:
+        - name: firefly
+          image: firefly:latest
+          ports:
+            - {name: http, containerPort: 4000}
+            - {name: epmd, containerPort: 4369}
+            - {name: dist, containerPort: 9100}
+          env:
+            - {name: FIREFLY_CLUSTER, value: postgres}
+            - name: FIREFLY_NODE_HOST
+              valueFrom: {fieldRef: {fieldPath: status.podIP}}
+            - name: RELEASE_COOKIE
+              valueFrom: {secretKeyRef: {name: firefly, key: release-cookie}}
+            # FIREFLY_DATABASE_URL, FIREFLY_SECRET_KEY_BASE... as for one node
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+```
+
+With a NetworkPolicy, allow ingress on 4369 and 9100 from pods labelled
+`app: firefly`. With Docker on several hosts, publish 4369 and 9100 on a
+private interface and set `FIREFLY_NODE_HOST` to that address. With
+`docker compose up --scale`, the defaults work: each container's own
+address on the compose network is its node host. IPv6-only networks also
+need `ELIXIR_ERL_OPTIONS="-proto_dist inet6_tcp"`.
+
 ### Monitoring
 
 Two unauthenticated JSON endpoints answer probes. They are handled at the
@@ -163,13 +251,14 @@ locale and theme, and aren't logged per request:
 | Endpoint | Answers |
 | --- | --- |
 | `GET /health` | Liveness: `200 {"status": "ok"}` while the VM runs and serves HTTP. No database call, so a database outage doesn't get every node restarted |
-| `GET /ready` | Readiness: `200` when the node should get traffic, else `503` with `"failing"` naming the failed checks. Checks: the database answers `SELECT 1` within 2 seconds, no migration is pending, and the node isn't shutting down (draining). Read-only mode and whether the plugin sandbox is available are reported in `"checks"` but never fail it |
+| `GET /ready` | Readiness: `200` when the node should get traffic, else `503` with `"failing"` naming the failed checks. Checks: the database answers `SELECT 1` within 2 seconds, no migration is pending, and the node isn't shutting down (draining). Read-only mode, whether the plugin sandbox is available and how many other cluster nodes this one is connected to are reported in `"checks"` but never fail it |
 
 ```json
 {"status": "unavailable", "failing": ["migrations"],
  "checks": {"database": {"ok": true}, "migrations": {"ok": false, "pending": [20261101000000]},
             "draining": {"ok": true}, "read_only": {"ok": true, "enabled": false},
-            "plugin_sandbox": {"ok": true, "available": true}}}
+            "plugin_sandbox": {"ok": true, "available": true},
+            "cluster": {"ok": true, "enabled": false, "nodes": 0}}}
 ```
 
 Production redirects HTTP to HTTPS (`force_ssl`), except for these two paths,
@@ -293,8 +382,11 @@ What's exported (durations are histograms in microseconds, named
 | `firefly_webhooks_delivery_stop_duration_microseconds`, `firefly_webhooks_delivery_exception_count` | `type`, `result` (`success`, `failure`) |
 | `firefly_scheduler_job_stop_duration_microseconds`, `firefly_scheduler_job_exception_count` | `job` |
 | `firefly_mailer_deliver_stop_count`, `firefly_mailer_deliver_stop_duration_microseconds`, `firefly_mailer_deliver_exception_count` | `adapter` (`smtp`, `ses`, `sendgrid`, `mailgun`, `postmark`, `local`), `result` (`sent`, `failed`, `skipped`) |
+| `firefly_cluster_node_count`, `firefly_cluster_nodes_connected` | `event` (`up`, `down`) on the count |
 
-No label carries a user id or a request path. The VM and queue gauges are
+Every series also has a `node` label, the node it was measured on
+(`firefly@10.0.0.7`; one per node), so a cluster's series stay apart. No
+label carries a user id or a request path. The VM and queue gauges are
 measured every 10 seconds. The domain emits its events with `:telemetry`
 (listed in `Firefly.Telemetry`); `FireflyWeb.Telemetry` defines the metrics.
 A Prometheus scrape config:
@@ -697,7 +789,17 @@ mix precommit              # compile --warnings-as-errors, format, credo, test
 ```
 
 Set `FIREFLY_CHROMIUM_PATH` to use an already-installed Chromium, and
-`FIREFLY_PW_TRACE=true` to record Playwright traces.
+`FIREFLY_PW_TRACE=true` to record Playwright traces. The test server
+listens on `FIREFLY_TEST_PORT` (default 4002); with a different port and
+`MIX_TEST_PARTITION` (its own database), two suites can run side by side.
+
+The clustering test starts a second node (`:peer`) and has both find each
+other through the test database, so it needs `epmd` (it starts it) and is
+left out unless included (CI runs it):
+
+```sh
+(cd apps/firefly && mix test --only cluster)
+```
 
 Property-based and fuzz tests ([StreamData](https://hexdocs.pm/stream_data),
 in each app's `test/property`) check invariants over generated input: valid
