@@ -1,6 +1,9 @@
 defmodule Firefly.SiteSettingsCatalogTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Firefly.Fixtures
 

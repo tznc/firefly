@@ -1,6 +1,9 @@
 defmodule Firefly.IgnoresTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Groups, Messaging, Notifications}
   alias Firefly.Accounts.{AccountDeletion, AccountExport, Ignores}
@@ -88,9 +91,8 @@ defmodule Firefly.IgnoresTest do
 
       assert kinds(alice) == []
 
-      refute_delivered_email(
-        Firefly.Notifications.Emails.mention_notification(alice, thread, post)
-      )
+      subject = Firefly.Notifications.Emails.mention_notification(alice, thread, post).subject
+      refute_received {:email, %{subject: ^subject}}
 
       # Others still notify.
       carol = user("carol")

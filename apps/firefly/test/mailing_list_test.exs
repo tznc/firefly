@@ -1,6 +1,9 @@
 defmodule Firefly.MailingListTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Groups, Notifications, SiteSettings}
   alias Firefly.Accounts.Ignores
@@ -37,23 +40,23 @@ defmodule Firefly.MailingListTest do
 
     thread = thread_fixture(ctx.category, ctx.author, %{title: "Fresh"})
     flush()
-    assert_email_delivered_with(to: [nil: "lister@example.com"], subject: "[Firefly] Fresh")
+    assert_email_sent(to: "lister@example.com", subject: "[Firefly] Fresh")
 
     reply(thread, ctx.author, "A reply")
 
-    assert_receive {:delivered_email, email}
+    assert_receive {:email, email}
     assert email.text_body =~ "A reply"
-    assert email.headers["reply-to"] == ReplyAddress.address(thread, lister)
+    assert email.reply_to == {"", ReplyAddress.address(thread, lister)}
   end
 
   test "not one's own posts unless no echo is off", ctx do
     lister = lister("lister")
     reply(ctx.thread, lister, "Mine")
-    refute_receive {:delivered_email, %{to: [{nil, "lister@example.com"}]}}
+    refute_receive {:email, %{to: [{"", "lister@example.com"}]}}
 
     {:ok, _} = Accounts.update_preferences(lister, %{mailing_list_no_echo: false})
     reply(ctx.thread, lister, "Mine again")
-    assert_receive {:delivered_email, %{to: [{nil, "lister@example.com"}]}}
+    assert_receive {:email, %{to: [{"", "lister@example.com"}]}}
   end
 
   test "leaves out muted threads, ignored authors and unreadable categories", ctx do
@@ -82,9 +85,9 @@ defmodule Firefly.MailingListTest do
     lister("lister")
 
     reply(ctx.thread, ctx.author, "One")
-    assert_email_delivered_with(to: [nil: "lister@example.com"])
+    assert_email_sent(to: "lister@example.com")
     reply(ctx.thread, ctx.author, "Two")
-    refute_receive {:delivered_email, %{to: [{nil, "lister@example.com"}]}}
+    refute_receive {:email, %{to: [{"", "lister@example.com"}]}}
 
     SiteSettings.update(%{"mailing_list_mode" => "false"}, ctx.admin)
     assert MailingList.recipients(ctx.thread, %Discussion.Post{user_id: ctx.author.id}) == []
@@ -96,8 +99,8 @@ defmodule Firefly.MailingListTest do
 
     reply(ctx.thread, ctx.author, "Only once")
 
-    assert_receive {:delivered_email, %{subject: "[Firefly] Release plans"}}
-    refute_receive {:delivered_email, _}
+    assert_receive {:email, %{subject: "[Firefly] Release plans"}}
+    refute_receive {:email, _}
     assert [%{kind: "new_post"}] = Notifications.notifications_for(lister)
   end
 end

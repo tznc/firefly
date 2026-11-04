@@ -1,6 +1,9 @@
 defmodule Firefly.ChatNotificationsTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Firefly.Fixtures
 
@@ -63,7 +66,7 @@ defmodule Firefly.ChatNotificationsTest do
       assert Notification.path(notification) =~ ~r"^/chat/c/general/\d+\?message=\d+$"
 
       # Bob was away (never seen); Carol was here.
-      assert_delivered_email_matches(%{subject: "@alice mentioned you in #General" <> _})
+      assert_received {:email, %{subject: "@alice mentioned you in #General" <> _}}
       assert [%{emailed_at: %DateTime{}}] = Notifications.notifications_for(ctx.bob)
 
       assert [%{emailed_at: nil}] = Notifications.notifications_for(ctx.carol)

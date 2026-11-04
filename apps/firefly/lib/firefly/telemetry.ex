@@ -24,6 +24,7 @@ defmodule Firefly.Telemetry do
   | `[:firefly, :discussion, :create_post, :start \\| :stop \\| :exception]` | `duration` | `result` (`ok`, `error`) on stop |
   | `[:firefly, :plugins, :run_hook, :start \\| :stop \\| :exception]` | `duration` | `plugin`, `hook`; `result` on stop |
   | `[:firefly, :ai, :request, :start \\| :stop \\| :exception]` | `duration` | `adapter`; `result` on stop |
+  | `[:firefly, :mailer, :deliver, :start \\| :stop \\| :exception]` | `duration` | `adapter` (`smtp`, `ses`...), `template`; `result` (`sent`, `failed`, `skipped`) on stop |
   | `[:firefly, :queue, :depth]` | `depth` | `queue` (`plugin_events`, `webhooks`); from `measure_queues/0` |
   """
 

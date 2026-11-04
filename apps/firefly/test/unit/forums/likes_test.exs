@@ -1,6 +1,6 @@
 defmodule Firefly.Discussion.LikesTest do
   use Firefly.DataCase
-  use Bamboo.Test
+  import Swoosh.TestAssertions
 
   import Firefly.Fixtures,
     only: [user_fixture: 1, admin_fixture: 0, category_fixture: 0, thread_fixture: 3]
@@ -74,7 +74,7 @@ defmodule Firefly.Discussion.LikesTest do
     assert [%{read_at: nil, subject: ~s(@eve and 3 others liked your post in "Likeable")}, %{}] =
              Notifications.notifications_for(author)
 
-    assert_no_emails_delivered()
+    assert_no_email_sent()
   end
 
   test "unliking updates the unread notification, or removes it", ctx do

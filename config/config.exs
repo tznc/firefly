@@ -76,7 +76,10 @@ config :ueberauth, Ueberauth,
     identity: {Ueberauth.Strategy.Identity, [callback_methods: ["POST"]]}
   ]
 
-config :firefly, Firefly.Mailer, adapter: Bamboo.LocalAdapter
+# Email is kept in memory in development (see /dev/mailbox); production
+# picks an adapter in config/runtime.exs. Swoosh's HTTP APIs go through Req.
+config :firefly, Firefly.Mailer, adapter: Swoosh.Adapters.Local
+config :swoosh, :api_client, Swoosh.ApiClient.Req
 
 # Outbound email and reply-by-email. `inbound_token` is the shared secret the
 # SendGrid Inbound Parse webhook must send (reply-by-email is off without it).

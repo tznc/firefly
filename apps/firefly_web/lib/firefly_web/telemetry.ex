@@ -135,7 +135,10 @@ defmodule FireflyWeb.Telemetry do
       duration("firefly.scheduler.job.stop.duration",
         tags: [:job]
       ),
-      counter("firefly.scheduler.job.exception.count", tags: [:job])
+      counter("firefly.scheduler.job.exception.count", tags: [:job]),
+      counter("firefly.mailer.deliver.stop.count", tags: [:adapter, :result]),
+      duration("firefly.mailer.deliver.stop.duration", tags: [:adapter]),
+      counter("firefly.mailer.deliver.exception.count", tags: [:adapter])
     ]
   end
 

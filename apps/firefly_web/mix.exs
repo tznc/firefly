@@ -45,6 +45,8 @@ defmodule FireflyWeb.MixProject do
       {:phoenix_test, "~> 0.14", only: :test, runtime: false},
       {:phoenix_test_playwright, "~> 0.19", only: :test, runtime: false},
       {:bandit, "~> 1.14"},
+      # The development mailbox at /dev/mailbox (Plug.Swoosh.MailboxPreview).
+      {:swoosh, "~> 1.29"},
       # Metrics (see FireflyWeb.Telemetry): the definitions, VM and queue
       # measurements, and Peep, which aggregates them for Prometheus in
       # fixed buckets (memory stays flat however rarely it's scraped).

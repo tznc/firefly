@@ -1,6 +1,9 @@
 defmodule Firefly.MessagesTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   require Ecto.Query
 
@@ -71,8 +74,8 @@ defmodule Firefly.MessagesTest do
       assert [_] = Notifications.notifications_for(carol)
       assert Notifications.notifications_for(alice) == []
 
-      assert_email_delivered_with(
-        to: [nil: "bob@example.com"],
+      assert_email_sent(
+        to: "bob@example.com",
         subject: ~s(@alice sent you a message: "Hush" on Firefly)
       )
     end
@@ -174,8 +177,8 @@ defmodule Firefly.MessagesTest do
 
       assert [%{kind: "message", emailed_at: nil}] = Notifications.notifications_for(quiet)
       assert [%{kind: "message", emailed_at: nil}] = Notifications.notifications_for(unconfirmed)
-      refute_email_delivered_with(to: [nil: "quiet@example.com"])
-      refute_email_delivered_with(to: [nil: "unc@example.com"])
+      refute_email_sent(to: "quiet@example.com")
+      refute_email_sent(to: "unc@example.com")
     end
 
     test "only participants can reply", %{alice: alice, carol: carol} do
@@ -186,8 +189,8 @@ defmodule Firefly.MessagesTest do
     test "message emails have no reply-by-email address", %{alice: alice} do
       start(alice, "bob")
 
-      assert_delivered_email_matches(%{to: [nil: "bob@example.com"], headers: headers})
-      refute Map.has_key?(headers, "reply-to")
+      assert_received {:email, %{to: [{_, "bob@example.com"}], reply_to: nil, headers: headers}}
+      refute Map.has_key?(headers, "Reply-To")
     end
   end
 

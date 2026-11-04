@@ -1,6 +1,9 @@
 defmodule FireflyWeb.AccountTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
   import Firefly.DataCase, only: [errors_on: 1]

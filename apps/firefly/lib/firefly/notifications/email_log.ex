@@ -36,10 +36,10 @@ defmodule Firefly.Notifications.EmailLog do
   def statuses, do: @statuses
 
   @doc """
-  Records an attempt to send `email` with Bamboo's `result`. A failure to
-  record is logged, never raised: the email went (or didn't) either way.
+  Records an attempt to send `email` with the mailer's `result`. A failure
+  to record is logged, never raised: the email went (or didn't) either way.
   """
-  def record(%Bamboo.Email{} = email, result) do
+  def record(%Swoosh.Email{} = email, result) do
     to = recipients(email)
     {status, error} = status(to, result)
 
@@ -61,12 +61,17 @@ defmodule Firefly.Notifications.EmailLog do
   defp status(_to, {:error, error}), do: {"failed", describe(error)}
   defp status(_to, _sent), do: {"sent", nil}
 
-  defp describe(error) when is_binary(error), do: error
-  defp describe(error) when is_exception(error), do: Exception.message(error)
-  defp describe(error), do: inspect(error)
+  @doc "A mailer error (an adapter's reason or an exception), as text."
+  def describe(error) when is_binary(error), do: error
+  def describe(error) when is_exception(error), do: Exception.message(error)
+  # An HTTP API's answer, e.g. SendGrid's `{401, %{"errors" => ...}}`.
+  def describe({status, body}) when is_integer(status),
+    do: "HTTP #{status}: " <> if(is_binary(body), do: body, else: inspect(body))
+
+  def describe(error), do: inspect(error)
 
   @doc "An email's recipients' addresses, comma-separated (`\"\"` for none)."
-  def recipients(%Bamboo.Email{to: to}) do
+  def recipients(%Swoosh.Email{to: to}) do
     to
     |> List.wrap()
     |> Enum.map(fn

@@ -478,7 +478,8 @@ defmodule FireflyWeb.Router do
   end
 
   if Application.compile_env(:firefly_web, :dev_routes) do
-    forward("/sent_emails", Bamboo.SentEmailViewerPlug)
+    # The emails sent in development (Swoosh's local adapter).
+    forward("/dev/mailbox", Plug.Swoosh.MailboxPreview)
   end
 
   # Last: an imported site's old URLs (see FireflyWeb.PermalinkController),
