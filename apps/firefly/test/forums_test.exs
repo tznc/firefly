@@ -488,4 +488,27 @@ defmodule Firefly.ForumsTest do
     assert {:ok, %{slug: "untitled"}} =
              Firefly.Discussion.create_thread(category, user, %{title: "🔥🔥🔥", body: "Hot."})
   end
+
+  # Found by Firefly.DiscussionPropertyTest: a title longer than the column
+  # raised instead of failing validation, and a long slug left no room for
+  # its "-N" suffix.
+  test "category and thread titles are at most 255 characters, and slugs stay short" do
+    assert {:error, changeset} =
+             Firefly.Discussion.create_category(%{title: String.duplicate("9", 256)})
+
+    assert "should be at most 255 character(s)" in errors_on(changeset).title
+
+    for _ <- 1..2 do
+      assert {:ok, category} =
+               Firefly.Discussion.create_category(%{title: String.duplicate("9", 255)})
+
+      assert String.length(category.slug) <= 202
+    end
+
+    user = Firefly.Fixtures.user_fixture()
+    {:ok, home} = Firefly.Discussion.create_category(%{title: "Home"})
+    attrs = %{title: String.duplicate("9", 256), body: "Long."}
+    assert {:error, changeset} = Firefly.Discussion.create_thread(home, user, attrs)
+    assert "should be at most 255 character(s)" in errors_on(changeset).title
+  end
 end
