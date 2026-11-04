@@ -171,5 +171,4 @@ defmodule Firefly.Plugin.Settings do
       do: {:error, "must be at most 5000 characters"},
       else: {:ok, String.trim(value)}
   end
-
 end

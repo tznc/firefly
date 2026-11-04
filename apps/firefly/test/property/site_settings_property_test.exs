@@ -134,7 +134,9 @@ defmodule Firefly.SiteSettingsPropertyTest do
             settings <-
               map_of(
                 one_of([member_of(keys), adversarial_text(2)]),
-                one_of([json_value(), adversarial_text()]), max_length: 4),
+                one_of([json_value(), adversarial_text()]),
+                max_length: 4
+              ),
             max_runs: runs(100)
           ) do
       assert match?(
