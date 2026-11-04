@@ -122,19 +122,15 @@ defmodule Firefly.Packages.Archive do
   # files before anything can be checked (a 5 MB zip can hold gigabytes).
   defp inflate_all(zip, entries) do
     entries
-    |> Enum.reduce_while({%{}, @max_unpacked}, fn {name, _size, offset, compressed}, {files, left} ->
-      case entry_data(zip, offset, compressed) do
-        {:ok, method, data} ->
-          case inflate(method, data, left) do
-            {:ok, inflated} ->
-              {:cont, {Map.put(files, name, inflated), left - byte_size(inflated)}}
-
-            :too_big ->
-              {:halt, {:error, "The package unpacks to more than #{div(@max_unpacked, 1024 * 1024)} MB."}}
-
-            :invalid ->
-              {:halt, {:error, "The file isn't a valid .zip."}}
-          end
+    |> Enum.reduce_while({%{}, @max_unpacked}, fn {name, _size, offset, compressed},
+                                                   {files, left} ->
+      with {:ok, method, data} <- entry_data(zip, offset, compressed),
+           {:ok, inflated} <- inflate(method, data, left) do
+        {:cont, {Map.put(files, name, inflated), left - byte_size(inflated)}}
+      else
+        :too_big ->
+          {:halt,
+           {:error, "The package unpacks to more than #{div(@max_unpacked, 1024 * 1024)} MB."}}
 
         :invalid ->
           {:halt, {:error, "The file isn't a valid .zip."}}
