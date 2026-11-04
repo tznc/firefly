@@ -38,6 +38,24 @@ defmodule Firefly.Packages do
 
   Plugins depend only on plugins (a dependency must be running for them
   to run); themes may depend on plugins and themes.
+
+  ## Theme components from plugins
+
+  A package with plugin code may also carry a theme component (`"theme":
+  {"component": true, ...}`): colors and CSS for themes to include, its
+  HTML cleaned like every package theme's (scripts never run, whatever
+  the package says; only an admin's own themes may run them). Installing
+  it needs its own grant (`grant_theme: true`, the confirm step's
+  checkbox), recorded on the package and in the staff log
+  (`package.theme_grant`); an upgrade of a granted package keeps it.
+
+  ## Theme settings
+
+  A theme package's typed `settings` (the plugin settings schema, see
+  `Firefly.Plugin.Settings`) are set on its theme's page
+  (`update_settings/3`) and reach its CSS as custom properties on `:root`,
+  `--<package id>-<key>` (`css_variables/1`). A plugin package's settings
+  are its plugin's, as before.
   """
 
   use Boundary, top_level?: true, check: [out: false], exports: [Package, Archive]
@@ -46,7 +64,7 @@ defmodule Firefly.Packages do
   alias Firefly.Accounts.User
   alias Firefly.Moderation.StaffLog
   alias Firefly.Packages.{Archive, Legacy, Package}
-  alias Firefly.Plugin.{Graph, Manifest}
+  alias Firefly.Plugin.{Graph, Manifest, Settings}
   alias Firefly.Rendering.LinkPreviews.Fetcher
   alias Firefly.Themes.Theme
 
@@ -109,7 +127,8 @@ defmodule Firefly.Packages do
   Every plugin and package, by name, for the staff list: `%{id, name,
   version, tags, kind, plugin, package, themes}`. `kind` is `:plugin` or
   `:theme`; `plugin` is the plugin as in `Firefly.Plugins.overview/0`
-  (core plugins too), `themes` the themes a theme package installed. With
+  (core plugins too), `themes` the themes (or a plugin's theme
+  components) the package installed. With
   `tag`, only those that carry it.
   """
   def list(tag \\ nil) do
@@ -127,7 +146,8 @@ defmodule Firefly.Packages do
           kind: :plugin,
           plugin: plugin,
           package: packages[plugin.id],
-          themes: []
+          themes:
+            if(package = packages[plugin.id], do: Themes.package_themes(package.id), else: [])
         }
       end
 
@@ -168,7 +188,8 @@ defmodule Firefly.Packages do
       archive: archive,
       current: current,
       problems: problems(archive, current),
-      edited: if(current, do: edited_themes(current), else: [])
+      edited: if(current, do: edited_themes(current), else: []),
+      grant_needed: grant_needed?(manifest, current)
     }
   end
 
@@ -191,6 +212,12 @@ defmodule Firefly.Packages do
     end
   end
 
+  # A plugin's theme components need staff's grant, once.
+  defp grant_needed?(manifest, current) do
+    Manifest.plugin?(manifest) and Manifest.theme?(manifest) and
+      is_nil(current && current.theme_granted_at)
+  end
+
   defp edited_themes(%Package{id: nil}), do: []
 
   defp edited_themes(package) do
@@ -204,8 +231,10 @@ defmodule Firefly.Packages do
       plugin && plugin.source == "core" ->
         ["#{manifest.id} is a core plugin; it can't be replaced by a package."]
 
-      Manifest.plugin?(manifest) and Manifest.theme?(manifest) ->
-        ["A package with plugin code can't carry a theme yet: ship them as two packages."]
+      not plugin_theme_ok?(manifest) ->
+        [
+          "A plugin ships theme components only: its theme must be a component (\"component\": true), without components of its own."
+        ]
 
       true ->
         case current && upgrade_problem(archive, current) do
@@ -213,6 +242,11 @@ defmodule Firefly.Packages do
           problem -> [problem]
         end
     end
+  end
+
+  defp plugin_theme_ok?(%Manifest{theme: theme} = manifest) do
+    not (Manifest.plugin?(manifest) and Manifest.theme?(manifest)) or
+      (theme["component"] == true and not Map.has_key?(theme, "components"))
   end
 
   defp upgrade_problem(%Archive{manifest: manifest} = archive, current) do
@@ -290,11 +324,15 @@ defmodule Firefly.Packages do
   Returns `{:ok, package}` or `{:error, message}`.
   """
   def install(%Archive{} = archive, %User{} = admin, opts \\ []) do
-    %{current: current, problems: problems, edited: edited} = preview(archive)
+    %{current: current, problems: problems, edited: edited, grant_needed: grant?} =
+      preview(archive)
 
     cond do
       problems != [] ->
         {:error, Enum.join(problems, " ")}
+
+      grant? and !opts[:grant_theme] ->
+        {:error, "Its plugin ships theme components: allow them to install it."}
 
       edited != [] and !opts[:overwrite] ->
         {:error,
@@ -317,10 +355,29 @@ defmodule Firefly.Packages do
       installed_by_id: admin.id
     }
 
+    grant? = Manifest.plugin?(manifest) and Manifest.theme?(manifest) and !!opts[:grant_theme]
+
+    attrs =
+      if grant? and is_nil(current && current.theme_granted_at),
+        do:
+          Map.merge(attrs, %{
+            theme_granted_at: DateTime.utc_now(:second),
+            theme_granted_by_id: admin.id
+          }),
+        else: attrs
+
     package =
       (current || %Package{package_id: manifest.id})
       |> Ecto.Changeset.change(attrs)
       |> Repo.insert_or_update!()
+
+    if Map.has_key?(attrs, :theme_granted_at),
+      do:
+        StaffLog.record(admin, "package.theme_grant", {"package", package.id}, %{
+          package: manifest.id,
+          version: manifest.version,
+          components: Enum.join(theme_names(manifest), ", ")
+        })
 
     with :ok <- install_plugin(archive, admin),
          :ok <- install_theme(archive, package, admin) do
@@ -357,6 +414,90 @@ defmodule Firefly.Packages do
   defp install_theme(%Archive{manifest: manifest, files: files}, package, admin) do
     Themes.install_package(manifest.theme, files, package, admin)
     :ok
+  end
+
+  @doc "The names of the themes `manifest`'s theme section creates or updates."
+  def theme_names(%Manifest{theme: nil}), do: []
+
+  def theme_names(%Manifest{theme: theme, name: name}) do
+    components = Enum.map(theme["components"] || [], &(&1["name"] || "#{name} component"))
+    [theme["name"] || name | components]
+  end
+
+  ## Settings
+
+  @doc """
+  A theme package's settings: `{definitions, values}` (see
+  `Firefly.Plugin.Settings`); none for a plugin's package, whose settings
+  are its plugin's.
+  """
+  def settings(%Package{} = package) do
+    manifest = parse!(package)
+
+    if Manifest.plugin?(manifest),
+      do: {[], %{}},
+      else: {manifest.settings, Settings.values(manifest.settings, package.settings)}
+  end
+
+  @doc """
+  Saves a theme package's settings from form `params` as `admin`, then
+  compiles its themes again: `{:ok, package}` or `{:error, errors}` by key.
+  """
+  def update_settings(%Package{} = package, params, %User{} = admin) do
+    {definitions, current} = settings(package)
+
+    with {:ok, stored} <- Settings.cast_all(definitions, params) do
+      values = Settings.values(definitions, stored)
+
+      changes =
+        for {key, value} <- values,
+            value != current[key],
+            into: %{},
+            do: {key, %{before: current[key], after: value}}
+
+      Repo.transact(fn -> save_settings(package, stored, changes, admin) end)
+    end
+  end
+
+  defp save_settings(package, stored, changes, admin) do
+    package = package |> Ecto.Changeset.change(settings: stored) |> Repo.update!()
+
+    if changes != %{} do
+      details = Map.put(changes, :package, package.package_id)
+      StaffLog.record(admin, "package.settings", {"package", package.id}, details)
+      Themes.recompile_package(package.id)
+    end
+
+    {:ok, package}
+  end
+
+  @doc """
+  The CSS custom properties for the settings of the package with row id
+  `id` (a theme's `package_id`): `--<package id>-<key>: value;` each, or
+  "" when it has none. Text that could break out of a declaration is
+  given as a CSS string instead.
+  """
+  def css_variables(nil), do: ""
+
+  def css_variables(id) do
+    with %Package{} = package <- Repo.get(Package, id),
+         {[_ | _] = definitions, values} <- settings(package) do
+      Enum.map_join(definitions, " ", fn %{key: key} ->
+        "--#{package.package_id}-#{key}: #{css_value(values[key])};"
+      end)
+    else
+      _none -> ""
+    end
+  end
+
+  defp css_value(true), do: "1"
+  defp css_value(false), do: "0"
+  defp css_value(value) when is_integer(value), do: Integer.to_string(value)
+
+  defp css_value(value) when is_binary(value) do
+    if value =~ ~r{^[#%(),./\w\s+-]*$},
+      do: value,
+      else: ~s{"} <> String.replace(value, ~r{[\\"\n\r<>]}, &"\\#{Base.encode16(&1)} ") <> ~s{"}
   end
 
   ## Uninstall

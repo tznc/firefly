@@ -14,6 +14,8 @@ defmodule FireflyWeb.StaffLive.Theme do
 
   on_mount({FireflyWeb.UserAuth, :require_user})
 
+  import FireflyWeb.StaffLive.Packages, only: [setting_fields: 1]
+
   alias Firefly.{Packages, SiteSettings, Themes}
   alias Firefly.Themes.{Palette, Theme}
 
@@ -46,9 +48,27 @@ defmodule FireflyWeb.StaffLive.Theme do
     |> assign(:default?, SiteSettings.get("default_theme_id") == theme.id)
     |> assign(:package, Packages.for_theme(theme))
     |> assign(:edited?, Themes.locally_edited?(theme))
+    |> assign_settings()
     |> assign(:colors, theme.colors || %{})
     |> assign(:warnings, Themes.contrast_warnings(theme.colors))
     |> assign(:form, to_form(Themes.change_theme(theme)))
+  end
+
+  # A theme package's settings, which its CSS reads as custom properties.
+  defp assign_settings(socket, errors \\ %{}, values \\ nil)
+
+  defp assign_settings(%{assigns: %{package: nil}} = socket, _errors, _values),
+    do: assign(socket, settings: [], settings_form: nil)
+
+  defp assign_settings(socket, errors, values) do
+    {definitions, current} = Packages.settings(socket.assigns.package)
+    values = values || Map.new(current, fn {key, value} -> {key, to_string(value)} end)
+    errors = Enum.map(errors, fn {key, message} -> {key, {message, []}} end)
+
+    assign(socket,
+      settings: definitions,
+      settings_form: to_form(values, as: :settings, errors: errors, action: :validate)
+    )
   end
 
   defp reload(socket), do: load(socket, Themes.get_theme!(socket.assigns.theme.id))
@@ -139,6 +159,21 @@ defmodule FireflyWeb.StaffLive.Theme do
      socket
      |> put_flash(:info, gettext("Theme deleted."))
      |> push_navigate(to: ~p"/staff/themes")}
+  end
+
+  defp theme_event("save_settings", params, socket) do
+    values = Map.get(params, "settings", %{})
+
+    case Packages.update_settings(socket.assigns.package, values, socket.assigns.current_user) do
+      {:ok, _package} ->
+        {:noreply, socket |> put_flash(:info, gettext("Settings saved.")) |> reload()}
+
+      {:error, errors} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("Some settings are invalid; nothing was saved."))
+         |> assign_settings(errors, values)}
+    end
   end
 
   defp theme_event("validate_asset", _params, socket), do: {:noreply, socket}
@@ -330,6 +365,19 @@ defmodule FireflyWeb.StaffLive.Theme do
           <.button variant="primary" phx-disable-with={gettext("Saving...")}>{gettext("Save theme")}</.button>
         </div>
       </.form>
+
+      <section :if={@settings != []} id="theme-settings" class="card border border-base-300 bg-base-100">
+        <.form for={@settings_form} id="theme-settings-form" phx-submit="save_settings" class="card-body gap-2">
+          <h2 class="card-title">{gettext("Package settings")}</h2>
+          <p class="text-sm text-base-content/70">
+            {gettext("Its CSS reads them as custom properties, e.g. %{example}.",
+              example: "var(--#{@package.package_id}-#{hd(@settings).key})"
+            )}
+          </p>
+          <.setting_fields form={@settings_form} settings={@settings} />
+          <div><.button variant="primary">{gettext("Save settings")}</.button></div>
+        </.form>
+      </section>
 
       <section id="scripts" class="card border border-warning/50 bg-base-100">
         <div class="card-body gap-2">

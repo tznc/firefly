@@ -233,6 +233,44 @@ defmodule FireflyWeb.ThemesLiveTest do
     end
   end
 
+  test "a theme package's settings are edited on its page", %{conn: conn, admin: admin} do
+    zip =
+      Firefly.Packages.Archive.build(
+        %{
+          "id" => "dial",
+          "name" => "Dial",
+          "version" => "1.0.0",
+          "firefly" => "~> 1.0",
+          "tags" => ["theme"],
+          "settings" => [
+            %{
+              "key" => "radius",
+              "type" => "integer",
+              "default" => 4,
+              "label" => "Corner radius",
+              "help" => ""
+            }
+          ],
+          "theme" => %{"css" => "t.css"}
+        },
+        %{"t.css" => ".card { border-radius: calc(var(--dial-radius) * 1px); }"}
+      )
+
+    {:ok, archive} = Firefly.Packages.read(zip)
+    {:ok, package} = Firefly.Packages.install(archive, admin)
+    [theme] = Themes.package_themes(package.id)
+
+    conn
+    |> log_in_as(admin)
+    |> visit(~p"/staff/themes/#{theme.id}")
+    |> assert_has("#theme-settings", text: "var(--dial-radius)")
+    |> fill_in("Corner radius", with: "9")
+    |> click_button("Save settings")
+    |> assert_has("#flash-info", text: "Settings saved.")
+
+    assert Repo.reload!(theme).compiled_css =~ "--dial-radius: 9;"
+  end
+
   describe "members" do
     test "pick a selectable theme in their interface settings", %{conn: conn, admin: admin} do
       theme = theme(admin, %{"name" => "Night", "user_selectable" => true})

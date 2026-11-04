@@ -303,4 +303,32 @@ defmodule FireflyWeb.PackagesLiveTest do
       assert Firefly.Themes.list_themes() == []
     end
   end
+
+  test "a plugin's theme components need the grant", %{conn: conn} do
+    zip =
+      bundle_zip(
+        %{
+          "id" => "styled",
+          "name" => "Styled",
+          "main" => "index.js",
+          "tags" => ["theme"],
+          "theme" => %{"name" => "Styled bits", "component" => true, "css" => "s.css"}
+        },
+        %{"index.js" => "", "s.css" => ".s {}"}
+      )
+
+    conn
+    |> visit(~p"/staff/packages")
+    |> upload("Package file", write_zip(zip))
+    |> click_button("Upload")
+    |> assert_has("#preview-themes li", text: "Styled bits")
+    |> assert_has("#preview-grant", text: "Its plugin also ships theme components")
+    |> assert_has("#install-package[disabled]")
+    |> check("Allow its theme components")
+    |> click_button("#install-package", "Install")
+    |> assert_has("#flash-info", text: "Styled 1.0.0 installed (disabled).")
+    |> assert_has("#package-styled", text: "Styled bits")
+
+    assert Firefly.Packages.get("styled").theme_granted_at
+  end
 end

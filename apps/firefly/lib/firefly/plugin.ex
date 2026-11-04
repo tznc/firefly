@@ -59,7 +59,7 @@ defmodule Firefly.Plugin do
   use Boundary,
     top_level?: true,
     check: [out: false],
-    exports: [Host, Manifest, Runner, Sandbox, Graph]
+    exports: [Host, Manifest, Runner, Sandbox, Graph, Settings]
 
   alias Firefly.Plugin.Manifest
 
