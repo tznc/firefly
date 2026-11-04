@@ -150,6 +150,43 @@ if token = System.get_env("FIREFLY_METRICS_TOKEN") do
   config :firefly_web, FireflyWeb.Metrics, token: token
 end
 
+# OpenTelemetry (see FireflyWeb.OpenTelemetry), configured by the standard
+# OTEL_* variables, which the SDK reads itself: nothing is exported without
+# an OTLP endpoint. Metrics and logs over OTLP are experimental in the
+# Erlang SDK, so they're opt-in on top.
+otel_endpoint? = fn signal ->
+  System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") != nil or
+    System.get_env("OTEL_EXPORTER_OTLP_#{signal}_ENDPOINT") != nil
+end
+
+if config_env() != :test do
+  traces? =
+    otel_endpoint?.("TRACES") and System.get_env("OTEL_TRACES_EXPORTER", "otlp") != "none"
+
+  metrics? =
+    otel_endpoint?.("METRICS") and System.get_env("FIREFLY_OTEL_METRICS") in ~w(true 1)
+
+  logs? = otel_endpoint?.("LOGS") and System.get_env("FIREFLY_OTEL_LOGS") in ~w(true 1)
+
+  config :firefly_web, FireflyWeb.OpenTelemetry, traces: traces?, metrics: metrics?, logs: logs?
+
+  if traces?, do: config(:opentelemetry, traces_exporter: :otlp)
+
+  if metrics? do
+    config :opentelemetry_experimental,
+      readers: [
+        %{
+          module: :otel_metric_reader,
+          config: %{
+            exporter: {:otel_exporter_metrics_otlp, %{}},
+            export_interval_ms:
+              String.to_integer(System.get_env("OTEL_METRIC_EXPORT_INTERVAL", "60000"))
+          }
+        }
+      ]
+  end
+end
+
 # How long a shutting-down node fails readiness probes before the endpoint
 # stops listening (see FireflyWeb.Draining).
 if delay = System.get_env("FIREFLY_DRAIN_DELAY_MS") do

@@ -423,7 +423,8 @@ defmodule Firefly.AI do
     if Application.get_env(:firefly, __MODULE__, [])[:async] == false do
       fun.()
     else
-      {:ok, _pid} = Task.Supervisor.start_child(Firefly.AI.TaskSupervisor, fun)
+      {:ok, _pid} =
+        Task.Supervisor.start_child(Firefly.AI.TaskSupervisor, Firefly.Telemetry.bind(fun))
     end
 
     :ok

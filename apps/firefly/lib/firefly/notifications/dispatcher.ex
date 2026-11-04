@@ -22,26 +22,29 @@ defmodule Firefly.Notifications.Dispatcher do
   end
 
   @doc "Notify subscribers about a new reply."
-  def post_created(%Post{} = post), do: GenServer.cast(@name, {:post_created, post})
+  def post_created(%Post{} = post), do: cast({:post_created, post})
 
   @doc "Notify users newly mentioned by an edit."
-  def post_edited(%Post{} = post), do: GenServer.cast(@name, {:post_edited, post})
+  def post_edited(%Post{} = post), do: cast({:post_edited, post})
 
   @doc "Notify category subscribers about a new thread."
   def thread_created(%Thread{} = thread),
-    do: GenServer.cast(@name, {:thread_created, thread})
+    do: cast({:thread_created, thread})
 
   @doc "Notify a conversation's other participants about a new message."
   def message_created(%Message{} = message),
-    do: GenServer.cast(@name, {:message_created, message})
+    do: cast({:message_created, message})
 
   @doc "Notify `users` that `actor` added them to a conversation."
   def participants_added(%Conversation{} = conversation, %User{} = actor, users),
-    do: GenServer.cast(@name, {:participants_added, conversation, actor, users})
+    do: cast({:participants_added, conversation, actor, users})
 
   @doc "Notify about a chat message (see `Firefly.Chat.notify/2`)."
   def chat_message_created(message, mentioned_ids),
-    do: GenServer.cast(@name, {:chat_message_created, message, mentioned_ids})
+    do: cast({:chat_message_created, message, mentioned_ids})
+
+  # The caller's trace context goes along, so the fan-out joins its trace.
+  defp cast(message), do: GenServer.cast(@name, {message, Firefly.Telemetry.current_context()})
 
   ### Server API
 
@@ -49,7 +52,8 @@ defmodule Firefly.Notifications.Dispatcher do
   def init(_), do: {:ok, :nostate}
 
   @impl true
-  def handle_cast(message, state) do
+  def handle_cast({message, ctx}, state) do
+    Firefly.Telemetry.attach(ctx)
     event = elem(message, 0)
 
     Firefly.Telemetry.span([:firefly, :notifications, :dispatch], %{event: event}, fn ->

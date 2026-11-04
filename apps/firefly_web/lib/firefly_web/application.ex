@@ -5,6 +5,9 @@ defmodule FireflyWeb.Application do
 
   @impl true
   def start(_type, _args) do
+    # Spans and log export, when on (OpenTelemetry's SDK has started: it's a dependency).
+    FireflyWeb.OpenTelemetry.setup()
+
     children = [
       # Who's in which chat channel (see FireflyWeb.ChatLive)
       FireflyWeb.Presence,

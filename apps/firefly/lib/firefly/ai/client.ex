@@ -35,11 +35,18 @@ defmodule Firefly.AI.Client do
   @spec post(ProviderConfig.t(), String.t(), map, [{String.t(), String.t()}], keyword) ::
           {:ok, term} | {:error, String.t()}
   def post(%ProviderConfig{} = provider, path, body, headers, opts \\ []) do
+    Firefly.Telemetry.span([:firefly, :ai, :request], %{adapter: provider.adapter}, fn ->
+      result = request(provider, path, body, headers, opts)
+      {result, %{result: if(match?({:ok, _}, result), do: "ok", else: "error")}}
+    end)
+  end
+
+  defp request(provider, path, body, headers, opts) do
     with {:ok, url, connect} <- route(provider, provider.base_url <> path) do
       timeout = provider.timeout_seconds * 1_000
 
       request =
-        Req.new(
+        [
           method: :post,
           url: url,
           headers: headers,
@@ -50,7 +57,10 @@ defmodule Firefly.AI.Client do
           retry: if(opts[:sse], do: &retry_status/2, else: &retry/2),
           max_retries: @max_retries,
           retry_log_level: false
-        )
+        ]
+        |> Req.new()
+        # An HTTP client span; no trace headers go to the provider.
+        |> OpentelemetryReq.attach()
 
       request =
         if sse = opts[:sse], do: Req.merge(request, into: stream(sse)), else: request

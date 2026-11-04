@@ -113,6 +113,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
 | `FIREFLY_METRICS_PORT`, `FIREFLY_METRICS_IP`, `FIREFLY_METRICS_TOKEN` | Prometheus metrics, off by default: a port of their own for `/metrics` (bound to `FIREFLY_METRICS_IP`, default `0.0.0.0`), and/or a bearer token that serves `/metrics` on the main port too (see "Metrics") |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` and the other standard `OTEL_*` variables | OpenTelemetry traces over OTLP, off without an endpoint; `FIREFLY_OTEL_METRICS=true` and `FIREFLY_OTEL_LOGS=true` add metrics and logs (experimental; see "Observability") |
 | `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
 
@@ -231,6 +232,112 @@ scrape_configs:
     # With FIREFLY_METRICS_TOKEN (needed on the main port, optional on the metrics port):
     # authorization:
     #   credentials: <secret>
+```
+
+### Observability
+
+Firefly exports OpenTelemetry traces, and optionally metrics and logs, over
+OTLP to a collector (the OpenTelemetry Collector, Grafana Alloy, a vendor's
+endpoint). Nothing is exported unless an endpoint is set; everything is
+configured with the standard variables, which the SDK reads itself:
+
+| Variable | |
+| --- | --- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | The collector, e.g. `http://otel-collector:4318`; per signal: `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `_METRICS_ENDPOINT`, `_LOGS_ENDPOINT` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc` (port 4317) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | e.g. an API key: `x-api-key=...` |
+| `OTEL_SERVICE_NAME` | Default `firefly` (the release's name) |
+| `OTEL_RESOURCE_ATTRIBUTES` | e.g. `deployment.environment=production,service.instance.id=web-1` |
+| `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | e.g. `parentbased_traceidratio` and `0.1` to keep a tenth of traces |
+| `OTEL_TRACES_EXPORTER` | `none` turns traces off even with an endpoint |
+| `FIREFLY_OTEL_METRICS`, `FIREFLY_OTEL_LOGS` | `true` to also export metrics and logs (experimental, below); `OTEL_METRIC_EXPORT_INTERVAL` (ms, default 60000) |
+
+What's exported:
+
+- **Traces** (stable SDK: `opentelemetry` 1.7, `opentelemetry_exporter`
+  1.11): a server span per request (Bandit), with Phoenix's route and
+  LiveView mounts and events, Ecto queries, the AI client's HTTP requests
+  (Req) as child spans, and spans for the domain's operations: post
+  creation, notification fan-out, plugin hook runs and event deliveries,
+  webhook deliveries, scheduler jobs and AI requests (see
+  `Firefly.Telemetry`). Background tasks and the notification dispatcher
+  carry the trace on. Outgoing requests don't send trace headers to third
+  parties.
+- **Metrics** (`FIREFLY_OTEL_METRICS=true`, **experimental**): the same
+  metrics as Prometheus (see "Metrics" above), as OTLP counters, histograms
+  (same buckets) and gauges.
+- **Logs** (`FIREFLY_OTEL_LOGS=true`, **experimental**): log events at
+  `info` and up, with the trace and span ids of the span they were logged in.
+  Console logs print `otel_trace_id` and `otel_span_id` too.
+
+OpenTelemetry metrics and logs are still experimental in the Erlang SDK
+(`opentelemetry_experimental` and `opentelemetry_api_experimental` 0.6.0,
+pinned exactly): their APIs may change between releases, hence the opt-in.
+
+A local stack to try it with, as a `docker-compose.override.yml` next to
+Firefly (the collector sends traces to Jaeger, metrics to Prometheus; Tempo
+or Loki slot in the same way):
+
+```yaml
+services:
+  firefly:
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local
+      FIREFLY_OTEL_METRICS: "true"
+      FIREFLY_OTEL_LOGS: "true"
+      FIREFLY_METRICS_PORT: "9568"   # Prometheus can also scrape Firefly directly
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.139.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otelcol.yaml:/etc/otelcol/config.yaml:ro
+
+  jaeger:
+    image: jaegertracing/jaeger:2.11.0
+    ports: ["16686:16686"]   # the UI
+
+  prometheus:
+    image: prom/prometheus:v3.7.3
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--web.enable-otlp-receiver"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports: ["9090:9090"]
+```
+
+`otelcol.yaml`:
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      http: {endpoint: 0.0.0.0:4318}
+      grpc: {endpoint: 0.0.0.0:4317}
+processors:
+  batch: {}
+exporters:
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls: {insecure: true}
+  otlphttp/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp
+  debug: {}   # logs: swap in Loki, Elasticsearch or a vendor
+service:
+  pipelines:
+    traces: {receivers: [otlp], processors: [batch], exporters: [otlp/jaeger]}
+    metrics: {receivers: [otlp], processors: [batch], exporters: [otlphttp/prometheus]}
+    logs: {receivers: [otlp], processors: [batch], exporters: [debug]}
+```
+
+`prometheus.yml` (OTLP metrics arrive by push; the scrape job reads
+Firefly's own `/metrics` instead, if you prefer pull):
+
+```yaml
+scrape_configs:
+  - job_name: firefly
+    static_configs:
+      - targets: ["firefly:9568"]
 ```
 
 ### API

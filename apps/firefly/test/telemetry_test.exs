@@ -28,7 +28,11 @@ defmodule Firefly.TelemetryTest do
     thread = thread_fixture(category_fixture(), author)
     {:ok, post} = Firefly.Discussion.create_post(thread, author, %{body: "A reply"})
 
-    {:noreply, _} = Firefly.Notifications.Dispatcher.handle_cast({:post_edited, post}, :nostate)
+    {:noreply, _} =
+      Firefly.Notifications.Dispatcher.handle_cast(
+        {{:post_edited, post}, Firefly.Telemetry.current_context()},
+        :nostate
+      )
 
     assert_received {[:firefly, :notifications, :dispatch, :stop], ^ref, %{duration: _},
                      %{event: :post_edited}}

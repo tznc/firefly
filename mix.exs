@@ -39,6 +39,8 @@ defmodule Firefly.Umbrella.MixProject do
     [
       firefly: [
         applications: [
+          # The SDK crashing must not take the node down.
+          opentelemetry: :temporary,
           firefly: :permanent,
           firefly_plugins: :permanent,
           firefly_web: :permanent,

@@ -1,9 +1,11 @@
 defmodule FireflyWeb.Telemetry do
   @moduledoc """
-  The metrics Firefly reports (`metrics/0`) and, when metrics are on (see
-  `FireflyWeb.Metrics`), the processes that collect them: a Peep reporter
-  aggregating them in memory and a poller measuring the VM and the
-  background queues every 10 seconds.
+  The metrics Firefly reports (`metrics/0`) and, when metrics are on, the
+  processes that collect them: for Prometheus (see `FireflyWeb.Metrics`), a
+  Peep reporter aggregating them in memory; for OTLP (see
+  `FireflyWeb.OpenTelemetry.Metrics`), OpenTelemetry instruments; and for
+  either, a poller measuring the VM and the background queues every 10
+  seconds.
 
   Labels stay bounded: route patterns (never paths), LiveView modules (not
   their event names, which clients choose), the domain's event, job and
@@ -19,10 +21,13 @@ defmodule FireflyWeb.Telemetry do
 
   @impl true
   def init(_opts) do
+    prometheus? = FireflyWeb.Metrics.enabled?()
+    otlp? = FireflyWeb.OpenTelemetry.enabled?(:metrics)
+
     children =
-      if FireflyWeb.Metrics.enabled?(),
-        do: [reporter_spec(), poller_spec()] ++ FireflyWeb.Metrics.listener_specs(),
-        else: []
+      if(prometheus?, do: [reporter_spec() | FireflyWeb.Metrics.listener_specs()], else: []) ++
+        if(otlp?, do: [{FireflyWeb.OpenTelemetry.Metrics, metrics()}], else: []) ++
+        if prometheus? or otlp?, do: [poller_spec()], else: []
 
     Supervisor.init(children, strategy: :one_for_one)
   end
