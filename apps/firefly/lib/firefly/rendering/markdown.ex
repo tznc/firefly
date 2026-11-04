@@ -136,7 +136,9 @@ defmodule Firefly.Rendering.Markdown do
     spoilers? = SiteSettings.get("spoilers")
     options = options()
 
+    # The parser only takes UTF-8 (forms can send anything).
     body
+    |> String.replace_invalid()
     |> bbcode(spoilers?)
     |> spoilers(spoilers?)
     |> Mentions.parse()

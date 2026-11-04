@@ -101,4 +101,10 @@ defmodule Firefly.MarkdownTest do
     assert Markdown.render(~s(<span style="color: red">r</span>)) =~ ~s(style="color: red")
     refute Markdown.render(~s(<span style="color: red; position: fixed">r</span>)) =~ "style"
   end
+
+  # Found by Firefly.RenderingPropertyTest: the parser raised on bytes that
+  # aren't UTF-8.
+  test "renders invalid UTF-8 with replacement characters" do
+    assert Markdown.render(<<"a", 128, "b">>) == "<p>a\uFFFDb</p>"
+  end
 end
