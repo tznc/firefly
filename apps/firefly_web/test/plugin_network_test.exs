@@ -13,7 +13,8 @@ defmodule FireflyWeb.PluginNetworkTest do
   alias Firefly.Plugin.{Host, Manifest, Runner}
   alias Firefly.Plugins.{Egress, EgressEntry, HTTP, Health}
 
-  @url "http://127.0.0.1:4002/?token=secret"
+  @port URI.parse(FireflyWeb.Endpoint.url()).port
+  @url "http://127.0.0.1:#{@port}/?token=secret"
   @sync_error "permission denied: http.fetch is not available in synchronous hooks"
 
   # Each hook tries `http.fetch` and answers with the status or the error.
@@ -361,11 +362,14 @@ defmodule FireflyPlugins.Test.NetCorePlugin do
 
   alias Firefly.Plugin.Host
 
+  @port URI.parse(FireflyWeb.Endpoint.url()).port
+
   @impl true
   def render_post(plugin, _input), do: fetch(plugin)
 
   @impl true
   def run_job(plugin, _input), do: fetch(plugin)
 
-  defp fetch(plugin), do: Host.call(plugin, "http.fetch", %{"url" => "http://127.0.0.1:4002/"})
+  defp fetch(plugin),
+    do: Host.call(plugin, "http.fetch", %{"url" => "http://127.0.0.1:#{@port}/"})
 end

@@ -321,6 +321,58 @@ if delay = System.get_env("FIREFLY_DRAIN_DELAY_MS") do
   config :firefly_web, FireflyWeb.Draining, delay: String.to_integer(delay)
 end
 
+# Clustering (see Firefly.Cluster and "Running several nodes" in README.md):
+# off unless FIREFLY_CLUSTER=postgres, which finds the other nodes through
+# the database. FIREFLY_CLUSTER_NAME keeps deployments sharing a database
+# server apart (their own Postgres channel).
+case System.get_env("FIREFLY_CLUSTER", "") do
+  off when off in ["", "none", "false", "0"] ->
+    :ok
+
+  "postgres" ->
+    channel =
+      case System.get_env("FIREFLY_CLUSTER_NAME", "") do
+        "" ->
+          "firefly_cluster"
+
+        name ->
+          # Part of a Postgres identifier: short, and nothing to quote.
+          if not Regex.match?(~r/\A[a-z0-9_]{1,40}\z/, name),
+            do: raise("FIREFLY_CLUSTER_NAME must be 1-40 of a-z, 0-9 and _")
+
+          "firefly_cluster_" <> name
+      end
+
+    # A release started without RELEASE_COOKIE uses the cookie baked into
+    # it at build time, which anyone with the image has: a cluster would
+    # accept them as a node.
+    if config_env() == :prod do
+      cookie = System.get_env("RELEASE_COOKIE", "")
+
+      built_in =
+        case File.read(Path.join(System.get_env("RELEASE_ROOT", ""), "releases/COOKIE")) do
+          {:ok, built_in} -> String.trim(built_in)
+          {:error, _} -> nil
+        end
+
+      if String.length(cookie) < 32 or cookie == built_in,
+        do:
+          raise("""
+          FIREFLY_CLUSTER=postgres needs RELEASE_COOKIE: a random secret of at
+          least 32 characters, the same on every node (e.g. openssl rand -hex 32).
+          """)
+    end
+
+    config :firefly, Firefly.Cluster,
+      strategy: :postgres,
+      channel: channel,
+      heartbeat_interval:
+        String.to_integer(System.get_env("FIREFLY_CLUSTER_HEARTBEAT_MS", "5000"))
+
+  other ->
+    raise "FIREFLY_CLUSTER must be postgres or unset, got: #{inspect(other)}"
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("FIREFLY_DATABASE_URL") ||
