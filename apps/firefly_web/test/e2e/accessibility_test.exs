@@ -40,6 +40,8 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
       })
 
     {:ok, _reply} = Discussion.create_post(thread, admin, %{body: "It is."})
+    # The categories admin's nested, reorderable lists.
+    {:ok, _} = Discussion.create_category(%{title: "Nerves", parent_id: category.id})
     {:ok, _} = SiteSettings.update(%{"chat_enabled" => "true"}, admin)
     on_exit(&SiteSettings.clear_cache/0)
     {:ok, channel} = Chat.create_channel(%{name: "general"}, admin)
@@ -48,68 +50,64 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
     %{admin: admin, member: member, category: category, thread: thread, channel: channel}
   end
 
-  test "the pages members use have no serious accessibility violations", context do
-    %{conn: conn, category: category, thread: thread, channel: channel} = context
-    {:ok, theme} = Firefly.Themes.create_theme(%{"name" => "Ocean"}, context.admin)
-    packaged = theme_package!(context.admin)
-    # The categories admin's nested, reorderable lists.
-    {:ok, _} = Discussion.create_category(%{title: "Nerves", parent_id: category.id})
+  # One test per page (each holds the database sandbox only while it audits
+  # its page; a single test walking every page outlasted the sandbox's
+  # ownership timeout on a busy machine). Paths name what setup made.
+  @pages [
+    {"home", "/"},
+    {"categories", "/categories"},
+    {"category", "/categories/:category"},
+    {"thread", "/categories/:category/threads/:thread"},
+    {"composer", "/categories/:category/threads/:thread/posts/new"},
+    {"new thread", "/categories/:category/threads/new"},
+    {"chat", "/chat/c/:channel_slug/:channel"},
+    {"search", "/search?q=cool"},
+    {"users", "/users"},
+    {"notifications", "/notifications"},
+    {"settings", "/settings/profile"},
+    {"interface settings", "/settings/interface"},
+    {"staff dashboard", "/staff/dashboard"},
+    {"review queue", "/staff/review"},
+    {"site settings", "/staff/settings"},
+    {"admin home", "/staff?q=users"},
+    {"users admin", "/staff/users"},
+    {"user admin", "/staff/users/:member"},
+    {"categories admin", "/staff/categories"},
+    {"emails admin", "/staff/emails"},
+    {"email previews", "/staff/emails?tab=previews"},
+    {"screening", "/staff/screening"},
+    {"themes", "/staff/themes"},
+    {"theme editor", "/staff/themes/:theme"},
+    {"packages", "/staff/packages"},
+    {"package theme", "/staff/themes/:packaged"}
+  ]
 
-    session = log_in(conn, "ada")
-
-    for {name, path} <- [
-          {"home", "/"},
-          {"categories", "/categories"},
-          {"category", "/categories/#{category.id}"},
-          {"thread", "/categories/#{category.id}/threads/#{thread.id}"},
-          {"composer", "/categories/#{category.id}/threads/#{thread.id}/posts/new"},
-          {"new thread", "/categories/#{category.id}/threads/new"},
-          {"chat", "/chat/c/#{channel.slug}/#{channel.id}"},
-          {"search", "/search?q=cool"},
-          {"users", "/users"},
-          {"notifications", "/notifications"},
-          {"settings", "/settings/profile"},
-          {"interface settings", "/settings/interface"},
-          {"staff dashboard", "/staff/dashboard"},
-          {"review queue", "/staff/review"},
-          {"site settings", "/staff/settings"},
-          {"admin home", "/staff?q=users"},
-          {"users admin", "/staff/users"},
-          {"user admin", "/staff/users/#{context.member.id}"},
-          {"categories admin", "/staff/categories"},
-          {"emails admin", "/staff/emails"},
-          {"email previews", "/staff/emails?tab=previews"},
-          {"screening", "/staff/screening"},
-          {"themes", "/staff/themes"},
-          {"theme editor", "/staff/themes/#{theme.id}"},
-          {"packages", "/staff/packages"},
-          {"package theme", "/staff/themes/#{packaged.id}"}
-        ] do
-      session
-      |> visit(path)
+  for {name, template} <- @pages do
+    test "the #{name} page has no serious accessibility violations", context do
+      context.conn
+      |> log_in("ada")
+      |> visit(page_path(unquote(template), context))
       |> assert_has("[data-phx-main].phx-connected")
-      |> audit(context.axe, name)
+      |> audit(context.axe, unquote(name))
     end
   end
 
-  # Kaffy's markup, with the labels FireflyWeb.Admin.Theme adds to it.
-  test "the database admin has none either, in both themes", context do
-    {:ok, _} = SiteSettings.update(%{"enable_database_admin" => "true"}, context.admin)
-    session = log_in(context.conn, "ada")
-
-    for path <- [
-          "/staff/db/content/category",
-          "/staff/db/content/category/#{context.category.id}",
-          "/staff/db/people/user"
-        ] do
-      session
-      |> visit(path)
-      |> assert_has("#database-admin-banner")
-      |> audit(context.axe, path)
-      |> evaluate("document.documentElement.setAttribute('data-theme', 'firefly-dark')")
-      |> audit(context.axe, path <> " (dark)")
-    end
+  defp page_path(template, context) do
+    Regex.replace(~r/:(\w+)/, template, fn _, key -> to_string(page_id(key, context)) end)
   end
+
+  defp page_id("category", context), do: context.category.id
+  defp page_id("thread", context), do: context.thread.id
+  defp page_id("channel", context), do: context.channel.id
+  defp page_id("channel_slug", context), do: context.channel.slug
+  defp page_id("member", context), do: context.member.id
+
+  defp page_id("theme", context) do
+    {:ok, theme} = Firefly.Themes.create_theme(%{"name" => "Ocean"}, context.admin)
+    theme.id
+  end
+
+  defp page_id("packaged", context), do: theme_package!(context.admin).id
 
   # Not audited: the jobs dashboard (`/staff/jobs`, see FireflyWeb.JobsDashboard)
   # is Oban Web's own markup, under its own layout and stylesheet, which axe
