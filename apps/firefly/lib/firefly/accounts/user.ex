@@ -174,7 +174,7 @@ defmodule Firefly.Accounts.User do
     user
     |> cast(attrs, [:password])
     |> validate_required([:password])
-    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"), max: 72)
+    |> validate_password_length()
     |> validate_confirmation(:password, message: "does not match password")
     |> put_password_hash()
   end
@@ -245,7 +245,7 @@ defmodule Firefly.Accounts.User do
     )
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "must be a valid email")
     |> validate_length(:email, max: 160)
-    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"), max: 72)
+    |> validate_password_length()
     |> unsafe_validate_unique(:username, Firefly.Repo)
     |> put_password_hash()
   end
@@ -279,6 +279,19 @@ defmodule Firefly.Accounts.User do
   def avatar_url(%__MODULE__{email: email, username: username}, size) do
     (email || "#{username}@users.firestorm.invalid")
     |> Exgravatar.gravatar_url(d: "identicon", s: size)
+  end
+
+  # At least `min_password_length` characters, and at most 72 bytes: bcrypt
+  # only reads the first 72, so a longer password would also let in any
+  # other that starts the same.
+  defp validate_password_length(changeset) do
+    changeset
+    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"))
+    |> validate_length(:password,
+      max: 72,
+      count: :bytes,
+      message: "should be at most 72 bytes (fewer characters with accents or emoji)"
+    )
   end
 
   defp put_password_hash(changeset) do
