@@ -113,8 +113,8 @@ msgstr "Mit der Registrierung stimme ich den Bedingungen und der Datenschutzerkl
 
 #: lib/firefly_web/components/layouts.ex:168
 #: lib/firefly_web/components/layouts.ex:269
-#: lib/firefly_web/live/staff_live/categories.ex:23
-#: lib/firefly_web/live/staff_live/categories.ex:275
+#: lib/firefly_web/live/staff_live/categories.ex:31
+#: lib/firefly_web/live/staff_live/categories.ex:316
 #: lib/firefly_web/staff_nav.ex:99
 #, elixir-autogen, elixir-format
 msgid "Categories"
@@ -552,7 +552,7 @@ msgid "Watched words"
 msgstr "Beobachtete Wörter"
 
 #: lib/firefly_web/components/layouts.ex:129
-#: lib/firefly_web/live/staff_live/categories.ex:146
+#: lib/firefly_web/live/staff_live/categories.ex:176
 #, elixir-autogen, elixir-format
 msgid "Watching"
 msgstr "Beobachtet"
@@ -696,7 +696,7 @@ msgid "Next / previous topic or post"
 msgstr "Nächstes / vorheriges Thema oder Beitrag"
 
 #: lib/firefly_web/components/layouts.ex:276
-#: lib/firefly_web/live/staff_live/categories.ex:143
+#: lib/firefly_web/live/staff_live/categories.ex:173
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "Antworten"
@@ -737,7 +737,7 @@ msgstr "Alles klar"
 msgid "%{posts} posts in %{threads} threads they started"
 msgstr "%{posts} Beiträge in %{threads} selbst eröffneten Themen"
 
-#: lib/firefly_web/live/staff_live/categories.ex:121
+#: lib/firefly_web/live/staff_live/categories.ex:147
 #, elixir-autogen, elixir-format
 msgid "1 member got the default."
 msgid_plural "%{count} members got the default."
@@ -891,7 +891,7 @@ msgstr "Jeder kann beitreten"
 msgid "Apply penalty"
 msgstr "Strafe verhängen"
 
-#: lib/firefly_web/live/staff_live/categories.ex:263
+#: lib/firefly_web/live/staff_live/categories.ex:286
 #, elixir-autogen, elixir-format
 msgid "Apply to existing members"
 msgstr "Auf bestehende Mitglieder anwenden"
@@ -937,7 +937,7 @@ msgstr "Blockiert"
 msgid "Can read"
 msgstr "Darf lesen"
 
-#: lib/firefly_web/live/staff_live/categories.ex:130
+#: lib/firefly_web/live/staff_live/categories.ex:156
 #, elixir-autogen, elixir-format
 msgid "Category deleted."
 msgstr "Kategorie gelöscht."
@@ -962,12 +962,12 @@ msgstr "Inhalte"
 msgid "Create group"
 msgstr "Gruppe erstellen"
 
-#: lib/firefly_web/live/staff_live/categories.ex:240
+#: lib/firefly_web/live/staff_live/categories.ex:263
 #, elixir-autogen, elixir-format
 msgid "Defaults for members"
 msgstr "Standards für Mitglieder"
 
-#: lib/firefly_web/live/staff_live/categories.ex:208
+#: lib/firefly_web/live/staff_live/categories.ex:231
 #: lib/firefly_web/live/staff_live/groups.ex:208
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -978,7 +978,7 @@ msgstr "Löschen"
 msgid "Delete %{name}? Its members leave it."
 msgstr "%{name} löschen? Die Mitglieder verlassen die Gruppe."
 
-#: lib/firefly_web/live/staff_live/categories.ex:205
+#: lib/firefly_web/live/staff_live/categories.ex:228
 #, elixir-autogen, elixir-format
 msgid "Delete %{title}?"
 msgstr "%{title} löschen?"
@@ -1013,7 +1013,7 @@ msgstr "Domains, die in Beiträgen und Nachrichten nicht verlinkt werden dürfen
 msgid "Duration"
 msgstr "Dauer"
 
-#: lib/firefly_web/live/staff_live/categories.ex:201
+#: lib/firefly_web/live/staff_live/categories.ex:224
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "Bearbeiten"
@@ -1062,7 +1062,7 @@ msgstr "Such ein Konto, um es zu verwalten. Jede Änderung wird im Team-Protokol
 msgid "First seen"
 msgstr "Zuerst gesehen"
 
-#: lib/firefly_web/live/staff_live/categories.ex:260
+#: lib/firefly_web/live/staff_live/categories.ex:283
 #, elixir-autogen, elixir-format
 msgid "Give this level to every member who hasn't chosen one for this category?"
 msgstr "Diese Stufe allen Mitgliedern geben, die für diese Kategorie keine gewählt haben?"
@@ -1108,7 +1108,7 @@ msgstr "Als dieses Mitglied ansehen"
 msgid "In the review queue"
 msgstr "In der Prüfwarteschlange"
 
-#: lib/firefly_web/live/staff_live/categories.ex:137
+#: lib/firefly_web/live/staff_live/categories.ex:163
 #, elixir-autogen, elixir-format
 msgid "It couldn't be deleted: move its threads and subcategories out first."
 msgstr "Löschen nicht möglich: Verschieb zuerst ihre Themen und Unterkategorien."
@@ -1216,17 +1216,7 @@ msgstr "Nachricht (optional)"
 msgid "Moderation"
 msgstr "Moderation"
 
-#: lib/firefly_web/live/staff_live/categories.ex:180
-#, elixir-autogen, elixir-format
-msgid "Move %{title} down"
-msgstr "%{title} nach unten verschieben"
-
-#: lib/firefly_web/live/staff_live/categories.ex:170
-#, elixir-autogen, elixir-format
-msgid "Move %{title} up"
-msgstr "%{title} nach oben verschieben"
-
-#: lib/firefly_web/live/staff_live/categories.ex:149
+#: lib/firefly_web/live/staff_live/categories.ex:179
 #, elixir-autogen, elixir-format
 msgid "Muted"
 msgstr "Stummgeschaltet"
@@ -1244,7 +1234,7 @@ msgstr "Name"
 msgid "New"
 msgstr "Neu"
 
-#: lib/firefly_web/live/staff_live/categories.ex:278
+#: lib/firefly_web/live/staff_live/categories.ex:319
 #, elixir-autogen, elixir-format
 msgid "New category"
 msgstr "Neue Kategorie"
@@ -1254,7 +1244,7 @@ msgstr "Neue Kategorie"
 msgid "New group"
 msgstr "Neue Gruppe"
 
-#: lib/firefly_web/live/staff_live/categories.ex:242
+#: lib/firefly_web/live/staff_live/categories.ex:265
 #, elixir-autogen, elixir-format
 msgid "New members' notification level"
 msgstr "Benachrichtigungsstufe neuer Mitglieder"
@@ -1264,12 +1254,12 @@ msgstr "Benachrichtigungsstufe neuer Mitglieder"
 msgid "New name for %{name}"
 msgstr "Neuer Name für %{name}"
 
-#: lib/firefly_web/live/staff_live/categories.ex:225
+#: lib/firefly_web/live/staff_live/categories.ex:248
 #, elixir-autogen, elixir-format
 msgid "No access"
 msgstr "Kein Zugriff"
 
-#: lib/firefly_web/live/staff_live/categories.ex:282
+#: lib/firefly_web/live/staff_live/categories.ex:323
 #, elixir-autogen, elixir-format
 msgid "No categories yet."
 msgstr "Noch keine Kategorien."
@@ -1289,7 +1279,7 @@ msgstr "Keine Gruppe mit diesem Namen."
 msgid "No groups yet."
 msgstr "Noch keine Gruppen."
 
-#: lib/firefly_web/live/staff_live/categories.ex:216
+#: lib/firefly_web/live/staff_live/categories.ex:239
 #, elixir-autogen, elixir-format
 msgid "No groups: everyone can see it and post. Otherwise only these groups (and staff) can see it, each as allowed."
 msgstr "Keine Gruppen: Alle können sie sehen und darin posten. Sonst können nur diese Gruppen (und das Team) sie sehen, jede im erlaubten Umfang."
@@ -1299,7 +1289,7 @@ msgstr "Keine Gruppen: Alle können sie sehen und darin posten. Sonst können nu
 msgid "No users match."
 msgstr "Keine passenden Mitglieder."
 
-#: lib/firefly_web/live/staff_live/categories.ex:245
+#: lib/firefly_web/live/staff_live/categories.ex:268
 #, elixir-autogen, elixir-format
 msgid "None (they choose)"
 msgstr "Keine (sie wählen selbst)"
@@ -1320,7 +1310,7 @@ msgstr "Noch nichts erfasst."
 msgid "None."
 msgstr "Keine."
 
-#: lib/firefly_web/live/staff_live/categories.ex:148
+#: lib/firefly_web/live/staff_live/categories.ex:178
 #, elixir-autogen, elixir-format
 msgid "Normal"
 msgstr "Normal"
@@ -1355,7 +1345,7 @@ msgstr "Hinweis gesendet."
 msgid "Notification deleted."
 msgstr "Benachrichtigung gelöscht."
 
-#: lib/firefly_web/live/staff_live/categories.ex:276
+#: lib/firefly_web/live/staff_live/categories.ex:317
 #, elixir-autogen, elixir-format
 msgid "Order categories, and set who can see and post in each."
 msgstr "Kategorien ordnen und festlegen, wer in welcher sehen und posten darf."
@@ -1400,12 +1390,12 @@ msgstr "Strafe verhängt."
 msgid "People"
 msgstr "Personen"
 
-#: lib/firefly_web/live/staff_live/categories.ex:199
+#: lib/firefly_web/live/staff_live/categories.ex:222
 #, elixir-autogen, elixir-format
 msgid "Permissions and defaults"
 msgstr "Berechtigungen und Standards"
 
-#: lib/firefly_web/live/staff_live/categories.ex:109
+#: lib/firefly_web/live/staff_live/categories.ex:135
 #, elixir-autogen, elixir-format
 msgid "Pick a notification level."
 msgstr "Wähl eine Benachrichtigungsstufe."
@@ -1430,7 +1420,7 @@ msgstr "Beiträge"
 msgid "Public profile"
 msgstr "Öffentliches Profil"
 
-#: lib/firefly_web/live/staff_live/categories.ex:144
+#: lib/firefly_web/live/staff_live/categories.ex:174
 #, elixir-autogen, elixir-format
 msgid "Read only"
 msgstr "Nur lesen"
@@ -1552,12 +1542,12 @@ msgstr "Rollen gespeichert."
 msgid "Save account"
 msgstr "Konto speichern"
 
-#: lib/firefly_web/live/staff_live/categories.ex:254
+#: lib/firefly_web/live/staff_live/categories.ex:277
 #, elixir-autogen, elixir-format
 msgid "Save default"
 msgstr "Standard speichern"
 
-#: lib/firefly_web/live/staff_live/categories.ex:235
+#: lib/firefly_web/live/staff_live/categories.ex:258
 #, elixir-autogen, elixir-format
 msgid "Save permissions"
 msgstr "Berechtigungen speichern"
@@ -1573,12 +1563,12 @@ msgstr "Einstellungen speichern"
 msgid "Saved %{name}'s settings."
 msgstr "Einstellungen von %{name} gespeichert."
 
-#: lib/firefly_web/live/staff_live/categories.ex:105
+#: lib/firefly_web/live/staff_live/categories.ex:131
 #, elixir-autogen, elixir-format
 msgid "Saved %{title}'s default."
 msgstr "Standard für %{title} gespeichert."
 
-#: lib/firefly_web/live/staff_live/categories.ex:89
+#: lib/firefly_web/live/staff_live/categories.ex:115
 #, elixir-autogen, elixir-format
 msgid "Saved who can see and post in %{title}."
 msgstr "Gespeichert, wer in %{title} sehen und posten darf."
@@ -1703,7 +1693,7 @@ msgstr "Team"
 msgid "Staff only"
 msgstr "Nur Team"
 
-#: lib/firefly_web/live/staff_live/categories.ex:142
+#: lib/firefly_web/live/staff_live/categories.ex:172
 #, elixir-autogen, elixir-format
 msgid "Start threads and reply"
 msgstr "Themen erstellen und antworten"
@@ -1813,7 +1803,7 @@ msgstr "An"
 msgid "Today: %{sent} sent, %{skipped} skipped, %{failed} failed."
 msgstr "Heute: %{sent} gesendet, %{skipped} übersprungen, %{failed} fehlgeschlagen."
 
-#: lib/firefly_web/live/staff_live/categories.ex:147
+#: lib/firefly_web/live/staff_live/categories.ex:177
 #, elixir-autogen, elixir-format
 msgid "Tracking"
 msgstr "Verfolgt"
@@ -1890,7 +1880,7 @@ msgstr "Wer es @erwähnen darf"
 msgid "Who can message it"
 msgstr "Wer ihr schreiben darf"
 
-#: lib/firefly_web/live/staff_live/categories.ex:214
+#: lib/firefly_web/live/staff_live/categories.ex:237
 #, elixir-autogen, elixir-format
 msgid "Who can see and post"
 msgstr "Wer sehen und posten darf"
@@ -1921,7 +1911,7 @@ msgstr "Du bist wieder du selbst."
 msgid "confirmed"
 msgstr "bestätigt"
 
-#: lib/firefly_web/live/staff_live/categories.ex:190
+#: lib/firefly_web/live/staff_live/categories.ex:213
 #, elixir-autogen, elixir-format
 msgid "default: %{level}"
 msgstr "Standard: %{level}"
@@ -1953,7 +1943,7 @@ msgstr "Passwort"
 msgid "pending"
 msgstr "ausstehend"
 
-#: lib/firefly_web/live/staff_live/categories.ex:187
+#: lib/firefly_web/live/staff_live/categories.ex:210
 #, elixir-autogen, elixir-format
 msgid "restricted"
 msgstr "eingeschränkt"
@@ -2651,3 +2641,48 @@ msgstr "hero"
 #, elixir-autogen, elixir-format
 msgid "https://github.com/owner/repo"
 msgstr "https://github.com/owner/repo"
+
+#: lib/firefly_web/live/staff_live/categories.ex:334
+#, elixir-autogen, elixir-format
+msgid "%{item} couldn't be moved there."
+msgstr "%{item} konnte nicht dorthin verschoben werden."
+
+#: lib/firefly_web/live/staff_live/categories.ex:332
+#, elixir-autogen, elixir-format
+msgid "%{item} dropped at position %{position} of %{count}."
+msgstr "%{item} an Position %{position} von %{count} abgelegt."
+
+#: lib/firefly_web/live/staff_live/categories.ex:331
+#, elixir-autogen, elixir-format
+msgid "%{item} is now in %{parent}, position %{position} of %{count}."
+msgstr "%{item} ist jetzt in %{parent}, Position %{position} von %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:329
+#, elixir-autogen, elixir-format
+msgid "%{item} picked up, position %{position} of %{count}."
+msgstr "%{item} aufgenommen, Position %{position} von %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:330
+#, elixir-autogen, elixir-format
+msgid "%{item}: position %{position} of %{count}."
+msgstr "%{item}: Position %{position} von %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:338
+#, elixir-autogen, elixir-format
+msgid "Drag a category by its handle to reorder it, or into another category to make it a subcategory. With the keyboard: focus the handle, press Space to pick it up, the arrow keys to move it and Space to drop it, or Escape to cancel."
+msgstr "Zieh eine Kategorie an ihrem Griff, um sie umzusortieren, oder in eine andere Kategorie, um sie zur Unterkategorie zu machen. Mit der Tastatur: Griff fokussieren, mit der Leertaste aufnehmen, mit den Pfeiltasten verschieben und mit der Leertaste ablegen, oder mit Escape abbrechen."
+
+#: lib/firefly_web/live/staff_live/categories.ex:203
+#, elixir-autogen, elixir-format
+msgid "Move %{title}"
+msgstr "%{title} verschieben"
+
+#: lib/firefly_web/live/staff_live/categories.ex:333
+#, elixir-autogen, elixir-format
+msgid "Move cancelled. %{item} is back at position %{position} of %{count}."
+msgstr "Verschieben abgebrochen. %{item} ist wieder an Position %{position} von %{count}."
+
+#: lib/firefly_web/live/staff_live/categories.ex:91
+#, elixir-autogen, elixir-format
+msgid "That category can't go there."
+msgstr "Diese Kategorie kann dort nicht hin."

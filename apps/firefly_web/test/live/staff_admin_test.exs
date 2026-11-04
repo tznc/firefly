@@ -4,6 +4,7 @@ defmodule FireflyWeb.StaffAdminTest do
   use Bamboo.Test, shared: true
 
   import Ecto.Query, only: [from: 2]
+  import Phoenix.LiveViewTest, only: [live: 2]
 
   alias Firefly.{Accounts, Discussion, Groups, Repo, SiteSettings}
   alias Firefly.Accounts.{User, UserIPs}
@@ -273,21 +274,13 @@ defmodule FireflyWeb.StaffAdminTest do
   end
 
   describe "the categories admin" do
-    test "orders categories and sets group permissions and defaults", %{conn: conn, admin: admin} do
+    test "sets group permissions and defaults", %{conn: conn, admin: admin} do
       first = category_fixture("Alpha")
-      second = category_fixture("Beta")
       {:ok, group} = Groups.create_group(%{"name" => "insiders"}, admin)
 
-      session =
-        conn
-        |> log_in_as(admin)
-        |> visit(~p"/staff/categories")
-        |> click_button("Move Beta up")
-
-      assert Discussion.get_category!(second.id).position <
-               Discussion.get_category!(first.id).position
-
-      session
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/categories")
       |> click_button("#category-#{first.id} button", "Permissions and defaults")
       |> within("#permissions-#{first.id}", fn session ->
         session
@@ -306,6 +299,109 @@ defmodule FireflyWeb.StaffAdminTest do
       assert id == group.id
       assert Discussion.get_category!(first.id).default_notification_level == "watching"
     end
+  end
+
+  describe "reordering categories" do
+    setup %{admin: admin} do
+      alpha = category_fixture("Alpha")
+      beta = category_fixture("Beta")
+      {:ok, child} = Discussion.create_category(%{title: "Child", parent_id: alpha.id})
+      other_admin = admin_fixture(%{username: "other"})
+      %{alpha: alpha, beta: beta, child: child, admin: admin, other_admin: other_admin}
+    end
+
+    test "a drop moves a category, and other staff on the page see it", context do
+      %{conn: conn, admin: admin, beta: beta, child: child} = context
+      {:ok, view, _html} = live(log_in_as(conn, admin), ~p"/staff/categories")
+
+      {:ok, watcher, _html} =
+        live(log_in_as(build_conn(), context.other_admin), ~p"/staff/categories")
+
+      Phoenix.LiveViewTest.render_hook(view, "place", %{
+        "id" => beta.id,
+        "parent_id" => nil,
+        "index" => 0
+      })
+
+      Phoenix.LiveViewTest.assert_reply(view, %{ok: true})
+      assert order(watcher) == ["Beta", "Alpha", "Child"]
+
+      # Into another parent: Child goes under Beta.
+      Phoenix.LiveViewTest.render_hook(view, "place", %{
+        "id" => child.id,
+        "parent_id" => beta.id,
+        "index" => 0
+      })
+
+      Phoenix.LiveViewTest.assert_reply(view, %{ok: true})
+      assert Discussion.get_category!(child.id).parent_id == beta.id
+
+      assert watcher
+             |> Phoenix.LiveViewTest.element("#subcategories-#{beta.id}")
+             |> Phoenix.LiveViewTest.render() =~ "Child"
+
+      assert Repo.all(
+               from(a in StaffAction, where: a.action == "category.update", select: a.actor_id)
+             ) ==
+               [admin.id, admin.id]
+    end
+
+    test "a drop the structure doesn't allow is refused and nothing moves", context do
+      %{conn: conn, admin: admin, alpha: alpha, beta: beta} = context
+      {:ok, view, _html} = live(log_in_as(conn, admin), ~p"/staff/categories")
+
+      # Alpha has a subcategory, so it can't become one.
+      html =
+        Phoenix.LiveViewTest.render_hook(view, "place", %{
+          "id" => alpha.id,
+          "parent_id" => beta.id,
+          "index" => 0
+        })
+
+      Phoenix.LiveViewTest.assert_reply(view, %{ok: false})
+      assert html =~ "That category can&#39;t go there."
+      assert Discussion.get_category!(alpha.id).parent_id == nil
+
+      # A category that's gone, or a malformed drop.
+      Phoenix.LiveViewTest.render_hook(view, "place", %{
+        "id" => -1,
+        "parent_id" => nil,
+        "index" => 0
+      })
+
+      Phoenix.LiveViewTest.assert_reply(view, %{ok: false})
+      assert actions() == []
+    end
+
+    test "an admin demoted with the page open can't reorder from it", context do
+      %{conn: conn, admin: admin, beta: beta} = context
+      {:ok, view, _html} = live(log_in_as(conn, admin), ~p"/staff/categories")
+      {:ok, _} = Groups.remove_member(Groups.staff_group("admin"), admin, context.other_admin)
+
+      html =
+        Phoenix.LiveViewTest.render_hook(view, "place", %{
+          "id" => beta.id,
+          "parent_id" => nil,
+          "index" => 0
+        })
+
+      Phoenix.LiveViewTest.assert_reply(view, %{ok: false})
+      assert html =~ "You are not allowed to do that."
+      refute "category.update" in actions()
+    end
+
+    test "members and moderators never get the page", %{conn: conn} do
+      for user <- [user_fixture(), moderator_fixture()] do
+        assert {:error, {:live_redirect, %{to: "/"}}} =
+                 live(log_in_as(conn, user), ~p"/staff/categories")
+      end
+    end
+  end
+
+  # Category titles in the order the page lists them.
+  defp order(view) do
+    html = view |> Phoenix.LiveViewTest.element("#categories") |> Phoenix.LiveViewTest.render()
+    for [_, title] <- Regex.scan(~r/data-label="([^"]+)"/, html), do: title
   end
 
   describe "the emails admin" do

@@ -110,8 +110,8 @@ msgstr "注册即表示我同意 %{site} 的条款和隐私政策。"
 
 #: lib/firefly_web/components/layouts.ex:168
 #: lib/firefly_web/components/layouts.ex:269
-#: lib/firefly_web/live/staff_live/categories.ex:23
-#: lib/firefly_web/live/staff_live/categories.ex:275
+#: lib/firefly_web/live/staff_live/categories.ex:31
+#: lib/firefly_web/live/staff_live/categories.ex:316
 #: lib/firefly_web/staff_nav.ex:99
 #, elixir-autogen, elixir-format
 msgid "Categories"
@@ -549,7 +549,7 @@ msgid "Watched words"
 msgstr "监控词"
 
 #: lib/firefly_web/components/layouts.ex:129
-#: lib/firefly_web/live/staff_live/categories.ex:146
+#: lib/firefly_web/live/staff_live/categories.ex:176
 #, elixir-autogen, elixir-format
 msgid "Watching"
 msgstr "关注中"
@@ -693,7 +693,7 @@ msgid "Next / previous topic or post"
 msgstr "下一个 / 上一个主题或帖子"
 
 #: lib/firefly_web/components/layouts.ex:276
-#: lib/firefly_web/live/staff_live/categories.ex:143
+#: lib/firefly_web/live/staff_live/categories.ex:173
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr "回复"
@@ -734,7 +734,7 @@ msgstr "知道了"
 msgid "%{posts} posts in %{threads} threads they started"
 msgstr "在其发起的 %{threads} 个主题中有 %{posts} 个帖子"
 
-#: lib/firefly_web/live/staff_live/categories.ex:121
+#: lib/firefly_web/live/staff_live/categories.ex:147
 #, elixir-autogen, elixir-format
 msgid "1 member got the default."
 msgid_plural "%{count} members got the default."
@@ -887,7 +887,7 @@ msgstr "任何人可加入"
 msgid "Apply penalty"
 msgstr "施加处罚"
 
-#: lib/firefly_web/live/staff_live/categories.ex:263
+#: lib/firefly_web/live/staff_live/categories.ex:286
 #, elixir-autogen, elixir-format
 msgid "Apply to existing members"
 msgstr "应用到现有成员"
@@ -933,7 +933,7 @@ msgstr "已拦截"
 msgid "Can read"
 msgstr "可阅读"
 
-#: lib/firefly_web/live/staff_live/categories.ex:130
+#: lib/firefly_web/live/staff_live/categories.ex:156
 #, elixir-autogen, elixir-format
 msgid "Category deleted."
 msgstr "分类已删除。"
@@ -958,12 +958,12 @@ msgstr "内容"
 msgid "Create group"
 msgstr "创建群组"
 
-#: lib/firefly_web/live/staff_live/categories.ex:240
+#: lib/firefly_web/live/staff_live/categories.ex:263
 #, elixir-autogen, elixir-format
 msgid "Defaults for members"
 msgstr "成员默认设置"
 
-#: lib/firefly_web/live/staff_live/categories.ex:208
+#: lib/firefly_web/live/staff_live/categories.ex:231
 #: lib/firefly_web/live/staff_live/groups.ex:208
 #, elixir-autogen, elixir-format
 msgid "Delete"
@@ -974,7 +974,7 @@ msgstr "删除"
 msgid "Delete %{name}? Its members leave it."
 msgstr "要删除 %{name} 吗？其成员将离开该群组。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:205
+#: lib/firefly_web/live/staff_live/categories.ex:228
 #, elixir-autogen, elixir-format
 msgid "Delete %{title}?"
 msgstr "要删除 %{title} 吗？"
@@ -1009,7 +1009,7 @@ msgstr "帖子和消息中不能链接的域名（包括其子域名）。"
 msgid "Duration"
 msgstr "时长"
 
-#: lib/firefly_web/live/staff_live/categories.ex:201
+#: lib/firefly_web/live/staff_live/categories.ex:224
 #, elixir-autogen, elixir-format
 msgid "Edit"
 msgstr "编辑"
@@ -1058,7 +1058,7 @@ msgstr "查找账户以进行管理。每项更改都会记入管理日志。"
 msgid "First seen"
 msgstr "首次出现"
 
-#: lib/firefly_web/live/staff_live/categories.ex:260
+#: lib/firefly_web/live/staff_live/categories.ex:283
 #, elixir-autogen, elixir-format
 msgid "Give this level to every member who hasn't chosen one for this category?"
 msgstr "要为所有未在此分类中选择级别的成员设置此级别吗？"
@@ -1104,7 +1104,7 @@ msgstr "模拟登录"
 msgid "In the review queue"
 msgstr "在审核队列中"
 
-#: lib/firefly_web/live/staff_live/categories.ex:137
+#: lib/firefly_web/live/staff_live/categories.ex:163
 #, elixir-autogen, elixir-format
 msgid "It couldn't be deleted: move its threads and subcategories out first."
 msgstr "无法删除：请先移走其中的主题和子分类。"
@@ -1212,17 +1212,7 @@ msgstr "消息（可选）"
 msgid "Moderation"
 msgstr "审核"
 
-#: lib/firefly_web/live/staff_live/categories.ex:180
-#, elixir-autogen, elixir-format
-msgid "Move %{title} down"
-msgstr "下移 %{title}"
-
-#: lib/firefly_web/live/staff_live/categories.ex:170
-#, elixir-autogen, elixir-format
-msgid "Move %{title} up"
-msgstr "上移 %{title}"
-
-#: lib/firefly_web/live/staff_live/categories.ex:149
+#: lib/firefly_web/live/staff_live/categories.ex:179
 #, elixir-autogen, elixir-format
 msgid "Muted"
 msgstr "已静音"
@@ -1240,7 +1230,7 @@ msgstr "名称"
 msgid "New"
 msgstr "新用户"
 
-#: lib/firefly_web/live/staff_live/categories.ex:278
+#: lib/firefly_web/live/staff_live/categories.ex:319
 #, elixir-autogen, elixir-format
 msgid "New category"
 msgstr "新建分类"
@@ -1250,7 +1240,7 @@ msgstr "新建分类"
 msgid "New group"
 msgstr "新建群组"
 
-#: lib/firefly_web/live/staff_live/categories.ex:242
+#: lib/firefly_web/live/staff_live/categories.ex:265
 #, elixir-autogen, elixir-format
 msgid "New members' notification level"
 msgstr "新成员的通知级别"
@@ -1260,12 +1250,12 @@ msgstr "新成员的通知级别"
 msgid "New name for %{name}"
 msgstr "%{name} 的新名称"
 
-#: lib/firefly_web/live/staff_live/categories.ex:225
+#: lib/firefly_web/live/staff_live/categories.ex:248
 #, elixir-autogen, elixir-format
 msgid "No access"
 msgstr "无权访问"
 
-#: lib/firefly_web/live/staff_live/categories.ex:282
+#: lib/firefly_web/live/staff_live/categories.ex:323
 #, elixir-autogen, elixir-format
 msgid "No categories yet."
 msgstr "还没有分类。"
@@ -1285,7 +1275,7 @@ msgstr "没有该名称的群组。"
 msgid "No groups yet."
 msgstr "还没有群组。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:216
+#: lib/firefly_web/live/staff_live/categories.ex:239
 #, elixir-autogen, elixir-format
 msgid "No groups: everyone can see it and post. Otherwise only these groups (and staff) can see it, each as allowed."
 msgstr "不限群组：所有人都能查看和发帖。否则只有这些群组（和管理人员）可以查看，各按其权限。"
@@ -1295,7 +1285,7 @@ msgstr "不限群组：所有人都能查看和发帖。否则只有这些群组
 msgid "No users match."
 msgstr "没有匹配的用户。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:245
+#: lib/firefly_web/live/staff_live/categories.ex:268
 #, elixir-autogen, elixir-format
 msgid "None (they choose)"
 msgstr "无（由成员自选）"
@@ -1316,7 +1306,7 @@ msgstr "还没有记录。"
 msgid "None."
 msgstr "无。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:148
+#: lib/firefly_web/live/staff_live/categories.ex:178
 #, elixir-autogen, elixir-format
 msgid "Normal"
 msgstr "普通"
@@ -1351,7 +1341,7 @@ msgstr "通知已发送。"
 msgid "Notification deleted."
 msgstr "通知已删除。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:276
+#: lib/firefly_web/live/staff_live/categories.ex:317
 #, elixir-autogen, elixir-format
 msgid "Order categories, and set who can see and post in each."
 msgstr "调整分类顺序，并设置每个分类中谁可以查看和发帖。"
@@ -1396,12 +1386,12 @@ msgstr "已施加处罚。"
 msgid "People"
 msgstr "人员"
 
-#: lib/firefly_web/live/staff_live/categories.ex:199
+#: lib/firefly_web/live/staff_live/categories.ex:222
 #, elixir-autogen, elixir-format
 msgid "Permissions and defaults"
 msgstr "权限和默认设置"
 
-#: lib/firefly_web/live/staff_live/categories.ex:109
+#: lib/firefly_web/live/staff_live/categories.ex:135
 #, elixir-autogen, elixir-format
 msgid "Pick a notification level."
 msgstr "请选择通知级别。"
@@ -1426,7 +1416,7 @@ msgstr "帖子"
 msgid "Public profile"
 msgstr "公开资料"
 
-#: lib/firefly_web/live/staff_live/categories.ex:144
+#: lib/firefly_web/live/staff_live/categories.ex:174
 #, elixir-autogen, elixir-format
 msgid "Read only"
 msgstr "只读"
@@ -1548,12 +1538,12 @@ msgstr "角色已保存。"
 msgid "Save account"
 msgstr "保存账户"
 
-#: lib/firefly_web/live/staff_live/categories.ex:254
+#: lib/firefly_web/live/staff_live/categories.ex:277
 #, elixir-autogen, elixir-format
 msgid "Save default"
 msgstr "保存默认值"
 
-#: lib/firefly_web/live/staff_live/categories.ex:235
+#: lib/firefly_web/live/staff_live/categories.ex:258
 #, elixir-autogen, elixir-format
 msgid "Save permissions"
 msgstr "保存权限"
@@ -1569,12 +1559,12 @@ msgstr "保存设置"
 msgid "Saved %{name}'s settings."
 msgstr "已保存 %{name} 的设置。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:105
+#: lib/firefly_web/live/staff_live/categories.ex:131
 #, elixir-autogen, elixir-format
 msgid "Saved %{title}'s default."
 msgstr "已保存 %{title} 的默认值。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:89
+#: lib/firefly_web/live/staff_live/categories.ex:115
 #, elixir-autogen, elixir-format
 msgid "Saved who can see and post in %{title}."
 msgstr "已保存 %{title} 的查看和发帖权限。"
@@ -1699,7 +1689,7 @@ msgstr "管理人员"
 msgid "Staff only"
 msgstr "仅管理人员"
 
-#: lib/firefly_web/live/staff_live/categories.ex:142
+#: lib/firefly_web/live/staff_live/categories.ex:172
 #, elixir-autogen, elixir-format
 msgid "Start threads and reply"
 msgstr "发起主题和回复"
@@ -1809,7 +1799,7 @@ msgstr "收件人"
 msgid "Today: %{sent} sent, %{skipped} skipped, %{failed} failed."
 msgstr "今日：已发送 %{sent} 封，跳过 %{skipped} 封，失败 %{failed} 封。"
 
-#: lib/firefly_web/live/staff_live/categories.ex:147
+#: lib/firefly_web/live/staff_live/categories.ex:177
 #, elixir-autogen, elixir-format
 msgid "Tracking"
 msgstr "跟踪中"
@@ -1886,7 +1876,7 @@ msgstr "谁可以 @提及它"
 msgid "Who can message it"
 msgstr "谁可以给它发消息"
 
-#: lib/firefly_web/live/staff_live/categories.ex:214
+#: lib/firefly_web/live/staff_live/categories.ex:237
 #, elixir-autogen, elixir-format
 msgid "Who can see and post"
 msgstr "谁可以查看和发帖"
@@ -1917,7 +1907,7 @@ msgstr "你已恢复为自己的身份。"
 msgid "confirmed"
 msgstr "已确认"
 
-#: lib/firefly_web/live/staff_live/categories.ex:190
+#: lib/firefly_web/live/staff_live/categories.ex:213
 #, elixir-autogen, elixir-format
 msgid "default: %{level}"
 msgstr "默认：%{level}"
@@ -1949,7 +1939,7 @@ msgstr "密码"
 msgid "pending"
 msgstr "待处理"
 
-#: lib/firefly_web/live/staff_live/categories.ex:187
+#: lib/firefly_web/live/staff_live/categories.ex:210
 #, elixir-autogen, elixir-format
 msgid "restricted"
 msgstr "受限"
@@ -2646,3 +2636,48 @@ msgstr "hero"
 #, elixir-autogen, elixir-format
 msgid "https://github.com/owner/repo"
 msgstr "https://github.com/owner/repo"
+
+#: lib/firefly_web/live/staff_live/categories.ex:334
+#, elixir-autogen, elixir-format
+msgid "%{item} couldn't be moved there."
+msgstr "无法将 %{item} 移到那里。"
+
+#: lib/firefly_web/live/staff_live/categories.ex:332
+#, elixir-autogen, elixir-format
+msgid "%{item} dropped at position %{position} of %{count}."
+msgstr "已将 %{item} 放在第 %{position} 位，共 %{count} 位。"
+
+#: lib/firefly_web/live/staff_live/categories.ex:331
+#, elixir-autogen, elixir-format
+msgid "%{item} is now in %{parent}, position %{position} of %{count}."
+msgstr "%{item} 现在位于 %{parent} 中，第 %{position} 位，共 %{count} 位。"
+
+#: lib/firefly_web/live/staff_live/categories.ex:329
+#, elixir-autogen, elixir-format
+msgid "%{item} picked up, position %{position} of %{count}."
+msgstr "已拿起 %{item}，位于第 %{position} 位，共 %{count} 位。"
+
+#: lib/firefly_web/live/staff_live/categories.ex:330
+#, elixir-autogen, elixir-format
+msgid "%{item}: position %{position} of %{count}."
+msgstr "%{item}：第 %{position} 位，共 %{count} 位。"
+
+#: lib/firefly_web/live/staff_live/categories.ex:338
+#, elixir-autogen, elixir-format
+msgid "Drag a category by its handle to reorder it, or into another category to make it a subcategory. With the keyboard: focus the handle, press Space to pick it up, the arrow keys to move it and Space to drop it, or Escape to cancel."
+msgstr "拖动分类的把手即可调整顺序，拖入另一个分类即可设为其子分类。使用键盘：聚焦把手，按空格键拿起，用方向键移动，再按空格键放下，或按 Escape 取消。"
+
+#: lib/firefly_web/live/staff_live/categories.ex:203
+#, elixir-autogen, elixir-format
+msgid "Move %{title}"
+msgstr "移动 %{title}"
+
+#: lib/firefly_web/live/staff_live/categories.ex:333
+#, elixir-autogen, elixir-format
+msgid "Move cancelled. %{item} is back at position %{position} of %{count}."
+msgstr "已取消移动。%{item} 回到第 %{position} 位，共 %{count} 位。"
+
+#: lib/firefly_web/live/staff_live/categories.ex:91
+#, elixir-autogen, elixir-format
+msgid "That category can't go there."
+msgstr "该分类不能移到那里。"
