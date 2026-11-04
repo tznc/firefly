@@ -144,6 +144,15 @@ defmodule Firefly.SiteSettings do
         help: "Admins must set up two-factor authentication before they can use the site."
       },
       %{
+        key: "ldap_replaces_password",
+        section: "Logins",
+        type: :boolean,
+        label: "LDAP replaces local passwords",
+        default: false,
+        help:
+          "With an LDAP directory configured (FIREFLY_LDAP_*): members log in with their directory password, and local passwords, registration, email login links and passkeys are off."
+      },
+      %{
         key: "discourse_connect_overrides_email",
         section: "Logins",
         type: :boolean,

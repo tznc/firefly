@@ -1,4 +1,5 @@
-ExUnit.configure(exclude: [pending: true])
+# `:ldap` tests need a directory server (see Firefly.LDAPTestDirectory).
+ExUnit.configure(exclude: [pending: true, ldap: true])
 
 # Run alone (`cd apps/firefly && mix test`), the domain has no web
 # interface to link to and broadcast through: stand one in.
