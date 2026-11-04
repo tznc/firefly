@@ -9,7 +9,9 @@ defmodule FireflyWeb.Telemetry do
 
   Labels stay bounded: route patterns (never paths), LiveView modules (not
   their event names, which clients choose), the domain's event, job and
-  plugin names, outcomes; never user ids.
+  plugin names, outcomes; never user ids. Every Prometheus series also
+  carries the `node` it was measured on (one per node), so a cluster's
+  nodes stay apart wherever they're scraped from.
   """
   use Supervisor
 
@@ -33,7 +35,8 @@ defmodule FireflyWeb.Telemetry do
   end
 
   @doc "The Peep reporter collecting `metrics/0`."
-  def reporter_spec, do: {Peep, name: @reporter, metrics: metrics()}
+  def reporter_spec,
+    do: {Peep, name: @reporter, metrics: metrics(), global_tags: %{node: node()}}
 
   defp poller_spec do
     {:telemetry_poller,
@@ -138,7 +141,12 @@ defmodule FireflyWeb.Telemetry do
       counter("firefly.scheduler.job.exception.count", tags: [:job]),
       counter("firefly.mailer.deliver.stop.count", tags: [:adapter, :result]),
       duration("firefly.mailer.deliver.stop.duration", tags: [:adapter]),
-      counter("firefly.mailer.deliver.exception.count", tags: [:adapter])
+      counter("firefly.mailer.deliver.exception.count", tags: [:adapter]),
+      counter("firefly.cluster.node.count", tags: [:event]),
+      last_value("firefly.cluster.nodes.connected",
+        event_name: [:firefly, :cluster, :node],
+        measurement: :connected
+      )
     ] ++ job_metrics()
   end
 
