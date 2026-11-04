@@ -174,19 +174,26 @@ defmodule Firefly.Plugins.Events do
   end
 
   defp deliver(row, now) do
+    Firefly.Telemetry.span([:firefly, :plugins, :event], %{}, fn ->
+      {delivered, result} = attempt(row, now)
+      {delivered, %{result: result}}
+    end)
+  end
+
+  defp attempt(row, now) do
     with %{} = plugin <- Plugins.get_active(row.plugin_id),
          {:ok, _} <-
            Runner.invoke(plugin, "handle_event", [%{"event" => row.event, "data" => row.payload}]) do
       Repo.delete!(row)
-      1
+      {1, "delivered"}
     else
       nil ->
         Repo.delete!(row)
-        0
+        {0, "dropped"}
 
       {:error, reason} ->
         retry(row, reason, now)
-        0
+        {0, "failed"}
     end
   end
 

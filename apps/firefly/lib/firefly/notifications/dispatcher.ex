@@ -49,21 +49,31 @@ defmodule Firefly.Notifications.Dispatcher do
   def init(_), do: {:ok, :nostate}
 
   @impl true
-  def handle_cast({:post_created, %Post{} = post}, state) do
+  def handle_cast(message, state) do
+    event = elem(message, 0)
+
+    Firefly.Telemetry.span([:firefly, :notifications, :dispatch], %{event: event}, fn ->
+      {dispatch(message), %{}}
+    end)
+
+    {:noreply, state}
+  end
+
+  defp dispatch({:post_created, %Post{} = post}) do
     with {:ok, thread, post} <- reload(post) do
       listed = MailingList.deliver(thread, post)
       fan_out("new_post", thread, post, notify_mentions(thread, post, listed), listed)
     end
 
-    {:noreply, state}
+    :ok
   end
 
-  def handle_cast({:post_edited, %Post{} = post}, state) do
+  defp dispatch({:post_edited, %Post{} = post}) do
     with {:ok, thread, post} <- reload(post), do: notify_mentions(thread, post)
-    {:noreply, state}
+    :ok
   end
 
-  def handle_cast({:thread_created, %Thread{} = thread}, state) do
+  defp dispatch({:thread_created, %Thread{} = thread}) do
     first_post =
       Post
       |> where(thread_id: ^thread.id)
@@ -77,10 +87,10 @@ defmodule Firefly.Notifications.Dispatcher do
       fan_out("new_thread", thread, post, notify_mentions(thread, post, listed), listed)
     end
 
-    {:noreply, state}
+    :ok
   end
 
-  def handle_cast({:message_created, %Message{} = message}, state) do
+  defp dispatch({:message_created, %Message{} = message}) do
     message = Repo.preload(message, [:user, :conversation])
     conversation = message.conversation
     # The author's account may be gone by now (their messages stay).
@@ -106,20 +116,20 @@ defmodule Firefly.Notifications.Dispatcher do
       notify_group(conversation, message, author, first?, skip)
     end
 
-    {:noreply, state}
+    :ok
   end
 
-  def handle_cast({:chat_message_created, message, mentioned_ids}, state) do
+  defp dispatch({:chat_message_created, message, mentioned_ids}) do
     :ok = Firefly.Chat.notify(message, mentioned_ids)
-    {:noreply, state}
+    :ok
   end
 
-  def handle_cast({:participants_added, conversation, actor, users}, state) do
+  defp dispatch({:participants_added, conversation, actor, users}) do
     message = Messaging.latest_message(conversation)
     subject = "@#{actor.username} added you to \"#{conversation.title}\""
 
     for user <- users, do: notify_message(user, conversation, message, subject)
-    {:noreply, state}
+    :ok
   end
 
   # The group's members who aren't in the conversation, by their level.

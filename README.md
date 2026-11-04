@@ -112,6 +112,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
 | `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
+| `FIREFLY_METRICS_PORT`, `FIREFLY_METRICS_IP`, `FIREFLY_METRICS_TOKEN` | Prometheus metrics, off by default: a port of their own for `/metrics` (bound to `FIREFLY_METRICS_IP`, default `0.0.0.0`), and/or a bearer token that serves `/metrics` on the main port too (see "Metrics") |
 | `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
 
@@ -184,6 +185,52 @@ readinessProbe:
   httpGet: {path: /ready, port: 4000}
   periodSeconds: 5
   failureThreshold: 2
+```
+
+### Metrics
+
+Firefly exports metrics in Prometheus' text format at `/metrics`, off by
+default. Turn it on with either:
+
+- `FIREFLY_METRICS_PORT=9568` (preferred): a listener of its own, which
+  serves only `/metrics`, so the metrics stay off the public port. Keep it
+  inside your network (or bind it with `FIREFLY_METRICS_IP=127.0.0.1` for a
+  local agent).
+- `FIREFLY_METRICS_TOKEN=<secret>`: `/metrics` on the main port too, for
+  requests with `Authorization: Bearer <secret>`. With a port as well, the
+  token is required there too.
+
+What's exported (durations are histograms in microseconds, named
+`..._microseconds`; buckets from 0.5 ms to 10 s):
+
+| Metric | Labels |
+| --- | --- |
+| `vm_memory_{total,processes,binary,ets}`, `vm_total_run_queue_lengths_{total,cpu,io}`, `vm_system_counts_{process,port}_count` | |
+| `phoenix_router_dispatch_stop_duration_microseconds`, `phoenix_router_dispatch_exception_count` | `route` (the pattern, e.g. `/categories/:category_id/threads/:id`), `method`, `status` |
+| `phoenix_live_view_mount_stop_duration_microseconds`, `phoenix_live_view_handle_event_stop_duration_microseconds`, `phoenix_live_view_handle_event_exception_count` | `view` (event names are left out: clients choose them) |
+| `firefly_repo_query_total_time_microseconds`, `firefly_repo_query_queue_time_microseconds` | `source` (table) |
+| `firefly_notifications_dispatch_stop_duration_microseconds`, `firefly_notifications_dispatch_exception_count` | `event` (`post_created`, `message_created`...) |
+| `firefly_notifications_created_count` | `kind` |
+| `firefly_plugins_hook_count`, `firefly_plugins_hook_duration_microseconds` | `plugin`, `hook`, `result`; `hook` |
+| `firefly_plugins_event_stop_count`, `firefly_plugins_event_exception_count` | `result` (`delivered`, `failed`, `dropped`) |
+| `firefly_queue_depth` | `queue` (`plugin_events`, `webhooks`) |
+| `firefly_webhooks_delivery_stop_duration_microseconds`, `firefly_webhooks_delivery_exception_count` | `type`, `result` (`success`, `failure`) |
+| `firefly_scheduler_job_stop_duration_microseconds`, `firefly_scheduler_job_exception_count` | `job` |
+
+No label carries a user id or a request path. The VM and queue gauges are
+measured every 10 seconds. The domain emits its events with `:telemetry`
+(listed in `Firefly.Telemetry`); `FireflyWeb.Telemetry` defines the metrics.
+A Prometheus scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: firefly
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["firefly:9568"]
+    # With FIREFLY_METRICS_TOKEN (needed on the main port, optional on the metrics port):
+    # authorization:
+    #   credentials: <secret>
 ```
 
 ### API

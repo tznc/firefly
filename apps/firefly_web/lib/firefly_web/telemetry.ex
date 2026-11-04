@@ -1,0 +1,178 @@
+defmodule FireflyWeb.Telemetry do
+  @moduledoc """
+  The metrics Firefly reports (`metrics/0`) and, when metrics are on (see
+  `FireflyWeb.Metrics`), the processes that collect them: a Peep reporter
+  aggregating them in memory and a poller measuring the VM and the
+  background queues every 10 seconds.
+
+  Labels stay bounded: route patterns (never paths), LiveView modules (not
+  their event names, which clients choose), the domain's event, job and
+  plugin names, outcomes; never user ids.
+  """
+  use Supervisor
+
+  import Telemetry.Metrics
+
+  @reporter :firefly_metrics
+
+  def start_link(opts \\ []), do: Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
+
+  @impl true
+  def init(_opts) do
+    children =
+      if FireflyWeb.Metrics.enabled?(),
+        do: [reporter_spec(), poller_spec()] ++ FireflyWeb.Metrics.listener_specs(),
+        else: []
+
+    Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  @doc "The Peep reporter collecting `metrics/0`."
+  def reporter_spec, do: {Peep, name: @reporter, metrics: metrics()}
+
+  defp poller_spec do
+    {:telemetry_poller,
+     name: FireflyWeb.Telemetry.Poller,
+     period: :timer.seconds(10),
+     measurements: [
+       :memory,
+       :total_run_queue_lengths,
+       :system_counts,
+       {Firefly.Telemetry, :measure_queues, []}
+     ]}
+  end
+
+  @doc "The collected metrics in Prometheus' text format, or nil when the reporter isn't running."
+  @spec prometheus() :: iodata | nil
+  def prometheus do
+    if Process.whereis(@reporter),
+      do: @reporter |> Peep.get_all_metrics() |> Peep.Prometheus.export()
+  end
+
+  @doc "Every metric reported, as `Telemetry.Metrics` definitions."
+  def metrics do
+    vm_metrics() ++ web_metrics() ++ repo_metrics() ++ domain_metrics()
+  end
+
+  defp vm_metrics do
+    [
+      last_value("vm.memory.total", unit: :byte),
+      last_value("vm.memory.processes", unit: :byte),
+      last_value("vm.memory.binary", unit: :byte),
+      last_value("vm.memory.ets", unit: :byte),
+      last_value("vm.total_run_queue_lengths.total"),
+      last_value("vm.total_run_queue_lengths.cpu"),
+      last_value("vm.total_run_queue_lengths.io"),
+      last_value("vm.system_counts.process_count"),
+      last_value("vm.system_counts.port_count")
+    ]
+  end
+
+  defp web_metrics do
+    [
+      duration("phoenix.router_dispatch.stop.duration",
+        tags: [:route, :method, :status],
+        tag_values: &route_tags/1
+      ),
+      counter("phoenix.router_dispatch.exception.count",
+        tags: [:route, :method],
+        tag_values: &route_tags/1
+      ),
+      duration("phoenix.live_view.mount.stop.duration",
+        tags: [:view],
+        tag_values: &view_tags/1
+      ),
+      # By view only: clients choose event names, so they'd be unbounded.
+      duration("phoenix.live_view.handle_event.stop.duration",
+        tags: [:view],
+        tag_values: &view_tags/1
+      ),
+      counter("phoenix.live_view.handle_event.exception.count",
+        tags: [:view],
+        tag_values: &view_tags/1
+      )
+    ]
+  end
+
+  defp repo_metrics do
+    [
+      duration("firefly.repo.query.total_time",
+        tags: [:source],
+        tag_values: &%{source: &1[:source] || "none"}
+      ),
+      # Time waiting for a pooled connection (absent when none was needed).
+      duration("firefly.repo.query.queue_time")
+    ]
+  end
+
+  defp domain_metrics do
+    [
+      duration("firefly.notifications.dispatch.stop.duration",
+        tags: [:event]
+      ),
+      counter("firefly.notifications.dispatch.exception.count", tags: [:event]),
+      counter("firefly.notifications.created.count", tags: [:kind]),
+      counter("firefly.plugins.hook.count", tags: [:plugin, :hook, :result]),
+      duration("firefly.plugins.hook.duration",
+        tags: [:hook]
+      ),
+      counter("firefly.plugins.event.stop.count", tags: [:result]),
+      counter("firefly.plugins.event.exception.count"),
+      last_value("firefly.queue.depth",
+        event_name: [:firefly, :queue, :depth],
+        measurement: :depth,
+        tags: [:queue]
+      ),
+      duration("firefly.webhooks.delivery.stop.duration",
+        tags: [:type, :result]
+      ),
+      counter("firefly.webhooks.delivery.exception.count", tags: [:type]),
+      duration("firefly.scheduler.job.stop.duration",
+        tags: [:job]
+      ),
+      counter("firefly.scheduler.job.exception.count", tags: [:job])
+    ]
+  end
+
+  defmodule Buckets do
+    @moduledoc false
+    # Histogram bounds for durations in microseconds, 0.5ms to 10s: few
+    # enough to keep each series small (Peep's default has ~60).
+    use Peep.Buckets.Custom,
+      buckets: [
+        500,
+        1_000,
+        2_500,
+        5_000,
+        10_000,
+        25_000,
+        50_000,
+        100_000,
+        250_000,
+        500_000,
+        1_000_000,
+        2_500_000,
+        5_000_000,
+        10_000_000
+      ]
+  end
+
+  # Durations in microseconds (Peep keeps integers: milliseconds would
+  # round most queries to 0), named so: `name` plus `.microseconds`.
+  defp duration(name, opts \\ []) do
+    name
+    |> distribution(
+      [unit: {:native, :microsecond}, reporter_options: [peep_bucket_calculator: Buckets]] ++
+        opts
+    )
+    |> Map.update!(:name, &(&1 ++ [:microseconds]))
+  end
+
+  # The route's pattern (`/t/:id`), never the path; unmatched requests
+  # have none.
+  defp route_tags(%{conn: conn} = metadata) do
+    %{route: metadata[:route] || "unmatched", method: conn.method, status: conn.status}
+  end
+
+  defp view_tags(%{socket: socket}), do: %{view: inspect(socket.view)}
+end

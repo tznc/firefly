@@ -45,6 +45,12 @@ defmodule FireflyWeb.MixProject do
       {:phoenix_test, "~> 0.14", only: :test, runtime: false},
       {:phoenix_test_playwright, "~> 0.19", only: :test, runtime: false},
       {:bandit, "~> 1.14"},
+      # Metrics (see FireflyWeb.Telemetry): the definitions, VM and queue
+      # measurements, and Peep, which aggregates them for Prometheus in
+      # fixed buckets (memory stays flat however rarely it's scraped).
+      {:telemetry_metrics, "~> 1.2"},
+      {:telemetry_poller, "~> 1.3"},
+      {:peep, "~> 5.0"},
       {:jason, "~> 1.4"},
       {:gettext, "~> 1.0"},
       # The optional raw-records admin at /staff/db (see FireflyWeb.Admin).

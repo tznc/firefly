@@ -31,9 +31,11 @@ defmodule FireflyWeb.Endpoint do
     longpoll: false
   )
 
-  # Liveness and readiness probes (/health, /ready), before anything that
-  # would log, track or touch the session.
+  # Liveness and readiness probes (/health, /ready) and metrics, before
+  # anything that would log, track or touch the session.
   plug(FireflyWeb.Plugs.Health)
+  # Prometheus metrics at /metrics, with FIREFLY_METRICS_TOKEN (see FireflyWeb.Metrics).
+  plug(FireflyWeb.Metrics)
 
   # Serve at "/" the static files from "priv/static" directory.
   #

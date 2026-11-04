@@ -134,6 +134,22 @@ if config_env() != :test do
     region: System.get_env("FIREFLY_AWS_S3_REGION")
 end
 
+# Prometheus metrics (see FireflyWeb.Metrics): off unless a port of their own
+# or a bearer token for /metrics on the main endpoint is set.
+if port = System.get_env("FIREFLY_METRICS_PORT") do
+  ip =
+    case :inet.parse_address(String.to_charlist(System.get_env("FIREFLY_METRICS_IP", "0.0.0.0"))) do
+      {:ok, ip} -> ip
+      {:error, _} -> raise "FIREFLY_METRICS_IP is not an IP address"
+    end
+
+  config :firefly_web, FireflyWeb.Metrics, port: String.to_integer(port), ip: ip
+end
+
+if token = System.get_env("FIREFLY_METRICS_TOKEN") do
+  config :firefly_web, FireflyWeb.Metrics, token: token
+end
+
 # How long a shutting-down node fails readiness probes before the endpoint
 # stops listening (see FireflyWeb.Draining).
 if delay = System.get_env("FIREFLY_DRAIN_DELAY_MS") do
