@@ -38,11 +38,16 @@ defmodule Firefly.PackagesPropertyTest do
           if String.starts_with?(name, "/"),
             do: String.pad_leading("#{n}Z", byte_size(name), "Q"),
             else: name
+
         {name, placeholder, data}
       end)
 
     {:ok, {_name, zip}} =
-      :zip.create(~c"p.zip", Enum.map(named, fn {_, p, data} -> {String.to_charlist(p), data} end), [:memory])
+      :zip.create(
+        ~c"p.zip",
+        Enum.map(named, fn {_, p, data} -> {String.to_charlist(p), data} end),
+        [:memory]
+      )
 
     Enum.reduce(named, zip, fn {name, placeholder, _}, zip ->
       if name == placeholder, do: zip, else: :binary.replace(zip, placeholder, name, [:global])
@@ -113,7 +118,10 @@ defmodule Firefly.PackagesPropertyTest do
     end
 
     property "a manifest that isn't JSON, or isn't an object, is refused" do
-      check all(json <- one_of([adversarial_text(), map(json_value(), &Jason.encode!/1)]), max_runs: runs(100)) do
+      check all(
+              json <- one_of([adversarial_text(), map(json_value(), &Jason.encode!/1)]),
+              max_runs: runs(100)
+            ) do
         case Jason.decode(json) do
           {:ok, map} when is_map(map) -> read(zip([{"firefly.json", json}]))
           _ -> assert {:error, _} = read(zip([{"firefly.json", json}]))
@@ -130,7 +138,11 @@ defmodule Firefly.PackagesPropertyTest do
               name <- string(:alphanumeric, min_length: 1, max_length: 10),
               max_runs: runs(100)
             ) do
-        entries = [{"firefly.json", Jason.encode!(manifest)}, {prefix <> name, "x"} | Map.to_list(files)]
+        entries = [
+          {"firefly.json", Jason.encode!(manifest)},
+          {prefix <> name, "x"} | Map.to_list(files)
+        ]
+
         assert {:error, message} = read(zip(entries))
         assert message =~ "unsafe path" or message =~ "valid .zip"
       end
@@ -167,7 +179,7 @@ defmodule Firefly.PackagesPropertyTest do
 
         if theme? == tagged? do
           assert {:ok, archive} = result
-          assert ("theme" in archive.manifest.tags) == is_map(archive.manifest.theme)
+          assert "theme" in archive.manifest.tags == is_map(archive.manifest.theme)
         else
           assert {:error, _} = result
         end
@@ -193,7 +205,10 @@ defmodule Firefly.PackagesPropertyTest do
     defp scan([_ | rest], string, depth) when string != nil, do: scan(rest, string, depth)
     defp scan([q | rest], nil, depth) when q in ["\"", "'"], do: scan(rest, q, depth)
     defp scan([o | rest], nil, depth) when o in ["(", "["], do: scan(rest, nil, depth + 1)
-    defp scan([c | rest], nil, depth) when c in [")", "]"] and depth > 0, do: scan(rest, nil, depth - 1)
+
+    defp scan([c | rest], nil, depth) when c in [")", "]"] and depth > 0,
+      do: scan(rest, nil, depth - 1)
+
     defp scan([c | _], nil, _) when c in [")", "]", ";", "{", "}"], do: false
     defp scan(["/", "*" | _], nil, _), do: false
     defp scan([_ | rest], nil, depth), do: scan(rest, nil, depth)
@@ -213,8 +228,20 @@ defmodule Firefly.PackagesPropertyTest do
               value <-
                 one_of([
                   adversarial_text(10),
-                  member_of(["x\f;} body{display:none} :root{", "(", ")", "a(b", "\"", "'",
-                             "/*", "\\", "url(x", "red;}", "x\r;}", "</style>"])
+                  member_of([
+                    "x\f;} body{display:none} :root{",
+                    "(",
+                    ")",
+                    "a(b",
+                    "\"",
+                    "'",
+                    "/*",
+                    "\\",
+                    "url(x",
+                    "red;}",
+                    "x\r;}",
+                    "</style>"
+                  ])
                 ]),
               key <- member_of(["tagline", "accent"]),
               max_runs: runs(150)
@@ -260,7 +287,9 @@ defmodule Firefly.PackagesPropertyTest do
           constant(:install),
           member_of(@ids),
           integer(0..3),
-          map_of(member_of(@ids), member_of([">= 1.0.0", "~> 1.1", "== 1.0.0", ">= 1.2.0"]), max_length: 2)
+          map_of(member_of(@ids), member_of([">= 1.0.0", "~> 1.1", "== 1.0.0", ">= 1.2.0"]),
+            max_length: 2
+          )
         }),
         tuple({constant(:uninstall), member_of(@ids)})
       ])
@@ -324,11 +353,13 @@ defmodule Firefly.PackagesPropertyTest do
     end
 
     defp step({:uninstall, id}, model, admin) do
-      needed? = Enum.any?(model, fn {other, {_, deps}} -> other != id and Map.has_key?(deps, id) end)
+      needed? =
+        Enum.any?(model, fn {other, {_, deps}} -> other != id and Map.has_key?(deps, id) end)
+
       expected_ok? = Map.has_key?(model, id) and not needed?
       result = Packages.uninstall(id, admin)
 
-      assert (result == :ok) == expected_ok?,
+      assert result == :ok == expected_ok?,
              "uninstall #{id} from #{inspect(model)}: #{inspect(result)}"
 
       if expected_ok?, do: Map.delete(model, id), else: model
@@ -377,10 +408,16 @@ defmodule Firefly.PackagesPropertyTest do
               data <-
                 one_of([
                   any_binary(5_000),
-                  map({valid_zip(), list_of(integer(0..255), min_length: 1, max_length: 20), integer(0..10_000)}, fn {zip, bytes, at} ->
-                    at = rem(at, byte_size(zip))
-                    binary_part(zip, 0, at) <> :erlang.list_to_binary(bytes) <> binary_part(zip, at, byte_size(zip) - at)
-                  end)
+                  map(
+                    {valid_zip(), list_of(integer(0..255), min_length: 1, max_length: 20),
+                     integer(0..10_000)},
+                    fn {zip, bytes, at} ->
+                      at = rem(at, byte_size(zip))
+
+                      binary_part(zip, 0, at) <>
+                        :erlang.list_to_binary(bytes) <> binary_part(zip, at, byte_size(zip) - at)
+                    end
+                  )
                 ]),
               max_runs: fuzz_runs()
             ) do

@@ -42,7 +42,10 @@ defmodule Firefly.PluginGraphPropertyTest do
       index = nodes |> Enum.with_index() |> Map.new(fn {node, i} -> {node.id, i} end)
 
       Enum.map(nodes, fn node ->
-        keep = fn deps -> Map.filter(deps, fn {dep, _} -> (index[dep] || -1) < index[node.id] end) end
+        keep = fn deps ->
+          Map.filter(deps, fn {dep, _} -> (index[dep] || -1) < index[node.id] end)
+        end
+
         %{node | requires: keep.(node.requires), optional: keep.(node.optional)}
       end)
     end)
@@ -148,7 +151,7 @@ defmodule Firefly.PluginGraphPropertyTest do
 
         dependency_problems = Enum.reject(problems[node.id] || [], &match?({:cycle, _}, &1))
         assert Enum.sort(dependency_problems) == Enum.sort(required ++ optional)
-        assert Enum.any?(problems[node.id] || [], &match?({:cycle, _}, &1)) == (node.id in cyclic)
+        assert Enum.any?(problems[node.id] || [], &match?({:cycle, _}, &1)) == node.id in cyclic
       end
     end
   end
@@ -161,7 +164,9 @@ defmodule Firefly.PluginGraphPropertyTest do
         Stream.iterate(MapSet.new([from]), fn seen ->
           MapSet.union(seen, MapSet.new(Enum.flat_map(seen, step)))
         end)
-        |> Enum.reduce_while(nil, fn seen, prev -> if seen == prev, do: {:halt, seen}, else: {:cont, seen} end)
+        |> Enum.reduce_while(nil, fn seen, prev ->
+          if seen == prev, do: {:halt, seen}, else: {:cont, seen}
+        end)
         |> MapSet.delete(from)
       end
 
@@ -189,10 +194,18 @@ defmodule Firefly.PluginGraphPropertyTest do
     Stream.iterate(MapSet.new([id]), fn seen ->
       MapSet.union(
         seen,
-        MapSet.new(for x <- seen, node = by_id[x], node != nil, dep <- Map.keys(node.requires) ++ Map.keys(node.optional), do: dep)
+        MapSet.new(
+          for x <- seen,
+              node = by_id[x],
+              node != nil,
+              dep <- Map.keys(node.requires) ++ Map.keys(node.optional),
+              do: dep
+        )
       )
     end)
-    |> Enum.reduce_while(nil, fn seen, prev -> if seen == prev, do: {:halt, seen}, else: {:cont, seen} end)
+    |> Enum.reduce_while(nil, fn seen, prev ->
+      if seen == prev, do: {:halt, seen}, else: {:cont, seen}
+    end)
     |> MapSet.delete(id)
     |> MapSet.to_list()
   end
