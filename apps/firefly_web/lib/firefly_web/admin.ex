@@ -10,8 +10,9 @@ defmodule FireflyWeb.Admin do
   for admins only, checked on every request (`FireflyWeb.Plugs.RequireAdmin`).
   Every create, update and delete is in the staff log
   (`FireflyWeb.Admin.Logged`). Secrets aren't shown: password hashes,
-  plugins' bundles, code, secrets and settings, secret site settings; API
-  keys, two-factor secrets and passkeys aren't listed at all.
+  plugins' code, secrets and settings, packages' zips and settings, secret
+  site settings; API keys, two-factor secrets and passkeys aren't listed
+  at all.
   """
 
   alias FireflyWeb.Admin
@@ -48,7 +49,8 @@ defmodule FireflyWeb.Admin do
             admin: Admin.SiteSettingAdmin
           ],
           theme: [schema: Firefly.Themes.Theme, admin: Admin.ThemeAdmin],
-          plugin: [schema: Firefly.Plugins.InstalledPlugin, admin: Admin.PluginAdmin]
+          plugin: [schema: Firefly.Plugins.InstalledPlugin, admin: Admin.PluginAdmin],
+          package: [schema: Firefly.Packages.Package, admin: Admin.PackageAdmin]
         ]
       ],
       email: [

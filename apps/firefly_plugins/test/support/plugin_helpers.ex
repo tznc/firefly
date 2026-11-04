@@ -5,7 +5,7 @@ defmodule FireflyPlugins.PluginHelpers do
   use Boundary, top_level?: true, check: [in: false, out: false]
 
   alias FireflyPlugins.Bundle
-  alias Firefly.Plugins
+  alias Firefly.{Packages, Plugins}
 
   @doc """
   A plugin bundle (.zip binary): `manifest` merged into a minimal valid one
@@ -37,7 +37,7 @@ defmodule FireflyPlugins.PluginHelpers do
   def install_plugin!(admin, manifest \\ %{}, files \\ nil, opts \\ []) do
     zip = if files, do: bundle_zip(manifest, files), else: bundle_zip(manifest)
     {:ok, bundle} = Bundle.read(zip)
-    {:ok, _row} = Plugins.install(bundle, admin)
+    {:ok, _package} = Packages.install(bundle, admin)
     if opts[:enable], do: {:ok, _} = Plugins.enable(bundle.manifest.id, admin)
     bundle.manifest.id
   end
@@ -57,7 +57,7 @@ defmodule FireflyPlugins.PluginHelpers do
   @doc "Installs and enables the example plugin `name` as `admin`."
   def install_example!(admin, name) do
     {:ok, bundle} = Bundle.read(example_zip(name))
-    {:ok, _row} = Plugins.install(bundle, admin)
+    {:ok, _package} = Packages.install(bundle, admin)
     {:ok, _} = Plugins.enable(bundle.manifest.id, admin)
     bundle.manifest.id
   end

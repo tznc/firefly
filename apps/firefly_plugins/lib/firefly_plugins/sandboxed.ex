@@ -26,7 +26,12 @@ defmodule FireflyPlugins.Sandboxed do
   alias Firefly.Plugins.InstalledPlugin
 
   @impl true
-  def load(%InstalledPlugin{manifest: attrs, code: code, checksum: checksum, bundle: zip})
+  # The zip and its checksum are the plugin's package's (see Firefly.Packages).
+  def load(%InstalledPlugin{
+        manifest: attrs,
+        code: code,
+        package: %{archive: zip, checksum: checksum}
+      })
       when is_binary(code) do
     with {:ok, manifest} <- Manifest.parse(attrs, "upload"),
          {:ok, assets} <- assets(manifest, zip),

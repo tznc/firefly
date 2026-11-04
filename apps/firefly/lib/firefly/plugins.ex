@@ -89,7 +89,7 @@ defmodule Firefly.Plugins do
   # state, error, enabled, disabled_reason}`, by id. `manifest` is nil (and
   # `error` says why) when the plugin can't load.
   defp entries do
-    rows = Map.new(Repo.all(InstalledPlugin), &{&1.plugin_id, &1})
+    rows = Map.new(Repo.all(from(p in InstalledPlugin, preload: :package)), &{&1.plugin_id, &1})
     core = Enum.map(core_modules(), &core_entry(&1, rows))
     core_ids = MapSet.new(core, & &1.id)
 
@@ -439,13 +439,11 @@ defmodule Firefly.Plugins do
   defp install_problems(snapshot, %{manifest: manifest}, nil),
     do: graph_problems(snapshot, manifest)
 
-  defp install_problems(snapshot, %{manifest: manifest} = bundle, current) do
+  # The same zip again is the package's to refuse (`Firefly.Packages`).
+  defp install_problems(snapshot, %{manifest: manifest}, current) do
     cond do
       current.source == "core" ->
         ["#{manifest.id} is a core plugin; it can't be replaced by an upload."]
-
-      current.row.checksum == bundle.checksum ->
-        ["This exact bundle is already installed."]
 
       current.manifest && Version.compare(manifest.version, current.manifest.version) != :gt ->
         ["Version #{current.manifest.version} is installed: upload a newer version to upgrade."]
@@ -478,32 +476,33 @@ defmodule Firefly.Plugins do
   end
 
   @doc """
-  Installs `bundle` (a read package with plugin code, see
-  `Firefly.Packages`, which installs packages through here) as `admin`,
-  or upgrades the installed plugin with its id (keeping its settings and
-  state). A new plugin starts disabled.
+  Installs `bundle` (a read package with plugin code) as `admin`, or
+  upgrades the installed plugin with its id (keeping its settings and
+  state). A new plugin starts disabled. Only `Firefly.Packages` calls
+  this, with the package row it saved: the zip and its checksum stay on
+  that row, the plugin row points at it.
   """
-  def install(%{manifest: manifest} = bundle, %User{} = admin) do
+  def install(%{manifest: manifest} = bundle, %{id: package_id}, %User{} = admin)
+      when is_integer(package_id) do
     snapshot = snapshot()
     current = snapshot.entries[manifest.id]
 
     with {:ok, sandbox} <- sandbox() do
       case install_problems(snapshot, bundle, current) do
-        [] -> save_bundle(sandbox, bundle, current, admin)
+        [] -> save_bundle(sandbox, bundle, package_id, current, admin)
         problems -> {:error, Enum.join(problems, " ")}
       end
     end
   end
 
-  defp save_bundle(sandbox, bundle, current, admin) do
+  defp save_bundle(sandbox, bundle, package_id, current, admin) do
     manifest = bundle.manifest
     row = (current && current.row) || %InstalledPlugin{plugin_id: manifest.id, source: "upload"}
 
     attrs = %{
       version: manifest.version,
       manifest: Manifest.to_map(manifest),
-      bundle: bundle.zip,
-      checksum: bundle.checksum,
+      package_id: package_id,
       code: sandbox.bundle_code(bundle),
       installed_by_id: admin.id
     }
