@@ -24,7 +24,9 @@ defmodule FireflyWeb.HealthTest do
              "migrations" => %{"ok" => true},
              "draining" => %{"ok" => true},
              "read_only" => %{"ok" => true, "enabled" => false},
-             "plugin_sandbox" => %{"ok" => true, "available" => available}
+             "plugin_sandbox" => %{"ok" => true, "available" => available},
+             # Reported, never failing: clustering is off in tests.
+             "cluster" => %{"ok" => true, "enabled" => false, "nodes" => 0}
            } = body["checks"]
 
     assert is_boolean(available)

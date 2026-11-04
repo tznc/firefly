@@ -298,7 +298,10 @@ defmodule FireflyWeb.SSOTest do
     test "sends a signed nonce and return URL", %{conn: conn} do
       {conn, request} = dc_start(conn)
       assert redirected_to(conn) =~ "https://id.example/session/sso_provider?"
-      assert request["return_sso_url"] == "http://localhost:4002/auth/discourse_connect/callback"
+
+      assert request["return_sso_url"] ==
+               "#{FireflyWeb.Endpoint.url()}/auth/discourse_connect/callback"
+
       assert get_session(conn, :discourse_connect_nonce) == request["nonce"]
     end
 
