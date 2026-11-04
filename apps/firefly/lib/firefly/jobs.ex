@@ -9,6 +9,7 @@ defmodule Firefly.Jobs do
   at a time leads (`Oban.Peers.Database`), running what must run once per
   cluster (the pruner, scheduled cron jobs).
 
+  Periodic work runs on cron schedules (see `Firefly.Jobs.Periodic`).
   Queues and their concurrency are configured in `config :firefly, Oban`
   (from `FIREFLY_JOBS_<QUEUE>` in production; see `queues/0`). Finished
   jobs (completed, cancelled, discarded) are kept `job_retention_days` (a
@@ -29,6 +30,24 @@ defmodule Firefly.Jobs do
   @doc "Enqueues `changeset` (a worker's `new/2`), carrying the trace context."
   @spec insert(Ecto.Changeset.t()) :: {:ok, Oban.Job.t()} | {:error, term}
   def insert(%Ecto.Changeset{} = changeset), do: OpentelemetryOban.insert(changeset)
+
+  @doc "The periodic tasks' cron schedule (see `Firefly.Jobs.Periodic`)."
+  @spec crontab() :: [{String.t(), module}]
+  defdelegate crontab, to: Firefly.Jobs.Periodic
+
+  @doc """
+  Runs the periodic task `name` (`:TopicTimers` or `:BookmarkReminders`)
+  at `at` too, besides its schedule: a timer or reminder fires on time
+  rather than at the next sweep.
+  """
+  @spec run_at(:TopicTimers | :BookmarkReminders, DateTime.t()) :: {:ok, Oban.Job.t()}
+  def run_at(name, %DateTime{} = at) when name in [:TopicTimers, :BookmarkReminders] do
+    # Not unique: each timer gets its own run, whatever else is scheduled.
+    name
+    |> Firefly.Jobs.Periodic.worker()
+    |> apply(:new, [%{}, [scheduled_at: at, unique: false]])
+    |> insert()
+  end
 
   @doc "The configured queues' names."
   @spec queues() :: [atom]

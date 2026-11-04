@@ -5,9 +5,8 @@ defmodule Firefly.Badges do
 
   System badges (`system_badges/0`) are defined here, each by a query of
   who earned it (and with which post, and when). `run_due/0` (run by
-  `Firefly.Moderation.TopicTimers.Scheduler`, every 15 minutes across nodes; see
-  `Firefly.JobRuns`) creates any missing system badge and grants each
-  enabled one to everyone its query finds; a trust level change grants
+  `Firefly.Jobs.Periodic`, every 15 minutes across nodes) creates any
+  missing system badge and grants each enabled one to everyone its query finds; a trust level change grants
   the trust level badges at once (`grant_earned/1` for that member). A
   badge is granted once, or with `multiple_grant` once per post (Nice
   Reply and the like). Each grant notifies the member (`"badge_granted"`).
@@ -27,13 +26,11 @@ defmodule Firefly.Badges do
 
   import Ecto.Query
 
-  alias Firefly.{JobRuns, Notifications, Repo}
+  alias Firefly.{Notifications, Repo}
   alias Firefly.Moderation.StaffLog
   alias Firefly.Accounts.User
   alias Firefly.Badges.{Badge, UserBadge}
   alias Firefly.Discussion.{Policy, Post}
-
-  @run_seconds 900
 
   # The published posts of a query's `p`.
   @published "p.deleted_at IS NULL AND p.queued_at IS NULL AND p.hidden_at IS NULL"
@@ -211,10 +208,8 @@ defmodule Firefly.Badges do
 
   ## Granting
 
-  @doc "Grants what's earned, if 15 minutes have passed since the last run."
-  def run_due do
-    if JobRuns.claim("badges", @run_seconds), do: grant_earned(nil), else: :ok
-  end
+  @doc "Grants what's earned (every 15 minutes across nodes, see `Firefly.Jobs.Periodic`)."
+  def run_due, do: grant_earned(nil)
 
   @doc """
   Creates any missing system badge, then grants each enabled one to whoever

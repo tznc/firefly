@@ -28,7 +28,7 @@ defmodule Firefly.Upgrades do
 
   import Ecto.Query
 
-  alias Firefly.{JobRuns, Notifications, Repo, SiteSettings}
+  alias Firefly.{Notifications, Repo, SiteSettings}
   alias Firefly.Accounts.User
   alias Firefly.Plugins.HTTP
   alias Firefly.Rendering.Markdown
@@ -191,10 +191,10 @@ defmodule Firefly.Upgrades do
 
   @doc """
   The daily check (see the moduledoc), then the admins' notification of a
-  new release. Run by the scheduler (`Firefly.Moderation.TopicTimers.Scheduler`).
+  new release. Run once a day across nodes (see `Firefly.Jobs.Periodic`).
   """
   def run_due do
-    if SiteSettings.get("version_check") and JobRuns.claim("version_check", 86_400) do
+    if SiteSettings.get("version_check") do
       with {:ok, %{update?: true} = status} <- check(), do: notify(status)
     end
 

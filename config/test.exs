@@ -68,7 +68,6 @@ config :phoenix, :plug_init_mode, :runtime
 config :firefly, notifications_enabled: false
 
 # Tests run due thread timers and reminders themselves, inside their sandbox transaction.
-config :firefly, Firefly.Moderation.TopicTimers, enabled: false
 
 # Analytics are written when tests call Firefly.Analytics.flush/0.
 config :firefly, Firefly.Analytics, flush_interval: :manual

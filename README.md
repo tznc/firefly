@@ -212,6 +212,17 @@ crashed node left running is rescued after 30 minutes.
 Set a queue's concurrency on a node with `FIREFLY_JOBS_<QUEUE>` (e.g.
 `FIREFLY_JOBS_AI=0` on web nodes that shouldn't run AI work).
 
+Periodic work runs on cron schedules (Oban's cron, inserted by the leader
+only, so once per cluster; see `Firefly.Jobs.Periodic`): thread timers,
+bookmark reminders and poll closings every minute (timers and reminders
+also get a job at their own time, so they fire on time), unused uploads,
+link previews and semantic search embeddings every minute, badges and
+digests every 15 minutes, trust level reviews, analytics, the embed feed,
+chat retention, the email and egress logs, the user directory and
+scheduled backups hourly, and the version check daily. A task isn't
+queued again while its last run is waiting or running, and nothing runs
+while the site is read-only.
+
 Finished jobs (completed, cancelled and discarded) are kept for the
 `job_retention_days` site setting (Advanced, Jobs; default 14 days,
 `FIREFLY_SETTING_JOB_RETENTION_DAYS` pins it), then pruned by the leader

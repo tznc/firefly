@@ -163,7 +163,6 @@ defmodule FireflyWeb.EmbeddingTest do
     base: base
   } do
     {:ok, _} = SiteSettings.update(%{"embed_feed_url" => base <> "/feed.xml"}, admin)
-    Repo.delete_all("job_runs")
 
     assert :ok = Embedding.run_due()
     assert [%{embed_url: url, thread_id: id}] = Repo.all(TopicEmbed)

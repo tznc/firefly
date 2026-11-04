@@ -5,8 +5,9 @@ defmodule Firefly.Moderation.TopicTimers do
   timer; setting another replaces it.
 
   Timers live in the database (`Firefly.Moderation.ThreadTimer`), so they
-  survive restarts: `Firefly.Moderation.TopicTimers.Scheduler` runs the due ones
-  every so often, including any that fell due while the app was down.
+  survive restarts: a job scheduled for the timer's time runs the due ones
+  (`run_due/1`), and a sweep every minute (see `Firefly.Jobs.Periodic`)
+  catches any that fell due while the app was down.
   Running one is idempotent and safe across nodes: the timer row is locked
   (`SKIP LOCKED`, so two nodes never take the same one) and deleted in the
   same transaction as the action, and an action that's already done (a
@@ -61,6 +62,7 @@ defmodule Firefly.Moderation.TopicTimers do
       end)
 
     with {:ok, timer} <- result do
+      {:ok, _job} = Firefly.Jobs.run_at(:TopicTimers, timer.run_at)
       Discussion.thread_changed(:thread_updated, thread)
       {:ok, timer}
     end
@@ -148,86 +150,6 @@ defmodule Firefly.Moderation.TopicTimers do
         # Dropped rather than retried forever: it would fail the same way.
         Logger.error("Thread timer #{action} on thread #{thread.id} failed: #{inspect(reason)}")
         fn -> :ok end
-    end
-  end
-
-  defmodule Scheduler do
-    @moduledoc """
-    Runs what's due, from the database: thread timers (see
-    `Firefly.Moderation.TopicTimers`), bookmark reminders (see
-    `Firefly.Discussion.Bookmarks`), polls' closing times (see
-    `Firefly.Discussion.Polls`), unused uploads' removal (see
-    `Firefly.Uploads`), unseen link previews' (see
-    `Firefly.Rendering.LinkPreviews`), pruning the plugin egress log (see
-    `Firefly.Plugins.Egress`), refreshing the user directory's stats
-    (see `Firefly.Directory`), reviewing trust levels (see
-    `Firefly.TrustLevels`), granting badges (see
-    `Firefly.Badges`), sending digest emails (see
-    `Firefly.Notifications.Digests`), pruning a day's analytics
-    viewers (see `Firefly.Analytics`), scheduled backups (see
-    `Firefly.Backups`), the daily version check (see
-    `Firefly.Upgrades`), polling the embedding feed (see
-    `Firefly.Embedding`), chat retention (see `Firefly.Chat`),
-    embedding posts for semantic search (see `Firefly.AI`) and pruning
-    the email log (see `Firefly.Notifications.EmailLog`). Nothing runs while the site is read-only. At start (so nothing that fell due while the
-    app was down is lost), then every `:interval` milliseconds (the
-    `Firefly.Moderation.TopicTimers` config; 30 seconds by default), so each runs
-    at most that late. Every job takes its due rows one locked transaction
-    at a time, so each runs once, even with several nodes.
-    """
-    use GenServer
-    require Logger
-
-    # Each has `run_due/0`.
-    @jobs [
-      Firefly.Moderation.TopicTimers,
-      Firefly.Discussion.Bookmarks,
-      Firefly.Discussion.Polls,
-      Firefly.Uploads,
-      Firefly.Rendering.LinkPreviews,
-      Firefly.Plugins.Egress,
-      Firefly.Directory,
-      Firefly.TrustLevels,
-      Firefly.Badges,
-      Firefly.Notifications.Digests,
-      Firefly.Analytics,
-      Firefly.Backups,
-      Firefly.Upgrades,
-      Firefly.Embedding,
-      Firefly.Chat,
-      Firefly.AI,
-      Firefly.Notifications.EmailLog
-    ]
-
-    def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
-
-    @impl true
-    def init(opts) do
-      interval =
-        opts[:interval] ||
-          Application.get_env(:firefly, Firefly.Moderation.TopicTimers, [])[:interval] || 30_000
-
-      send(self(), :tick)
-      {:ok, %{interval: interval}}
-    end
-
-    @impl true
-    def handle_info(:tick, state) do
-      # A failing job is logged, not fatal: crashing would only retry it
-      # straight away, and then take the app down with it. Nor does it hold
-      # up the other jobs.
-      for job <- @jobs, not Firefly.Backups.read_only?() do
-        try do
-          Firefly.Telemetry.span([:firefly, :scheduler, :job], %{job: inspect(job)}, fn ->
-            {job.run_due(), %{}}
-          end)
-        rescue
-          error -> Logger.error("#{inspect(job)} failed: " <> Exception.message(error))
-        end
-      end
-
-      Process.send_after(self(), :tick, state.interval)
-      {:noreply, state}
     end
   end
 end

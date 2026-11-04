@@ -8,8 +8,8 @@ defmodule Firefly.Directory do
 
   The stats aren't aggregated per page view: `refresh/0` recomputes them
   for everyone into `directory_items` (one row per user and period), and
-  the scheduler (`Firefly.Moderation.TopicTimers.Scheduler`) runs it through
-  `run_due/0` once the last refresh is over an hour old. Only published
+  an hourly job (`Firefly.Jobs.Periodic`) runs it through `run_due/0`
+  unless another refresh ran in the meantime. Only published
   posts count, and likes on them. Members who left the directory or hid
   their profile (privacy settings) or deleted their account aren't listed; new members
   are, with no stats until the next refresh.
@@ -37,7 +37,8 @@ defmodule Firefly.Directory do
     "topics_entered" => "Topics viewed"
   }
 
-  @refresh_seconds 3600
+  # Under the hourly job's interval, so each run refreshes unless one just did.
+  @refresh_seconds 3000
 
   # Held while refreshing, so several nodes don't all do it at once.
   @lock_key 4_216_301

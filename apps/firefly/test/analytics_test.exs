@@ -91,7 +91,6 @@ defmodule Firefly.AnalyticsTest do
     ])
 
     Repo.insert_all("analytics_salts", [%{date: yesterday, salt: "old"}])
-    Repo.delete_all("job_runs")
 
     Analytics.run_due()
 
