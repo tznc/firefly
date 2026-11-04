@@ -718,4 +718,110 @@ const PushNotifications = {
   },
 }
 
-export default {ChatComposer, ChatScroll, ReactionPicker, PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}
+
+// Keyboard shortcuts, like Discourse's: "?" opens the help, j/k move
+// through the topics or posts on the page (whatever carries
+// data-shortcut-item), g then a letter goes somewhere, and r/l/b act on
+// the item in hand through its data-shortcut buttons. Typing in a field
+// is never intercepted, and a member can turn the whole thing off (see
+// their interface settings, which sets data-shortcuts="false").
+const SHORTCUT_PATHS = {h: "/", l: "/", n: "/new", u: "/unread", t: "/top", c: "/categories", b: "/bookmarks", m: "/messages", p: "/chat"}
+const TYPING = /^(input|textarea|select)$/i
+
+const typing = target =>
+  TYPING.test(target.tagName) || target.isContentEditable || target.closest("[contenteditable='true']")
+
+const KeyboardShortcuts = {
+  mounted() {
+    this.index = -1
+    this.pending = null
+    this.onKeyDown = event => this.handle(event)
+    window.addEventListener("keydown", this.onKeyDown)
+  },
+  destroyed() {
+    window.removeEventListener("keydown", this.onKeyDown)
+  },
+  enabled() {
+    return this.el.dataset.shortcuts !== "false"
+  },
+  items() {
+    return Array.from(document.querySelectorAll("[data-shortcut-item]"))
+  },
+  handle(event) {
+    if (!this.enabled() || event.metaKey || event.ctrlKey || event.altKey) { return }
+    if (typing(event.target)) { return }
+
+    const key = event.key
+    if (this.pending === "g") {
+      this.pending = null
+      const path = SHORTCUT_PATHS[key.toLowerCase()]
+      if (path) { event.preventDefault(); window.location.assign(path) }
+      return
+    }
+
+    switch (key) {
+      case "?":
+        event.preventDefault()
+        this.help()
+        break
+      case "j":
+        event.preventDefault()
+        this.move(1)
+        break
+      case "k":
+        event.preventDefault()
+        this.move(-1)
+        break
+      case "g":
+        this.pending = "g"
+        break
+      case "/":
+        event.preventDefault()
+        this.search()
+        break
+      case "r":
+      case "l":
+      case "b":
+        if (this.act({r: "reply", l: "like", b: "bookmark"}[key])) { event.preventDefault() }
+        break
+      case "Escape":
+        this.close()
+        break
+    }
+  },
+  move(step) {
+    const items = this.items()
+    if (!items.length) { return }
+    this.index = Math.min(Math.max(this.index + step, 0), items.length - 1)
+    const item = items[this.index]
+    if (!item.hasAttribute("tabindex")) { item.setAttribute("tabindex", "-1") }
+    item.focus({preventScroll: true})
+    item.scrollIntoView({block: "center", behavior: "smooth"})
+  },
+  // The button on the item in hand, else the page's own (a thread's reply
+  // button, say). Returns whether anything was clicked.
+  act(name) {
+    const items = this.items()
+    const current = items[this.index] || document.activeElement.closest("[data-shortcut-item]")
+    const button = (current || document).querySelector(`[data-shortcut="${name}"]`) ||
+      document.querySelector(`[data-shortcut="${name}"]`)
+    if (!button) { return false }
+    button.click()
+    return true
+  },
+  search() {
+    const field = document.querySelector("input[type='search']")
+    if (field) { field.focus() } else { window.location.assign("/search") }
+  },
+  help() {
+    const dialog = document.getElementById("shortcuts-help")
+    if (!dialog) { return }
+    dialog.open ? dialog.close() : dialog.showModal()
+  },
+  close() {
+    const dialog = document.getElementById("shortcuts-help")
+    if (dialog && dialog.open) { dialog.close() }
+  },
+}
+
+export default {KeyboardShortcuts, ChatComposer, ChatScroll, ReactionPicker, PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

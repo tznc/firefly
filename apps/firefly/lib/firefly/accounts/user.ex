@@ -25,6 +25,9 @@ defmodule Firefly.Accounts.User do
     field(:theme, :string, default: "system")
     # The interface's language (see FireflyWeb.Locale); nil: their browser's.
     field(:locale, :string)
+    # Whether they want the keyboard shortcuts (see the web app's
+    # KeyboardShortcuts hook).
+    field(:keyboard_shortcuts, :boolean, default: true)
     field(:reply_level, :string, default: "tracking")
     field(:new_thread_level, :string, default: "watching")
     field(:hide_profile_activity, :boolean, default: false)
@@ -110,6 +113,7 @@ defmodule Firefly.Accounts.User do
       :allow_private_messages,
       :theme,
       :locale,
+      :keyboard_shortcuts,
       :reply_level,
       :new_thread_level,
       :hide_profile_activity,

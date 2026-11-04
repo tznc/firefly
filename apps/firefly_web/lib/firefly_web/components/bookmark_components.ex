@@ -28,6 +28,7 @@ defmodule FireflyWeb.BookmarkComponents do
     <button
       type="button"
       phx-click="toggle_bookmark"
+      data-shortcut="bookmark"
       phx-value-id={@post.id}
       class={["bookmark-toggle btn btn-ghost btn-sm btn-square", @bookmarked && "text-primary"]}
       aria-label={if @bookmarked, do: "Remove bookmark of post #{@post.id}", else: "Bookmark post #{@post.id}"}

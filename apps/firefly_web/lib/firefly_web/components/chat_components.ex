@@ -68,7 +68,7 @@ defmodule FireflyWeb.ChatComponents do
     <div
       :if={@unread_divider}
       id="new-messages-divider"
-      class="divider divider-primary my-1 text-xs text-primary"
+      class="divider divider-primary my-1 text-xs text-error"
     >
       New messages
     </div>
