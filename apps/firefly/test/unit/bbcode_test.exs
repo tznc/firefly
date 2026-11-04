@@ -130,4 +130,10 @@ defmodule Firefly.BBCodeTest do
     {:ok, _} = Firefly.Groups.add_role(user, role)
     user
   end
+
+  # Found by Firefly.RenderingPropertyTest: the regexes raised on bytes that
+  # aren't UTF-8 (imported text may have them).
+  test "converts text with invalid UTF-8" do
+    assert BBCode.to_markdown(<<"[b]a", 248, "[/b]">>) == "<strong>a\uFFFD</strong>"
+  end
 end

@@ -1,5 +1,6 @@
 # `:ldap` tests need a directory server (see Firefly.LDAPTestDirectory).
-ExUnit.configure(exclude: [pending: true, ldap: true])
+# `:fuzz` tests are the deep property runs (see "Tests" in the README).
+ExUnit.configure(exclude: [pending: true, ldap: true, fuzz: true])
 
 # Run alone (`cd apps/firefly && mix test`), the domain has no web
 # interface to link to and broadcast through: stand one in.

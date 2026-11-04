@@ -96,10 +96,12 @@ defmodule Firefly.Plugins.Content do
 
   @doc "Sanitizes HTML with the markdown renderer's allow-list."
   def sanitize(html) do
-    MDEx.safe_html(html,
+    html
+    |> MDEx.safe_html(
       sanitize: Firefly.Rendering.Markdown.sanitize_options(),
       escape: [content: false, curly_braces_in_code: false]
     )
+    |> Firefly.Rendering.Markdown.safe_styles()
   end
 
   defp render_posts(html, context, plugins) do
