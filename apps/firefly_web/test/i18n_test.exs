@@ -174,6 +174,62 @@ defmodule FireflyWeb.I18nTest do
       end
     end
 
+    # Text that genuinely reads the same in a language: technical names,
+    # code, and the words a language borrowed from English.
+    @same_everywhere ~w(API CSS HTML JSON YAML OK Firefly GitHub hero)
+    @same_in %{
+      "es" => ~w(Chat Normal Scripts Webhooks),
+      "fr" =>
+        ["Notifications (%{count})", "version %{version}"] ++
+          ~w(Actions Badges Communication Configuration Description Forum Maintenance Messages
+             Normal Notifications Scripts Webhooks),
+      "de" =>
+        ["Link (optional)"] ++
+          ~w(April August Backups Chat Forum Import Moderation Name Normal November Plugins
+             September Status Tags Uploads URLs Webhooks Website),
+      "pt_BR" => ~w(Backups Chat Normal Plugins Posts Scripts Status Tags Webhooks),
+      "ar" => ~w(Webhooks)
+    }
+
+    test "no translation is left fuzzy or copied from the English" do
+      for domain <- ["default", "errors", "times"], locale <- Locale.locales() -- ["en"] do
+        path = Path.join([@gettext, locale, "LC_MESSAGES", "#{domain}.po"])
+        same = @same_everywhere ++ Map.get(@same_in, locale, [])
+
+        fuzzy = for {msgid, flags, _} <- entries(path), "fuzzy" in flags, do: msgid
+
+        copied =
+          for {msgid, _, msgstr} <- entries(path),
+              msgstr == msgid,
+              msgid not in same,
+              not String.starts_with?(msgid, ["http://", "https://"]),
+              do: msgid
+
+        assert fuzzy == [], "#{locale}/#{domain}.po has fuzzy messages: #{inspect(fuzzy)}"
+
+        assert copied == [],
+               "#{locale}/#{domain}.po has English left as the translation " <>
+                 "(translate it, or list it here if it really reads the same): #{inspect(copied)}"
+      end
+    end
+
+    test "translations keep the message's %{...} placeholders" do
+      placeholders = &(~r/%\{\w+\}/ |> Regex.scan(&1) |> List.flatten() |> Enum.sort())
+
+      for domain <- ["default", "errors", "times"], locale <- Locale.locales() -- ["en"] do
+        path = Path.join([@gettext, locale, "LC_MESSAGES", "#{domain}.po"])
+
+        # Plurals are left out: a singular form may spell out the 1.
+        broken =
+          for {msgid, _, msgstr} <- entries(path, plurals: false),
+              msgstr != "",
+              placeholders.(msgstr) != placeholders.(msgid),
+              do: {msgid, msgstr}
+
+        assert broken == [], "#{locale}/#{domain}.po changes placeholders: #{inspect(broken)}"
+      end
+    end
+
     test "the partial translations cover the navigation at least" do
       path = Path.join([@gettext, "ar", "LC_MESSAGES", "default.po"])
       translated = Map.new(translations(path))
@@ -184,18 +240,37 @@ defmodule FireflyWeb.I18nTest do
     end
 
     # msgid to its msgstr (the first plural form for plurals).
-    defp translations(path) do
+    defp translations(path), do: path |> File.read!() |> translations_in()
+
+    defp msgids(path), do: path |> translations() |> MapSet.new(&elem(&1, 0))
+
+    # Each message as {msgid, flags, msgstr} (the first plural form for plurals).
+    defp entries(path, opts \\ []) do
+      plurals? = Keyword.get(opts, :plurals, true)
+
+      for block <- path |> File.read!() |> String.split("\n\n"),
+          plurals? or not String.contains?(block, "\nmsgid_plural "),
+          {msgid, msgstr} <- translations_in(block) do
+        flags =
+          case Regex.run(~r/^#,(.*)$/m, block) do
+            [_, flags] -> flags |> String.split(",") |> Enum.map(&String.trim/1)
+            nil -> []
+          end
+
+        {msgid, flags, msgstr}
+      end
+    end
+
+    defp translations_in(block) do
       for [_, msgid, msgstr] <-
             Regex.scan(
               ~r/^msgid "((?:[^"\\]|\\.)*)"\n(?:msgid_plural "(?:[^"\\]|\\.)*"\n)?msgstr(?:\[0\])? "((?:[^"\\]|\\.)*)"/m,
-              File.read!(path)
+              block
             ),
           msgid != "" do
         {msgid, msgstr}
       end
     end
-
-    defp msgids(path), do: path |> translations() |> MapSet.new(&elem(&1, 0))
   end
 
   describe "the localized templates" do
