@@ -14,7 +14,9 @@ defmodule Firefly.Moderation do
     * `Firefly.Moderation.BulkActions` - acting on many threads at once
     * `Firefly.Moderation.WatchedWords` - words that block, censor, queue,
       flag, replace, tag, silence or link
-    * the schemas `Flag`, `StaffAction`, `ThreadTimer` and `WatchedWord`
+    * `Firefly.Moderation.Akismet` - spam checks of new content with Akismet
+    * the schemas `Flag`, `StaffAction`, `ThreadTimer`, `WatchedWord` and
+      `AkismetCheck`
 
   Its other modules (`SpamGuard`) are internal.
   """
@@ -35,6 +37,8 @@ defmodule Firefly.Moderation do
       ThreadTimer,
       SpamGuard,
       WatchedWords,
-      WatchedWord
+      WatchedWord,
+      Akismet,
+      AkismetCheck
     ]
 end

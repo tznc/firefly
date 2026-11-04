@@ -655,6 +655,7 @@ defmodule Firefly.Chat do
       broadcast(channel.id, {:message_created, message})
       Enum.each(refollowed, &user_changed/1)
       announce("chat_message_created", message, channel, user, mentioned)
+      :ok = Firefly.Moderation.Akismet.chat_sent(message, user)
       {:ok, message}
     end
   end
@@ -1235,9 +1236,12 @@ defmodule Firefly.Chat do
     end
   end
 
-  @doc "Flags a message as the system (a watched word), `note` saying why."
-  def flag_by_system(%Message{} = message, note) do
-    {:ok, flag} = insert_flag(%Flag{message_id: message.id}, %{reason: "other", note: note})
+  @doc """
+  Flags a message as the system (a watched word, Akismet), `note` saying
+  why, `reason` `"other"` unless given.
+  """
+  def flag_by_system(%Message{} = message, note, reason \\ "other") do
+    {:ok, flag} = insert_flag(%Flag{message_id: message.id}, %{reason: reason, note: note})
     Review.changed()
     {:ok, flag}
   end
@@ -1281,6 +1285,12 @@ defmodule Firefly.Chat do
         {:ok, _} = updated(settled)
         emit_deleted(settled, message.channel, admin)
       end
+
+      :ok =
+        Firefly.Moderation.Akismet.chat_reviewed(
+          message.id,
+          if(decision == :agree, do: :spam, else: :ham)
+        )
 
       Review.changed()
       {:ok, settled}

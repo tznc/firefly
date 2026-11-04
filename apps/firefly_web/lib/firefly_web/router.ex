@@ -22,6 +22,7 @@ defmodule FireflyWeb.Router do
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
     plug(FireflyWeb.Plugs.CurrentUser)
+    plug(FireflyWeb.Plugs.AkismetClient)
     plug(FireflyWeb.Plugs.Analytics, :browser)
   end
 
@@ -35,6 +36,7 @@ defmodule FireflyWeb.Router do
     # The API authenticates with bearer tokens (not cookies), so any origin may call it.
     plug(CORSPlug)
     plug(FireflyWeb.Plugs.ApiCurrentUser)
+    plug(FireflyWeb.Plugs.AkismetClient)
     plug(FireflyWeb.Plugs.Analytics, :api)
     plug(FireflyWeb.Plugs.ReadOnly)
   end

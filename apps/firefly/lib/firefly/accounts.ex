@@ -219,9 +219,16 @@ defmodule Firefly.Accounts do
 
   """
   def update_user(%User{} = user, attrs) do
-    user
-    |> User.update_changeset(attrs)
-    |> Repo.update()
+    changeset = User.update_changeset(user, attrs)
+
+    with {:ok, updated} <- Repo.update(changeset) do
+      # What others read about the member: checked for spam (see
+      # Firefly.Moderation.Akismet).
+      if Enum.any?([:bio, :website, :location], &Map.has_key?(changeset.changes, &1)),
+        do: :ok = Firefly.Moderation.Akismet.profile_updated(updated)
+
+      {:ok, updated}
+    end
   end
 
   @doc "Users with a password whose email matches (case-insensitively)."

@@ -103,7 +103,10 @@ defmodule FireflyWeb.StaffLive.Log do
     "ai_provider.delete" => "Deleted AI provider",
     "ai_feature.update" => "Changed AI feature",
     "ai.flag" => "AI triage flagged post",
-    "ai.hide" => "AI triage hid post"
+    "ai.hide" => "AI triage hid post",
+    "akismet.spam" => "Akismet caught spam",
+    "akismet.confirm" => "Confirmed Akismet spam",
+    "akismet.not_spam" => "Marked not spam (Akismet)"
   }
 
   @impl true

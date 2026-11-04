@@ -94,6 +94,7 @@ defmodule Firefly.Messaging do
 
     with {:ok, {conversation, message}} <- result do
       :ok = Notifications.message_created(message)
+      :ok = Firefly.Moderation.Akismet.message_sent(message, sender)
       {:ok, conversation}
     end
   end
@@ -168,6 +169,7 @@ defmodule Firefly.Messaging do
 
         mark_read(conversation, user)
         :ok = Notifications.message_created(message)
+        :ok = Firefly.Moderation.Akismet.message_sent(message, user)
         broadcast(conversation, {:message_created, message})
         {:ok, message}
     end
