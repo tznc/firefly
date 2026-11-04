@@ -48,7 +48,10 @@ defmodule Firefly.PackagesTest do
   defp lying_zip(size) do
     zip = theme_zip(%{}, %{"theme.css" => "a{}", "big.bin" => :binary.copy(<<0>>, size)})
 
-    for {signature, offset} <- [{<<0x50, 0x4B, 0x03, 0x04>>, 22}, {<<0x50, 0x4B, 0x01, 0x02>>, 24}],
+    for {signature, offset} <- [
+          {<<0x50, 0x4B, 0x03, 0x04>>, 22},
+          {<<0x50, 0x4B, 0x01, 0x02>>, 24}
+        ],
         {at, _} <- :binary.matches(zip, signature),
         reduce: zip do
       zip ->
@@ -387,7 +390,8 @@ defmodule Firefly.PackagesTest do
       for {font, css} <- [
             {"(", ~s|--ocean-font: "(";|},
             {"a) b", ~s|--ocean-font: "a) b";|},
-            {"x\f;} body{display:none} :root{", ~s|--ocean-font: "x\\0C ;} body{display:none} :root{";|},
+            {"x\f;} body{display:none} :root{",
+             ~s|--ocean-font: "x\\0C ;} body{display:none} :root{";|},
             {"(\u0301", ~s|--ocean-font: "(\u0301";|},
             {"Inter (sans)", "--ocean-font: Inter (sans);"}
           ] do
