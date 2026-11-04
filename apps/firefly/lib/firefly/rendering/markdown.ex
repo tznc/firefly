@@ -120,12 +120,11 @@ defmodule Firefly.Rendering.Markdown do
   """
   def safe_styles(html) do
     if String.contains?(html, " style=\""),
-      do:
-        Regex.replace(~r/ style="([^"]*)"/, html, fn whole, style ->
-          if style =~ @bbcode_style, do: whole, else: ""
-        end),
+      do: Regex.replace(~r/ style="([^"]*)"/, html, &bbcode_style/2),
       else: html
   end
+
+  defp bbcode_style(attribute, style), do: if(style =~ @bbcode_style, do: attribute, else: "")
 
   @spec render(String.t() | nil, Mentions.refs() | term, keyword) :: String.t()
   def render(body, refs_or_viewer \\ nil, opts \\ [])
