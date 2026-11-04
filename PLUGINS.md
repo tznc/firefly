@@ -9,7 +9,7 @@ plugins through it. There are two kinds:
 |---|---|---|
 | Written in | Elixir (or Elixir wrapping a Rust NIF) | JavaScript |
 | Runs | natively, in the BEAM | sandboxed: QuickJS compiled to WebAssembly, on wasmtime (Wasmex) |
-| Installed by | listing the module in config | staff uploading a `.zip` at `/staff/plugins` |
+| Installed by | listing the module in config | staff installing its package at `/staff/packages` (an upload, a URL or a GitHub repository) |
 | Trust | trusted; permissions granted without a prompt | staff see the requested permissions before installing |
 | Implementation | the module itself (`use Firefly.Plugin`) | `FireflyPlugins.Sandboxed`, one module serving every bundle |
 
@@ -17,8 +17,13 @@ Both kinds appear at `/staff/plugins`, can be enabled and disabled, have
 settings, statistics and an error log, can depend on each other, and are
 subject to the same time limits, permission checks and circuit breaker.
 
-There is no plugin registry yet. The manifest's `source` (`"upload"` or
-`"core"`) and the reserved `registry` key leave room for Firefly Cloud's.
+Uploaded plugins ship as packages (see "Uploaded plugins" below and
+"Packages" in the README): admins install, upgrade and uninstall them at
+`/staff/packages`, uploaded or fetched from a URL or a GitHub repository,
+with versions and dependencies checked across every package. The list is
+per site; there is no shared catalog yet. The manifest's `source`
+(`"upload"` or `"core"`) and the reserved `registry` key leave room for
+Firefly Cloud's.
 
 ## Core plugins
 
@@ -467,7 +472,7 @@ backed by `handle_widget` that counts each member's views in their own
 storage, a page and a frame app, a staff section, an
 endpoint (`GET /api/plugins/hello/stats`), events, a scheduled job,
 moderation driven by its settings, a flag hook, a public custom field and
-an export. Zip the folder and upload it at `/staff/plugins`.
+an export. Zip the folder and upload it at `/staff/packages`.
 
 ## Storage and custom fields
 
