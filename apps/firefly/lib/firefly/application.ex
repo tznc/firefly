@@ -37,6 +37,8 @@ defmodule Firefly.Application do
       {Task.Supervisor, name: Firefly.AI.TaskSupervisor},
       # Checks new content with Akismet in the background
       {Task.Supervisor, name: Firefly.Moderation.Akismet.TaskSupervisor},
+      # Runs readiness probes' database checks, bounded by a timeout
+      {Task.Supervisor, name: Firefly.Health.TaskSupervisor},
       # Posts as plugins transformed them
       Firefly.Plugins.Content.cache_spec(),
       # Counts traffic in memory and writes it in batches

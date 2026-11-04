@@ -134,6 +134,12 @@ if config_env() != :test do
     region: System.get_env("FIREFLY_AWS_S3_REGION")
 end
 
+# How long a shutting-down node fails readiness probes before the endpoint
+# stops listening (see FireflyWeb.Draining).
+if delay = System.get_env("FIREFLY_DRAIN_DELAY_MS") do
+  config :firefly_web, FireflyWeb.Draining, delay: String.to_integer(delay)
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("FIREFLY_DATABASE_URL") ||

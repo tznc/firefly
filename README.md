@@ -62,7 +62,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -112,6 +112,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
 | `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
+| `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
 
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see
@@ -143,6 +144,47 @@ The image needs at least `FIREFLY_DATABASE_URL` and `FIREFLY_SECRET_KEY_BASE` (g
 newer with pgvector works (a managed one too); the `supabase/postgres` image
 above is the recommended one to run yourself. The other settings (GitHub
 login, email, S3 uploads) are read from the environment in `config/runtime.exs`.
+
+The image's `HEALTHCHECK` runs `/app/bin/healthcheck`, which asks the server
+for `GET /health` over bash's `/dev/tcp`: the image has no curl, and
+`bin/firefly rpc` would start a second VM on every check. Give it a path to
+check readiness instead (`/app/bin/healthcheck /ready`), e.g. as a compose
+`healthcheck` that `depends_on: condition: service_healthy` waits for.
+
+### Monitoring
+
+Two unauthenticated JSON endpoints answer probes. They are handled at the
+top of the endpoint, before sessions, CSRF, analytics, rate limits, the
+locale and theme, and aren't logged per request:
+
+| Endpoint | Answers |
+| --- | --- |
+| `GET /health` | Liveness: `200 {"status": "ok"}` while the VM runs and serves HTTP. No database call, so a database outage doesn't get every node restarted |
+| `GET /ready` | Readiness: `200` when the node should get traffic, else `503` with `"failing"` naming the failed checks. Checks: the database answers `SELECT 1` within 2 seconds, no migration is pending, and the node isn't shutting down (draining). Read-only mode and whether the plugin sandbox is available are reported in `"checks"` but never fail it |
+
+```json
+{"status": "unavailable", "failing": ["migrations"],
+ "checks": {"database": {"ok": true}, "migrations": {"ok": false, "pending": [20261101000000]},
+            "draining": {"ok": true}, "read_only": {"ok": true, "enabled": false},
+            "plugin_sandbox": {"ok": true, "available": true}}}
+```
+
+Production redirects HTTP to HTTPS (`force_ssl`), except for these two paths,
+so a kubelet or load balancer can probe a pod's port over plain HTTP from
+inside the cluster; no `Host` header check applies to them. On `SIGTERM`
+the node flags itself as draining (`/ready` answers `503`), waits
+`FIREFLY_DRAIN_DELAY_MS`, then stops accepting connections. A Kubernetes
+example:
+
+```yaml
+livenessProbe:
+  httpGet: {path: /health, port: 4000}
+  periodSeconds: 10
+readinessProbe:
+  httpGet: {path: /ready, port: 4000}
+  periodSeconds: 5
+  failureThreshold: 2
+```
 
 ### API
 

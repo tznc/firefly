@@ -49,7 +49,13 @@ defmodule Firefly.BoundariesTest do
   test "every context is a boundary" do
     boundaries = boundaries()
 
-    for context <- [Firefly.Packages, Firefly.Plugins, Firefly.Plugin, Firefly.Themes] do
+    for context <- [
+          Firefly.Health,
+          Firefly.Packages,
+          Firefly.Plugins,
+          Firefly.Plugin,
+          Firefly.Themes
+        ] do
       assert Map.has_key?(boundaries, context), "#{inspect(context)} isn't a boundary"
     end
 

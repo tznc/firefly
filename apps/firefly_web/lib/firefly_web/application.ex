@@ -9,7 +9,9 @@ defmodule FireflyWeb.Application do
       # Who's in which chat channel (see FireflyWeb.ChatLive)
       FireflyWeb.Presence,
       # Start the endpoint when the application starts
-      FireflyWeb.Endpoint
+      FireflyWeb.Endpoint,
+      # Fails readiness probes on shutdown, before the endpoint stops
+      FireflyWeb.Draining
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: FireflyWeb.Supervisor)
