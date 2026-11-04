@@ -56,6 +56,14 @@ defmodule Firefly.ThemesTest do
   end
 
   describe "editing and compiling" do
+    # Found by Firefly.ThemesPropertyTest: taking "*/" out of the name once
+    # turned "**//" into a new "*/", ending the stylesheet's first comment.
+    test "the name can't end the stylesheet's header comment", %{admin: admin} do
+      theme = theme(admin, %{"name" => "**//body{display:none}/*"})
+      [header | _] = String.split(theme.compiled_css, "\n")
+      assert header == "/* ** //body{display:none}/* v1 */"
+    end
+
     test "compiles colors, CSS and assets into a versioned stylesheet", %{admin: admin} do
       theme =
         theme(admin, %{

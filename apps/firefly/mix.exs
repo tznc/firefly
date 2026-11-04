@@ -86,7 +86,9 @@ defmodule Firefly.MixProject do
       # Embeddings for semantic search, in a pgvector column.
       {:pgvector, "~> 0.4.2"},
       # Tests fake AI providers with a local HTTP server (see Firefly.AI.FakeProvider).
-      {:bandit, "~> 1.14", only: :test}
+      {:bandit, "~> 1.14", only: :test},
+      # Property-based and fuzz tests (see "Tests" in the README).
+      {:stream_data, "~> 1.1", only: :test}
     ]
   end
 
