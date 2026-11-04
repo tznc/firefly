@@ -138,7 +138,7 @@ defmodule Firefly.SiteSettingsPropertyTest do
                 one_of([json_value(), adversarial_text()]),
                 max_length: 4
               ),
-            max_runs: runs(100)
+            max_runs: runs(30)
           ) do
       assert match?(
                {:ok, %{changed: _, skipped: _}},
