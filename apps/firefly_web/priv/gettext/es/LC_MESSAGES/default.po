@@ -733,1921 +733,1921 @@ msgid "Got it"
 msgstr "Entendido"
 
 #: lib/firefly_web/live/staff_live/user.ex:342
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{posts} posts in %{threads} threads they started"
-msgstr "%{posts} posts in %{threads} threads they started"
+msgstr "%{posts} publicaciones en %{threads} temas que inició"
 
 #: lib/firefly_web/live/staff_live/categories.ex:121
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "1 member got the default."
 msgid_plural "%{count} members got the default."
-msgstr[0] "1 member got the default."
-msgstr[1] "%{count} members got the default."
+msgstr[0] "1 miembro recibió el valor predeterminado."
+msgstr[1] "%{count} miembros recibieron el valor predeterminado."
 
 #: lib/firefly_web/live/staff_live/user.ex:206
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "A password reset link was emailed to them."
-msgstr "A password reset link was emailed to them."
+msgstr "Se le envió por correo un enlace para restablecer la contraseña."
 
 #: lib/firefly_web/live/staff_live/user.ex:112
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Account saved."
-msgstr "Account saved."
+msgstr "Cuenta guardada."
 
 #: lib/firefly_web/live/staff_live/user.ex:613
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Account to merge into"
-msgstr "Account to merge into"
+msgstr "Cuenta con la que fusionar"
 
 #: lib/firefly_web/live/staff_live/screening.ex:129
 #: lib/firefly_web/live/staff_live/users.ex:134
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Actions"
-msgstr "Actions"
+msgstr "Acciones"
 
 #: lib/firefly_web/live/staff_live/users.ex:80
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Active"
-msgstr "Active"
+msgstr "Activos"
 
 #: lib/firefly_web/live/staff_live/screening.ex:117
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add"
-msgstr "Add"
+msgstr "Añadir"
 
 #: lib/firefly_web/live/staff_live/groups.ex:255
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add a member to %{name}"
-msgstr "Add a member to %{name}"
+msgstr "Añadir un miembro a %{name}"
 
 #: lib/firefly_web/live/staff_live/groups.ex:258
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add member"
-msgstr "Add member"
+msgstr "Añadir miembro"
 
 #: lib/firefly_web/live/staff_live/user.ex:452
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add to a group"
-msgstr "Add to a group"
+msgstr "Añadir a un grupo"
 
 #: lib/firefly_web/live/staff_live/user.ex:454
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add to group"
-msgstr "Add to group"
+msgstr "Añadir al grupo"
 
 #: lib/firefly_web/live/staff_live/groups.ex:81
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Added @%{username} to %{name}."
-msgstr "Added @%{username} to %{name}."
+msgstr "Se añadió a @%{username} a %{name}."
 
 #: lib/firefly_web/live/staff_live/screening.ex:128
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Added by"
-msgstr "Added by"
+msgstr "Añadido por"
 
 #: lib/firefly_web/live/staff_live/user.ex:190
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Added to %{group}."
-msgstr "Added to %{group}."
+msgstr "Añadido a %{group}."
 
 #: lib/firefly_web/live/staff_live/user.ex:510
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Address"
-msgstr "Address"
+msgstr "Dirección"
 
 #: lib/firefly_web/live/staff_live/emails.ex:143
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Address or subject"
-msgstr "Address or subject"
+msgstr "Dirección o asunto"
 
 #: lib/firefly_web/live/staff_live/screening.ex:84
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Addresses or ranges (like 203.0.113.0/24) that can't sign up or post."
-msgstr "Addresses or ranges (like 203.0.113.0/24) that can't sign up or post."
+msgstr "Direcciones o rangos (como 203.0.113.0/24) que no pueden registrarse ni publicar."
 
 #: lib/firefly_web/live/staff_live/screening.ex:79
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Addresses that can't sign up. Use * for any run of characters, as in *@spam.example for a whole domain."
-msgstr "Addresses that can't sign up. Use * for any run of characters, as in *@spam.example for a whole domain."
+msgstr "Direcciones que no pueden registrarse. Usa * para cualquier secuencia de caracteres, como en *@spam.example para un dominio entero."
 
 #: lib/firefly_web/staff_nav.ex:48
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Admin home"
-msgstr "Admin home"
+msgstr "Inicio de administración"
 
 #: lib/firefly_web/components/layouts.ex:404
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Admin navigation"
-msgstr "Admin navigation"
+msgstr "Navegación de administración"
 
 #: lib/firefly_web/live/staff_live/settings.ex:268
 #: lib/firefly_web/live/staff_live/users.ex:79
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "All"
-msgstr "All"
+msgstr "Todos"
 
 #: lib/firefly_web/live/staff_live/user.ex:526
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Also seen at these addresses:"
-msgstr "Also seen at these addresses:"
+msgstr "También visto en estas direcciones:"
 
 #: lib/firefly_web/live/staff_live/user.ex:597
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Anonymize"
-msgstr "Anonymize"
+msgstr "Anonimizar"
 
 #: lib/firefly_web/live/staff_live/user.ex:594
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Anonymize this account? This can't be undone."
-msgstr "Anonymize this account? This can't be undone."
+msgstr "¿Anonimizar esta cuenta? No se puede deshacer."
 
 #: lib/firefly_web/live/staff_live/user.ex:589
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Anonymizing keeps their posts under a placeholder. Deleting also deletes the threads they started and their posts. Merging moves everything they own to another account and removes this one."
-msgstr "Anonymizing keeps their posts under a placeholder. Deleting also deletes the threads they started and their posts. Merging moves everything they own to another account and removes this one."
+msgstr "Anonimizar conserva sus publicaciones bajo un marcador. Eliminar también borra los temas que inició y sus publicaciones. Fusionar mueve todo lo suyo a otra cuenta y elimina esta."
 
 #: lib/firefly_web/live/staff_live/emails.ex:146
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Any status"
-msgstr "Any status"
+msgstr "Cualquier estado"
 
 #: lib/firefly_web/live/staff_live/emails.ex:152
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Any template"
-msgstr "Any template"
+msgstr "Cualquier plantilla"
 
 #: lib/firefly_web/live/staff_live/groups.ex:151
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Anyone can ask; owners approve"
-msgstr "Anyone can ask; owners approve"
+msgstr "Cualquiera puede pedirlo; los propietarios aprueban"
 
 #: lib/firefly_web/live/staff_live/groups.ex:150
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Anyone can join"
-msgstr "Anyone can join"
+msgstr "Cualquiera puede unirse"
 
 #: lib/firefly_web/live/staff_live/user.ex:498
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Apply penalty"
-msgstr "Apply penalty"
+msgstr "Aplicar sanción"
 
 #: lib/firefly_web/live/staff_live/categories.ex:263
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Apply to existing members"
-msgstr "Apply to existing members"
+msgstr "Aplicar a los miembros actuales"
 
 #: lib/firefly_web/live/staff_live/user.ex:498
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Applying..."
-msgstr "Applying..."
+msgstr "Aplicando..."
 
 #: lib/firefly_web/live/staff_live/user.ex:317
 #: lib/firefly_web/live/staff_live/users.ex:166
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Approve"
-msgstr "Approve"
+msgstr "Aprobar"
 
 #: lib/firefly_web/live/staff_live/users.ex:62
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Approved @%{username}."
-msgstr "Approved @%{username}."
+msgstr "Se aprobó a @%{username}."
 
 #: lib/firefly_web/live/staff_live/user.ex:122
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Approved. They can post now."
-msgstr "Approved. They can post now."
+msgstr "Aprobado. Ya puede publicar."
 
 #: lib/firefly_web/components/layouts.ex:409
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Back to the forum"
-msgstr "Back to the forum"
+msgstr "Volver al foro"
 
 #: lib/firefly_web/live/staff_live/screening.ex:98
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Block spam at the door: sign-ups and posts that match are refused and logged."
-msgstr "Block spam at the door: sign-ups and posts that match are refused and logged."
+msgstr "Frena el spam en la entrada: los registros y publicaciones que coincidan se rechazan y quedan registrados."
 
 #: lib/firefly_web/live/staff_live/screening.ex:126
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Blocked"
-msgstr "Blocked"
+msgstr "Bloqueados"
 
 #: lib/firefly_web/live/staff_live/groups.ex:228
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Can read"
-msgstr "Can read"
+msgstr "Puede leer"
 
 #: lib/firefly_web/live/staff_live/categories.ex:130
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Category deleted."
-msgstr "Category deleted."
+msgstr "Categoría eliminada."
 
 #: lib/firefly_web/staff_nav.ex:151
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Communication"
-msgstr "Communication"
+msgstr "Comunicación"
 
 #: lib/firefly_web/staff_nav.ex:168
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Configuration"
-msgstr "Configuration"
+msgstr "Configuración"
 
 #: lib/firefly_web/staff_nav.ex:95
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Content"
-msgstr "Content"
+msgstr "Contenido"
 
 #: lib/firefly_web/live/staff_live/groups.ex:173
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Create group"
-msgstr "Create group"
+msgstr "Crear grupo"
 
 #: lib/firefly_web/live/staff_live/categories.ex:240
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Defaults for members"
-msgstr "Defaults for members"
+msgstr "Valores predeterminados para los miembros"
 
 #: lib/firefly_web/live/staff_live/categories.ex:208
 #: lib/firefly_web/live/staff_live/groups.ex:208
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete"
-msgstr "Delete"
+msgstr "Eliminar"
 
 #: lib/firefly_web/live/staff_live/groups.ex:205
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete %{name}? Its members leave it."
-msgstr "Delete %{name}? Its members leave it."
+msgstr "¿Eliminar %{name}? Sus miembros dejarán de pertenecer a él."
 
 #: lib/firefly_web/live/staff_live/categories.ex:205
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete %{title}?"
-msgstr "Delete %{title}?"
+msgstr "¿Eliminar %{title}?"
 
 #: lib/firefly_web/live/staff_live/user.ex:567
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete notification"
-msgstr "Delete notification"
+msgstr "Eliminar notificación"
 
 #: lib/firefly_web/live/staff_live/user.ex:601
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete this account with its threads and posts? This can't be undone."
-msgstr "Delete this account with its threads and posts? This can't be undone."
+msgstr "¿Eliminar esta cuenta con sus temas y publicaciones? No se puede deshacer."
 
 #: lib/firefly_web/live/staff_live/user.ex:604
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete with posts"
-msgstr "Delete with posts"
+msgstr "Eliminar con publicaciones"
 
 #: lib/firefly_web/live/staff_live/groups.ex:139
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Deleted %{name}."
-msgstr "Deleted %{name}."
+msgstr "Se eliminó %{name}."
 
 #: lib/firefly_web/live/staff_live/screening.ex:87
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Domains that can't be linked in posts and messages (their subdomains too)."
-msgstr "Domains that can't be linked in posts and messages (their subdomains too)."
+msgstr "Dominios que no se pueden enlazar en publicaciones y mensajes (ni sus subdominios)."
 
 #: lib/firefly_web/live/staff_live/user.ex:494
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Duration"
-msgstr "Duration"
+msgstr "Duración"
 
 #: lib/firefly_web/live/staff_live/categories.ex:201
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Edit"
-msgstr "Edit"
+msgstr "Editar"
 
 #: lib/firefly_web/live/staff_live/emails.ex:225
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email preview"
-msgstr "Email preview"
+msgstr "Vista previa del correo"
 
 #: lib/firefly_web/live/staff_live/user.ex:373
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Email this member a password reset link?"
-msgstr "Email this member a password reset link?"
+msgstr "¿Enviar a este miembro un enlace para restablecer la contraseña?"
 
 #: lib/firefly_web/live/staff_live/emails.ex:23
 #: lib/firefly_web/live/staff_live/emails.ex:117
 #: lib/firefly_web/live/staff_live/screening.ex:73
 #: lib/firefly_web/staff_nav.ex:155
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Emails"
-msgstr "Emails"
+msgstr "Correos"
 
 #: lib/firefly_web/live/staff_live/index.ex:141
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Emails failed today"
-msgstr "Emails failed today"
+msgstr "Correos fallidos hoy"
 
 #: lib/firefly_web/live/staff_live/groups.ex:146
 #: lib/firefly_web/live/staff_live/groups.ex:155
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Everyone"
-msgstr "Everyone"
+msgstr "Todos"
 
 #: lib/firefly_web/live/staff_live/index.ex:82
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Everything staff run the forum with, in one place."
-msgstr "Everything staff run the forum with, in one place."
+msgstr "Todo lo que el equipo usa para gestionar el foro, en un solo lugar."
 
 #: lib/firefly_web/live/staff_live/users.ex:92
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Find an account to manage it. Every change is recorded in the staff log."
-msgstr "Find an account to manage it. Every change is recorded in the staff log."
+msgstr "Busca una cuenta para gestionarla. Cada cambio queda en el registro del equipo."
 
 #: lib/firefly_web/live/staff_live/user.ex:511
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "First seen"
-msgstr "First seen"
+msgstr "Visto por primera vez"
 
 #: lib/firefly_web/live/staff_live/categories.ex:260
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Give this level to every member who hasn't chosen one for this category?"
-msgstr "Give this level to every member who hasn't chosen one for this category?"
+msgstr "¿Dar este nivel a cada miembro que no haya elegido uno para esta categoría?"
 
 #: lib/firefly_web/live/staff_live/user.ex:415
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Grant admin"
-msgstr "Grant admin"
+msgstr "Hacer administrador"
 
 #: lib/firefly_web/live/staff_live/user.ex:415
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Grant moderator"
-msgstr "Grant moderator"
+msgstr "Hacer moderador"
 
 #: lib/firefly_web/live/staff_live/groups.ex:45
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Group %{name} created."
-msgstr "Group %{name} created."
+msgstr "Grupo %{name} creado."
 
 #: lib/firefly_web/live/staff_live/user.ex:451
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Group name"
-msgstr "Group name"
+msgstr "Nombre del grupo"
 
 #: lib/firefly_web/live/staff_live/groups.ex:189
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Group page"
-msgstr "Group page"
+msgstr "Página del grupo"
 
 #: lib/firefly_web/live/staff_live/screening.ex:74
 #: lib/firefly_web/live/staff_live/user.ex:505
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "IP addresses"
-msgstr "IP addresses"
+msgstr "Direcciones IP"
 
 #: lib/firefly_web/live/staff_live/user.ex:308
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Impersonate"
-msgstr "Impersonate"
+msgstr "Suplantar"
 
 #: lib/firefly_web/live/staff_live/index.ex:135
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "In the review queue"
-msgstr "In the review queue"
+msgstr "En la cola de revisión"
 
 #: lib/firefly_web/live/staff_live/categories.ex:137
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "It couldn't be deleted: move its threads and subcategories out first."
-msgstr "It couldn't be deleted: move its threads and subcategories out first."
+msgstr "No se pudo eliminar: primero saca de ella sus temas y subcategorías."
 
 #: lib/firefly_web/live/staff_live/emails.ex:98
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "It couldn't be sent: see the log for why."
-msgstr "It couldn't be sent: see the log for why."
+msgstr "No se pudo enviar: consulta el registro para ver por qué."
 
 #: lib/firefly_web/live/staff_live/groups.ex:147
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Its members"
-msgstr "Its members"
+msgstr "Sus miembros"
 
 #: lib/firefly_web/live/staff_live/user.ex:334
 #: lib/firefly_web/live/staff_live/users.ex:133
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Joined"
-msgstr "Joined"
+msgstr "Se unió"
 
 #: lib/firefly_web/live/staff_live/groups.ex:220
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Joining"
-msgstr "Joining"
+msgstr "Cómo unirse"
 
 #: lib/firefly_web/live/staff_live/user.ex:229
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Key revoked."
-msgstr "Key revoked."
+msgstr "Clave revocada."
 
 #: lib/firefly_web/live/staff_live/screening.ex:127
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Last blocked"
-msgstr "Last blocked"
+msgstr "Último bloqueo"
 
 #: lib/firefly_web/live/staff_live/user.ex:336
 #: lib/firefly_web/live/staff_live/user.ex:512
 #: lib/firefly_web/live/staff_live/users.ex:132
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Last seen"
-msgstr "Last seen"
+msgstr "Visto por última vez"
 
 #: lib/firefly_web/live/staff_live/user.ex:470
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Lift silence"
-msgstr "Lift silence"
+msgstr "Quitar silencio"
 
 #: lib/firefly_web/live/staff_live/user.ex:477
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Lift suspension"
-msgstr "Lift suspension"
+msgstr "Levantar suspensión"
 
 #: lib/firefly_web/live/staff_live/user.ex:163
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Lifted."
-msgstr "Lifted."
+msgstr "Levantada."
 
 #: lib/firefly_web/live/staff_live/user.ex:576
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Link (optional)"
-msgstr "Link (optional)"
+msgstr "Enlace (opcional)"
 
 #: lib/firefly_web/live/staff_live/user.ex:399
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Lock it (the automatic review leaves it alone)"
-msgstr "Lock it (the automatic review leaves it alone)"
+msgstr "Fijarlo (la revisión automática no lo cambia)"
 
 #: lib/firefly_web/live/staff_live/user.ex:343
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Logins"
-msgstr "Logins"
+msgstr "Métodos de acceso"
 
 #: lib/firefly_web/staff_nav.ex:207
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Maintenance"
-msgstr "Maintenance"
+msgstr "Mantenimiento"
 
 #: lib/firefly_web/live/staff_live/user.ex:412
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Make them %{role}?"
-msgstr "Make them %{role}?"
+msgstr "¿Hacerle %{role}?"
 
 #: lib/firefly_web/live/staff_live/user.ex:619
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Merge into"
-msgstr "Merge into"
+msgstr "Fusionar con"
 
 #: lib/firefly_web/live/staff_live/user.ex:617
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Merge this account into that one? This can't be undone."
-msgstr "Merge this account into that one? This can't be undone."
+msgstr "¿Fusionar esta cuenta con esa? No se puede deshacer."
 
 #: lib/firefly_web/live/staff_live/user.ex:260
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Merged into @%{username}."
-msgstr "Merged into @%{username}."
+msgstr "Fusionada con @%{username}."
 
 #: lib/firefly_web/live/staff_live/user.ex:578
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Message (optional)"
-msgstr "Message (optional)"
+msgstr "Mensaje (opcional)"
 
 #: lib/firefly_web/staff_nav.ex:120
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Moderation"
-msgstr "Moderation"
+msgstr "Moderación"
 
 #: lib/firefly_web/live/staff_live/categories.ex:180
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Move %{title} down"
-msgstr "Move %{title} down"
+msgstr "Bajar %{title}"
 
 #: lib/firefly_web/live/staff_live/categories.ex:170
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Move %{title} up"
-msgstr "Move %{title} up"
+msgstr "Subir %{title}"
 
 #: lib/firefly_web/live/staff_live/categories.ex:149
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Muted"
-msgstr "Muted"
+msgstr "Silenciado"
 
 #: lib/firefly_web/live/staff_live/groups.ex:172
 #: lib/firefly_web/live/staff_live/theme.ex:238
 #: lib/firefly_web/live/staff_live/themes.ex:144
 #: lib/firefly_web/live/staff_live/user.ex:366
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Name"
-msgstr "Name"
+msgstr "Nombre"
 
 #: lib/firefly_web/live/staff_live/users.ex:81
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New"
-msgstr "New"
+msgstr "Nuevos"
 
 #: lib/firefly_web/live/staff_live/categories.ex:278
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New category"
-msgstr "New category"
+msgstr "Nueva categoría"
 
 #: lib/firefly_web/live/staff_live/groups.ex:172
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New group"
-msgstr "New group"
+msgstr "Nuevo grupo"
 
 #: lib/firefly_web/live/staff_live/categories.ex:242
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New members' notification level"
-msgstr "New members' notification level"
+msgstr "Nivel de notificación de los miembros nuevos"
 
 #: lib/firefly_web/live/staff_live/groups.ex:197
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New name for %{name}"
-msgstr "New name for %{name}"
+msgstr "Nuevo nombre para %{name}"
 
 #: lib/firefly_web/live/staff_live/categories.ex:225
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No access"
-msgstr "No access"
+msgstr "Sin acceso"
 
 #: lib/firefly_web/live/staff_live/categories.ex:282
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No categories yet."
-msgstr "No categories yet."
+msgstr "Aún no hay categorías."
 
 #: lib/firefly_web/live/staff_live/emails.ex:172
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No emails yet."
-msgstr "No emails yet."
+msgstr "Aún no hay correos."
 
 #: lib/firefly_web/live/staff_live/user.ex:185
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No group with that name."
-msgstr "No group with that name."
+msgstr "No hay ningún grupo con ese nombre."
 
 #: lib/firefly_web/live/staff_live/groups.ex:176
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No groups yet."
-msgstr "No groups yet."
+msgstr "Aún no hay grupos."
 
 #: lib/firefly_web/live/staff_live/categories.ex:216
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No groups: everyone can see it and post. Otherwise only these groups (and staff) can see it, each as allowed."
-msgstr "No groups: everyone can see it and post. Otherwise only these groups (and staff) can see it, each as allowed."
+msgstr "Sin grupos: todos pueden verla y publicar. Si no, solo estos grupos (y el equipo) pueden verla, cada uno según lo permitido."
 
 #: lib/firefly_web/live/staff_live/users.ex:139
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No users match."
-msgstr "No users match."
+msgstr "Ningún usuario coincide."
 
 #: lib/firefly_web/live/staff_live/categories.ex:245
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "None (they choose)"
-msgstr "None (they choose)"
+msgstr "Ninguno (lo eligen ellos)"
 
 #: lib/firefly_web/live/staff_live/user.ex:464
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "None in force."
-msgstr "None in force."
+msgstr "Ninguna vigente."
 
 #: lib/firefly_web/live/staff_live/user.ex:506
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "None recorded yet."
-msgstr "None recorded yet."
+msgstr "Aún no hay nada registrado."
 
 #: lib/firefly_web/live/staff_live/user.ex:432
 #: lib/firefly_web/live/staff_live/user.ex:535
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "None."
-msgstr "None."
+msgstr "Ninguno."
 
 #: lib/firefly_web/live/staff_live/categories.ex:148
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Normal"
 msgstr "Normal"
 
 #: lib/firefly_web/live/staff_live/groups.ex:126
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Not renamed: name %{message}"
-msgstr "Not renamed: name %{message}"
+msgstr "No se renombró: el nombre %{message}"
 
 #: lib/firefly_web/live/staff_live/groups.ex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Not saved: %{message}"
-msgstr "Not saved: %{message}"
+msgstr "No se guardó: %{message}"
 
 #: lib/firefly_web/live/staff_live/index.ex:102
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Nothing matches. Try another word."
-msgstr "Nothing matches. Try another word."
+msgstr "Nada coincide. Prueba con otra palabra."
 
 #: lib/firefly_web/live/staff_live/screening.ex:134
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Nothing screened yet."
-msgstr "Nothing screened yet."
+msgstr "Aún no se ha filtrado nada."
 
 #: lib/firefly_web/live/staff_live/user.ex:216
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Notice sent."
-msgstr "Notice sent."
+msgstr "Aviso enviado."
 
 #: lib/firefly_web/live/staff_live/user.ex:222
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Notification deleted."
-msgstr "Notification deleted."
+msgstr "Notificación eliminada."
 
 #: lib/firefly_web/live/staff_live/categories.ex:276
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Order categories, and set who can see and post in each."
-msgstr "Order categories, and set who can see and post in each."
+msgstr "Ordena las categorías y define quién puede ver y publicar en cada una."
 
 #: lib/firefly_web/staff_nav.ex:46
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Overview"
-msgstr "Overview"
+msgstr "Resumen"
 
 #: lib/firefly_web/live/staff_live/groups.ex:154
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Owners"
-msgstr "Owners"
+msgstr "Propietarios"
 
 #: lib/firefly_web/live/staff_live/groups.ex:149
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Owners and staff add members"
-msgstr "Owners and staff add members"
+msgstr "Los propietarios y el equipo añaden miembros"
 
 #: lib/firefly_web/live/staff_live/groups.ex:152
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Owners invite"
-msgstr "Owners invite"
+msgstr "Los propietarios invitan"
 
 #: lib/firefly_web/live/staff_live/user.ex:462
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Penalties"
-msgstr "Penalties"
+msgstr "Sanciones"
 
 #: lib/firefly_web/live/staff_live/user.ex:491
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Penalty"
-msgstr "Penalty"
+msgstr "Sanción"
 
 #: lib/firefly_web/live/staff_live/user.ex:150
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Penalty applied."
-msgstr "Penalty applied."
+msgstr "Sanción aplicada."
 
 #: lib/firefly_web/staff_nav.ex:64
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "People"
-msgstr "People"
+msgstr "Personas"
 
 #: lib/firefly_web/live/staff_live/categories.ex:199
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Permissions and defaults"
-msgstr "Permissions and defaults"
+msgstr "Permisos y valores predeterminados"
 
 #: lib/firefly_web/live/staff_live/categories.ex:109
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Pick a notification level."
-msgstr "Pick a notification level."
+msgstr "Elige un nivel de notificación."
 
 #: lib/firefly_web/live/staff_live/user.ex:141
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Pick a trust level."
-msgstr "Pick a trust level."
+msgstr "Elige un nivel de confianza."
 
 #: lib/firefly_web/live/staff_live/emails.ex:232
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Plain text version"
-msgstr "Plain text version"
+msgstr "Versión en texto plano"
 
 #: lib/firefly_web/live/staff_live/user.ex:341
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Posts"
-msgstr "Posts"
+msgstr "Publicaciones"
 
 #: lib/firefly_web/live/staff_live/user.ex:299
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Public profile"
-msgstr "Public profile"
+msgstr "Perfil público"
 
 #: lib/firefly_web/live/staff_live/categories.ex:144
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Read only"
-msgstr "Read only"
+msgstr "Solo lectura"
 
 #: lib/firefly_web/live/staff_live/user.ex:497
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reason (they see it)"
-msgstr "Reason (they see it)"
+msgstr "Motivo (lo verá)"
 
 #: lib/firefly_web/live/staff_live/user.ex:319
 #: lib/firefly_web/live/staff_live/users.ex:174
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reject"
-msgstr "Reject"
+msgstr "Rechazar"
 
 #: lib/firefly_web/live/staff_live/user.ex:318
 #: lib/firefly_web/live/staff_live/users.ex:171
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reject and delete this account?"
-msgstr "Reject and delete this account?"
+msgstr "¿Rechazar y eliminar esta cuenta?"
 
 #: lib/firefly_web/live/staff_live/users.ex:63
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Rejected and deleted the account."
-msgstr "Rejected and deleted the account."
+msgstr "Se rechazó y eliminó la cuenta."
 
 #: lib/firefly_web/live/staff_live/user.ex:127
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Rejected: the account was deleted."
-msgstr "Rejected: the account was deleted."
+msgstr "Rechazada: la cuenta se eliminó."
 
 #: lib/firefly_web/live/staff_live/screening.ex:151
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove"
-msgstr "Remove"
+msgstr "Quitar"
 
 #: lib/firefly_web/live/staff_live/groups.ex:238
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove %{username}"
-msgstr "Remove %{username}"
+msgstr "Quitar a %{username}"
 
 #: lib/firefly_web/live/staff_live/user.ex:439
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove from %{group}"
-msgstr "Remove from %{group}"
+msgstr "Quitar de %{group}"
 
 #: lib/firefly_web/live/staff_live/user.ex:587
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove or merge"
-msgstr "Remove or merge"
+msgstr "Eliminar o fusionar"
 
 #: lib/firefly_web/live/staff_live/screening.ex:66
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Removed %{value}."
-msgstr "Removed %{value}."
+msgstr "Se quitó %{value}."
 
 #: lib/firefly_web/live/staff_live/groups.ex:100
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Removed @%{username} from %{name}."
-msgstr "Removed @%{username} from %{name}."
+msgstr "Se quitó a @%{username} de %{name}."
 
 #: lib/firefly_web/live/staff_live/user.ex:199
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Removed from %{group}."
-msgstr "Removed from %{group}."
+msgstr "Quitado de %{group}."
 
 #: lib/firefly_web/live/staff_live/groups.ex:199
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Rename"
-msgstr "Rename"
+msgstr "Renombrar"
 
 #: lib/firefly_web/live/staff_live/groups.ex:118
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Renamed %{old} to %{new}."
-msgstr "Renamed %{old} to %{new}."
+msgstr "Se renombró %{old} a %{new}."
 
 #: lib/firefly_web/staff_nav.ex:58
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reports"
-msgstr "Reports"
+msgstr "Informes"
 
 #: lib/firefly_web/live/staff_live/user.ex:354
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reset two-factor"
-msgstr "Reset two-factor"
+msgstr "Restablecer la verificación en dos pasos"
 
 #: lib/firefly_web/live/staff_live/index.ex:100
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Results for “%{q}”"
-msgstr "Results for “%{q}”"
+msgstr "Resultados para “%{q}”"
 
 #: lib/firefly_web/live/staff_live/user.ex:549
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Revoke"
-msgstr "Revoke"
+msgstr "Revocar"
 
 #: lib/firefly_web/live/staff_live/user.ex:425
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Revoke admin"
-msgstr "Revoke admin"
+msgstr "Quitar administrador"
 
 #: lib/firefly_web/live/staff_live/user.ex:425
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Revoke moderator"
-msgstr "Revoke moderator"
+msgstr "Quitar moderador"
 
 #: lib/firefly_web/live/staff_live/user.ex:546
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Revoke this key?"
-msgstr "Revoke this key?"
+msgstr "¿Revocar esta clave?"
 
 #: lib/firefly_web/live/staff_live/user.ex:177
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Roles saved."
-msgstr "Roles saved."
+msgstr "Roles guardados."
 
 #: lib/firefly_web/live/staff_live/user.ex:369
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Save account"
-msgstr "Save account"
+msgstr "Guardar cuenta"
 
 #: lib/firefly_web/live/staff_live/categories.ex:254
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Save default"
-msgstr "Save default"
+msgstr "Guardar predeterminado"
 
 #: lib/firefly_web/live/staff_live/categories.ex:235
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Save permissions"
-msgstr "Save permissions"
+msgstr "Guardar permisos"
 
 #: lib/firefly_web/live/staff_live/groups.ex:224
 #: lib/firefly_web/live/staff_live/settings.ex:398
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Save settings"
-msgstr "Save settings"
+msgstr "Guardar ajustes"
 
 #: lib/firefly_web/live/staff_live/groups.ex:61
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Saved %{name}'s settings."
-msgstr "Saved %{name}'s settings."
+msgstr "Se guardaron los ajustes de %{name}."
 
 #: lib/firefly_web/live/staff_live/categories.ex:105
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Saved %{title}'s default."
-msgstr "Saved %{title}'s default."
+msgstr "Se guardó el valor predeterminado de %{title}."
 
 #: lib/firefly_web/live/staff_live/categories.ex:89
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Saved who can see and post in %{title}."
-msgstr "Saved who can see and post in %{title}."
+msgstr "Se guardó quién puede ver y publicar en %{title}."
 
 #: lib/firefly_web/live/staff_live/screening.ex:118
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Screen it"
-msgstr "Screen it"
+msgstr "Filtrarlo"
 
 #: lib/firefly_web/live/staff_live/screening.ex:55
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Screened %{value}."
-msgstr "Screened %{value}."
+msgstr "Se filtró %{value}."
 
 #: lib/firefly_web/live/staff_live/screening.ex:18
 #: lib/firefly_web/live/staff_live/screening.ex:97
 #: lib/firefly_web/staff_nav.ex:138
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Screening"
-msgstr "Screening"
+msgstr "Filtrado"
 
 #: lib/firefly_web/live/staff_live/index.ex:93
 #: lib/firefly_web/live/staff_live/index.ex:94
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Search admin pages and settings"
-msgstr "Search admin pages and settings"
+msgstr "Buscar páginas y ajustes de administración"
 
 #: lib/firefly_web/live/staff_live/emails.ex:143
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Search emails"
-msgstr "Search emails"
+msgstr "Buscar correos"
 
 #: lib/firefly_web/components/layouts.ex:414
 #: lib/firefly_web/components/layouts.ex:414
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Search the admin"
-msgstr "Search the admin"
+msgstr "Buscar en la administración"
 
 #: lib/firefly_web/live/staff_live/users.ex:120
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Search users"
-msgstr "Search users"
+msgstr "Buscar usuarios"
 
 #: lib/firefly_web/live/staff_live/user.ex:305
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "See the site as this member? It's recorded in the staff log."
-msgstr "See the site as this member? It's recorded in the staff log."
+msgstr "¿Ver el sitio como este miembro? Queda en el registro del equipo."
 
 #: lib/firefly_web/live/staff_live/user.ex:575
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Send a notice: subject"
-msgstr "Send a notice: subject"
+msgstr "Enviar un aviso: asunto"
 
 #: lib/firefly_web/live/staff_live/user.ex:580
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Send notice"
-msgstr "Send notice"
+msgstr "Enviar aviso"
 
 #: lib/firefly_web/live/staff_live/user.ex:376
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Send password reset"
-msgstr "Send password reset"
+msgstr "Enviar restablecimiento de contraseña"
 
 #: lib/firefly_web/live/staff_live/emails.ex:200
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Send test email"
-msgstr "Send test email"
+msgstr "Enviar correo de prueba"
 
 #: lib/firefly_web/live/staff_live/emails.ex:199
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Send to"
-msgstr "Send to"
+msgstr "Enviar a"
 
 #: lib/firefly_web/live/staff_live/emails.ex:196
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Sends a short email through the configured mailer, to check delivery works. It shows in the log."
-msgstr "Sends a short email through the configured mailer, to check delivery works. It shows in the log."
+msgstr "Envía un correo breve con el servicio de correo configurado para comprobar que la entrega funciona. Aparece en el registro."
 
 #: lib/firefly_web/live/staff_live/emails.ex:129
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Sent log"
-msgstr "Sent log"
+msgstr "Registro de envíos"
 
 #: lib/firefly_web/live/staff_live/user.ex:400
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Set trust level"
-msgstr "Set trust level"
+msgstr "Fijar nivel de confianza"
 
 #: lib/firefly_web/live/staff_live/groups.ex:167
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Set what each group may do in each category at Categories. Members of admin and moderator are staff."
-msgstr "Set what each group may do in each category at Categories. Members of admin and moderator are staff."
+msgstr "Define qué puede hacer cada grupo en cada categoría en Categorías. Los miembros de admin y moderator forman el equipo."
 
 #: lib/firefly_web/live/staff_live/user.ex:492
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Silence (can read, can't post)"
-msgstr "Silence (can read, can't post)"
+msgstr "Silenciar (puede leer, no puede publicar)"
 
 #: lib/firefly_web/live/staff_live/users.ex:84
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Silenced"
-msgstr "Silenced"
+msgstr "Silenciado"
 
 #: lib/firefly_web/live/staff_live/user.ex:467
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Silenced %{until}"
-msgstr "Silenced %{until}"
+msgstr "Silenciado %{until}"
 
 #: lib/firefly_web/live/staff_live/index.ex:119
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Site setting"
-msgstr "Site setting"
+msgstr "Ajuste del sitio"
 
 #: lib/firefly_web/live/staff_live/groups.ex:148
 #: lib/firefly_web/live/staff_live/users.ex:82
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Staff"
-msgstr "Staff"
+msgstr "Equipo"
 
 #: lib/firefly_web/live/staff_live/groups.ex:153
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Staff only"
-msgstr "Staff only"
+msgstr "Solo el equipo"
 
 #: lib/firefly_web/live/staff_live/categories.ex:142
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Start threads and reply"
-msgstr "Start threads and reply"
+msgstr "Iniciar temas y responder"
 
 #: lib/firefly_web/live/staff_live/emails.ex:145
 #: lib/firefly_web/live/staff_live/emails.ex:167
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Status"
-msgstr "Status"
+msgstr "Estado"
 
 #: lib/firefly_web/components/layouts.ex:384
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Stop impersonating"
-msgstr "Stop impersonating"
+msgstr "Dejar de suplantar"
 
 #: lib/firefly_web/live/staff_live/screening.ex:148
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Stop screening %{value}?"
-msgstr "Stop screening %{value}?"
+msgstr "¿Dejar de filtrar %{value}?"
 
 #: lib/firefly_web/live/staff_live/emails.ex:166
 #: lib/firefly_web/live/staff_live/emails.ex:220
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Subject"
-msgstr "Subject"
+msgstr "Asunto"
 
 #: lib/firefly_web/live/staff_live/user.ex:492
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Suspend (can't log in)"
-msgstr "Suspend (can't log in)"
+msgstr "Suspender (no puede iniciar sesión)"
 
 #: lib/firefly_web/live/staff_live/users.ex:83
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Suspended"
-msgstr "Suspended"
+msgstr "Suspendido"
 
 #: lib/firefly_web/live/staff_live/user.ex:474
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Suspended %{until}"
-msgstr "Suspended %{until}"
+msgstr "Suspendido %{until}"
 
 #: lib/firefly_web/live/staff_live/user.ex:422
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Take away their %{role} role?"
-msgstr "Take away their %{role} role?"
+msgstr "¿Quitarle el rol de %{role}?"
 
 #: lib/firefly_web/live/staff_live/emails.ex:151
 #: lib/firefly_web/live/staff_live/emails.ex:165
 #: lib/firefly_web/live/staff_live/emails.ex:210
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Template"
-msgstr "Template"
+msgstr "Plantilla"
 
 #: lib/firefly_web/live/staff_live/emails.ex:135
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Templates"
-msgstr "Templates"
+msgstr "Plantillas"
 
 #: lib/firefly_web/live/staff_live/emails.ex:132
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Test email"
-msgstr "Test email"
+msgstr "Correo de prueba"
 
 #: lib/firefly_web/live/staff_live/emails.ex:90
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Test email sent to %{to}."
-msgstr "Test email sent to %{to}."
+msgstr "Correo de prueba enviado a %{to}."
 
 #: lib/firefly_web/live/staff_live/user.ex:36
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That account doesn't exist."
-msgstr "That account doesn't exist."
+msgstr "Esa cuenta no existe."
 
 #: lib/firefly_web/live/staff_live/emails.ex:94
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "That isn't an email address."
-msgstr "That isn't an email address."
+msgstr "Eso no es una dirección de correo."
 
 #: lib/firefly_web/live/staff_live/user.ex:247
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The account and its posts were deleted."
-msgstr "The account and its posts were deleted."
+msgstr "Se eliminaron la cuenta y sus publicaciones."
 
 #: lib/firefly_web/live/staff_live/user.ex:238
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The account was anonymized. Its posts stay, under a placeholder."
-msgstr "The account was anonymized. Its posts stay, under a placeholder."
+msgstr "La cuenta se anonimizó. Sus publicaciones se mantienen, bajo un marcador."
 
 #: lib/firefly_web/live/staff_live/user.ex:559
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Their latest, without private messages."
-msgstr "Their latest, without private messages."
+msgstr "Lo más reciente, sin mensajes privados."
 
 #: lib/firefly_web/live/staff_live/user.ex:315
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "This account waits for approval: it can read but not post."
-msgstr "This account waits for approval: it can read but not post."
+msgstr "Esta cuenta espera aprobación: puede leer pero no publicar."
 
 #: lib/firefly_web/live/staff_live/emails.ex:164
 #: lib/firefly_web/live/staff_live/emails.ex:218
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "To"
-msgstr "To"
+msgstr "Para"
 
 #: lib/firefly_web/live/staff_live/emails.ex:119
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Today: %{sent} sent, %{skipped} skipped, %{failed} failed."
-msgstr "Today: %{sent} sent, %{skipped} skipped, %{failed} failed."
+msgstr "Hoy: %{sent} enviados, %{skipped} omitidos, %{failed} fallidos."
 
 #: lib/firefly_web/live/staff_live/categories.ex:147
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Tracking"
-msgstr "Tracking"
+msgstr "Rastreando"
 
 #: lib/firefly_web/live/staff_live/user.ex:385
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Trust and roles"
-msgstr "Trust and roles"
+msgstr "Confianza y roles"
 
 #: lib/firefly_web/live/staff_live/user.ex:396
 #: lib/firefly_web/live/staff_live/users.ex:131
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Trust level"
-msgstr "Trust level"
+msgstr "Nivel de confianza"
 
 #: lib/firefly_web/live/staff_live/user.ex:138
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Trust level set."
-msgstr "Trust level set."
+msgstr "Nivel de confianza fijado."
 
 #: lib/firefly_web/live/staff_live/user.ex:351
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Turn off every second factor of this account?"
-msgstr "Turn off every second factor of this account?"
+msgstr "¿Desactivar todos los segundos factores de esta cuenta?"
 
 #: lib/firefly_web/live/staff_live/user.ex:170
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Two-factor authentication was reset."
-msgstr "Two-factor authentication was reset."
+msgstr "Se restableció la verificación en dos pasos."
 
 #: lib/firefly_web/live/staff_live/screening.ex:75
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "URLs"
-msgstr "URLs"
+msgstr "Direcciones URL"
 
 #: lib/firefly_web/live/staff_live/user.ex:495
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Until (for a date)"
-msgstr "Until (for a date)"
+msgstr "Hasta (para una fecha)"
 
 #: lib/firefly_web/live/staff_live/users.ex:129
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "User"
-msgstr "User"
+msgstr "Usuario"
 
 #: lib/firefly_web/live/staff_live/users.ex:119
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Username, name, email or IP address"
-msgstr "Username, name, email or IP address"
+msgstr "Nombre de usuario, nombre, correo o dirección IP"
 
 #: lib/firefly_web/live/staff_live/screening.ex:125
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Value"
-msgstr "Value"
+msgstr "Valor"
 
 #: lib/firefly_web/live/staff_live/index.ex:129
 #: lib/firefly_web/live/staff_live/users.ex:85
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Waiting for approval"
-msgstr "Waiting for approval"
+msgstr "Esperando aprobación"
 
 #: lib/firefly_web/live/staff_live/emails.ex:163
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "When"
-msgstr "When"
+msgstr "Cuándo"
 
 #: lib/firefly_web/live/staff_live/groups.ex:221
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Who can @mention it"
-msgstr "Who can @mention it"
+msgstr "Quién puede @mencionarlo"
 
 #: lib/firefly_web/live/staff_live/groups.ex:222
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Who can message it"
-msgstr "Who can message it"
+msgstr "Quién puede enviarle mensajes"
 
 #: lib/firefly_web/live/staff_live/categories.ex:214
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Who can see and post"
-msgstr "Who can see and post"
+msgstr "Quién puede ver y publicar"
 
 #: lib/firefly_web/live/staff_live/groups.ex:219
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Who sees it"
-msgstr "Who sees it"
+msgstr "Quién lo ve"
 
 #: lib/firefly_web/controllers/staff_controller.ex:40
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You can't impersonate that account."
-msgstr "You can't impersonate that account."
+msgstr "No puedes suplantar esa cuenta."
 
 #: lib/firefly_web/components/layouts.ex:382
 #: lib/firefly_web/controllers/staff_controller.ex:35
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're seeing the site as @%{username}."
-msgstr "You're seeing the site as @%{username}."
+msgstr "Estás viendo el sitio como @%{username}."
 
 #: lib/firefly_web/controllers/staff_controller.ex:58
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're yourself again."
-msgstr "You're yourself again."
+msgstr "Vuelves a ser tú."
 
 #: lib/firefly_web/live/staff_live/user.ex:331
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "confirmed"
-msgstr "confirmed"
+msgstr "confirmado"
 
 #: lib/firefly_web/live/staff_live/categories.ex:190
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "default: %{level}"
-msgstr "default: %{level}"
+msgstr "predeterminado: %{level}"
 
 #: lib/firefly_web/live/staff_live/emails.ex:111
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "failed"
-msgstr "failed"
+msgstr "fallido"
 
 #: lib/firefly_web/live/staff_live/screening.ex:141
 #: lib/firefly_web/live/staff_live/user.ex:339
 #: lib/firefly_web/live/staff_live/users.ex:160
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "never"
-msgstr "never"
+msgstr "nunca"
 
 #: lib/firefly_web/live/staff_live/user.ex:330
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "none"
-msgstr "none"
+msgstr "ninguno"
 
 #: lib/firefly_web/live/staff_live/user.ex:345
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "password"
-msgstr "password"
+msgstr "contraseña"
 
 #: lib/firefly_web/live/staff_live/users.ex:149
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "pending"
-msgstr "pending"
+msgstr "pendiente"
 
 #: lib/firefly_web/live/staff_live/categories.ex:187
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "restricted"
-msgstr "restricted"
+msgstr "restringida"
 
 #: lib/firefly_web/live/staff_live/user.ex:541
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "revoked"
-msgstr "revoked"
+msgstr "revocada"
 
 #: lib/firefly_web/live/staff_live/emails.ex:109
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "sent"
-msgstr "sent"
+msgstr "enviado"
 
 #: lib/firefly_web/live/staff_live/user.ex:295
 #: lib/firefly_web/live/staff_live/users.ex:151
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "silenced"
-msgstr "silenced"
+msgstr "silenciado"
 
 #: lib/firefly_web/live/staff_live/emails.ex:110
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "skipped"
-msgstr "skipped"
+msgstr "omitido"
 
 #: lib/firefly_web/live/staff_live/user.ex:294
 #: lib/firefly_web/live/staff_live/users.ex:150
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "suspended"
-msgstr "suspended"
+msgstr "suspendido"
 
 #: lib/firefly_web/live/staff_live/user.ex:347
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "two-factor"
-msgstr "two-factor"
+msgstr "dos pasos"
 
 #: lib/firefly_web/live/staff_live/user.ex:332
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "unconfirmed"
-msgstr "unconfirmed"
+msgstr "sin confirmar"
 
 #: lib/firefly_web/live/staff_live/groups.ex:254
 #: lib/firefly_web/live/staff_live/user.ex:612
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "username"
-msgstr "username"
+msgstr "nombre de usuario"
 
 #: lib/firefly_web/live/staff_live/user.ex:293
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "waiting for approval"
-msgstr "waiting for approval"
+msgstr "esperando aprobación"
 
 #: lib/firefly_web/live/thread_live/tools.ex:116
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{count} posts now by @%{username}."
-msgstr "%{count} posts now by @%{username}."
+msgstr "Ahora hay %{count} publicaciones de @%{username}."
 
 #: lib/firefly_web/live/thread_live/tools.ex:283
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Change author"
-msgstr "Change author"
+msgstr "Cambiar autor"
 
 #: lib/firefly_web/live/thread_live/tools.ex:263
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Change the author"
-msgstr "Change the author"
+msgstr "Cambiar el autor"
 
 #: lib/firefly_web/live/thread_live/tools.ex:283
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Give these posts to that member?"
-msgstr "Give these posts to that member?"
+msgstr "¿Dar estas publicaciones a ese miembro?"
 
 #: lib/firefly_web/live/thread_live/tools.ex:282
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New author's username"
-msgstr "New author's username"
+msgstr "Nombre de usuario del nuevo autor"
 
 #: lib/firefly_web/live/thread_live/tools.ex:266
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Posts to give another author"
-msgstr "Posts to give another author"
+msgstr "Publicaciones para dar a otro autor"
 
 #: lib/firefly_web/live/staff_live/settings.ex:126
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{key} is back to its default."
-msgstr "%{key} is back to its default."
+msgstr "%{key} vuelve a su valor predeterminado."
 
 #: lib/firefly_web/live/staff_live/settings.ex:414
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "A JSON or YAML export (of this site or another). Every value is checked first, and each change is logged. Secrets and settings pinned by the environment are skipped."
-msgstr "A JSON or YAML export (of this site or another). Every value is checked first, and each change is logged. Secrets and settings pinned by the environment are skipped."
+msgstr "Una exportación JSON o YAML (de este sitio o de otro). Cada valor se comprueba primero y cada cambio queda registrado. Se omiten los secretos y los ajustes fijados por el entorno."
 
 #: lib/firefly_web/live/staff_live/settings.ex:296
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Changed only"
-msgstr "Changed only"
+msgstr "Solo cambiados"
 
 #: lib/firefly_web/live/staff_live/settings.ex:256
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Changes apply at once and are recorded in the staff log."
-msgstr "Changes apply at once and are recorded in the staff log."
+msgstr "Los cambios se aplican al instante y quedan en el registro del equipo."
 
 #: lib/firefly_web/live/staff_live/settings.ex:391
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Current %{label}"
-msgstr "Current %{label}"
+msgstr "%{label} actual"
 
 #: lib/firefly_web/live/staff_live/settings.ex:349
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Default: %{value}"
-msgstr "Default: %{value}"
+msgstr "Predeterminado: %{value}"
 
 #: lib/firefly_web/live/staff_live/settings.ex:258
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Export JSON"
-msgstr "Export JSON"
+msgstr "Exportar JSON"
 
 #: lib/firefly_web/live/staff_live/settings.ex:259
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Export YAML"
-msgstr "Export YAML"
+msgstr "Exportar YAML"
 
 #: lib/firefly_web/live/staff_live/settings.ex:372
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "History"
-msgstr "History"
+msgstr "Historial"
 
 #: lib/firefly_web/live/staff_live/settings.ex:412
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Import settings"
-msgstr "Import settings"
+msgstr "Importar ajustes"
 
 #: lib/firefly_web/live/staff_live/settings.ex:183
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Imported %{changed} changed settings."
-msgstr "Imported %{changed} changed settings."
+msgstr "Se importaron %{changed} ajustes cambiados."
 
 #: lib/firefly_web/live/staff_live/settings.ex:314
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Login providers are configured in the server's environment (FIREFLY_* variables)."
-msgstr "Login providers are configured in the server's environment (FIREFLY_* variables)."
+msgstr "Los proveedores de inicio de sesión se configuran en el entorno del servidor (variables FIREFLY_*)."
 
 #: lib/firefly_web/live/staff_live/settings.ex:405
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Logo image"
-msgstr "Logo image"
+msgstr "Imagen del logotipo"
 
 #: lib/firefly_web/live/staff_live/settings.ex:165
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Logo saved."
-msgstr "Logo saved."
+msgstr "Logotipo guardado."
 
 #: lib/firefly_web/live/staff_live/settings.ex:380
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Never changed."
-msgstr "Never changed."
+msgstr "Nunca cambiado."
 
 #: lib/firefly_web/live/staff_live/settings.ex:301
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No settings match."
-msgstr "No settings match."
+msgstr "Ningún ajuste coincide."
 
 #: lib/firefly_web/live/staff_live/settings.ex:108
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Nothing changed."
-msgstr "Nothing changed."
+msgstr "No cambió nada."
 
 #: lib/firefly_web/live/staff_live/settings.ex:201
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Nothing was imported: %{details}"
-msgstr "Nothing was imported: %{details}"
+msgstr "No se importó nada: %{details}"
 
 #: lib/firefly_web/live/staff_live/settings.ex:192
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Pick a JSON or YAML file."
-msgstr "Pick a JSON or YAML file."
+msgstr "Elige un archivo JSON o YAML."
 
 #: lib/firefly_web/live/staff_live/settings.ex:160
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Pick an image."
-msgstr "Pick an image."
+msgstr "Elige una imagen."
 
 #: lib/firefly_web/live/staff_live/settings.ex:360
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reset %{label} to its default?"
-msgstr "Reset %{label} to its default?"
+msgstr "¿Restablecer %{label} a su valor predeterminado?"
 
 #: lib/firefly_web/live/staff_live/settings.ex:363
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Reset to default"
-msgstr "Reset to default"
+msgstr "Restablecer valor predeterminado"
 
 #: lib/firefly_web/live/staff_live/settings.ex:289
 #: lib/firefly_web/live/staff_live/settings.ex:290
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Search settings"
-msgstr "Search settings"
+msgstr "Buscar ajustes"
 
 #: lib/firefly_web/live/staff_live/settings.ex:353
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Set by %{env}"
-msgstr "Set by %{env}"
+msgstr "Fijado por %{env}"
 
 #: lib/firefly_web/live/staff_live/settings.ex:344
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Set: leave blank to keep it"
-msgstr "Set: leave blank to keep it"
+msgstr "Definido: déjalo en blanco para mantenerlo"
 
 #: lib/firefly_web/live/staff_live/settings.ex:416
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Settings file"
-msgstr "Settings file"
+msgstr "Archivo de ajustes"
 
 #: lib/firefly_web/live/staff_live/settings.ex:109
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Settings saved: %{keys}."
-msgstr "Settings saved: %{keys}."
+msgstr "Ajustes guardados: %{keys}."
 
 #: lib/firefly_web/live/staff_live/settings.ex:315
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Single sign-on is the only way to log in."
-msgstr "Single sign-on is the only way to log in."
+msgstr "El inicio de sesión único es la única forma de entrar."
 
 #: lib/firefly_web/live/staff_live/settings.ex:186
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Skipped: %{keys}."
-msgstr "Skipped: %{keys}."
+msgstr "Omitidos: %{keys}."
 
 #: lib/firefly_web/live/staff_live/settings.ex:116
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Some settings are invalid; nothing was saved."
-msgstr "Some settings are invalid; nothing was saved."
+msgstr "Algunos ajustes no son válidos; no se guardó nada."
 
 #: lib/firefly_web/live/staff_live/settings.ex:168
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The logo couldn't be saved."
-msgstr "The logo couldn't be saved."
+msgstr "No se pudo guardar el logotipo."
 
 #: lib/firefly_web/live/staff_live/settings.ex:404
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Upload a logo"
-msgstr "Upload a logo"
+msgstr "Subir un logotipo"
 
 #: lib/firefly_web/live/staff_live/settings.ex:406
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Use as logo"
-msgstr "Use as logo"
+msgstr "Usar como logotipo"
 
 #: lib/firefly_web/live/staff_live/settings.ex:240
 #: lib/firefly_web/live/staff_live/settings.ex:245
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "blank"
-msgstr "blank"
+msgstr "vacío"
 
 #: lib/firefly_web/live/staff_live/settings.ex:351
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "changed"
-msgstr "changed"
+msgstr "cambiado"
 
 #: lib/firefly_web/live/staff_live/settings.ex:242
 #: lib/firefly_web/live/staff_live/settings.ex:324
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "off"
-msgstr "off"
+msgstr "desactivado"
 
 #: lib/firefly_web/live/staff_live/settings.ex:241
 #: lib/firefly_web/live/staff_live/settings.ex:323
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "on"
-msgstr "on"
+msgstr "activado"
 
 #: lib/firefly_web/live/staff_live/settings.ex:385
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "reset"
-msgstr "reset"
+msgstr "restablecido"
 
 #: lib/firefly_web/live/staff_live/settings.ex:383
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "the system"
-msgstr "the system"
+msgstr "el sistema"
 
 #: lib/firefly_web/live/staff_live/settings.ex:265
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Category"
-msgstr "Category"
+msgstr "Categoría"
 
 #: lib/firefly_web/live/staff_live/theme.ex:116
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{name} is the site's theme now."
-msgstr "%{name} is the site's theme now."
+msgstr "%{name} es ahora el tema del sitio."
 
 #: lib/firefly_web/live/staff_live/theme.ex:261
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "%{scheme}: %{foreground} on %{background} is %{ratio}:1"
-msgstr "%{scheme}: %{foreground} on %{background} is %{ratio}:1"
+msgstr "%{scheme}: %{foreground} sobre %{background} es %{ratio}:1"
 
 #: lib/firefly_web/live/staff_live/themes.ex:104
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "1 component"
 msgid_plural "%{count} components"
-msgstr[0] "1 component"
-msgstr[1] "%{count} components"
+msgstr[0] "1 componente"
+msgstr[1] "%{count} componentes"
 
 #: lib/firefly_web/live/staff_live/themes.ex:168
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "A GitHub repository's firefly-theme.json is read from its default branch. Imported themes never run scripts until you allow it."
-msgstr "A GitHub repository's firefly-theme.json is read from its default branch. Imported themes never run scripts until you allow it."
+msgstr "Se lee el firefly-theme.json de un repositorio de GitHub desde su rama predeterminada. Los temas importados nunca ejecutan scripts hasta que lo permitas."
 
 #: lib/firefly_web/live/staff_live/theme.ex:204
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "A theme"
-msgstr "A theme"
+msgstr "Un tema"
 
 #: lib/firefly_web/live/staff_live/theme.ex:204
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "A theme component"
-msgstr "A theme component"
+msgstr "Un componente de tema"
 
 #: lib/firefly_web/live/staff_live/theme.ex:384
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Add asset"
-msgstr "Add asset"
+msgstr "Añadir recurso"
 
 #: lib/firefly_web/live/staff_live/theme.ex:157
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Added %{name}."
-msgstr "Added %{name}."
+msgstr "Se añadió %{name}."
 
 #: lib/firefly_web/live/staff_live/theme.ex:335
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Allow scripts"
-msgstr "Allow scripts"
+msgstr "Permitir scripts"
 
 #: lib/firefly_web/live/staff_live/theme.ex:382
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Asset name"
-msgstr "Asset name"
+msgstr "Nombre del recurso"
 
 #: lib/firefly_web/live/staff_live/theme.ex:366
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Assets"
-msgstr "Assets"
+msgstr "Recursos"
 
 #: lib/firefly_web/live/staff_live/theme.ex:312
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "At the bottom of every page"
-msgstr "At the bottom of every page"
+msgstr "Al final de cada página"
 
 #: lib/firefly_web/live/staff_live/theme.ex:311
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "At the top of every page"
-msgstr "At the top of every page"
+msgstr "Al principio de cada página"
 
 #: lib/firefly_web/live/staff_live/theme.ex:294
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "CSS"
 msgstr "CSS"
 
 #: lib/firefly_web/live/staff_live/theme.ex:251
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Colors"
-msgstr "Colors"
+msgstr "Colores"
 
 #: lib/firefly_web/live/staff_live/themes.ex:116
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Colors, CSS and HTML for the whole site. Preview a theme yourself before making it the default."
-msgstr "Colors, CSS and HTML for the whole site. Preview a theme yourself before making it the default."
+msgstr "Colores, CSS y HTML para todo el sitio. Previsualiza un tema tú mismo antes de hacerlo el predeterminado."
 
 #: lib/firefly_web/live/staff_live/theme.ex:346
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Components"
-msgstr "Components"
+msgstr "Componentes"
 
 #: lib/firefly_web/live/staff_live/themes.ex:134
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Components are pieces several themes can include, like a banner or a font."
-msgstr "Components are pieces several themes can include, like a banner or a font."
+msgstr "Los componentes son piezas que varios temas pueden incluir, como un banner o una fuente."
 
 #: lib/firefly_web/live/staff_live/theme.ex:106
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Components saved."
-msgstr "Components saved."
+msgstr "Componentes guardados."
 
 #: lib/firefly_web/live/staff_live/themes.ex:146
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Create"
-msgstr "Create"
+msgstr "Crear"
 
 #: lib/firefly_web/live/staff_live/theme.ex:298
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Custom CSS"
-msgstr "Custom CSS"
+msgstr "CSS personalizado"
 
 #: lib/firefly_web/live/staff_live/theme.ex:395
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete %{name}? This can't be undone."
-msgstr "Delete %{name}? This can't be undone."
+msgstr "¿Eliminar %{name}? No se puede deshacer."
 
 #: lib/firefly_web/live/staff_live/theme.ex:398
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Delete theme"
-msgstr "Delete theme"
+msgstr "Eliminar tema"
 
 #: lib/firefly_web/live/staff_live/theme.ex:239
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Description"
-msgstr "Description"
+msgstr "Descripción"
 
 #: lib/firefly_web/live/staff_live/theme.ex:253
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Each scheme's daisyUI colors. Colors left as they are keep the built-in value."
-msgstr "Each scheme's daisyUI colors. Colors left as they are keep the built-in value."
+msgstr "Los colores daisyUI de cada esquema. Los que no cambies conservan el valor integrado."
 
 #: lib/firefly_web/live/staff_live/theme.ex:222
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Every member who hasn't picked a theme will see it. Go ahead?"
-msgstr "Every member who hasn't picked a theme will see it. Go ahead?"
+msgstr "Todos los miembros que no hayan elegido un tema lo verán. ¿Continuar?"
 
 #: lib/firefly_web/live/staff_live/theme.ex:272
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Every text color meets WCAG AA."
-msgstr "Every text color meets WCAG AA."
+msgstr "Todos los colores de texto cumplen WCAG AA."
 
 #: lib/firefly_web/live/staff_live/theme.ex:230
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Export"
-msgstr "Export"
+msgstr "Exportar"
 
 #: lib/firefly_web/live/staff_live/theme.ex:304
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "HTML"
 msgstr "HTML"
 
 #: lib/firefly_web/live/staff_live/theme.ex:383
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Image or font file"
-msgstr "Image or font file"
+msgstr "Imagen o archivo de fuente"
 
 #: lib/firefly_web/live/staff_live/themes.ex:155
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Import file"
-msgstr "Import file"
+msgstr "Importar archivo"
 
 #: lib/firefly_web/live/staff_live/themes.ex:165
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Import from URL"
-msgstr "Import from URL"
+msgstr "Importar desde una URL"
 
 #: lib/firefly_web/live/staff_live/themes.ex:74
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Imported %{name}."
-msgstr "Imported %{name}."
+msgstr "Se importó %{name}."
 
 #: lib/firefly_web/live/staff_live/theme.ex:310
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "In the page's head"
-msgstr "In the page's head"
+msgstr "En el head de la página"
 
 #: lib/firefly_web/live/staff_live/themes.ex:145
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "It's a component (themes include it)"
-msgstr "It's a component (themes include it)"
+msgstr "Es un componente (los temas lo incluyen)"
 
 #: lib/firefly_web/live/staff_live/theme.ex:92
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Its HTML may run scripts now."
-msgstr "Its HTML may run scripts now."
+msgstr "Su HTML ya puede ejecutar scripts."
 
 #: lib/firefly_web/live/staff_live/theme.ex:93
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Its scripts are off."
-msgstr "Its scripts are off."
+msgstr "Sus scripts están desactivados."
 
 #: lib/firefly_web/live/staff_live/theme.ex:332
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Let this theme run scripts on every page?"
-msgstr "Let this theme run scripts on every page?"
+msgstr "¿Permitir que este tema ejecute scripts en todas las páginas?"
 
 #: lib/firefly_web/live/staff_live/theme.ex:225
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Make default"
-msgstr "Make default"
+msgstr "Hacer predeterminado"
 
 #: lib/firefly_web/live/staff_live/theme.ex:244
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Members can pick it in their interface settings"
-msgstr "Members can pick it in their interface settings"
+msgstr "Los miembros pueden elegirlo en sus ajustes de interfaz"
 
 #: lib/firefly_web/live/staff_live/themes.ex:143
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "New theme"
-msgstr "New theme"
+msgstr "Nuevo tema"
 
 #: lib/firefly_web/live/staff_live/theme.ex:347
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No components yet."
-msgstr "No components yet."
+msgstr "Aún no hay componentes."
 
 #: lib/firefly_web/live/staff_live/themes.ex:125
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "No themes yet."
-msgstr "No themes yet."
+msgstr "Aún no hay temas."
 
 #: lib/firefly_web/live/staff_live/themes.ex:82
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Not imported: %{details}"
-msgstr "Not imported: %{details}"
+msgstr "No se importó: %{details}"
 
 #: lib/firefly_web/live/staff_live/theme.ex:81
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Not saved: fix what's marked."
-msgstr "Not saved: fix what's marked."
+msgstr "No se guardó: corrige lo marcado."
 
 #: lib/firefly_web/live/staff_live/themes.ex:162
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Or from a URL or GitHub repository"
-msgstr "Or from a URL or GitHub repository"
+msgstr "O desde una URL o un repositorio de GitHub"
 
 #: lib/firefly_web/live/staff_live/theme.ex:386
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "PNG, JPEG, GIF or WebP images, WOFF or WOFF2 fonts."
-msgstr "PNG, JPEG, GIF or WebP images, WOFF or WOFF2 fonts."
+msgstr "Imágenes PNG, JPEG, GIF o WebP, fuentes WOFF o WOFF2."
 
 #: lib/firefly_web/live/staff_live/theme.ex:151
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Pick a file."
-msgstr "Pick a file."
+msgstr "Elige un archivo."
 
 #: lib/firefly_web/live/staff_live/themes.ex:64
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Pick a theme bundle (JSON)."
-msgstr "Pick a theme bundle (JSON)."
+msgstr "Elige un paquete de tema (JSON)."
 
 #: lib/firefly_web/live/staff_live/theme.ex:216
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Preview"
-msgstr "Preview"
+msgstr "Vista previa"
 
 #: lib/firefly_web/controllers/theme_controller.ex:44
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Previewing %{name}: only you see it."
-msgstr "Previewing %{name}: only you see it."
+msgstr "Previsualizando %{name}: solo tú lo ves."
 
 #: lib/firefly_web/live/staff_live/theme.ex:374
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Remove %{name}"
-msgstr "Remove %{name}"
+msgstr "Quitar %{name}"
 
 #: lib/firefly_web/live/staff_live/theme.ex:360
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Save components"
-msgstr "Save components"
+msgstr "Guardar componentes"
 
 #: lib/firefly_web/live/staff_live/theme.ex:317
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Save theme"
-msgstr "Save theme"
+msgstr "Guardar tema"
 
 #: lib/firefly_web/live/staff_live/theme.ex:323
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Scripts"
 msgstr "Scripts"
 
 #: lib/firefly_web/live/staff_live/theme.ex:325
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Scripts in a theme's HTML run on every page, for every member, with their session. Only allow them for code you trust. The change is recorded in the staff log."
-msgstr "Scripts in a theme's HTML run on every page, for every member, with their session. Only allow them for code you trust. The change is recorded in the staff log."
+msgstr "Los scripts del HTML de un tema se ejecutan en cada página, para cada miembro, con su sesión. Permítelos solo para código de confianza. El cambio queda en el registro del equipo."
 
 #: lib/firefly_web/live/staff_live/theme.ex:308
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Scripts, event handlers and inline styles are removed."
-msgstr "Scripts, event handlers and inline styles are removed."
+msgstr "Se eliminan los scripts, los manejadores de eventos y los estilos en línea."
 
 #: lib/firefly_web/live/settings_live/index.ex:699
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Site theme"
-msgstr "Site theme"
+msgstr "Tema del sitio"
 
 #: lib/firefly_web/live/staff_live/theme.ex:258
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Some text won't be readable enough (WCAG AA needs 4.5:1):"
-msgstr "Some text won't be readable enough (WCAG AA needs 4.5:1):"
+msgstr "Parte del texto no será lo bastante legible (WCAG AA exige 4.5:1):"
 
 #: lib/firefly_web/components/layouts/root.html.heex:70
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Stop previewing"
-msgstr "Stop previewing"
+msgstr "Dejar de previsualizar"
 
 #: lib/firefly_web/controllers/theme_controller.ex:55
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Stopped previewing."
-msgstr "Stopped previewing."
+msgstr "Se dejó de previsualizar."
 
 #: lib/firefly_web/live/staff_live/theme.ex:117
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The site uses the built-in look again."
-msgstr "The site uses the built-in look again."
+msgstr "El sitio vuelve a usar el aspecto integrado."
 
 #: lib/firefly_web/live/staff_live/themes.ex:120
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The site uses the built-in look: no theme is the default."
-msgstr "The site uses the built-in look: no theme is the default."
+msgstr "El sitio usa el aspecto integrado: ningún tema es el predeterminado."
 
 #: lib/firefly_web/live/settings_live/index.ex:701
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "The site's default"
-msgstr "The site's default"
+msgstr "El predeterminado del sitio"
 
 #: lib/firefly_web/live/staff_live/themes.ex:154
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Theme bundle"
-msgstr "Theme bundle"
+msgstr "Paquete de tema"
 
 #: lib/firefly_web/live/staff_live/themes.ex:132
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Theme components"
-msgstr "Theme components"
+msgstr "Componentes del tema"
 
 #: lib/firefly_web/live/staff_live/theme.ex:131
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Theme deleted."
-msgstr "Theme deleted."
+msgstr "Tema eliminado."
 
 #: lib/firefly_web/live/settings_live/index.ex:285
 #: lib/firefly_web/live/staff_live/theme.ex:76
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Theme saved."
-msgstr "Theme saved."
+msgstr "Tema guardado."
 
 #: lib/firefly_web/live/staff_live/themes.ex:20
 #: lib/firefly_web/live/staff_live/themes.ex:115
 #: lib/firefly_web/live/staff_live/themes.ex:124
 #: lib/firefly_web/staff_nav.ex:179
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Themes"
-msgstr "Themes"
+msgstr "Temas"
 
 #: lib/firefly_web/live/staff_live/theme.ex:307
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "This theme may run scripts: its HTML is used as written."
-msgstr "This theme may run scripts: its HTML is used as written."
+msgstr "Este tema puede ejecutar scripts: su HTML se usa tal cual."
 
 #: lib/firefly_web/live/staff_live/theme.ex:338
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Turn scripts off"
-msgstr "Turn scripts off"
+msgstr "Desactivar scripts"
 
 #: lib/firefly_web/live/staff_live/theme.ex:296
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Up to 100 KB. Name an asset as theme-asset(name), e.g. background: theme-asset(hero)."
-msgstr "Up to 100 KB. Name an asset as theme-asset(name), e.g. background: theme-asset(hero)."
+msgstr "Hasta 100 KB. Nombra un recurso como theme-asset(nombre), p. ej. background: theme-asset(hero)."
 
 #: lib/firefly_web/live/staff_live/theme.ex:228
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Use the built-in look"
-msgstr "Use the built-in look"
+msgstr "Usar el aspecto integrado"
 
 #: lib/firefly_web/live/settings_live/index.ex:703
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "Use this theme"
-msgstr "Use this theme"
+msgstr "Usar este tema"
 
 #: lib/firefly_web/components/layouts/root.html.heex:68
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "You're previewing the %{name} theme. Only you see it."
-msgstr "You're previewing the %{name} theme. Only you see it."
+msgstr "Estás previsualizando el tema %{name}. Solo tú lo ves."
 
 #: lib/firefly_web/live/staff_live/theme.ex:206
 #: lib/firefly_web/live/staff_live/themes.ex:100
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "default"
-msgstr "default"
+msgstr "predeterminado"
 
 #: lib/firefly_web/live/staff_live/themes.ex:101
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "members can pick it"
-msgstr "members can pick it"
+msgstr "los miembros pueden elegirlo"
 
 #: lib/firefly_web/live/staff_live/themes.ex:102
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "runs scripts"
-msgstr "runs scripts"
+msgstr "ejecuta scripts"
 
 #: lib/firefly_web/live/staff_live/theme.ex:205
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "version %{version}"
-msgstr "version %{version}"
+msgstr "versión %{version}"
 
 #: lib/firefly_web/live/staff_live/theme.ex:382
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "hero"
 msgstr "hero"
 
 #: lib/firefly_web/live/staff_live/themes.ex:163
-#, elixir-autogen, elixir-format, fuzzy
+#, elixir-autogen, elixir-format
 msgid "https://github.com/owner/repo"
 msgstr "https://github.com/owner/repo"
