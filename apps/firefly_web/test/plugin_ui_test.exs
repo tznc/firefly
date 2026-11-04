@@ -11,7 +11,7 @@ defmodule FireflyWeb.PluginUITest do
   alias Firefly.{Discussion, Groups, Plugins, RateLimit, Repo}
   alias Firefly.Discussion.Post
   alias Firefly.Moderation.StaffAction
-  alias Firefly.Plugins.{Events, Fields, Jobs, Storage, UI}
+  alias Firefly.Plugins.{Fields, Jobs, Storage, UI}
 
   setup do
     admin = admin_fixture(%{username: "boss"})
@@ -38,7 +38,7 @@ defmodule FireflyWeb.PluginUITest do
       assert html =~ ~s(<span class="hello">Hello, World!</span>)
       assert html =~ "This post says hello."
 
-      assert Events.deliver_due() == 1
+      assert %{success: 1} = Oban.drain_queue(queue: :plugins)
       assert Storage.get("hello", "thread_created") == 1
       assert Fields.get("hello", "post", post.id) == %{"hellos" => 1}
 

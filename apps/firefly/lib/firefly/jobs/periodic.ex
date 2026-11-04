@@ -13,6 +13,7 @@ defmodule Firefly.Jobs.Periodic do
   | `PollClosing` | every minute | default |
   | `UnusedUploads`, `LinkPreviews` | every minute | maintenance |
   | `Embeddings` (semantic search) | every minute | ai |
+  | `PluginJobs` (plugins' own scheduled jobs, see `Firefly.Plugins.Jobs`) | every minute | plugins |
   | `Badges` | every 15 minutes | maintenance |
   | `Digests` | every 15 minutes | mailers |
   | `TrustLevels`, `Analytics`, `EmbedFeed`, `ChatRetention`, `EmailLog`, `EgressLog`, `Directory`, `Backups` | hourly | maintenance |
@@ -27,6 +28,7 @@ defmodule Firefly.Jobs.Periodic do
     {UnusedUploads, "* * * * *", :maintenance, {Firefly.Uploads, :run_due}},
     {LinkPreviews, "* * * * *", :maintenance, {Firefly.Rendering.LinkPreviews, :run_due}},
     {Embeddings, "* * * * *", :ai, {Firefly.AI, :run_due}},
+    {PluginJobs, "* * * * *", :plugins, {Firefly.Plugins, :run_due_jobs}},
     {Badges, "*/15 * * * *", :maintenance, {Firefly.Badges, :run_due}},
     {Digests, "*/15 * * * *", :mailers, {Firefly.Notifications.Digests, :run_due}},
     # The hourly ones, spread over the hour.

@@ -54,7 +54,7 @@ defmodule Firefly.TelemetryTest do
     assert_received {[:firefly, :queue, :depth], ^ref, %{depth: 1}, %{queue: "webhooks"}}
     assert_received {[:firefly, :queue, :depth], ^ref, %{depth: 0}, %{queue: "plugin_events"}}
 
-    assert Webhooks.deliver_due() == 0
+    assert %{failure: 1} = Oban.drain_queue(queue: :webhooks)
 
     assert_received {[:firefly, :webhooks, :delivery, :stop], ^ref, %{duration: _},
                      %{type: "ping", result: "failure"}}

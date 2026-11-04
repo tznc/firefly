@@ -50,7 +50,7 @@ defmodule FireflyWeb.WebhooksTest do
       )
 
     thread = thread_fixture(category_fixture(), user_fixture(), %{title: "Hooked"})
-    assert Webhooks.deliver_due() == 1
+    assert %{success: 1} = Oban.drain_queue(queue: :webhooks)
 
     assert_received {:delivery, "/ok", headers, body}
     headers = Map.new(headers)
@@ -87,7 +87,7 @@ defmodule FireflyWeb.WebhooksTest do
       |> click_button("Ping")
       |> assert_has("#flash-info", text: "Ping queued.")
 
-    Webhooks.deliver_due()
+    assert %{failure: 1} = Oban.drain_queue(queue: :webhooks)
     assert_received {:delivery, "/fail", _headers, _body}
 
     [delivery] = Webhooks.list() |> hd() |> Webhooks.deliveries()

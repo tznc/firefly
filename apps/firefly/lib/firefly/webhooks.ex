@@ -20,8 +20,8 @@ defmodule Firefly.Webhooks do
   categories: admins chose where they go. `ping` (`ping/1`) tests one.
 
   Each event becomes a `Firefly.Webhooks.Delivery` per webhook, POSTed
-  (JSON `{"event", "type", "event_id", "data"}`) by the plugin queue
-  (`Firefly.Plugins.Queue`) with the headers `X-Firefly-Event`,
+  (JSON `{"event", "type", "event_id", "data"}`) by a background job
+  (`Firefly.Webhooks.DeliveryWorker`, the `webhooks` queue) with the headers `X-Firefly-Event`,
   `X-Firefly-Event-Type`, `X-Firefly-Event-Id`, `X-Firefly-Delivery` and,
   with a secret, `X-Firefly-Event-Signature: sha256=<HMAC-SHA256 of the
   body>`. Requests go through the same server-side request forgery guard
@@ -46,7 +46,7 @@ defmodule Firefly.Webhooks do
   alias Firefly.Groups.RoleMembership
   alias Firefly.Moderation.StaffLog
   alias Firefly.Plugins.HTTP
-  alias Firefly.Webhooks.{Delivery, Webhook}
+  alias Firefly.Webhooks.{Delivery, DeliveryWorker, Webhook}
 
   @types %{
     "thread_created" => "topic",
@@ -64,9 +64,6 @@ defmodule Firefly.Webhooks do
   @max_attempts 5
   @disable_after 10
   @truncate 10_000
-  # How long a delivery in progress holds its row before another node may
-  # take it.
-  @lease 300
 
   ## Managing webhooks
 
@@ -135,15 +132,22 @@ defmodule Firefly.Webhooks do
 
   @doc "Sends `delivery`'s event again, as a new delivery with the same event id."
   def redeliver(%Delivery{} = delivery) do
-    Repo.insert!(%Delivery{
-      webhook_id: delivery.webhook_id,
-      event_id: delivery.event_id,
-      event: delivery.event,
-      payload: delivery.payload,
-      run_at: DateTime.utc_now()
-    })
+    %{id: id} =
+      Repo.insert!(%Delivery{
+        webhook_id: delivery.webhook_id,
+        event_id: delivery.event_id,
+        event: delivery.event,
+        payload: delivery.payload,
+        run_at: DateTime.utc_now()
+      })
 
-    Firefly.Plugins.Queue.kick()
+    send_later([id])
+  end
+
+  # A job per delivery (see Firefly.Webhooks.DeliveryWorker), in the
+  # caller's transaction.
+  defp send_later(ids) do
+    for id <- ids, do: {:ok, _job} = Firefly.Jobs.insert(DeliveryWorker.new(%{delivery_id: id}))
     :ok
   end
 
@@ -223,8 +227,8 @@ defmodule Firefly.Webhooks do
         }
       end
 
-    Repo.insert_all(Delivery, rows)
-    Firefly.Plugins.Queue.kick()
+    {_count, inserted} = Repo.insert_all(Delivery, rows, returning: [:id])
+    send_later(Enum.map(inserted, & &1.id))
   end
 
   ## Delivering
@@ -233,34 +237,25 @@ defmodule Firefly.Webhooks do
   @spec pending_count() :: non_neg_integer
   def pending_count, do: Repo.aggregate(where(Delivery, status: "pending"), :count)
 
-  @doc "Delivers what's due at `now`, one at a time. Returns how many succeeded."
-  def deliver_due(now \\ DateTime.utc_now()), do: deliver_due(now, 0)
-
-  defp deliver_due(now, count) do
-    case claim(now) do
-      nil -> count
-      row -> deliver_due(now, count + deliver(row, now))
+  @doc """
+  Attempts the delivery `id` now (its job's work, see
+  `Firefly.Webhooks.DeliveryWorker`): `:ok` when it's done (delivered,
+  skipped, or no longer pending), `{:error, reason}` when it failed (retried
+  until it has had #{@max_attempts} attempts).
+  """
+  @spec deliver(pos_integer, DateTime.t()) :: :ok | {:error, String.t()}
+  def deliver(id, now \\ DateTime.utc_now()) do
+    with %Delivery{status: "pending"} = row <- Repo.get(Delivery, id),
+         0 <- attempt_delivery(row, now),
+         %Delivery{status: status, error: error} when status in ~w(pending failed) <-
+           Repo.get(Delivery, id) do
+      {:error, error}
+    else
+      _done -> :ok
     end
   end
 
-  defp claim(now) do
-    {:ok, row} =
-      Repo.transact(fn ->
-        row =
-          Delivery
-          |> where([d], d.status == "pending" and d.run_at <= ^now)
-          |> order_by(asc: :run_at, asc: :id)
-          |> limit(1)
-          |> lock("FOR UPDATE SKIP LOCKED")
-          |> Repo.one()
-
-        {:ok, row && Repo.update!(Ecto.Changeset.change(row, run_at: DateTime.add(now, @lease)))}
-      end)
-
-    row
-  end
-
-  defp deliver(row, now) do
+  defp attempt_delivery(row, now) do
     case Repo.get(Webhook, row.webhook_id) do
       %Webhook{active: true} = hook ->
         Firefly.Telemetry.span(

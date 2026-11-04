@@ -3,7 +3,7 @@ defmodule Firefly.WebhooksTest do
 
   alias Firefly.{Discussion, Groups, Notifications, Webhooks}
   alias Firefly.Moderation.StaffAction
-  alias Firefly.Webhooks.{Delivery, Webhook}
+  alias Firefly.Webhooks.{Delivery, DeliveryWorker, Webhook}
 
   import Firefly.Fixtures
   import ExUnit.CaptureLog
@@ -72,9 +72,12 @@ defmodule Firefly.WebhooksTest do
   test "failed deliveries are retried with backoff, then the webhook is turned off", ctx do
     webhook = hook(ctx.admin, %{"wildcard" => "true", "secret" => "a secret of some length"})
     :ok = Webhooks.ping(webhook)
+    [%{id: id}] = deliveries(webhook)
+    assert_enqueued(worker: DeliveryWorker, args: %{delivery_id: id}, queue: :webhooks)
     now = DateTime.utc_now()
 
-    assert Webhooks.deliver_due(now) == 0
+    assert {:error, error} = perform_job(DeliveryWorker, %{delivery_id: id})
+    assert error =~ "private address"
     [delivery] = deliveries(webhook)
     assert delivery.status == "pending"
     assert delivery.attempts == 1
@@ -86,7 +89,7 @@ defmodule Firefly.WebhooksTest do
 
     # Each attempt counts; the tenth in a row turns it off.
     Repo.update_all(where(Webhook, id: ^webhook.id), set: [failure_count: 9])
-    capture_log(fn -> assert Webhooks.deliver_due(DateTime.add(now, 31)) == 0 end)
+    capture_log(fn -> assert {:error, _} = Webhooks.deliver(id, DateTime.add(now, 31)) end)
 
     webhook = Repo.reload!(webhook)
     refute webhook.active
@@ -95,8 +98,9 @@ defmodule Firefly.WebhooksTest do
 
     # Deliveries for a webhook that's off are skipped.
     :ok = Webhooks.ping(webhook)
-    Webhooks.deliver_due(DateTime.add(now, 10_000))
-    assert Enum.any?(deliveries(webhook), &(&1.status == "skipped"))
+    skipped = webhook |> deliveries() |> Enum.map(& &1.id) |> Enum.max()
+    assert :ok = perform_job(DeliveryWorker, %{delivery_id: skipped})
+    assert Repo.get!(Delivery, skipped).status == "skipped"
 
     {:ok, webhook} = Webhooks.update(webhook, %{"active" => "true"}, ctx.admin)
     assert webhook.failure_count == 0
@@ -108,7 +112,9 @@ defmodule Firefly.WebhooksTest do
     [delivery] = deliveries(webhook)
     Repo.update!(change(delivery, attempts: 4))
 
-    Webhooks.deliver_due()
+    # The job's fifth attempt, its last: Oban discards it.
+    assert Enum.map(1..4, &DeliveryWorker.backoff(%Oban.Job{attempt: &1})) == [30, 120, 480, 1920]
+    assert {:error, _} = perform_job(DeliveryWorker, %{delivery_id: delivery.id}, attempt: 5)
     assert [%{status: "failed", attempts: 5}] = deliveries(webhook)
   end
 

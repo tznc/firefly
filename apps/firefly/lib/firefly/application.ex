@@ -50,15 +50,7 @@ defmodule Firefly.Application do
       Firefly.Reports.Cache,
       # Runs backups and restores; applies read-only mode
       Firefly.Backups.Runner
-    ] ++ plugin_queue()
-  end
-
-  # Delivers plugin events and runs plugins' scheduled jobs. Off in tests,
-  # which run them inside their own database transaction.
-  defp plugin_queue do
-    if Application.get_env(:firefly, Firefly.Plugins.Queue, [])[:enabled] == false,
-      do: [],
-      else: [Firefly.Plugins.Queue]
+    ]
   end
 
   defp children(false), do: default_children()

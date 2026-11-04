@@ -13,7 +13,7 @@ defmodule FireflyWeb.PluginEventsTest do
   alias Firefly.Discussion.{Poll, Post, Thread}
   alias Firefly.Notifications.Notification
   alias Firefly.Plugin.Runner
-  alias Firefly.Plugins.{Events, Fields, HTTP, Health, Jobs, QueuedEvent, Storage}
+  alias Firefly.Plugins.{EventWorker, Events, Fields, HTTP, Health, Jobs, Storage}
 
   setup do
     admin = admin_fixture()
@@ -23,8 +23,8 @@ defmodule FireflyWeb.PluginEventsTest do
     %{admin: admin, member: member, category: category, thread: thread}
   end
 
-  defp queued, do: Repo.all(from(e in QueuedEvent, order_by: e.id))
-  defp queued_events, do: Enum.map(queued(), & &1.event)
+  defp queued, do: Enum.sort_by(all_enqueued(worker: EventWorker), & &1.id)
+  defp queued_events, do: Enum.map(queued(), & &1.args["event"])
 
   # A plugin whose `go` export runs `body` (JS) with `args`, as `call/2` does.
   defp actor(admin, manifest, body) do
@@ -76,7 +76,7 @@ defmodule FireflyWeb.PluginEventsTest do
       {:ok, post} = Discussion.create_post(thread, member, %{body: "a reply"})
 
       assert ["post_created"] = queued_events()
-      assert Events.deliver_due() == 1
+      assert %{success: 1} = Oban.drain_queue(queue: :plugins)
       assert queued() == []
 
       assert [
@@ -198,18 +198,17 @@ defmodule FireflyWeb.PluginEventsTest do
       )
 
       {:ok, _} = Discussion.create_post(thread, member, %{body: "x"})
-      now = DateTime.utc_now()
+      [%{args: args}] = queued()
 
-      assert Events.deliver_due(now) == 0
-      assert [%{attempts: 1, last_error: "js_error: down" <> _, run_at: run_at}] = queued()
-      assert DateTime.diff(run_at, now) == 30
-      # Not due yet.
-      Events.deliver_due(now)
-      assert [%{attempts: 1}] = queued()
+      # Retried after 30 seconds, 2, 8 and 32 minutes.
+      assert Enum.map(1..4, &EventWorker.backoff(%Oban.Job{attempt: &1})) == [30, 120, 480, 1920]
 
-      for minutes <- [1, 3, 11, 43], do: Events.deliver_due(DateTime.add(now, minutes, :minute))
+      for attempt <- 1..4 do
+        assert {:error, "js_error: down" <> _} = perform_job(EventWorker, args, attempt: attempt)
+      end
 
-      assert queued() == []
+      assert Health.errors("flaky") |> Enum.filter(&(&1.kind == "gave_up")) == []
+      assert {:error, _} = perform_job(EventWorker, args, attempt: 5)
 
       assert [%{kind: "gave_up", message: "Dropped post_created after 5 attempts" <> _} | _] =
                Health.errors("flaky")
@@ -237,7 +236,7 @@ defmodule FireflyWeb.PluginEventsTest do
       )
 
       {:ok, _} = Discussion.create_post(thread, member, %{body: "hi"})
-      assert Events.deliver_due() == 1
+      assert %{success: 1} = Oban.drain_queue(queue: :plugins)
       assert queued() == []
 
       bot = Repo.get_by!(User, plugin_bot: "echo")
@@ -253,7 +252,7 @@ defmodule FireflyWeb.PluginEventsTest do
       {:ok, _} = Discussion.create_post(thread, member, %{body: "x"})
       {:ok, _} = Plugins.disable("listener", admin)
 
-      assert Events.deliver_due() == 0
+      assert %{cancelled: 1} = Oban.drain_queue(queue: :plugins)
       assert queued() == []
     end
   end

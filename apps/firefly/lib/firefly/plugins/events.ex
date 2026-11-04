@@ -32,12 +32,11 @@ defmodule Firefly.Plugins.Events do
   Every event also goes to the webhooks that want it (see
   `Firefly.Webhooks.enqueue/3`), whatever plugins subscribe.
 
-  Delivery is asynchronous and durable: `emit/3` queues a row per
-  subscriber (`Firefly.Plugins.QueuedEvent`) in the caller's
-  transaction, and `Firefly.Plugins.Queue` delivers them. A failed
-  delivery is retried after 30 seconds, 2 minutes, 8 minutes and 32 minutes,
-  then dropped (and logged). Events for a plugin that's inactive when they
-  come due are dropped.
+  Delivery is asynchronous and durable: `emit/3` enqueues a job per
+  subscriber (`Firefly.Plugins.EventWorker`, in the `plugins` queue) in the
+  caller's transaction. A failed delivery is retried after 30 seconds, 2
+  minutes, 8 minutes and 32 minutes, then dropped (and logged). Events for
+  a plugin that's inactive when they come due are dropped.
   """
 
   import Ecto.Query
@@ -45,18 +44,13 @@ defmodule Firefly.Plugins.Events do
   alias Firefly.{Discussion, Plugins, Repo}
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
-  alias Firefly.Plugin.Runner
-  alias Firefly.Plugins.{Health, QueuedEvent}
+  alias Firefly.Plugins.EventWorker
   alias Firefly.URLs
 
   @names ~w(post_created post_edited post_deleted thread_created user_registered flag_raised
             post_liked solved poll_closed category_created category_updated category_deleted
             post_approved post_rejected chat_message_created chat_message_edited
             chat_message_deleted chat_channel_created)
-  @max_attempts 5
-  # How long a delivery in progress holds its row before another node may
-  # take it.
-  @lease 300
 
   @doc "Every event name."
   def names, do: @names
@@ -82,22 +76,13 @@ defmodule Firefly.Plugins.Events do
     if subscribers != [] and opts[:private] != true and
          public?(opts[:post], opts[:thread], opts[:category]) do
       payload = if is_function(data, 0), do: data.(), else: data
-      now = DateTime.utc_now()
 
-      rows =
-        for plugin <- subscribers do
-          %{
-            plugin_id: plugin.id,
-            event: event,
-            payload: payload,
-            run_at: now,
-            inserted_at: NaiveDateTime.utc_now(),
-            updated_at: NaiveDateTime.utc_now()
-          }
-        end
-
-      Repo.insert_all(QueuedEvent, rows)
-      Plugins.Queue.kick()
+      for plugin <- subscribers do
+        {:ok, _job} =
+          %{plugin_id: plugin.id, event: event, payload: payload}
+          |> EventWorker.new()
+          |> Firefly.Jobs.insert()
+      end
     end
 
     :ok
@@ -146,84 +131,13 @@ defmodule Firefly.Plugins.Events do
       url: URLs.thread_url(thread)
     }
 
-  @doc "Delivers the events due at `now`, one at a time. Returns how many were delivered."
-  def deliver_due(now \\ DateTime.utc_now()), do: deliver_due(now, 0)
-
-  defp deliver_due(now, count) do
-    case claim(now) do
-      nil -> count
-      row -> deliver_due(now, count + deliver(row, now))
-    end
-  end
-
-  defp claim(now) do
-    {:ok, row} =
-      Repo.transact(fn ->
-        row =
-          QueuedEvent
-          |> where([e], e.run_at <= ^now)
-          |> order_by([e], asc: e.run_at, asc: e.id)
-          |> limit(1)
-          |> lock("FOR UPDATE SKIP LOCKED")
-          |> Repo.one()
-
-        {:ok, row && Repo.update!(Ecto.Changeset.change(row, run_at: DateTime.add(now, @lease)))}
-      end)
-
-    row
-  end
-
-  defp deliver(row, now) do
-    Firefly.Telemetry.span([:firefly, :plugins, :event], %{}, fn ->
-      {delivered, result} = attempt(row, now)
-      {delivered, %{result: result}}
-    end)
-  end
-
-  defp attempt(row, now) do
-    with %{} = plugin <- Plugins.get_active(row.plugin_id),
-         {:ok, _} <-
-           Runner.invoke(plugin, "handle_event", [%{"event" => row.event, "data" => row.payload}]) do
-      Repo.delete!(row)
-      {1, "delivered"}
-    else
-      nil ->
-        Repo.delete!(row)
-        {0, "dropped"}
-
-      {:error, reason} ->
-        retry(row, reason, now)
-        {0, "failed"}
-    end
-  end
-
-  defp retry(row, reason, now) do
-    attempts = row.attempts + 1
-    message = describe(reason)
-
-    if attempts >= @max_attempts do
-      Repo.delete!(row)
-
-      Health.log_error(
-        row.plugin_id,
-        "handle_event",
-        :gave_up,
-        "Dropped #{row.event} after #{attempts} attempts; the last: #{message}"
-      )
-    else
-      Repo.update!(
-        Ecto.Changeset.change(row,
-          attempts: attempts,
-          last_error: message,
-          run_at: DateTime.add(now, 30 * 4 ** (attempts - 1))
-        )
-      )
-    end
-  end
-
-  defp describe({kind, message}), do: "#{kind}: #{message}"
-  defp describe(reason), do: to_string(inspect(reason))
-
   @doc "Drops `plugin_id`'s queued events (on uninstall)."
-  def clear(plugin_id), do: Repo.delete_all(where(QueuedEvent, plugin_id: ^plugin_id))
+  def clear(plugin_id) do
+    Repo.delete_all(
+      from(j in Oban.Job,
+        where: j.worker == ^inspect(EventWorker) and j.state in ~w(available scheduled retryable),
+        where: fragment("?->>'plugin_id' = ?", j.args, ^plugin_id)
+      )
+    )
+  end
 end
