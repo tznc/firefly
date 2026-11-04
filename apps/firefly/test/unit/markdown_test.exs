@@ -82,4 +82,29 @@ defmodule Firefly.MarkdownTest do
       refute Markdown.render("`<pre>`") =~ ~s(<pre class=)
     end
   end
+
+  # Found by Firefly.RenderingPropertyTest: MDEx's default allow-list keeps
+  # `style` on div, span, pre and code, so a post could cover the page.
+  test "drops inline styles, but for BBCode's colors and sizes" do
+    for html <- [
+          ~s(<div style="position:fixed;inset:0;z-index:9999">Log in again</div>),
+          ~s{<span style="expression(alert(1))">x</span>},
+          ~s(<pre style="display:none">x</pre>),
+          ~s{<script><div style="expression(alert(1))">}
+        ] do
+      refute Markdown.render(html) =~ "style="
+    end
+
+    assert Markdown.render("[color=red]r[/color] [size=150]b[/size]") ==
+             ~s(<p><span style="color: red">r</span> <span style="font-size: 150%">b</span></p>)
+
+    assert Markdown.render(~s(<span style="color: red">r</span>)) =~ ~s(style="color: red")
+    refute Markdown.render(~s(<span style="color: red; position: fixed">r</span>)) =~ "style"
+  end
+
+  # Found by Firefly.RenderingPropertyTest: the parser raised on bytes that
+  # aren't UTF-8.
+  test "renders invalid UTF-8 with replacement characters" do
+    assert Markdown.render(<<"a", 128, "b">>) == "<p>a\uFFFDb</p>"
+  end
 end

@@ -49,7 +49,9 @@ defmodule FireflyImport.MixProject do
       # HTML to Markdown.
       {:floki, "~> 0.38"},
       # Files to download (uploads given by URL).
-      {:req, "~> 0.7.5"}
+      {:req, "~> 0.7.5"},
+      # Property-based tests of the HTML to Markdown conversion.
+      {:stream_data, "~> 1.1", only: :test}
     ]
   end
 

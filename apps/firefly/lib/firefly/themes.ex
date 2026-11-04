@@ -366,7 +366,8 @@ defmodule Firefly.Themes do
         end)
       )
 
-    "/* #{String.replace(theme.name, "*/", "")} v#{theme.version} */\n" <>
+    # "* /": removing "*/" would turn "**//" into another "*/".
+    "/* #{String.replace(theme.name, "*/", "* /")} v#{theme.version} */\n" <>
       color_css(theme) <> settings_css(parts) <> css
   end
 
