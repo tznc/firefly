@@ -13,7 +13,7 @@ defmodule FireflyWeb.AuthLive.Identity do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Log In")
+     |> assign(:page_title, gettext("Log in"))
      |> assign(:trigger_submit, false)
      |> assign(:passkeys, Firefly.Accounts.Passkeys.enabled?())
      |> assign(:magic_links, Firefly.Accounts.MagicLinks.enabled?())
@@ -46,9 +46,10 @@ defmodule FireflyWeb.AuthLive.Identity do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
-        <.page_header title="Log In">
+        <.page_header title={gettext("Log in")}>
           <:subtitle :if={Firefly.Accounts.registration_open?()}>
-            New here? <.link navigate={~p"/register"} class="link">Create an account</.link>
+            {gettext("New here?")}
+            <.link navigate={~p"/register"} class="link">{gettext("Create an account")}</.link>
           </:subtitle>
         </.page_header>
         <.form
@@ -64,24 +65,24 @@ defmodule FireflyWeb.AuthLive.Identity do
           <.input
             field={@form[:username]}
             type="text"
-            label="Username"
+            label={gettext("Username")}
             autocomplete={if @passkeys, do: "username webauthn", else: "username"}
           />
           <.input
             field={@form[:password]}
             type="password"
-            label="Password"
+            label={gettext("Password")}
             autocomplete="current-password"
           />
-          <.button variant="primary" class="btn btn-primary w-full">Log in</.button>
+          <.button variant="primary" class="btn btn-primary w-full">{gettext("Log in")}</.button>
           <p class="text-center text-sm">
-            <.link navigate={~p"/reset-password"} class="link">Forgot your password?</.link>
+            <.link navigate={~p"/reset-password"} class="link">{gettext("Forgot your password?")}</.link>
             <span :if={@magic_links}>
-              · <.link navigate={~p"/login/email"} class="link">Email me a login link</.link>
+              · <.link navigate={~p"/login/email"} class="link">{gettext("Email me a login link")}</.link>
             </span>
           </p>
         </.form>
-        <div :if={@passkeys} class="divider text-xs">or</div>
+        <div :if={@passkeys} class="divider text-xs">{gettext("or")}</div>
         <FireflyWeb.AuthLive.Login.passkey_form :if={@passkeys} conditional />
       </section>
     </Layouts.app>

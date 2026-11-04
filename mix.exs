@@ -14,7 +14,11 @@ defmodule Firefly.Umbrella.MixProject do
       deps: deps(),
       aliases: aliases(),
       releases: releases(),
-      dialyzer: [plt_add_apps: [:mix, :ex_unit], plt_local_path: "priv/plts"]
+      dialyzer: [
+        plt_add_apps: [:mix, :ex_unit],
+        plt_local_path: "priv/plts",
+        ignore_warnings: ".dialyzer_ignore.exs"
+      ]
     ]
   end
 

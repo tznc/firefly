@@ -22,6 +22,7 @@ defmodule FireflyWeb.Router do
     plug(:protect_from_forgery)
     plug(:put_secure_browser_headers)
     plug(FireflyWeb.Plugs.CurrentUser)
+    plug(FireflyWeb.Locale)
     plug(FireflyWeb.Plugs.AkismetClient)
     plug(FireflyWeb.Plugs.Analytics, :browser)
     plug(FireflyWeb.Plugs.CrawlerView)
@@ -120,6 +121,7 @@ defmodule FireflyWeb.Router do
       session: {FireflyWeb.Plugs.Analytics, :live_session, []},
       on_mount: [
         {FireflyWeb.UserAuth, :mount_current_user},
+        {FireflyWeb.Locale, :put_locale},
         FireflyWeb.PluginWidgets
       ] do
       # Declared first so that e.g. /categories/new wins over /categories/:id.

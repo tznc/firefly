@@ -1,0 +1,746 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/firefly_web/components/layouts.ex:190
+#: lib/firefly_web/components/layouts.ex:190
+#, elixir-autogen, elixir-format
+msgid "%{count} to review"
+msgstr "%{count} por revisar"
+
+#: lib/firefly_web/components/layouts.ex:134
+#: lib/firefly_web/components/layouts.ex:134
+#, elixir-autogen, elixir-format
+msgid "%{count} unread"
+msgstr "%{count} sin leer"
+
+#: lib/firefly_web/live/thread_live/show.ex:748
+#: lib/firefly_web/live/thread_live/show.ex:748
+#, elixir-autogen, elixir-format
+msgid "1 reply"
+msgid_plural "%{count} replies"
+msgstr[0] "1 respuesta"
+msgstr[1] "%{count} respuestas"
+
+#: lib/firefly_web/live/search_live/index.ex:165
+#: lib/firefly_web/live/search_live/index.ex:165
+#, elixir-autogen, elixir-format
+msgid "1 result"
+msgid_plural "%{count} results"
+msgstr[0] "1 resultado"
+msgstr[1] "%{count} resultados"
+
+#: lib/firefly_web/live/thread_live/show.ex:749
+#: lib/firefly_web/live/thread_live/show.ex:749
+#, elixir-autogen, elixir-format
+msgid "1 view"
+msgid_plural "%{count} views"
+msgstr[0] "1 visita"
+msgstr[1] "%{count} visitas"
+
+#: lib/firefly_web/components/layouts.ex:246
+#: lib/firefly_web/components/layouts.ex:246
+#, elixir-autogen, elixir-format
+msgid "API keys"
+msgstr "Claves de API"
+
+#: lib/firefly_web/components/layouts.ex:310
+#: lib/firefly_web/components/layouts.ex:310
+#, elixir-autogen, elixir-format
+msgid "About"
+msgstr "Acerca de"
+
+#: lib/firefly_web/components/layouts.ex:156
+#: lib/firefly_web/components/layouts.ex:156
+#, elixir-autogen, elixir-format
+msgid "Account"
+msgstr "Cuenta"
+
+#: lib/firefly_web/components/layouts.ex:286
+#: lib/firefly_web/components/layouts.ex:286
+#, elixir-autogen, elixir-format
+msgid "Admin"
+msgstr "Administración"
+
+#: lib/firefly_web/live/auth_live/registration.ex:81
+#: lib/firefly_web/live/auth_live/registration.ex:81
+#, elixir-autogen, elixir-format
+msgid "Already have one?"
+msgstr "¿Ya tienes una?"
+
+#: lib/firefly_web/live/settings_live/index.ex:656
+#: lib/firefly_web/live/settings_live/index.ex:656
+#, elixir-autogen, elixir-format
+msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
+msgstr "Se aplica en todas tus sesiones. El botón de la barra superior también lo cambia."
+
+#: lib/firefly_web/components/layouts.ex:442
+#: lib/firefly_web/components/layouts.ex:442
+#: lib/firefly_web/components/layouts.ex:457
+#: lib/firefly_web/components/layouts.ex:457
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr "Intentando reconectar"
+
+#: lib/firefly_web/components/layouts.ex:266
+#: lib/firefly_web/components/layouts.ex:266
+#, elixir-autogen, elixir-format
+msgid "Backups"
+msgstr "Copias de seguridad"
+
+#: lib/firefly_web/components/layouts.ex:154
+#: lib/firefly_web/components/layouts.ex:154
+#: lib/firefly_web/components/layouts.ex:229
+#: lib/firefly_web/components/layouts.ex:229
+#, elixir-autogen, elixir-format
+msgid "Badges"
+msgstr "Insignias"
+
+#: lib/firefly_web/components/layouts.ex:120
+#: lib/firefly_web/components/layouts.ex:120
+#, elixir-autogen, elixir-format
+msgid "Bookmarks"
+msgstr "Marcadores"
+
+#: lib/firefly_web/components/layouts.ex:318
+#: lib/firefly_web/components/layouts.ex:318
+#, elixir-autogen, elixir-format
+msgid "Built on Firestorm"
+msgstr "Construido sobre Firestorm"
+
+#: lib/firefly_web/live/auth_live/login.ex:88
+#: lib/firefly_web/live/auth_live/login.ex:88
+#, elixir-autogen, elixir-format
+msgid "By signing up, I agree to %{site}'s Terms and Privacy Policy."
+msgstr "Al registrarme, acepto los Términos y la Política de privacidad de %{site}."
+
+#: lib/firefly_web/components/layouts.ex:146
+#: lib/firefly_web/components/layouts.ex:146
+#, elixir-autogen, elixir-format
+msgid "Categories"
+msgstr "Categorías"
+
+#: lib/firefly_web/components/layouts.ex:140
+#: lib/firefly_web/components/layouts.ex:140
+#, elixir-autogen, elixir-format
+msgid "Chat"
+msgstr "Chat"
+
+#: lib/firefly_web/live/auth_live/reset_password.ex:16
+#: lib/firefly_web/live/auth_live/reset_password.ex:16
+#: lib/firefly_web/live/auth_live/reset_password.ex:52
+#: lib/firefly_web/live/auth_live/reset_password.ex:52
+#, elixir-autogen, elixir-format
+msgid "Choose a new password"
+msgstr "Elige una nueva contraseña"
+
+#: lib/firefly_web/components/layouts.ex:102
+#: lib/firefly_web/components/layouts.ex:102
+#, elixir-autogen, elixir-format
+msgid "Close menu"
+msgstr "Cerrar el menú"
+
+#: lib/firefly_web/live/auth_live/reset_password.ex:71
+#: lib/firefly_web/live/auth_live/reset_password.ex:71
+#, elixir-autogen, elixir-format
+msgid "Confirm new password"
+msgstr "Confirma la nueva contraseña"
+
+#: lib/firefly_web/components/layouts.ex:341
+#: lib/firefly_web/components/layouts.ex:341
+#, elixir-autogen, elixir-format
+msgid "Confirm your email address to start posting. We sent a link to %{email}."
+msgstr "Confirma tu dirección de correo para empezar a publicar. Enviamos un enlace a %{email}."
+
+#: lib/firefly_web/components/layouts.ex:313
+#: lib/firefly_web/components/layouts.ex:313
+#, elixir-autogen, elixir-format
+msgid "Contact us"
+msgstr "Contáctanos"
+
+#: lib/firefly_web/live/auth_live/login.ex:76
+#: lib/firefly_web/live/auth_live/login.ex:76
+#: lib/firefly_web/live/auth_live/registration.ex:109
+#: lib/firefly_web/live/auth_live/registration.ex:109
+#, elixir-autogen, elixir-format
+msgid "Create account"
+msgstr "Crear cuenta"
+
+#: lib/firefly_web/live/auth_live/identity.ex:52
+#: lib/firefly_web/live/auth_live/identity.ex:52
+#: lib/firefly_web/live/auth_live/registration.ex:32
+#: lib/firefly_web/live/auth_live/registration.ex:32
+#: lib/firefly_web/live/auth_live/registration.ex:79
+#: lib/firefly_web/live/auth_live/registration.ex:79
+#, elixir-autogen, elixir-format
+msgid "Create an account"
+msgstr "Crea una cuenta"
+
+#: lib/firefly_web/live/auth_live/registration.ex:108
+#: lib/firefly_web/live/auth_live/registration.ex:108
+#, elixir-autogen, elixir-format
+msgid "Creating..."
+msgstr "Creando..."
+
+#: lib/firefly_web/live/settings_live/index.ex:652
+#: lib/firefly_web/live/settings_live/index.ex:652
+#, elixir-autogen, elixir-format
+msgid "Dark"
+msgstr "Oscuro"
+
+#: lib/firefly_web/components/layouts.ex:182
+#: lib/firefly_web/components/layouts.ex:182
+#, elixir-autogen, elixir-format
+msgid "Dashboard"
+msgstr "Panel"
+
+#: lib/firefly_web/components/layouts.ex:117
+#: lib/firefly_web/components/layouts.ex:117
+#, elixir-autogen, elixir-format
+msgid "Drafts"
+msgstr "Borradores"
+
+#: lib/firefly_web/live/auth_live/forgot_password.ex:46
+#: lib/firefly_web/live/auth_live/forgot_password.ex:46
+#: lib/firefly_web/live/auth_live/magic_link.ex:56
+#: lib/firefly_web/live/auth_live/magic_link.ex:56
+#: lib/firefly_web/live/auth_live/registration.ex:96
+#: lib/firefly_web/live/auth_live/registration.ex:96
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr "Correo electrónico"
+
+#: lib/firefly_web/live/auth_live/magic_link.ex:22
+#: lib/firefly_web/live/auth_live/magic_link.ex:22
+#: lib/firefly_web/live/auth_live/magic_link.ex:43
+#: lib/firefly_web/live/auth_live/magic_link.ex:43
+#, elixir-autogen, elixir-format
+msgid "Email login links are off."
+msgstr "Los enlaces de acceso por correo están desactivados."
+
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/login.ex:83
+#: lib/firefly_web/live/auth_live/login.ex:83
+#, elixir-autogen, elixir-format
+msgid "Email me a login link"
+msgstr "Envíame un enlace de acceso"
+
+#: lib/firefly_web/components/layouts.ex:256
+#: lib/firefly_web/components/layouts.ex:256
+#, elixir-autogen, elixir-format
+msgid "Embedding"
+msgstr "Incrustación"
+
+#: lib/firefly_web/components/layouts.ex:226
+#: lib/firefly_web/components/layouts.ex:226
+#, elixir-autogen, elixir-format
+msgid "Emoji"
+msgstr "Emojis"
+
+#: lib/firefly_web/live/auth_live/login.ex:91
+#: lib/firefly_web/live/auth_live/login.ex:91
+#, elixir-autogen, elixir-format
+msgid "Firefly is made by"
+msgstr "Firefly está hecho por"
+
+#: lib/firefly_web/components/layouts.ex:317
+#: lib/firefly_web/components/layouts.ex:317
+#, elixir-autogen, elixir-format
+msgid "Firefly on GitHub"
+msgstr "Firefly en GitHub"
+
+#: lib/firefly_web/components/layouts.ex:319
+#: lib/firefly_web/components/layouts.ex:319
+#, elixir-autogen, elixir-format
+msgid "Firestorm patrons"
+msgstr "Patrocinadores de Firestorm"
+
+#: lib/firefly_web/live/settings_live/index.ex:662
+#: lib/firefly_web/live/settings_live/index.ex:662
+#, elixir-autogen, elixir-format
+msgid "Follow my browser"
+msgstr "Seguir mi navegador"
+
+#: lib/firefly_web/live/settings_live/index.ex:650
+#: lib/firefly_web/live/settings_live/index.ex:650
+#, elixir-autogen, elixir-format
+msgid "Follow my system"
+msgstr "Seguir mi sistema"
+
+#: lib/firefly_web/live/auth_live/identity.ex:79
+#: lib/firefly_web/live/auth_live/identity.ex:79
+#, elixir-autogen, elixir-format
+msgid "Forgot your password?"
+msgstr "¿Olvidaste tu contraseña?"
+
+#: lib/firefly_web/components/layouts.ex:143
+#: lib/firefly_web/components/layouts.ex:143
+#, elixir-autogen, elixir-format
+msgid "Forum"
+msgstr "Foro"
+
+#: lib/firefly_web/components/layouts.ex:151
+#: lib/firefly_web/components/layouts.ex:151
+#: lib/firefly_web/components/layouts.ex:210
+#: lib/firefly_web/components/layouts.ex:210
+#, elixir-autogen, elixir-format
+msgid "Groups"
+msgstr "Grupos"
+
+#: lib/firefly_web/components/layouts.ex:273
+#: lib/firefly_web/components/layouts.ex:273
+#, elixir-autogen, elixir-format
+msgid "Import"
+msgstr "Importar"
+
+#: lib/firefly_web/components/layouts.ex:174
+#: lib/firefly_web/components/layouts.ex:174
+#, elixir-autogen, elixir-format
+msgid "Invites"
+msgstr "Invitaciones"
+
+#: lib/firefly_web/live/settings_live/index.ex:661
+#: lib/firefly_web/live/settings_live/index.ex:661
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr "Idioma"
+
+#: lib/firefly_web/components/layouts.ex:144
+#: lib/firefly_web/components/layouts.ex:144
+#, elixir-autogen, elixir-format
+msgid "Latest"
+msgstr "Recientes"
+
+#: lib/firefly_web/live/settings_live/index.ex:651
+#: lib/firefly_web/live/settings_live/index.ex:651
+#, elixir-autogen, elixir-format
+msgid "Light"
+msgstr "Claro"
+
+#: lib/firefly_web/components/layouts.ex:300
+#: lib/firefly_web/components/layouts.ex:300
+#: lib/firefly_web/live/auth_live/identity.ex:16
+#: lib/firefly_web/live/auth_live/identity.ex:16
+#: lib/firefly_web/live/auth_live/identity.ex:49
+#: lib/firefly_web/live/auth_live/identity.ex:49
+#: lib/firefly_web/live/auth_live/identity.ex:77
+#: lib/firefly_web/live/auth_live/identity.ex:77
+#: lib/firefly_web/live/auth_live/login.ex:14
+#: lib/firefly_web/live/auth_live/login.ex:14
+#: lib/firefly_web/live/auth_live/registration.ex:82
+#: lib/firefly_web/live/auth_live/registration.ex:82
+#, elixir-autogen, elixir-format
+msgid "Log in"
+msgstr "Iniciar sesión"
+
+#: lib/firefly_web/live/auth_live/magic_link.ex:16
+#: lib/firefly_web/live/auth_live/magic_link.ex:16
+#: lib/firefly_web/live/auth_live/magic_link.ex:52
+#: lib/firefly_web/live/auth_live/magic_link.ex:52
+#, elixir-autogen, elixir-format
+msgid "Log in by email"
+msgstr "Iniciar sesión por correo"
+
+#: lib/firefly_web/live/auth_live/login.ex:68
+#: lib/firefly_web/live/auth_live/login.ex:68
+#, elixir-autogen, elixir-format
+msgid "Log in with %{provider}"
+msgstr "Iniciar sesión con %{provider}"
+
+#: lib/firefly_web/live/user_auth.ex:79
+#: lib/firefly_web/live/user_auth.ex:79
+#, elixir-autogen, elixir-format
+msgid "Log in with single sign-on."
+msgstr "Inicia sesión con el acceso único."
+
+#: lib/firefly_web/components/layouts.ex:291
+#: lib/firefly_web/components/layouts.ex:291
+#, elixir-autogen, elixir-format
+msgid "Log out"
+msgstr "Cerrar sesión"
+
+#: lib/firefly_web/live/settings_live/index.ex:666
+#: lib/firefly_web/live/settings_live/index.ex:666
+#, elixir-autogen, elixir-format
+msgid "Machine translations, pending a native speaker's review: please report anything that reads wrong."
+msgstr "Traducciones automáticas, pendientes de revisión por hablantes nativos: avísanos si algo suena mal."
+
+#: lib/firefly_web/components/layouts.ex:316
+#: lib/firefly_web/components/layouts.ex:316
+#, elixir-autogen, elixir-format
+msgid "Made by tznc.dev"
+msgstr "Hecho por tznc.dev"
+
+#: lib/firefly_web/components/layouts.ex:129
+#: lib/firefly_web/components/layouts.ex:129
+#, elixir-autogen, elixir-format
+msgid "Messages"
+msgstr "Mensajes"
+
+#: lib/firefly_web/live/auth_live/identity.ex:51
+#: lib/firefly_web/live/auth_live/identity.ex:51
+#, elixir-autogen, elixir-format
+msgid "New here?"
+msgstr "¿Eres nuevo?"
+
+#: lib/firefly_web/live/auth_live/reset_password.ex:65
+#: lib/firefly_web/live/auth_live/reset_password.ex:65
+#, elixir-autogen, elixir-format
+msgid "New password"
+msgstr "Nueva contraseña"
+
+#: lib/firefly_web/live/auth_live/registration.ex:25
+#: lib/firefly_web/live/auth_live/registration.ex:25
+#, elixir-autogen, elixir-format
+msgid "New registrations are closed."
+msgstr "Los registros están cerrados."
+
+#: lib/firefly_web/components/layouts.ex:123
+#: lib/firefly_web/components/layouts.ex:123
+#, elixir-autogen, elixir-format
+msgid "Notifications"
+msgstr "Notificaciones"
+
+#: lib/firefly_web/components/layouts.ex:67
+#: lib/firefly_web/components/layouts.ex:67
+#, elixir-autogen, elixir-format
+msgid "Notifications (%{count})"
+msgstr "Notificaciones (%{count})"
+
+#: lib/firefly_web/components/layouts.ex:80
+#: lib/firefly_web/components/layouts.ex:80
+#, elixir-autogen, elixir-format
+msgid "Open menu"
+msgstr "Abrir el menú"
+
+#: lib/firefly_web/components/layouts.ex:114
+#: lib/firefly_web/components/layouts.ex:114
+#, elixir-autogen, elixir-format
+msgid "Participating in"
+msgstr "Participando en"
+
+#: lib/firefly_web/live/auth_live/identity.ex:74
+#: lib/firefly_web/live/auth_live/identity.ex:74
+#: lib/firefly_web/live/auth_live/registration.ex:100
+#: lib/firefly_web/live/auth_live/registration.ex:100
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr "Contraseña"
+
+#: lib/firefly_web/live/auth_live/reset_password.ex:39
+#: lib/firefly_web/live/auth_live/reset_password.ex:39
+#, elixir-autogen, elixir-format
+msgid "Password reset. Log in with your new password."
+msgstr "Contraseña restablecida. Inicia sesión con la nueva."
+
+#: lib/firefly_web/components/layouts.ex:220
+#: lib/firefly_web/components/layouts.ex:220
+#, elixir-autogen, elixir-format
+msgid "Plugins"
+msgstr "Complementos"
+
+#: lib/firefly_web/components/layouts.ex:364
+#: lib/firefly_web/components/layouts.ex:364
+#, elixir-autogen, elixir-format
+msgid "Reason: %{reason}"
+msgstr "Motivo: %{reason}"
+
+#: lib/firefly_web/live/auth_live/registration.ex:47
+#: lib/firefly_web/live/auth_live/registration.ex:47
+#, elixir-autogen, elixir-format
+msgid "Registration failed. Please try again."
+msgstr "No se pudo completar el registro. Inténtalo de nuevo."
+
+#: lib/firefly_web/components/layouts.ex:344
+#: lib/firefly_web/components/layouts.ex:344
+#, elixir-autogen, elixir-format
+msgid "Resend link"
+msgstr "Reenviar el enlace"
+
+#: lib/firefly_web/live/auth_live/forgot_password.ex:16
+#: lib/firefly_web/live/auth_live/forgot_password.ex:16
+#: lib/firefly_web/live/auth_live/forgot_password.ex:42
+#: lib/firefly_web/live/auth_live/forgot_password.ex:42
+#, elixir-autogen, elixir-format
+msgid "Reset your password"
+msgstr "Restablece tu contraseña"
+
+#: lib/firefly_web/components/layouts.ex:185
+#: lib/firefly_web/components/layouts.ex:185
+#, elixir-autogen, elixir-format
+msgid "Review"
+msgstr "Revisión"
+
+#: lib/firefly_web/live/settings_live/index.ex:668
+#: lib/firefly_web/live/settings_live/index.ex:668
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Guardar"
+
+#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/settings_live/index.ex:668
+#: lib/firefly_web/live/settings_live/index.ex:668
+#, elixir-autogen, elixir-format
+msgid "Saving..."
+msgstr "Guardando..."
+
+#: lib/firefly_web/components/layouts.ex:53
+#: lib/firefly_web/components/layouts.ex:53
+#: lib/firefly_web/components/layouts.ex:59
+#: lib/firefly_web/components/layouts.ex:59
+#, elixir-autogen, elixir-format
+msgid "Search"
+msgstr "Buscar"
+
+#: lib/firefly_web/components/layouts.ex:53
+#: lib/firefly_web/components/layouts.ex:53
+#, elixir-autogen, elixir-format
+msgid "Search the forum"
+msgstr "Buscar en el foro"
+
+#: lib/firefly_web/live/auth_live/forgot_password.ex:47
+#: lib/firefly_web/live/auth_live/forgot_password.ex:47
+#: lib/firefly_web/live/auth_live/magic_link.ex:57
+#: lib/firefly_web/live/auth_live/magic_link.ex:57
+#, elixir-autogen, elixir-format
+msgid "Sending..."
+msgstr "Enviando..."
+
+#: lib/firefly_web/live/user_auth.ex:48
+#: lib/firefly_web/live/user_auth.ex:48
+#, elixir-autogen, elixir-format
+msgid "Set up two-factor authentication to go on."
+msgstr "Configura la verificación en dos pasos para continuar."
+
+#: lib/firefly_web/components/layouts.ex:166
+#: lib/firefly_web/components/layouts.ex:166
+#, elixir-autogen, elixir-format
+msgid "Settings"
+msgstr "Ajustes"
+
+#: lib/firefly_web/live/auth_live/login.ex:80
+#: lib/firefly_web/live/auth_live/login.ex:80
+#, elixir-autogen, elixir-format
+msgid "Sign in"
+msgstr "Entrar con contraseña"
+
+#: lib/firefly_web/components/layouts.ex:207
+#: lib/firefly_web/components/layouts.ex:207
+#, elixir-autogen, elixir-format
+msgid "Site settings"
+msgstr "Ajustes del sitio"
+
+#: lib/firefly_web/components/layouts.ex:449
+#: lib/firefly_web/components/layouts.ex:449
+#, elixir-autogen, elixir-format
+msgid "Something went wrong!"
+msgstr "¡Algo ha ido mal!"
+
+#: lib/firefly_web/components/layouts.ex:200
+#: lib/firefly_web/components/layouts.ex:200
+#, elixir-autogen, elixir-format
+msgid "Staff log"
+msgstr "Registro del equipo"
+
+#: lib/firefly_web/components/layouts.ex:213
+#: lib/firefly_web/components/layouts.ex:213
+#, elixir-autogen, elixir-format
+msgid "Tag groups"
+msgstr "Grupos de etiquetas"
+
+#: lib/firefly_web/components/layouts.ex:148
+#: lib/firefly_web/components/layouts.ex:148
+#, elixir-autogen, elixir-format
+msgid "Tags"
+msgstr "Etiquetas"
+
+#: lib/firefly_web/live/auth_live/reset_password.ex:23
+#: lib/firefly_web/live/auth_live/reset_password.ex:23
+#, elixir-autogen, elixir-format
+msgid "That reset link is invalid or has expired."
+msgstr "Ese enlace de restablecimiento no es válido o ha caducado."
+
+#: lib/firefly_web/components/layouts.ex:91
+#: lib/firefly_web/components/layouts.ex:91
+#, elixir-autogen, elixir-format
+msgid "The forum is read-only for maintenance (%{reason}). You can read, but not post or change anything for now."
+msgstr "El foro está en modo de solo lectura por mantenimiento (%{reason}). Puedes leer, pero no publicar ni cambiar nada por ahora."
+
+#: lib/firefly_web/live/settings_live/index.ex:648
+#: lib/firefly_web/live/settings_live/index.ex:648
+#, elixir-autogen, elixir-format
+msgid "Theme"
+msgstr "Tema"
+
+#: lib/firefly_web/components/layouts.ex:41
+#: lib/firefly_web/components/layouts.ex:41
+#, elixir-autogen, elixir-format
+msgid "Toggle navigation"
+msgstr "Mostrar u ocultar la navegación"
+
+#: lib/firefly_web/components/layouts.ex:280
+#: lib/firefly_web/components/layouts.ex:280
+#, elixir-autogen, elixir-format
+msgid "Upgrade"
+msgstr "Actualización"
+
+#: lib/firefly_web/components/layouts.ex:223
+#: lib/firefly_web/components/layouts.ex:223
+#, elixir-autogen, elixir-format
+msgid "Uploads"
+msgstr "Archivos subidos"
+
+#: lib/firefly_web/live/auth_live/login.ex:46
+#: lib/firefly_web/live/auth_live/login.ex:46
+#, elixir-autogen, elixir-format
+msgid "Use a passkey"
+msgstr "Usar una clave de acceso"
+
+#: lib/firefly_web/live/auth_live/identity.ex:68
+#: lib/firefly_web/live/auth_live/identity.ex:68
+#: lib/firefly_web/live/auth_live/registration.ex:95
+#: lib/firefly_web/live/auth_live/registration.ex:95
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr "Nombre de usuario"
+
+#: lib/firefly_web/components/layouts.ex:149
+#: lib/firefly_web/components/layouts.ex:149
+#, elixir-autogen, elixir-format
+msgid "Users"
+msgstr "Usuarios"
+
+#: lib/firefly_web/components/layouts.ex:236
+#: lib/firefly_web/components/layouts.ex:236
+#, elixir-autogen, elixir-format
+msgid "Watched words"
+msgstr "Palabras vigiladas"
+
+#: lib/firefly_web/components/layouts.ex:107
+#: lib/firefly_web/components/layouts.ex:107
+#, elixir-autogen, elixir-format
+msgid "Watching"
+msgstr "Siguiendo"
+
+#: lib/firefly_web/components/layouts.ex:434
+#: lib/firefly_web/components/layouts.ex:434
+#, elixir-autogen, elixir-format
+msgid "We can't find the internet"
+msgstr "No encontramos la conexión"
+
+#: lib/firefly_web/live/auth_live/magic_link.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:53
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link that logs you in."
+msgstr "Te enviaremos por correo un enlace para iniciar sesión."
+
+#: lib/firefly_web/live/auth_live/forgot_password.ex:43
+#: lib/firefly_web/live/auth_live/forgot_password.ex:43
+#, elixir-autogen, elixir-format
+msgid "We'll email you a link to choose a new one."
+msgstr "Te enviaremos por correo un enlace para elegir una nueva."
+
+#: lib/firefly_web/components/layouts.ex:239
+#: lib/firefly_web/components/layouts.ex:239
+#, elixir-autogen, elixir-format
+msgid "Webhooks"
+msgstr "Webhooks"
+
+#: lib/firefly_web/live/auth_live/registration.ex:105
+#: lib/firefly_web/live/auth_live/registration.ex:105
+#, elixir-autogen, elixir-format
+msgid "Website"
+msgstr "Sitio web"
+
+#: lib/firefly_web/components/layouts.ex:105
+#: lib/firefly_web/components/layouts.ex:105
+#, elixir-autogen, elixir-format
+msgid "You"
+msgstr "Tú"
+
+#: lib/firefly_web/authorization.ex:16
+#: lib/firefly_web/authorization.ex:16
+#, elixir-autogen, elixir-format
+msgid "You are not allowed to do that."
+msgstr "No tienes permiso para hacer eso."
+
+#: lib/firefly_web/authorization.ex:15
+#: lib/firefly_web/authorization.ex:15
+#: lib/firefly_web/live/user_auth.ex:66
+#: lib/firefly_web/live/user_auth.ex:66
+#, elixir-autogen, elixir-format
+msgid "You must be logged in to access this page."
+msgstr "Debes iniciar sesión para ver esta página."
+
+#: lib/firefly_web/components/layouts.ex:163
+#: lib/firefly_web/components/layouts.ex:163
+#, elixir-autogen, elixir-format
+msgid "Your profile"
+msgstr "Tu perfil"
+
+#: lib/firefly_web/components/layouts.ex:282
+#: lib/firefly_web/components/layouts.ex:282
+#, elixir-autogen, elixir-format
+msgid "new"
+msgstr "nuevo"
+
+#: lib/firefly_web/live/auth_live/identity.ex:85
+#: lib/firefly_web/live/auth_live/identity.ex:85
+#: lib/firefly_web/live/auth_live/login.ex:70
+#: lib/firefly_web/live/auth_live/login.ex:70
+#, elixir-autogen, elixir-format
+msgid "or"
+msgstr "o"
+
+#: lib/firefly_web/live/auth_live/magic_link.ex:58
+#: lib/firefly_web/live/auth_live/magic_link.ex:58
+#, elixir-autogen, elixir-format
+msgid "Email me a link"
+msgstr "Envíame un enlace"
+
+#: lib/firefly_web/components/layouts/root.html.heex:62
+#: lib/firefly_web/components/layouts/root.html.heex:62
+#, elixir-autogen, elixir-format
+msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
+msgstr "Firefly funciona sin JavaScript: las páginas, los temas y la búsqueda se generan en el servidor y los enlaces funcionan. Publicar, el chat y las actualizaciones en vivo sí lo necesitan."
+
+#: lib/firefly_web/live/auth_live/reset_password.ex:75
+#: lib/firefly_web/live/auth_live/reset_password.ex:75
+#, elixir-autogen, elixir-format
+msgid "Reset password"
+msgstr "Restablecer la contraseña"
+
+#: lib/firefly_web/live/auth_live/forgot_password.ex:48
+#: lib/firefly_web/live/auth_live/forgot_password.ex:48
+#, elixir-autogen, elixir-format
+msgid "Send reset link"
+msgstr "Enviar el enlace"
+
+#: lib/firefly_web/components/layouts.ex:500
+#: lib/firefly_web/components/layouts.ex:500
+#, elixir-autogen, elixir-format
+msgid "Use dark theme"
+msgstr "Usar el tema oscuro"
+
+#: lib/firefly_web/components/layouts.ex:492
+#: lib/firefly_web/components/layouts.ex:492
+#, elixir-autogen, elixir-format
+msgid "Use light theme"
+msgstr "Usar el tema claro"
+
+#: lib/firefly_web/components/layouts.ex:484
+#: lib/firefly_web/components/layouts.ex:484
+#, elixir-autogen, elixir-format
+msgid "Use system theme"
+msgstr "Usar el tema del sistema"

@@ -8,6 +8,7 @@ defmodule FireflyWeb.Api.V1.ThreadController do
   use FireflyWeb, :controller
   import FireflyWeb.Api.Helpers
 
+  alias Firefly.Accounts.User
   alias Firefly.{Discussion, Repo}
   alias Firefly.Discussion.{Bookmarks, Post, Solved, Thread}
   alias Firefly.Moderation.Posting
@@ -174,11 +175,14 @@ defmodule FireflyWeb.Api.V1.ThreadController do
 
       PostJSON.full(post, refs, user, %{
         like_count: length(liked_by),
-        liked: user != nil and Enum.any?(liked_by, &(&1.id == user.id)),
+        liked: liked_by?(liked_by, user),
         bookmarked: MapSet.member?(bookmarked, post.id)
       })
     end
   end
+
+  defp liked_by?(likers, %User{id: id}), do: Enum.any?(likers, &(&1.id == id))
+  defp liked_by?(_likers, nil), do: false
 
   defp can_view_hidden?(user, post), do: permit(user, :view_hidden_post, post) == :ok
 

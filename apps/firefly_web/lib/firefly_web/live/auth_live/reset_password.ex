@@ -13,14 +13,14 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
       {:ok, user} ->
         {:ok,
          socket
-         |> assign(:page_title, "Choose a new password")
+         |> assign(:page_title, gettext("Choose a new password"))
          |> assign(:user, user)
          |> assign(:form, to_form(User.password_changeset(user, %{}), as: :user))}
 
       {:error, _} ->
         {:ok,
          socket
-         |> put_flash(:error, "That reset link is invalid or has expired.")
+         |> put_flash(:error, gettext("That reset link is invalid or has expired."))
          |> push_navigate(to: ~p"/reset-password")}
     end
   end
@@ -36,7 +36,7 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
       {:ok, _user} ->
         {:noreply,
          socket
-         |> put_flash(:info, "Password reset. Log in with your new password.")
+         |> put_flash(:info, gettext("Password reset. Log in with your new password."))
          |> push_navigate(to: ~p"/auth/identity")}
 
       {:error, changeset} ->
@@ -49,7 +49,7 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
-        <.page_header title="Choose a new password">
+        <.page_header title={gettext("Choose a new password")}>
           <:subtitle>For {@user.username}</:subtitle>
         </.page_header>
         <.form
@@ -62,17 +62,17 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
           <.input
             field={@form[:password]}
             type="password"
-            label="New password"
+            label={gettext("New password")}
             autocomplete="new-password"
           />
           <.input
             field={@form[:password_confirmation]}
             type="password"
-            label="Confirm new password"
+            label={gettext("Confirm new password")}
             autocomplete="new-password"
           />
-          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with="Saving...">
-            Reset password
+          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with={gettext("Saving...")}>
+            {gettext("Reset password")}
           </.button>
         </.form>
       </section>

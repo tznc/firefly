@@ -23,6 +23,8 @@ defmodule Firefly.Accounts.User do
     field(:website, :string)
     field(:location, :string)
     field(:theme, :string, default: "system")
+    # The interface's language (see FireflyWeb.Locale); nil: their browser's.
+    field(:locale, :string)
     field(:reply_level, :string, default: "tracking")
     field(:new_thread_level, :string, default: "watching")
     field(:hide_profile_activity, :boolean, default: false)
@@ -107,6 +109,7 @@ defmodule Firefly.Accounts.User do
       :email_notifications,
       :allow_private_messages,
       :theme,
+      :locale,
       :reply_level,
       :new_thread_level,
       :hide_profile_activity,

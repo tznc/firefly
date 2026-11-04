@@ -169,6 +169,38 @@ Lists are paginated with `limit` (up to 100) and `cursor` (from
 `meta.next_cursor`); errors are `application/problem+json` (RFC 9457). The
 MCP server at `/mcp` uses the same keys, with the `read` scope.
 
+### Languages
+
+The interface is translated with [Gettext](https://hexdocs.pm/gettext)
+(`apps/firefly_web/priv/gettext`), in three domains: `default` (the
+interface), `errors` (validation messages) and `times` (month and day
+names, used by `FireflyWeb.Locale.strftime/2`). Shipped locales: English,
+Spanish, French, German, Brazilian Portuguese, Japanese, Simplified
+Chinese and Arabic.
+
+**The translations outside English are machine quality and still need a
+native speaker's review**; the interface says so where members pick their
+language. Arabic is deliberately partial: it covers the navigation and
+short labels, which is enough to exercise right-to-left layout (`<html
+dir="rtl">`), and the rest falls back to English.
+
+A reader's language is the first of: `?lang=`, their own choice (Settings
+> Interface), what an earlier request resolved (the session), the
+browser's `Accept-Language`, and the site's default (Language, under Site
+in the site settings). See `FireflyWeb.Locale`.
+
+Extracted so far: the shared chrome (navigation, notices, flashes, the
+theme toggle), the login, registration and password flows, the interface
+settings and every validation error. The rest of the interface is still
+English in the source; `FireflyWeb.I18nTest` lists the localized files and
+fails if an English literal creeps back into one, and if any `.po` file
+drifts from its `.pot`. To add strings: wrap them in `gettext(...)`, add
+the file to that list, then run
+
+```sh
+mix gettext.extract --merge
+```
+
 ### Search engines
 
 `robots.txt` is generated (crawl rules, the staff, account and private

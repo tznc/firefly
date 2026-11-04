@@ -1,0 +1,78 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+msgid ""
+msgstr ""
+"Language: ja\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "can't be blank"
+msgstr "入力してください"
+
+msgid "has already been taken"
+msgstr "すでに使われています"
+
+msgid "is invalid"
+msgstr "正しくありません"
+
+msgid "has invalid format"
+msgstr "形式が正しくありません"
+
+msgid "has an invalid entry"
+msgstr "不正な項目が含まれています"
+
+msgid "is reserved"
+msgstr "予約されています"
+
+msgid "does not match confirmation"
+msgstr "確認用の入力と一致しません"
+
+msgid "is still associated with this entry"
+msgstr "まだこの項目に紐づいています"
+
+msgid "are still associated with this entry"
+msgstr "まだこの項目に紐づいています"
+
+msgid "should be %{count} character(s)"
+msgid_plural "should be %{count} character(s)"
+msgstr[0] "%{count} 文字にしてください"
+
+msgid "should have %{count} item(s)"
+msgid_plural "should have %{count} item(s)"
+msgstr[0] "%{count} 件にしてください"
+
+msgid "should be at least %{count} character(s)"
+msgid_plural "should be at least %{count} character(s)"
+msgstr[0] "%{count} 文字以上にしてください"
+
+msgid "should have at least %{count} item(s)"
+msgid_plural "should have at least %{count} item(s)"
+msgstr[0] "%{count} 件以上にしてください"
+
+msgid "should be at most %{count} character(s)"
+msgid_plural "should be at most %{count} character(s)"
+msgstr[0] "%{count} 文字以内にしてください"
+
+msgid "should have at most %{count} item(s)"
+msgid_plural "should have at most %{count} item(s)"
+msgstr[0] "%{count} 件以内にしてください"
+
+msgid "must be less than %{number}"
+msgstr "%{number} より小さい値にしてください"
+
+msgid "must be greater than %{number}"
+msgstr "%{number} より大きい値にしてください"
+
+msgid "must be less than or equal to %{number}"
+msgstr "%{number} 以下にしてください"
+
+msgid "must be greater than or equal to %{number}"
+msgstr "%{number} 以上にしてください"
+
+msgid "must be equal to %{number}"
+msgstr "%{number} と同じ値にしてください"

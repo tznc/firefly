@@ -23,8 +23,8 @@ defmodule FireflyWeb.AuthLiveTest do
     |> visit(~p"/")
     |> click_link("Log in")
     |> assert_has(~s(a[href="/auth/github"]), text: "Log in with GitHub")
-    |> assert_has(~s(a[href="/register"]), text: "Create Account")
-    |> assert_has(~s(a[href="/auth/identity"]), text: "Sign In")
+    |> assert_has(~s(a[href="/register"]), text: "Create account")
+    |> assert_has(~s(a[href="/auth/identity"]), text: "Sign in")
   end
 
   test "the login form requires a username and password", %{conn: conn} do

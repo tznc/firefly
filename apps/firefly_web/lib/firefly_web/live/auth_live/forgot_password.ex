@@ -13,7 +13,7 @@ defmodule FireflyWeb.AuthLive.ForgotPassword do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Reset your password")
+     |> assign(:page_title, gettext("Reset your password"))
      |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
      |> assign(:form, to_form(%{"email" => ""}, as: :user))}
   end
@@ -39,13 +39,13 @@ defmodule FireflyWeb.AuthLive.ForgotPassword do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>
       <section class="mx-auto max-w-sm space-y-4 py-8">
-        <.page_header title="Reset your password">
-          <:subtitle>We'll email you a link to choose a new one.</:subtitle>
+        <.page_header title={gettext("Reset your password")}>
+          <:subtitle>{gettext("We'll email you a link to choose a new one.")}</:subtitle>
         </.page_header>
         <.form for={@form} id="forgot-password-form" phx-submit="send" class="space-y-2">
-          <.input field={@form[:email]} type="email" label="Email" autocomplete="email" required />
-          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with="Sending...">
-            Send reset link
+          <.input field={@form[:email]} type="email" label={gettext("Email")} autocomplete="email" required />
+          <.button variant="primary" class="btn btn-primary w-full" phx-disable-with={gettext("Sending...")}>
+            {gettext("Send reset link")}
           </.button>
         </.form>
       </section>

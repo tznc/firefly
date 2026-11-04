@@ -24,6 +24,8 @@ defmodule FireflyWeb.UserAuth do
       the password login, registration and reset pages.
   """
 
+  use Gettext, backend: FireflyWeb.Gettext
+
   use FireflyWeb, :verified_routes
 
   import Phoenix.Component, only: [assign: 3, assign_new: 3]
@@ -43,7 +45,7 @@ defmodule FireflyWeb.UserAuth do
          Firefly.Accounts.TwoFactor.must_enroll?(socket.assigns.current_user) do
       {:halt,
        socket
-       |> put_flash(:error, "Set up two-factor authentication to go on.")
+       |> put_flash(:error, gettext("Set up two-factor authentication to go on."))
        |> redirect(to: ~p"/settings/security")}
     else
       {:cont, socket}
@@ -61,7 +63,7 @@ defmodule FireflyWeb.UserAuth do
     else
       socket =
         socket
-        |> put_flash(:error, "You must be logged in to access this page.")
+        |> put_flash(:error, gettext("You must be logged in to access this page."))
         |> redirect(to: ~p"/categories")
 
       {:halt, socket}
@@ -74,7 +76,7 @@ defmodule FireflyWeb.UserAuth do
     else
       socket =
         socket
-        |> put_flash(:error, "Log in with single sign-on.")
+        |> put_flash(:error, gettext("Log in with single sign-on."))
         |> redirect(to: ~p"/login")
 
       {:halt, socket}

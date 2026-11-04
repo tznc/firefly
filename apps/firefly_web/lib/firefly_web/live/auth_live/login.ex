@@ -11,7 +11,7 @@ defmodule FireflyWeb.AuthLive.Login do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(:page_title, "Log in")
+     |> assign(:page_title, gettext("Log in"))
      |> assign(:providers, Firefly.Accounts.Auth.enabled_providers())
      |> assign(:password_login, Firefly.Accounts.Auth.password_login?())
      |> assign(:passkeys, Firefly.Accounts.Passkeys.enabled?())
@@ -43,7 +43,7 @@ defmodule FireflyWeb.AuthLive.Login do
         data-conditional={to_string(@conditional)}
         class="btn btn-outline w-full"
       >
-        <.icon name="hero-finger-print" class="size-5" /> Use a passkey
+        <.icon name="hero-finger-print" class="size-5" /> {gettext("Use a passkey")}
       </button>
     </.form>
     """
@@ -65,30 +65,30 @@ defmodule FireflyWeb.AuthLive.Login do
               id={"login-#{provider}"}
               class="btn btn-neutral"
             >
-              Log in with {Firefly.Accounts.Auth.label(provider)}
+              {gettext("Log in with %{provider}", provider: Firefly.Accounts.Auth.label(provider))}
             </a>
-            <div :if={@providers != [] and @password_login} class="divider text-xs">or</div>
+            <div :if={@providers != [] and @password_login} class="divider text-xs">{gettext("or")}</div>
             <.link
               :if={@password_login and Firefly.Accounts.registration_open?()}
               navigate={~p"/register"}
               class="btn btn-primary"
             >
-              Create Account
+              {gettext("Create account")}
             </.link>
             <.passkey_form :if={@passkeys} />
             <.link :if={@password_login} navigate={~p"/auth/identity"} class="link text-sm">
-              Sign In
+              {gettext("Sign in")}
             </.link>
             <.link :if={@magic_links} navigate={~p"/login/email"} class="link text-sm">
-              Email me a login link
+              {gettext("Email me a login link")}
             </.link>
           </div>
         </div>
         <p class="text-xs text-base-content/60">
-          By signing up, I agree to {Firefly.SiteSettings.get("title")}'s Terms and Privacy Policy.
+          {gettext("By signing up, I agree to %{site}'s Terms and Privacy Policy.", site: Firefly.SiteSettings.get("title"))}
         </p>
         <p class="text-xs text-base-content/60">
-          Firefly is made by <a href="https://tznc.dev" class="link">tznc.dev</a>
+          {gettext("Firefly is made by")} <a href="https://tznc.dev" class="link">tznc.dev</a>
         </p>
       </section>
     </Layouts.app>
