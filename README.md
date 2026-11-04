@@ -277,6 +277,16 @@ log; admins also run the site. Grant either role from a user's admin page
   log. Any setting can be pinned by the deployment with
   `FIREFLY_SETTING_<KEY>` (shown read-only). Export them as JSON or YAML
   and import either; secrets are never shown or exported.
+- **Themes** (`/staff/themes`): themes and theme components with light
+  and dark color schemes (daisyUI tokens, with a warning for any text
+  color below WCAG AA), custom CSS (up to 100 KB), head, header and footer
+  HTML (cleaned of scripts unless an admin allows them; allowed scripts
+  get the page's CSP nonce), and image and font assets. Admins preview a
+  theme in their own session before making it the default, and can let
+  members pick among some (Settings, Interface). Each theme compiles to a
+  stylesheet at a versioned URL browsers cache for good. Themes export as
+  a JSON bundle and import from a file, a URL or a GitHub repository's
+  `firefly-theme.json` (fetched from public addresses only).
 - **Screening** (`/staff/screening`): email addresses or patterns, IP
   addresses or ranges and URL domains that are blocked from signing up or
   posting. Each block is counted and recorded in the staff log.

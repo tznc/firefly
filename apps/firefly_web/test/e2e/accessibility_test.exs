@@ -50,6 +50,7 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
 
   test "the pages members use have no serious accessibility violations", context do
     %{conn: conn, category: category, thread: thread, channel: channel} = context
+    {:ok, theme} = Firefly.Themes.create_theme(%{"name" => "Ocean"}, context.admin)
 
     session = log_in(conn, "ada")
 
@@ -75,7 +76,9 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
           {"categories admin", "/staff/categories"},
           {"emails admin", "/staff/emails"},
           {"email previews", "/staff/emails?tab=previews"},
-          {"screening", "/staff/screening"}
+          {"screening", "/staff/screening"},
+          {"themes", "/staff/themes"},
+          {"theme editor", "/staff/themes/#{theme.id}"}
         ] do
       session
       |> visit(path)

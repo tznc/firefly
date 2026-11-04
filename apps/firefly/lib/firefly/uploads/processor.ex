@@ -3,9 +3,9 @@ defmodule Firefly.Uploads.Processor do
   Checks what an uploaded file really is and prepares it for storing.
 
   The type comes from the file's content, never from its name or the
-  browser's claim: PNG, JPEG, GIF and WebP images, PDFs, and plain text
-  (valid UTF-8 named `.txt`). Anything else (HTML, SVG, scripts,
-  executables) is refused.
+  browser's claim: PNG, JPEG, GIF and WebP images, PDFs, plain text
+  (valid UTF-8 named `.txt`) and, for themes, WOFF and WOFF2 fonts.
+  Anything else (HTML, SVG, scripts, executables) is refused.
 
   Images are decoded with libvips (through `Image`/`Vix`) and written
   again: turned upright from their EXIF orientation, with all metadata
@@ -50,6 +50,8 @@ defmodule Firefly.Uploads.Processor do
   def extension("image/webp"), do: ".webp"
   def extension("application/pdf"), do: ".pdf"
   def extension("text/plain"), do: ".txt"
+  def extension("font/woff2"), do: ".woff2"
+  def extension("font/woff"), do: ".woff"
 
   @doc """
   The content type of `data` named `filename`, if it's one that's
@@ -62,6 +64,9 @@ defmodule Firefly.Uploads.Processor do
   def detect(<<"GIF8", v, "a", _::binary>>, _filename) when v in [?7, ?9], do: {:ok, "image/gif"}
   def detect(<<"RIFF", _::32, "WEBP", _::binary>>, _filename), do: {:ok, "image/webp"}
   def detect(<<"%PDF-", _::binary>>, _filename), do: {:ok, "application/pdf"}
+  # Web fonts, which only themes may upload (see Firefly.Uploads).
+  def detect(<<"wOF2", _::binary>>, _filename), do: {:ok, "font/woff2"}
+  def detect(<<"wOFF", _::binary>>, _filename), do: {:ok, "font/woff"}
 
   def detect(data, filename) do
     if String.downcase(Path.extname(filename)) == ".txt" and String.valid?(data) and
@@ -87,6 +92,7 @@ defmodule Firefly.Uploads.Processor do
         "background" -> image(data, image, content_type, @background_size)
         "preview" -> image(data, image, content_type, @thumbnail_size)
         "site" -> image(data, image, content_type, @background_size)
+        "theme" -> image(data, image, content_type, @background_size)
         nil -> image(data, image, content_type, opts[:max_dimension])
       end
     end

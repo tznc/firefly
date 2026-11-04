@@ -74,7 +74,8 @@ defmodule Firefly.Discussion.Policy do
       admin participants
     * `:manage_site_settings`, `:manage_users` (edit, anonymize, delete,
       merge, roles, password resets, notifications), `:manage_emails` (the
-      email log, test emails and previews), `:manage_groups`,
+      email log, test emails and previews), `:manage_themes` (themes and
+      their components, scripts included, see `Firefly.Themes`), `:manage_groups`,
       `:manage_tags` (tag groups and synonyms), `:manage_badges`, `:manage_plugins`,
       `:manage_uploads` (list and delete any upload), `:manage_emoji`
       (custom emoji), `:manage_watched_words`, `:manage_webhooks`,
@@ -251,6 +252,7 @@ defmodule Firefly.Discussion.Policy do
              :manage_site_settings,
              :manage_users,
              :manage_emails,
+             :manage_themes,
              :manage_groups,
              :manage_tags,
              :manage_plugins,

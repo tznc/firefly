@@ -19,6 +19,7 @@ defmodule Firefly do
   | `Firefly.Groups`, `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory` | groups, trust levels, badges, the user directory |
   | `Firefly.Uploads`, `Firefly.Rendering` | uploaded files; Markdown/BBCode, emoji, embeds and link previews |
   | `Firefly.SiteSettings` | site settings |
+  | `Firefly.Themes` | themes and theme components: color schemes, CSS, head/header/footer HTML, assets, previews, import/export |
   | `Firefly.Analytics` | first-party traffic counts: page views, topic views, referrers, link clicks |
   | `Firefly.Reports` | the admin dashboard's overview and reports |
   | `Firefly.Backups` | backups and restores, read-only mode |
