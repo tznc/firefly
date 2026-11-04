@@ -30,9 +30,6 @@ config :firefly, Firefly.Repo,
 # Firefly.Endpoint): the domain never references it at compile time.
 config :firefly, Firefly.Endpoint, impl: FireflyWeb.Endpoint
 
-# Start notification server in app start
-config :firefly, notifications_enabled: true
-
 # Configures the endpoint
 config :firefly_web, FireflyWeb.Endpoint,
   url: [host: "localhost"],

@@ -2,7 +2,7 @@ defmodule FireflyWeb.GroupsTest do
   use FireflyWeb.ConnCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
+  # Mail is sent from other processes (LiveViews).
   setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
@@ -36,7 +36,7 @@ defmodule FireflyWeb.GroupsTest do
   defp kinds(user, kind),
     do: Enum.filter(Notifications.notifications_for(user), &(&1.kind == kind))
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   describe "visibility" do
     test "public groups for everyone, members groups for members, staff groups for staff", ctx do
@@ -232,7 +232,6 @@ defmodule FireflyWeb.GroupsTest do
 
   describe "mentions" do
     setup %{team: team, admin: admin} do
-      {:ok, _} = Notifications.start_link()
       category = category_fixture()
       thread = thread_fixture(category, user_fixture())
       flush()
@@ -307,7 +306,6 @@ defmodule FireflyWeb.GroupsTest do
 
   describe "inboxes" do
     setup %{team: team, admin: admin} do
-      {:ok, _} = Notifications.start_link()
       %{team: settings(team, %{"visibility" => "public", "messageable" => "members"}, admin)}
     end
 

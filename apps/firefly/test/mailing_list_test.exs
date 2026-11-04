@@ -2,9 +2,6 @@ defmodule Firefly.MailingListTest do
   use Firefly.DataCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
-  setup :set_swoosh_global
-
   alias Firefly.{Accounts, Discussion, Groups, Notifications, SiteSettings}
   alias Firefly.Accounts.Ignores
   alias Firefly.Notifications.{MailingList, ReplyAddress, Subscriptions}
@@ -12,7 +9,6 @@ defmodule Firefly.MailingListTest do
   import Firefly.Fixtures
 
   setup do
-    {:ok, _} = Notifications.start_link()
     category = category_fixture()
     author = user_fixture(%{username: "author", email: "author@example.com"})
     thread = thread_fixture(category, author, %{title: "Release plans"})
@@ -20,8 +16,7 @@ defmodule Firefly.MailingListTest do
     %{admin: admin_fixture(), category: category, author: author, thread: thread}
   end
 
-  # Casts are async; a call to the server waits for them.
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp lister(name, attrs \\ %{}) do
     user = user_fixture(Map.merge(%{username: name, email: "#{name}@example.com"}, attrs))

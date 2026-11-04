@@ -1,16 +1,10 @@
 defmodule Firefly.IgnoresTest do
   use Firefly.DataCase
-  import Swoosh.TestAssertions
-
-  # Mail is sent from other processes (the notifications process, LiveViews).
-  setup :set_swoosh_global
-
   alias Firefly.{Accounts, Discussion, Groups, Messaging, Notifications}
   alias Firefly.Accounts.{AccountDeletion, AccountExport, Ignores}
   alias Firefly.Accounts.UserIgnore
 
   setup do
-    {:ok, _} = Notifications.start_link()
     category = category()
     %{alice: user("alice"), bob: user("bob"), category: category}
   end
@@ -27,7 +21,7 @@ defmodule Firefly.IgnoresTest do
     category
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp thread(category, user, title \\ "OTP") do
     {:ok, thread} = Discussion.create_thread(category, user, %{title: title, body: "Cool?"})

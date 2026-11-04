@@ -15,18 +15,16 @@ defmodule Firefly.Notifications.MailingList do
 
   A member the post is mailed to (or would be, but for the daily limit)
   gets no other email about it, so nothing arrives twice: their in-app
-  notifications stay. The emails go out from the notifications fan-out
-  process (`Firefly.Notifications.Dispatcher`), after the post is saved.
+  notifications stay. The fan-out (`Firefly.Notifications.FanOut`) queues
+  them after the post is saved, one job each (`EmailWorker`).
   """
 
   import Ecto.Query
 
-  alias Firefly.{Mailer, Repo, SiteSettings}
+  alias Firefly.{Repo, SiteSettings}
   alias Firefly.Accounts.{Ignores, User}
   alias Firefly.Discussion.{Policy, Post, Thread}
-  alias Firefly.Notifications.{Emails, Subscriptions}
-
-  require Logger
+  alias Firefly.Notifications.{EmailWorker, Subscriptions}
 
   @doc "Whether the site offers mailing list mode."
   def enabled?, do: SiteSettings.get("mailing_list_mode")
@@ -105,16 +103,7 @@ defmodule Firefly.Notifications.MailingList do
     if count == 1, do: :ok, else: :limit
   end
 
-  # One failed address doesn't stop the rest.
-  defp send_email(user, thread, post) do
-    case user |> Emails.mailing_list_post(thread, post) |> Mailer.deliver_now() do
-      {:ok, _email} -> :ok
-      {:error, error} -> failed(user, error)
-    end
-  rescue
-    error -> failed(user, error)
-  end
-
-  defp failed(user, error),
-    do: Logger.error("Mailing list email to user #{user.id} failed: #{inspect(error)}")
+  # Each email is its own job (see Firefly.Notifications.EmailWorker): one
+  # failed address doesn't hold up the rest, and none goes twice.
+  defp send_email(user, thread, post), do: EmailWorker.mailing_list_later(user, thread, post)
 end

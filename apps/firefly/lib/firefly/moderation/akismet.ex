@@ -142,7 +142,7 @@ defmodule Firefly.Moderation.Akismet do
         |> Map.merge(fields)
         |> Map.reject(fn {_key, value} -> value in [nil, ""] end)
 
-      background(fn -> check(kind, id, user, params) end)
+      background(%{op: "check", kind: kind, id: id, user_id: user.id, params: params})
     end
 
     :ok
@@ -153,17 +153,33 @@ defmodule Firefly.Moderation.Akismet do
       TrustLevels.at_least?(user, SiteSettings.get("akismet_trust_level")) or
         Accounts.admin?(user)
 
-  defp background(fun) do
-    if config()[:async] == false do
-      fun.()
-    else
-      {:ok, _pid} =
-        Task.Supervisor.start_child(
-          Firefly.Moderation.Akismet.TaskSupervisor,
-          Firefly.Telemetry.bind(fun)
-        )
-    end
+  # A background job (Firefly.Moderation.Akismet.Worker); tests run it in
+  # their own process.
+  defp background(args) do
+    args
+    |> __MODULE__.Worker.new()
+    |> Firefly.Jobs.enqueue(inline: config()[:async] == false)
 
+    :ok
+  end
+
+  @doc false
+  # The job's work (see Firefly.Moderation.Akismet.Worker).
+  def run(%{
+        "op" => "check",
+        "kind" => kind,
+        "id" => id,
+        "user_id" => user_id,
+        "params" => params
+      }) do
+    case Repo.get(User, user_id) do
+      nil -> :ok
+      user -> check(kind, id, user, params)
+    end
+  end
+
+  def run(%{"op" => "submit", "verdict" => verdict, "params" => params}) do
+    submit(verdict, params)
     :ok
   end
 
@@ -265,8 +281,11 @@ defmodule Firefly.Moderation.Akismet do
            from(c in AkismetCheck, where: c.id == ^check.id and is_nil(c.feedback)),
            set: [feedback: verdict]
          ) do
-      {1, _} -> background(fn -> submit(verdict, check.params) end)
-      {0, _} -> :ok
+      {1, _} ->
+        background(%{op: "submit", verdict: verdict, check_id: check.id, params: check.params})
+
+      {0, _} ->
+        :ok
     end
   end
 
@@ -383,4 +402,20 @@ defmodule Firefly.Moderation.Akismet do
 
   @doc "A message for an error from `review/3`."
   def message(:not_pending), do: "Someone already reviewed that."
+end
+
+defmodule Firefly.Moderation.Akismet.Worker do
+  @moduledoc """
+  Checks content with Akismet, or reports a verdict to it (see
+  `Firefly.Moderation.Akismet`), in the background: a check isn't queued
+  twice for the same content while one waits, nor a report twice for a
+  check.
+  """
+  use Oban.Worker,
+    queue: :default,
+    max_attempts: 3,
+    unique: [keys: [:op, :kind, :id, :check_id], period: :infinity, states: :incomplete]
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: args}), do: Firefly.Moderation.Akismet.run(args)
 end

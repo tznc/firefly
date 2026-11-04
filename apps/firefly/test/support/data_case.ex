@@ -51,6 +51,16 @@ defmodule Firefly.DataCase do
   end
 
   @doc """
+  Runs the notification jobs enqueued so far, in the test's process: the
+  fan-out (`Firefly.Notifications.FanOut`), then the emails it queued.
+  """
+  def run_notifications do
+    Oban.drain_queue(queue: :notifications, with_recursion: true)
+    Oban.drain_queue(queue: :mailers, with_recursion: true)
+    :ok
+  end
+
+  @doc """
   A helper that transform changeset errors to a map of messages.
 
       changeset = Accounts.create_user(%{password: "short"})

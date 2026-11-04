@@ -337,8 +337,8 @@ What's exported:
   creation, notification fan-out, email sends (with the adapter and
   template), plugin hook runs and event deliveries, webhook deliveries,
   scheduler jobs and AI requests (see
-  `Firefly.Telemetry`). Background tasks and the notification dispatcher
-  carry the trace on. Outgoing requests don't send trace headers to third
+  `Firefly.Telemetry`). Background jobs (Oban: the notification fan-out,
+  emails, pushes, AI and Akismet work...) carry the trace on. Outgoing requests don't send trace headers to third
   parties.
 - **Metrics** (`FIREFLY_OTEL_METRICS=true`, **experimental**): the same
   metrics as Prometheus (see "Metrics" above), as OTLP counters, histograms

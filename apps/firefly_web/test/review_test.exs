@@ -2,7 +2,7 @@ defmodule FireflyWeb.ReviewTest do
   use Firefly.DataCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
+  # Mail is sent from other processes (LiveViews).
   setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Groups, Notifications, Repo}
@@ -14,7 +14,6 @@ defmodule FireflyWeb.ReviewTest do
   alias Firefly.SiteSettings.SiteSetting
 
   setup do
-    {:ok, _} = Notifications.start_link()
     admin = user("admin")
     {:ok, role} = Groups.create_role("admin")
     {:ok, _} = Groups.add_role(admin, role)
@@ -34,7 +33,7 @@ defmodule FireflyWeb.ReviewTest do
     user
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp flag_until_hidden(post) do
     for _ <- 1..3 do

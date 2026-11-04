@@ -410,24 +410,35 @@ defmodule Firefly.AI do
   def post_flagged(%Firefly.Discussion.Post{} = post), do: triage(post)
 
   defp triage(post) do
-    if available?(nil, "triage"), do: background(fn -> Firefly.AI.Triage.classify(post) end)
+    if available?(nil, "triage"), do: background(%{task: "triage", post_id: post.id})
     :ok
   end
 
   @doc """
-  Runs `fun` in the background: AI work never holds up (or fails) what
-  triggered it. Tests run it in their own process (`config :firefly,
-  Firefly.AI, async: false`).
+  Runs AI work in the background, as a job (`Firefly.AI.Worker`, the `ai`
+  queue): it never holds up (or fails) what triggered it, survives a
+  restart, and isn't queued twice for the same post while it waits. `args`:
+  `%{task: "embed" | "triage", post_id: id}`. Tests run it in their own
+  process (`config :firefly, Firefly.AI, async: false`).
   """
-  def background(fun) do
-    if Application.get_env(:firefly, __MODULE__, [])[:async] == false do
-      fun.()
-    else
-      {:ok, _pid} =
-        Task.Supervisor.start_child(Firefly.AI.TaskSupervisor, Firefly.Telemetry.bind(fun))
-    end
-
+  def background(args) do
+    async? = Application.get_env(:firefly, __MODULE__, [])[:async] != false
+    Firefly.Jobs.enqueue(Firefly.AI.Worker.new(args), inline: not async?)
     :ok
+  end
+
+  @doc false
+  # The job's work (see Firefly.AI.Worker).
+  def run(%{"task" => "embed", "post_id" => id}) do
+    Firefly.AI.Embeddings.embed([id])
+    :ok
+  end
+
+  def run(%{"task" => "triage", "post_id" => id}) do
+    case Firefly.Repo.get(Firefly.Discussion.Post, id) do
+      nil -> :ok
+      post -> Firefly.AI.Triage.classify(post)
+    end
   end
 
   @doc "A message for a reason `chat/4` or `embed/2` gave."
@@ -440,4 +451,15 @@ defmodule Firefly.AI do
   def message(:provider_failed), do: "The AI service didn't answer. Please try again later."
   def message(:unauthorized), do: "You can't use AI on that."
   def message(:empty), do: "Write something first."
+end
+
+defmodule Firefly.AI.Worker do
+  @moduledoc "AI work on a post, in the background (see `Firefly.AI.background/1`)."
+  use Oban.Worker,
+    queue: :ai,
+    max_attempts: 3,
+    unique: [keys: [:task, :post_id], period: :infinity, states: :incomplete]
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: args}), do: Firefly.AI.run(args)
 end

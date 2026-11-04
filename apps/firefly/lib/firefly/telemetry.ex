@@ -7,8 +7,8 @@ defmodule Firefly.Telemetry do
   Every `span/3` is also an OpenTelemetry span named after its event
   (`firefly.webhooks.delivery`), with the metadata as attributes, through
   the OpenTelemetry API alone: a no-op until the web app starts the SDK.
-  Background work started with `bind/1` (tasks, the notification
-  dispatcher) joins the trace of the process that started it.
+  Background work joins the trace of the process that started it: tasks
+  started with `bind/1`, and jobs (see `Firefly.Jobs.insert/1`).
 
   Metadata stays low-cardinality: kinds, names and outcomes, never user
   ids or free text.

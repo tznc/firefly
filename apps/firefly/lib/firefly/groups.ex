@@ -636,7 +636,7 @@ defmodule Firefly.Groups do
 
       notified ++
         for user <- members, MapSet.member?(allowed, user.id) do
-          {:ok, _} = Notifications.notify(user, group_mention(thread, post, author, group))
+          {:ok, _} = Notifications.notify_once(user, group_mention(thread, post, author, group))
           user.id
         end
     end)

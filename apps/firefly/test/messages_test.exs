@@ -2,9 +2,6 @@ defmodule Firefly.MessagesTest do
   use Firefly.DataCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
-  setup :set_swoosh_global
-
   require Ecto.Query
 
   alias Firefly.{Accounts, Discussion, Groups, Messaging, Notifications, RateLimit}
@@ -13,7 +10,6 @@ defmodule Firefly.MessagesTest do
   alias Firefly.Discussion.Policy
 
   setup do
-    {:ok, _} = Notifications.start_link()
     %{alice: user("alice"), bob: user("bob"), carol: user("carol")}
   end
 
@@ -26,8 +22,7 @@ defmodule Firefly.MessagesTest do
     user
   end
 
-  # Casts are async; a call to the server waits for them.
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp start(sender, recipients, body \\ "Secret plans") do
     {:ok, conversation} =
@@ -277,6 +272,11 @@ defmodule Firefly.MessagesTest do
     # As a hard delete of the account would, once nothing else references bob.
     Firefly.Repo.delete_all(
       Ecto.Query.where(Firefly.Notifications.Notification, user_id: ^bob.id)
+    )
+
+    # And alice's notification of it, so fanning it out again makes a new one.
+    Firefly.Repo.delete_all(
+      Ecto.Query.where(Firefly.Notifications.Notification, user_id: ^alice.id)
     )
 
     {:ok, _} = Accounts.delete_user(bob)

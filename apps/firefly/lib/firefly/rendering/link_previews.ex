@@ -42,9 +42,6 @@ defmodule Firefly.Rendering.LinkPreviews do
   @failed_minutes 60
   @unused_days 30
 
-  @doc "The task supervisor fetches run under."
-  def supervisor, do: Firefly.Rendering.LinkPreviews.TaskSupervisor
-
   @doc "Whether previews are on (the `link_previews` site setting)."
   def enabled?, do: SiteSettings.get("link_previews")
 
@@ -148,13 +145,12 @@ defmodule Firefly.Rendering.LinkPreviews do
     :ok
   end
 
+  # In a background job (Firefly.Rendering.LinkPreviews.Worker), not queued
+  # twice for the same links while one waits.
   defp refresh(urls, thread_id) do
     if Application.get_env(:firefly, __MODULE__, [])[:enabled] != false do
-      {:ok, _pid} =
-        Task.Supervisor.start_child(
-          supervisor(),
-          Firefly.Telemetry.bind(fn -> fetch_all(urls, thread_id) end)
-        )
+      {:ok, _job} =
+        Firefly.Jobs.insert(__MODULE__.Worker.new(%{urls: urls, thread_id: thread_id}))
     end
 
     :ok
@@ -283,4 +279,18 @@ defmodule Firefly.Rendering.LinkPreviews do
   end
 
   defp hash(url), do: Base.encode16(:crypto.hash(:sha256, url), case: :lower)
+end
+
+defmodule Firefly.Rendering.LinkPreviews.Worker do
+  @moduledoc "Fetches a post's link previews (see `Firefly.Rendering.LinkPreviews`)."
+  use Oban.Worker,
+    queue: :default,
+    max_attempts: 1,
+    unique: [period: :infinity, states: :incomplete]
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"urls" => urls, "thread_id" => thread_id}}) do
+    Firefly.Rendering.LinkPreviews.fetch_all(urls, thread_id)
+    :ok
+  end
 end

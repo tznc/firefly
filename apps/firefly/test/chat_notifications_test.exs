@@ -1,10 +1,5 @@
 defmodule Firefly.ChatNotificationsTest do
   use Firefly.DataCase
-  import Swoosh.TestAssertions
-
-  # Mail is sent from other processes (the notifications process, LiveViews).
-  setup :set_swoosh_global
-
   import Firefly.Fixtures
 
   alias Firefly.{Accounts, Chat, Groups, Notifications, Repo, SiteSettings, Webhooks}
@@ -15,7 +10,6 @@ defmodule Firefly.ChatNotificationsTest do
   alias Firefly.Webhooks.Delivery
 
   setup do
-    {:ok, _} = Notifications.start_link()
     admin = admin_fixture(%{username: "admin"})
     alice = member("alice")
     bob = member("bob")
@@ -31,7 +25,7 @@ defmodule Firefly.ChatNotificationsTest do
     Repo.update!(Ecto.Changeset.change(user, trust_level: 1))
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp send!(channel, user, body, attrs \\ %{}) do
     {:ok, message} = Chat.send_message(channel, user, Map.put(attrs, "body", body))

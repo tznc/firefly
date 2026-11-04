@@ -37,7 +37,7 @@ defmodule Firefly.AI.Embeddings do
 
   @doc "Embeds `post` in the background (after it's published or edited), when embeddings are on."
   def embed_later(%Post{} = post) do
-    if model(), do: AI.background(fn -> embed([post.id]) end)
+    if model(), do: AI.background(%{task: "embed", post_id: post.id})
     :ok
   end
 

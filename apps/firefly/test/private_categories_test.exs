@@ -3,9 +3,6 @@ defmodule Firefly.PrivateCategoriesTest do
   use Firefly.DataCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
-  setup :set_swoosh_global
-
   alias Firefly.{Accounts, Discussion, Groups, Messaging, Notifications, Repo}
   alias Firefly.Accounts.AccountExport
   alias Firefly.Discussion.{Mentions, Search}
@@ -17,8 +14,6 @@ defmodule Firefly.PrivateCategoriesTest do
   alias Firefly.Notifications.Subscriptions
 
   setup do
-    {:ok, _} = Notifications.start_link()
-
     admin = user("admin")
     {:ok, admin_role} = Groups.create_role("admin")
     {:ok, _} = Groups.add_role(admin, admin_role)
@@ -65,7 +60,7 @@ defmodule Firefly.PrivateCategoriesTest do
     thread
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
   defp titles(threads), do: threads |> Enum.map(& &1.title) |> Enum.sort()
   defp can?(user, action, resource), do: Bodyguard.permit?(Discussion, action, user, resource)
 

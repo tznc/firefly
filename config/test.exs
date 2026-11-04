@@ -64,9 +64,6 @@ config :logger, level: :warning
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# Start notification server in app start
-config :firefly, notifications_enabled: false
-
 # Tests run due thread timers and reminders themselves, inside their sandbox transaction.
 
 # Analytics are written when tests call Firefly.Analytics.flush/0.

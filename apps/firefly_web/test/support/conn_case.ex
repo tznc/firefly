@@ -20,6 +20,7 @@ defmodule FireflyWeb.ConnCase do
       import Phoenix.ConnTest
       import PhoenixTest
       import FireflyWeb.ConnCase
+      import Firefly.DataCase, only: [run_notifications: 0]
       import Firefly.Fixtures
       import FireflyWeb.ApiHelpers
 

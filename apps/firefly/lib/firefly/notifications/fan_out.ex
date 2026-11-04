@@ -1,67 +1,64 @@
-defmodule Firefly.Notifications.Dispatcher do
-  @moduledoc false
-  # The process behind `Firefly.Notifications`' fan-out (see its docs),
-  # registered as `Firefly.Notifications`.
+defmodule Firefly.Notifications.FanOut do
+  @moduledoc """
+  The notification fan-out (see `Firefly.Notifications`), as a background
+  job in the `notifications` queue: durable across crashes and deploys,
+  retried (5 attempts) when it fails, and in the trace of what enqueued it.
 
-  use GenServer
+  A retry never notifies or emails anyone twice: notifications are created
+  once per member and subject (`Firefly.Notifications.notify_once/2`), and
+  each email is its own job, unique per notification (or, in mailing list
+  mode, per post and member; see `Firefly.Notifications.EmailWorker`).
+  """
 
-  import Ecto.Query, only: [where: 2, order_by: 2, first: 1, select: 3]
+  use Oban.Worker,
+    queue: :notifications,
+    max_attempts: 5,
+    unique: [period: :infinity, states: :incomplete]
 
-  alias Firefly.{Discussion, Groups, Mailer, Messaging, Notifications, Repo}
+  import Ecto.Query, only: [from: 2, where: 2, order_by: 2, first: 1, select: 3]
+
+  alias Firefly.{Discussion, Groups, Messaging, Notifications, Repo}
   alias Firefly.Accounts.{Ignores, User}
   alias Firefly.Discussion.{Mentions, Policy, Post, Thread}
   alias Firefly.Messaging.{Conversation, Message}
-  alias Firefly.Notifications.{Emails, MailingList, Notification, Subscriptions}
+  alias Firefly.Notifications.{EmailWorker, MailingList, Notification, Subscriptions}
 
-  @name Firefly.Notifications
+  @doc "The job for `event` (`\"post_created\"`...) with its records' ids in `args`."
+  def job(event, args), do: new(Map.put(args, :event, event))
 
-  ### Client API
-
-  def start_link(_opts \\ []) do
-    GenServer.start_link(__MODULE__, :ok, name: @name)
-  end
-
-  @doc "Notify subscribers about a new reply."
-  def post_created(%Post{} = post), do: cast({:post_created, post})
-
-  @doc "Notify users newly mentioned by an edit."
-  def post_edited(%Post{} = post), do: cast({:post_edited, post})
-
-  @doc "Notify category subscribers about a new thread."
-  def thread_created(%Thread{} = thread),
-    do: cast({:thread_created, thread})
-
-  @doc "Notify a conversation's other participants about a new message."
-  def message_created(%Message{} = message),
-    do: cast({:message_created, message})
-
-  @doc "Notify `users` that `actor` added them to a conversation."
-  def participants_added(%Conversation{} = conversation, %User{} = actor, users),
-    do: cast({:participants_added, conversation, actor, users})
-
-  @doc "Notify about a chat message (see `Firefly.Chat.notify/2`)."
-  def chat_message_created(message, mentioned_ids),
-    do: cast({:chat_message_created, message, mentioned_ids})
-
-  # The caller's trace context goes along, so the fan-out joins its trace.
-  defp cast(message), do: GenServer.cast(@name, {message, Firefly.Telemetry.current_context()})
-
-  ### Server API
-
-  @impl true
-  def init(_), do: {:ok, :nostate}
-
-  @impl true
-  def handle_cast({message, ctx}, state) do
-    Firefly.Telemetry.attach(ctx)
-    event = elem(message, 0)
-
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"event" => event} = args}) do
     Firefly.Telemetry.span([:firefly, :notifications, :dispatch], %{event: event}, fn ->
-      {dispatch(message), %{}}
+      {run(event, args), %{}}
     end)
-
-    {:noreply, state}
   end
+
+  defp run("post_created", %{"post_id" => id}), do: dispatch({:post_created, %Post{id: id}})
+  defp run("post_edited", %{"post_id" => id}), do: dispatch({:post_edited, %Post{id: id}})
+
+  defp run("thread_created", %{"thread_id" => id}) do
+    with %Thread{} = thread <- Repo.get(Thread, id), do: dispatch({:thread_created, thread})
+    :ok
+  end
+
+  defp run("message_created", %{"message_id" => id}) do
+    with %Message{} = message <- Repo.get(Message, id), do: dispatch({:message_created, message})
+    :ok
+  end
+
+  defp run("participants_added", %{"conversation_id" => id, "actor_id" => actor_id} = args) do
+    with %Conversation{} = conversation <- Repo.get(Conversation, id),
+         %User{} = actor <- Repo.get(User, actor_id) do
+      ids = args["user_ids"]
+      users = Repo.all(from(u in User, where: u.id in ^ids))
+      dispatch({:participants_added, conversation, actor, users})
+    end
+
+    :ok
+  end
+
+  defp run("chat_message_created", %{"message_id" => id, "mentioned_ids" => mentioned_ids}),
+    do: Firefly.Chat.notify(%Firefly.Chat.Message{id: id}, mentioned_ids)
 
   defp dispatch({:post_created, %Post{} = post}) do
     with {:ok, thread, post} <- reload(post) do
@@ -123,11 +120,6 @@ defmodule Firefly.Notifications.Dispatcher do
     :ok
   end
 
-  defp dispatch({:chat_message_created, message, mentioned_ids}) do
-    :ok = Firefly.Chat.notify(message, mentioned_ids)
-    :ok
-  end
-
   defp dispatch({:participants_added, conversation, actor, users}) do
     message = Messaging.latest_message(conversation)
     subject = "@#{actor.username} added you to \"#{conversation.title}\""
@@ -156,11 +148,15 @@ defmodule Firefly.Notifications.Dispatcher do
 
   defp notify_message(user, conversation, message, subject, kind \\ "message", email \\ true) do
     attrs = %{Notification.for_message(conversation, message, subject) | kind: kind}
-    {:ok, notification} = Notifications.notify(user, attrs)
+    {:ok, notification} = Notifications.notify_once(user, attrs)
 
     if email and email?(user, notification) do
-      Mailer.deliver_now(Emails.message_notification(user, conversation, message, subject))
-      Notifications.notification_emailed(notification)
+      EmailWorker.send_later(notification, %{
+        template: "message_notification",
+        conversation_id: conversation.id,
+        message_id: message.id,
+        subject: subject
+      })
     end
   end
 
@@ -188,7 +184,7 @@ defmodule Firefly.Notifications.Dispatcher do
           not MapSet.member?(already_read, user.id) and not MapSet.member?(muters, user.id),
         MapSet.member?(readers, user.id) do
       {:ok, notification} =
-        Notifications.notify(user, Notification.for_post(kind, thread, post, post.user))
+        Notifications.notify_once(user, Notification.for_post(kind, thread, post, post.user))
 
       if level == "watching" and user.id not in listed,
         do: maybe_email(user, notification, thread, post)
@@ -217,7 +213,10 @@ defmodule Firefly.Notifications.Dispatcher do
           MapSet.member?(readers, user.id),
           Subscriptions.effective_thread_level(user, thread) != "muted" do
         {:ok, notification} =
-          Notifications.notify(user, Notification.for_post("mentioned", thread, post, post.user))
+          Notifications.notify_once(
+            user,
+            Notification.for_post("mentioned", thread, post, post.user)
+          )
 
         if user.id not in listed, do: maybe_email(user, notification, thread, post)
         user.id
@@ -249,11 +248,11 @@ defmodule Firefly.Notifications.Dispatcher do
 
   defp maybe_email(%User{} = user, notification, thread, post) do
     if email?(user, notification) do
-      user
-      |> email_for(notification.kind, thread, post)
-      |> Mailer.deliver_now()
-
-      Notifications.notification_emailed(notification)
+      EmailWorker.send_later(notification, %{
+        template: "post_notification",
+        thread_id: thread.id,
+        post_id: post.id
+      })
     end
   end
 
@@ -261,13 +260,4 @@ defmodule Firefly.Notifications.Dispatcher do
     user.email_notifications and User.confirmed?(user) and
       not Notifications.unread_emailed_notification?(user, notification)
   end
-
-  defp email_for(user, "mentioned", thread, post),
-    do: Emails.mention_notification(user, thread, post)
-
-  defp email_for(user, "new_thread", thread, post),
-    do: Emails.thread_created_notification(user, thread, post)
-
-  defp email_for(user, _kind, thread, post),
-    do: Emails.thread_new_post_notification(user, thread, post)
 end

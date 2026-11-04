@@ -2,11 +2,11 @@ defmodule FireflyWeb.SiteSettingsTest do
   use FireflyWeb.ConnCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
+  # Mail is sent from other processes (LiveViews).
   setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
-  import Firefly.DataCase, only: [errors_on: 1]
+  import Firefly.DataCase, only: [errors_on: 1, run_notifications: 0]
 
   alias Firefly.{Accounts, Discussion, Notifications, RateLimit, Repo, SiteSettings}
   alias Firefly.Discussion.Mentions
@@ -307,7 +307,6 @@ defmodule FireflyWeb.SiteSettingsTest do
     end
 
     test "turning confirmation off never marks addresses verified", %{conn: conn, admin: admin} do
-      {:ok, _} = Notifications.start_link()
       set(admin, %{"require_email_confirmation" => "false"})
       {:ok, trusted} = register("trusted")
       refute Firefly.Accounts.User.confirmed?(trusted)
@@ -320,7 +319,7 @@ defmodule FireflyWeb.SiteSettingsTest do
       # Notification email still goes only to proven addresses.
       thread = thread_fixture(category_fixture("Mail"), admin, %{title: "Relay"})
       {:ok, _} = Discussion.create_post(thread, admin, %{body: "hello @trusted"})
-      :sys.get_state(Notifications)
+      run_notifications()
 
       assert [%{kind: "mentioned"}] = Notifications.notifications_for(trusted)
       assert_no_email_sent()
