@@ -37,6 +37,9 @@ defmodule Firefly.Rendering.BBCode do
   @doc "`text` with its BBCode converted to Markdown."
   @spec to_markdown(String.t(), [String.t()]) :: String.t()
   def to_markdown(text, skip \\ []) when is_binary(text) do
+    # Its regexes only take UTF-8; imported text may not be.
+    text = String.replace_invalid(text)
+
     if String.contains?(text, "[") and not String.contains?(text, [@open_mark, @close_mark]),
       do: convert(text, Enum.map(skip, &String.downcase/1)),
       else: text
