@@ -1808,7 +1808,7 @@ defmodule Firefly.SiteSettings do
 
   # Adds the setting to the changes (if its value changed) or the errors.
   defp collect(%{key: key} = definition, raw, current, {changes, errors}) do
-    case {cast(definition, raw), System.get_env(definition.env)} do
+    case {cast_storable(definition, raw), System.get_env(definition.env)} do
       {{:ok, value}, _pinned} when value == :erlang.map_get(key, current) ->
         {changes, errors}
 
@@ -1821,6 +1821,13 @@ defmodule Firefly.SiteSettings do
       {{:error, message}, nil} ->
         {changes, Map.put(errors, key, message)}
     end
+  end
+
+  # Postgres can't store a NUL character in text.
+  defp cast_storable(definition, raw) do
+    if Enum.any?(List.wrap(raw), &(is_binary(&1) and String.contains?(&1, <<0>>))),
+      do: {:error, "can't contain a null character"},
+      else: cast(definition, raw)
   end
 
   defp save(changes, current, admin) do
