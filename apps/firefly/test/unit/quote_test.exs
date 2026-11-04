@@ -64,4 +64,16 @@ defmodule Firefly.QuoteTest do
     # Ordinary blockquotes are left alone
     assert Markdown.render("> just a quote") =~ "<blockquote>\n<p>just a quote</p>"
   end
+
+  # Found by Firefly.RenderingPropertyTest: splitting lines on a byte-mode
+  # `\R` took the 0x85 inside "х" (D1 85) for a line break (NEL), cutting
+  # the character in two.
+  test "quotes text whose characters contain the byte 0x85 intact" do
+    for body <- ["хорошо", "Ņ", "\u{105ED8}"] do
+      quote = Quote.build(body, "alice", @url)
+      assert String.valid?(quote)
+      assert quote =~ "\n> #{body}\n"
+      assert Markdown.render(quote) =~ body
+    end
+  end
 end
