@@ -31,6 +31,10 @@ defmodule FireflyWeb.Endpoint do
     longpoll: false
   )
 
+  # Liveness and readiness probes (/health, /ready), before anything that
+  # would log, track or touch the session.
+  plug(FireflyWeb.Plugs.Health)
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # You should set gzip to true if you are running phoenix.digest

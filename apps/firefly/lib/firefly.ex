@@ -24,6 +24,7 @@ defmodule Firefly do
   | `Firefly.Reports` | the admin dashboard's overview and reports |
   | `Firefly.Backups` | backups and restores, read-only mode |
   | `Firefly.Upgrades` | the running version, the daily check for new releases, pending migrations |
+  | `Firefly.Health` | the readiness checks (database, migrations) behind the readiness probe |
   | `Firefly.Embedding` | topics as comments on other sites' pages (embeddable hosts, the embed feed) |
   | `Firefly.Chat` | real-time chat: channels, direct messages, threads, unread tracking |
   | `Firefly.AI` | AI model providers (pluggable adapters), per-feature provider selection, quotas and the usage log |

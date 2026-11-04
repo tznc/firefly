@@ -1,0 +1,12 @@
+#!/bin/bash
+# Probes this node over HTTP without curl (the image has none) and without
+# starting a second VM (as `bin/firefly rpc` would): bash's /dev/tcp asks
+# the endpoint for /health (or the path given, e.g. /ready) and succeeds
+# on a 200. Used by the Docker image's HEALTHCHECK.
+set -eu
+
+path="${1:-/health}"
+exec 3<>"/dev/tcp/127.0.0.1/${FIREFLY_PORT:-4000}"
+printf 'GET %s HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' "$path" >&3
+read -r -t 5 _version status _rest <&3
+[ "$status" = "200" ]
