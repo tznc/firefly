@@ -367,10 +367,10 @@ Subscribe with `events` (needs the `read` permission and the
 | `poll_closed` | `{poll_id, post_id, thread_id}` |
 
 A post is `{id, thread_id, user_id, author, body, url}`, a thread
-`{id, title, category_id, url}`. Events are queued in the database in the
-same transaction as the change and delivered by `Firefly.Plugins.Queue`
-(within about a second): a failure is retried after 30 s, 2, 8 and 32
-minutes, then dropped and logged. Only content anonymous visitors can read
+`{id, title, category_id, url}`. Each event is a background job (Oban's
+`plugins` queue, see "Background jobs" in the README) enqueued in the same
+transaction as the change and delivered within moments: a failure is
+retried after 30 s, 2, 8 and 32 minutes, then dropped and logged. Only content anonymous visitors can read
 produces events, and a plugin never hears about its own bot's actions.
 
 ## Scheduled jobs
@@ -378,7 +378,8 @@ produces events, and a plugin never hears about its own bot's actions.
 `jobs` entries are `{"name", "every": seconds}` (60 or more) or
 `{"name", "cron": "m h dom mon dow"}` (UTC). Due jobs call `run_job` with
 `{job}`; the next run time is stored, so jobs survive restarts and run once
-across nodes. A failed run isn't retried before its next time.
+across nodes. Due jobs are checked every minute (a background job on the
+`plugins` queue). A failed run isn't retried before its next time.
 
 ## Moderation
 

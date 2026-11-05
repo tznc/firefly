@@ -293,8 +293,8 @@ crashed node left running is rescued after 30 minutes.
 | `default` | 10 | anything else |
 | `mailers` | 10 | email |
 | `notifications` | 10 | notification fan-out |
-| `webhooks` | 5 | webhook deliveries |
-| `plugins` | 5 | plugin events and jobs |
+| `webhooks` | 5 | webhook deliveries (5 attempts: retried after 30 s, 2, 8 and 32 min; each attempt in the webhook's delivery log) |
+| `plugins` | 5 | plugin events (the same retries; the circuit breaker still applies) and plugins' scheduled jobs |
 | `ai` | 3 | AI work |
 | `maintenance` | 2 | scheduled housekeeping |
 
@@ -305,7 +305,7 @@ Periodic work runs on cron schedules (Oban's cron, inserted by the leader
 only, so once per cluster; see `Firefly.Jobs.Periodic`): thread timers,
 bookmark reminders and poll closings every minute (timers and reminders
 also get a job at their own time, so they fire on time), unused uploads,
-link previews and semantic search embeddings every minute, badges and
+link previews, semantic search embeddings and plugins' scheduled jobs every minute, badges and
 digests every 15 minutes, trust level reviews, analytics, the embed feed,
 chat retention, the email and egress logs, the user directory and
 scheduled backups hourly, and the version check daily. A task isn't

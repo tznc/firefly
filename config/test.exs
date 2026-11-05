@@ -143,9 +143,6 @@ config :firefly, Firefly.Rendering.LinkPreviews, enabled: false
 # that need them).
 config :firefly, Firefly.Notifications.WebPush, async: false
 
-# Tests deliver plugin events and run plugin jobs themselves.
-config :firefly, Firefly.Plugins.Queue, enabled: false
-
 # Every social login is enabled, with made-up credentials (tests fake the
 # providers' callbacks).
 for config_key <- [
