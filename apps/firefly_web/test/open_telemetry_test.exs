@@ -152,7 +152,7 @@ defmodule FireflyWeb.OpenTelemetryTest do
   describe "metrics over OTLP" do
     setup do
       collector =
-        start_supervised!({Bandit, plug: {Collector, self()}, port: 0, ip: :loopback})
+        start_supervised!({Bandit, plug: {__MODULE__.Collector, self()}, port: 0, ip: :loopback})
 
       {:ok, {_ip, port}} = ThousandIsland.listener_info(collector)
 
