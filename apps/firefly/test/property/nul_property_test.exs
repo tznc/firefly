@@ -42,14 +42,8 @@ defmodule Firefly.NulPropertyTest do
     %{admin: admin, member: user_fixture(), category: category_fixture()}
   end
 
-  # A title starts with a letter: one that slugifies to nothing (just "-")
-  # fails in the slug lookup, with or without a NUL.
   property "categories, threads and posts are stored without NUL", ctx do
-    check all(
-            title <- map(nul_text(), &("t" <> &1)),
-            body <- nul_text(),
-            max_runs: runs(40)
-          ) do
+    check all(title <- nul_text(), body <- nul_text(), max_runs: runs(40)) do
       case Discussion.create_category(%{title: title, description: body}) do
         {:ok, category} -> assert nul_free?(Repo.reload!(category))
         {:error, %Ecto.Changeset{}} -> :ok

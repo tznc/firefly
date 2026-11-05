@@ -43,6 +43,23 @@ defmodule Firefly.PackagesTest do
     package
   end
 
+  # A theme package with a file of `size` zero bytes whose headers say
+  # every file is 10 bytes.
+  defp lying_zip(size) do
+    zip = theme_zip(%{}, %{"theme.css" => "a{}", "big.bin" => :binary.copy(<<0>>, size)})
+
+    for {signature, offset} <- [
+          {<<0x50, 0x4B, 0x03, 0x04>>, 22},
+          {<<0x50, 0x4B, 0x01, 0x02>>, 24}
+        ],
+        {at, _} <- :binary.matches(zip, signature),
+        reduce: zip do
+      zip ->
+        <<before::binary-size(^at + ^offset), _size::little-32, rest::binary>> = zip
+        <<before::binary, 10::little-32, rest::binary>>
+    end
+  end
+
   defp read_error(zip) do
     assert {:error, message} = Packages.read(zip)
     message
@@ -92,6 +109,39 @@ defmodule Firefly.PackagesTest do
       assert read_error("not a zip") == "The file isn't a valid .zip."
       assert read_error(:binary.copy("x", Archive.max_size() + 1)) =~ "The package is over"
       assert read_error(Archive.build(%{}, %{})) =~ "Invalid manifest"
+    end
+  end
+
+  describe "limits" do
+    # Found by Firefly.PackagesPropertyTest: the unpacked size was checked
+    # against the sizes the zip declares, then after :zip.extract/2 had
+    # inflated everything, so a zip claiming tiny files could inflate to
+    # gigabytes first.
+    test "a zip that lies about its sizes stops inflating at the limit" do
+      zip = lying_zip(150 * 1024 * 1024)
+      {:ok, entries} = :zip.list_dir(zip)
+      assert Enum.all?(for({:zip_file, _, info, _, _, _} <- entries, do: elem(info, 1) == 10))
+
+      task =
+        Task.async(fn ->
+          # Killed if it holds more than 100 MB, binaries included.
+          Process.flag(:max_heap_size, %{
+            size: div(100 * 1024 * 1024, :erlang.system_info(:wordsize)),
+            kill: true,
+            error_logger: false,
+            include_shared_binaries: true
+          })
+
+          Packages.read(zip)
+        end)
+
+      assert Task.await(task, 30_000) == {:error, "The package unpacks to more than 20 MB."}
+    end
+
+    test "honest packages near the limit still read" do
+      files = for n <- 1..4, into: %{}, do: {"f#{n}.bin", :binary.copy(<<n>>, 4 * 1024 * 1024)}
+      assert {:ok, archive} = Packages.read(theme_zip(%{}, Map.put(files, "theme.css", "a{}")))
+      assert archive.files["f4.bin"] == :binary.copy(<<4>>, 4 * 1024 * 1024)
     end
   end
 
@@ -317,6 +367,41 @@ defmodule Firefly.PackagesTest do
         "help" => ""
       }
     ]
+
+    # Found by Firefly.PackagesPropertyTest: Postgres can't store "\0" in
+    # JSON, so saving one raised. It's stripped.
+    test "drop a null character", %{admin: admin} do
+      package = install!(theme_zip(%{"settings" => @settings}), admin)
+
+      assert {:ok, package} =
+               Packages.update_settings(
+                 package,
+                 %{"radius" => "4", "accent" => "#0b6bcb", "font" => <<"a", 0>>},
+                 admin
+               )
+
+      assert package.settings["font"] == "a"
+    end
+
+    # Found by Firefly.PackagesPropertyTest: an unbalanced bracket left the
+    # value bare (taking in the rest of the stylesheet), and \f, which ends
+    # a CSS string as a newline does, wasn't escaped.
+    test "can't break out of their declaration", %{admin: admin} do
+      package = install!(theme_zip(%{"settings" => @settings}), admin)
+
+      for {font, css} <- [
+            {"(", ~s|--ocean-font: "(";|},
+            {"a) b", ~s|--ocean-font: "a) b";|},
+            {"x\f;} body{display:none} :root{",
+             ~s|--ocean-font: "x\\0C ;} body{display:none} :root{";|},
+            {"(\u0301", ~s|--ocean-font: "(\u0301";|},
+            {"Inter (sans)", "--ocean-font: Inter (sans);"}
+          ] do
+        params = %{"radius" => "4", "accent" => "#0b6bcb", "font" => font}
+        {:ok, _} = Packages.update_settings(package, params, admin)
+        assert Packages.css_variables(package.id) =~ css
+      end
+    end
 
     test "reach the CSS as custom properties, and a change compiles it again", %{admin: admin} do
       package = install!(theme_zip(%{"settings" => @settings}), admin)
