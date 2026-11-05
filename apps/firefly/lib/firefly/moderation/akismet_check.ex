@@ -4,9 +4,10 @@ defmodule Firefly.Moderation.AkismetCheck do
   its `kind` (`"post"`, `"message"`, `"chat"`, `"profile"`) and id, its
   author, the request's `params` (taken when it was posted; the job only
   carries this row's id), whether Akismet called it spam (nil until it
-  answers), the `status` (`"queued"` until then, `"clean"`, `"pending"`
-  while spam waits for staff, `"confirmed"`, `"not_spam"`) and the
-  `feedback` reported back.
+  answers), the `status` (`"queued"` until then, `"failed"` if it never
+  does (the job ran out of attempts; the content stands), `"clean"`,
+  `"pending"` while spam waits for staff, `"confirmed"`, `"not_spam"`) and
+  the `feedback` reported back.
   """
   use Ecto.Schema
 

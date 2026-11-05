@@ -11,8 +11,9 @@ defmodule Firefly.Repo.Migrations.CreateAkismetChecks do
       add :user_id, references(:forums_users, on_delete: :nilify_all)
       # Nil until Akismet answers.
       add :spam, :boolean
-      # "queued" (waiting for Akismet), "clean", "pending" (spam, waiting for
-      # staff), "confirmed", "not_spam".
+      # "queued" (waiting for Akismet), "failed" (it never answered: the job
+      # ran out of attempts), "clean", "pending" (spam, waiting for staff),
+      # "confirmed", "not_spam".
       add :status, :string, null: false
       add :params, :map, null: false, default: %{}
       # What we told Akismet afterwards: "spam" or "ham".

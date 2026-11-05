@@ -86,8 +86,8 @@ defmodule Firefly.AkismetTest do
       FakeAkismet.setup(%{}, fn _call, _params -> "oops" end)
       post = reply(ctx, "viagra")
       refute Post.hidden?(post)
-      # Left queued for the job's retries.
-      assert [%AkismetCheck{status: "queued", spam: nil}] = Repo.all(AkismetCheck)
+      # Run inline, its one attempt was the last.
+      assert [%AkismetCheck{status: "failed", spam: nil}] = Repo.all(AkismetCheck)
     end
 
     test "staff confirming spam or finding it isn't is reported back once", ctx do
@@ -240,14 +240,57 @@ defmodule Firefly.AkismetTest do
     end
 
     @tag :capture_log
-    test "a failure is retried with the same row", ctx do
+    test "a failure is retried with the same row; the last one marks it failed", ctx do
       FakeAkismet.setup(%{}, fn _call, _params -> "oops" end)
-      config = Application.get_env(:firefly, Akismet)
-      Application.put_env(:firefly, Akismet, Keyword.put(config, :async, true))
       post = reply(ctx, "viagra")
 
-      assert {:error, _} = perform_job(Akismet.Worker, job_args())
-      assert %AkismetCheck{status: "queued"} = check("post", post.id)
+      for attempt <- [1, 2] do
+        assert {:error, _} = perform_job(Akismet.Worker, job_args(), attempt: attempt)
+        assert_received {:akismet, "comment-check", _}
+        assert %AkismetCheck{status: "queued"} = check("post", post.id)
+      end
+
+      assert {:error, _} = perform_job(Akismet.Worker, job_args(), attempt: 3)
+      assert_received {:akismet, "comment-check", _}
+      assert %AkismetCheck{status: "failed", spam: nil} = check("post", post.id)
+      refute Post.hidden?(Repo.get!(Post, post.id))
+
+      # Over: a rerun asks Akismet nothing, and staff and the report never see it.
+      FakeAkismet.setup()
+      assert :ok = perform_job(Akismet.Worker, job_args(), attempt: 3)
+      refute_received {:akismet, "comment-check", _}
+      assert Review.pending_count() == 0
+      {:series, series} = Reports.get("akismet").run(Reports.last(1))
+      assert Enum.all?(series, fn %{points: points} -> Enum.all?(points, &(elem(&1, 1) == 0)) end)
+    end
+
+    @tag :capture_log
+    test "a private message whose check failed stays out of the review queue", ctx do
+      FakeAkismet.setup(%{}, fn _call, _params -> "oops" end)
+
+      {:ok, _} =
+        Messaging.start_conversation(ctx.alice, %{
+          "recipients" => "boss",
+          "title" => "Hi",
+          "body" => "viagra for you"
+        })
+
+      assert {:error, _} = perform_job(Akismet.Worker, job_args(), attempt: 3)
+      assert [%AkismetCheck{kind: "message", status: "failed"}] = Repo.all(AkismetCheck)
+      assert Akismet.pending() == []
+      assert Review.pending_count() == 0
+    end
+
+    @tag :capture_log
+    test "staff deciding a post whose check failed reports nothing back", ctx do
+      FakeAkismet.setup(%{}, fn _call, _params -> "oops" end)
+      post = reply(ctx, "viagra")
+      assert {:error, _} = perform_job(Akismet.Worker, job_args(), attempt: 3)
+
+      {:ok, _} = Flags.flag_post(post, member("flagger", 2), %{reason: "spam"})
+      assert {:ok, _} = Review.agree(post, ctx.admin, :hide)
+      assert %AkismetCheck{status: "failed", feedback: nil} = check("post", post.id)
+      refute_enqueued(worker: Akismet.Worker, args: %{op: "submit"})
     end
 
     test "a missing row is a no-op" do

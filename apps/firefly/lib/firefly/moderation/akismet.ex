@@ -5,7 +5,8 @@ defmodule Firefly.Moderation.Akismet do
   messages, chat messages and profile edits (each kind its own setting) by
   members below the `akismet_trust_level` trust level are sent to
   Akismet's `comment-check` in the background. Posting never waits for
-  it, nor fails with it: errors are logged and the content stands.
+  it, nor fails with it: errors are logged and retried, and the content
+  stands; a check still failing on the job's last attempt ends `"failed"`.
 
   Akismet's spam:
 
@@ -182,17 +183,18 @@ defmodule Firefly.Moderation.Akismet do
   @doc false
   # The job's work (see Firefly.Moderation.Akismet.Worker): from the check's
   # row, which a retry rereads. A row gone, already answered, or whose
-  # author was deleted is left alone.
-  def run(%{"op" => "check", "check_id" => id}) do
+  # author was deleted is left alone. `last?`: whether this is the job's
+  # last attempt.
+  def run(%{"op" => "check", "check_id" => id}, last?) do
     with %AkismetCheck{status: "queued"} = check <- Repo.get(AkismetCheck, id),
          %User{} = user <- check.user_id && Repo.get(User, check.user_id) do
-      check(check, user)
+      check(check, user, last?)
     else
       _gone_or_done -> :ok
     end
   end
 
-  def run(%{"op" => "submit", "check_id" => id, "verdict" => verdict}) do
+  def run(%{"op" => "submit", "check_id" => id, "verdict" => verdict}, _last?) do
     case Repo.get(AkismetCheck, id) do
       nil -> :ok
       check -> submit(verdict, check.params)
@@ -201,8 +203,8 @@ defmodule Firefly.Moderation.Akismet do
 
   # Asks Akismet about the queued `check` by `user`, records the verdict
   # and acts on spam. A failure is retried (the job's attempts); the
-  # content stands meanwhile.
-  defp check(check, user) do
+  # content stands meanwhile, and after the last one the check is "failed".
+  defp check(check, user, last?) do
     case request("comment-check", check.params) do
       {:ok, "true"} ->
         record(check, user, true)
@@ -215,6 +217,7 @@ defmodule Firefly.Moderation.Akismet do
           "Akismet check of #{check.kind} #{check.subject_id} failed: #{inspect(other)}"
         )
 
+        if last?, do: Repo.update!(Ecto.Changeset.change(check, status: "failed"))
         {:error, :akismet_failed}
     end
   end
@@ -284,7 +287,7 @@ defmodule Firefly.Moderation.Akismet do
   defp latest(kind, id) do
     Repo.one(
       from(c in AkismetCheck,
-        where: c.kind == ^kind and c.subject_id == ^id and c.status != "queued",
+        where: c.kind == ^kind and c.subject_id == ^id and c.status not in ["queued", "failed"],
         order_by: [desc: c.id],
         limit: 1
       )
@@ -432,7 +435,8 @@ defmodule Firefly.Moderation.Akismet.Worker do
   `Firefly.Moderation.Akismet`), in the background. Its args are the `op`
   (`"check"`, or `"submit"` with its `verdict`) and the
   `Firefly.Moderation.AkismetCheck`'s id, never the request's data; no
-  check or report is queued twice for the same row.
+  check or report is queued twice for the same row. A check still failing
+  on its last attempt marks the row `"failed"`.
   """
   use Oban.Worker,
     queue: :default,
@@ -440,5 +444,6 @@ defmodule Firefly.Moderation.Akismet.Worker do
     unique: [keys: [:op, :check_id], period: :infinity, states: :incomplete]
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}), do: Firefly.Moderation.Akismet.run(args)
+  def perform(%Oban.Job{args: args, attempt: attempt, max_attempts: max_attempts}),
+    do: Firefly.Moderation.Akismet.run(args, attempt >= max_attempts)
 end
