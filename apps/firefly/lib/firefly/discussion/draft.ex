@@ -28,8 +28,8 @@ defmodule Firefly.Discussion.Draft do
   def changeset(%__MODULE__{} = draft, attrs) do
     draft
     |> cast(attrs, [:title, :tags, :body])
-    |> validate_length(:title, max: 255)
-    |> validate_length(:tags, max: 255)
+    |> validate_length(:title, max: 255, count: :codepoints)
+    |> validate_length(:tags, max: 255, count: :codepoints)
     |> Post.validate_body_length()
   end
 

@@ -120,8 +120,9 @@ defmodule Firefly.Moderation.Penalties do
   defp ends_at("1m", _date), do: {:ok, from_now(30)}
   defp ends_at("forever", _date), do: {:ok, @forever}
 
-  defp ends_at("date", date) do
-    with {:ok, date} <- Date.from_iso8601(date || ""),
+  # The API passes `until` through as it came, so it may not be a string.
+  defp ends_at("date", date) when is_binary(date) do
+    with {:ok, date} <- Date.from_iso8601(date),
          {:ok, until} <- DateTime.new(date, ~T[00:00:00]),
          true <- DateTime.after?(until, DateTime.utc_now()) do
       {:ok, until}

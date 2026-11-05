@@ -310,9 +310,8 @@ if token = System.get_env("FIREFLY_METRICS_TOKEN") do
 end
 
 # OpenTelemetry (see FireflyWeb.OpenTelemetry), configured by the standard
-# OTEL_* variables, which the SDK reads itself: nothing is exported without
-# an OTLP endpoint. Metrics and logs over OTLP are experimental in the
-# Erlang SDK, so they're opt-in on top.
+# OTEL_* variables: nothing is exported without an OTLP endpoint. Metrics
+# and logs over OTLP are opt-in on top.
 otel_endpoint? = fn signal ->
   System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") != nil or
     System.get_env("OTEL_EXPORTER_OTLP_#{signal}_ENDPOINT") != nil
@@ -323,7 +322,8 @@ if config_env() != :test do
     otel_endpoint?.("TRACES") and System.get_env("OTEL_TRACES_EXPORTER", "otlp") != "none"
 
   metrics? =
-    otel_endpoint?.("METRICS") and System.get_env("FIREFLY_OTEL_METRICS") in ~w(true 1)
+    otel_endpoint?.("METRICS") and System.get_env("OTEL_METRICS_EXPORTER", "otlp") != "none" and
+      System.get_env("FIREFLY_OTEL_METRICS") in ~w(true 1)
 
   logs? = otel_endpoint?.("LOGS") and System.get_env("FIREFLY_OTEL_LOGS") in ~w(true 1)
 
@@ -331,18 +331,42 @@ if config_env() != :test do
 
   if traces?, do: config(:opentelemetry, traces_exporter: :otlp)
 
+  # The SDK reads its variables itself; OtelMetricExporter reads them too,
+  # but not as the spec (and the SDK) does, so they're mapped here: a
+  # signal's own variable wins, its endpoint is the full URL, and header
+  # values may contain "=". The resource is the traces' (see
+  # FireflyWeb.Telemetry).
   if metrics? do
-    config :opentelemetry_experimental,
-      readers: [
-        %{
-          module: :otel_metric_reader,
-          config: %{
-            exporter: {:otel_exporter_metrics_otlp, %{}},
-            export_interval_ms:
-              String.to_integer(System.get_env("OTEL_METRIC_EXPORT_INTERVAL", "60000"))
-          }
-        }
-      ]
+    otlp_env = fn var ->
+      System.get_env("OTEL_EXPORTER_OTLP_METRICS_#{var}") ||
+        System.get_env("OTEL_EXPORTER_OTLP_#{var}")
+    end
+
+    protocol = otlp_env.("PROTOCOL") || "http/protobuf"
+
+    if protocol != "http/protobuf" do
+      raise "FIREFLY_OTEL_METRICS sends OTLP over http/protobuf only, not #{protocol}: " <>
+              "set OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf " <>
+              "(and OTEL_EXPORTER_OTLP_METRICS_ENDPOINT to the collector's HTTP port)"
+    end
+
+    # The exporter appends /v1/metrics itself.
+    endpoint =
+      if url = System.get_env("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"),
+        do: String.replace_suffix(url, "/v1/metrics", ""),
+        else: String.trim_trailing(System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT"), "/")
+
+    headers =
+      for pair <- String.split(otlp_env.("HEADERS") || "", ",", trim: true),
+          [key, value] <- [String.split(pair, "=", parts: 2)],
+          into: %{},
+          do: {String.trim(key), String.trim(value)}
+
+    config :otel_metric_exporter,
+      otlp_endpoint: endpoint,
+      otlp_headers: headers,
+      otlp_timeout: String.to_integer(otlp_env.("TIMEOUT") || "10000"),
+      export_period: String.to_integer(System.get_env("OTEL_METRIC_EXPORT_INTERVAL", "60000"))
   end
 end
 
