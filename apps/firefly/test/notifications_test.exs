@@ -2,15 +2,10 @@ defmodule Firefly.NotificationsTest do
   use Firefly.DataCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
-  setup :set_swoosh_global
-
   alias Firefly.{Accounts, Discussion, Notifications}
   alias Firefly.Notifications.Subscriptions
 
   setup do
-    {:ok, _} = Notifications.start_link()
-
     {:ok, category} = Discussion.create_category(%{title: "Elixir"})
     author = user("author")
     reader = user("reader")
@@ -27,8 +22,7 @@ defmodule Firefly.NotificationsTest do
     user
   end
 
-  # Casts are async; a call to the server waits for them.
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp reply(thread, user, body) do
     {:ok, post} = Discussion.create_post(thread, user, %{body: body})
@@ -199,10 +193,8 @@ defmodule Firefly.NotificationsTest do
     reader: reader,
     thread: thread
   } do
-    :sys.suspend(Notifications)
     {:ok, post} = Discussion.create_post(thread, reader, %{body: "never mind"})
     {:ok, _} = Discussion.delete_post(post, reader)
-    :sys.resume(Notifications)
     flush()
 
     assert notifications(author) == []
@@ -232,10 +224,8 @@ defmodule Firefly.NotificationsTest do
   } do
     # The reader had the thread open: their read position moved past the post
     # before the fan-out ran.
-    :ok = :sys.suspend(Notifications)
     {:ok, post} = Discussion.create_post(thread, reader, %{body: "yup"})
     Discussion.mark_thread_read(author, thread)
-    :ok = :sys.resume(Notifications)
     flush()
 
     assert MapSet.member?(Discussion.users_who_read(thread, post), author.id)

@@ -16,8 +16,8 @@ defmodule Firefly.Notifications.WebPush do
   `FIREFLY_VAPID_PUBLIC_KEY`, `FIREFLY_VAPID_PRIVATE_KEY` and
   `FIREFLY_VAPID_SUBJECT` environment variables (`mix
   firefly.gen.vapid_keys` makes a pair). Without them the feature is off
-  and hidden. They're sent from a task, never holding up whatever created
-  the notification. A push service answering 404 or 410 means the browser
+  and hidden. They're sent from a background job, never holding up
+  whatever created the notification. A push service answering 404 or 410 means the browser
   dropped the subscription: it's deleted.
   """
 
@@ -88,30 +88,31 @@ defmodule Firefly.Notifications.WebPush do
   ## Pushing
 
   @doc """
-  Pushes `notification` to `user`'s browsers, from a task (see the
-  moduledoc), unless pushes are off or the member is around.
+  Pushes `notification` to `user`'s browsers, from a background job (see
+  the moduledoc), unless pushes are off or the member is around. The job is
+  unique per notification, so a notification is pushed once.
   """
   def notification_created(%User{} = user, %Notification{} = notification) do
     if enabled?() do
-      run(fn -> push(user, notification) end)
-    else
-      :ok
+      %{user_id: user.id, notification_id: notification.id}
+      |> __MODULE__.Worker.new()
+      |> Firefly.Jobs.enqueue(inline: config()[:async] == false)
     end
+
+    :ok
   end
 
-  # Async in production; tests run it in their own process.
-  defp run(fun) do
-    if config()[:async] == false do
-      fun.()
-    else
-      {:ok, _pid} =
-        Task.Supervisor.start_child(__MODULE__.TaskSupervisor, Firefly.Telemetry.bind(fun))
+  @doc false
+  # The job's work: the notification, if it's still there, to the member's
+  # browsers.
+  def push(user_id, notification_id) do
+    with %Notification{} = notification <- Repo.get(Notification, notification_id),
+         do: send_push(%User{id: user_id}, notification)
 
-      :ok
-    end
+    :ok
   end
 
-  defp push(user, notification) do
+  defp send_push(user, notification) do
     user = Repo.get(User, user.id)
     subscriptions = if user && not around?(user), do: subscriptions(user), else: []
 
@@ -176,4 +177,16 @@ defmodule Firefly.Notifications.WebPush do
       %{endpoint_host: URI.parse(s.endpoint).host, user_agent: s.user_agent, since: s.inserted_at}
     end
   end
+end
+
+defmodule Firefly.Notifications.WebPush.Worker do
+  @moduledoc "Pushes one notification (see `Firefly.Notifications.WebPush`), once."
+  use Oban.Worker,
+    queue: :notifications,
+    max_attempts: 3,
+    unique: [keys: [:notification_id], period: :infinity, states: :all]
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"user_id" => user_id, "notification_id" => id}}),
+    do: Firefly.Notifications.WebPush.push(user_id, id)
 end

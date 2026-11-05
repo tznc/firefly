@@ -4,10 +4,10 @@ defmodule Firefly.Chat.Notifier do
 
   import Ecto.Query
 
-  alias Firefly.{Mailer, Notifications, Repo, URLs}
+  alias Firefly.{Notifications, Repo, URLs}
   alias Firefly.Accounts.{Ignores, User}
   alias Firefly.Chat.{Channel, Membership, Message}
-  alias Firefly.Notifications.{Emails, Notification}
+  alias Firefly.Notifications.Notification
 
   # Someone not seen for this long is away: mentions and direct messages
   # are emailed to them too.
@@ -78,7 +78,7 @@ defmodule Firefly.Chat.Notifier do
         else: String.slice(message.body, 0, 300)
 
     {:ok, notification} =
-      Notifications.notify(user, %{
+      Notifications.notify_once(user, %{
         kind: kind,
         subject: subject,
         body: body,
@@ -87,8 +87,13 @@ defmodule Firefly.Chat.Notifier do
       })
 
     if email?(user, kind, channel, notification) do
-      Mailer.deliver_now(Emails.chat_notification(user, subject, message.body, url))
-      Notifications.notification_emailed(notification)
+      Notifications.email_later(notification, %{
+        template: "chat_notification",
+        subject: subject,
+        # The body is read when the email is built: no message text in jobs.
+        message_id: message.id,
+        url: url
+      })
     end
   end
 

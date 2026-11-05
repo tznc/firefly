@@ -7,13 +7,10 @@ defmodule Firefly.Application do
   def start(_type, _args) do
     opts = [strategy: :one_for_one, name: Firefly.Supervisor]
 
-    Supervisor.start_link(
-      children(Application.get_env(:firefly, :notifications_enabled)),
-      opts
-    )
+    Supervisor.start_link(children(), opts)
   end
 
-  defp default_children do
+  defp children do
     # Start the Ecto repository, then join the other nodes (when clustering
     # is on) before anything relies on PubSub reaching them
     [Firefly.Repo] ++
@@ -32,14 +29,8 @@ defmodule Firefly.Application do
         {Task.Supervisor, name: Firefly.Plugin.TaskSupervisor},
         # Loads plugins and reloads them when another node changes them
         Firefly.Plugins.Registry,
-        # Fetches link previews in the background
-        {Task.Supervisor, name: Firefly.Rendering.LinkPreviews.supervisor()},
-        {Task.Supervisor, name: Firefly.Notifications.WebPush.TaskSupervisor},
-        # Runs AI work in the background (triage, embeddings)
-        {Task.Supervisor, name: Firefly.AI.TaskSupervisor},
-        # Checks new content with Akismet in the background
-        {Task.Supervisor, name: Firefly.Moderation.Akismet.TaskSupervisor},
-        # Background and scheduled jobs (see Firefly.Jobs)
+        # Background and scheduled jobs (see Firefly.Jobs): notification
+        # fan-out and emails, web pushes, link previews, Akismet, AI work...
         {Oban,
          Keyword.put(Application.fetch_env!(:firefly, Oban), :cron,
            crontab: Firefly.Jobs.crontab()
@@ -55,12 +46,5 @@ defmodule Firefly.Application do
         # Runs backups and restores; applies read-only mode
         Firefly.Backups.Runner
       ]
-  end
-
-  defp children(false), do: default_children()
-
-  defp children(_) do
-    # Start the notifications server
-    default_children() ++ [Firefly.Notifications]
   end
 end

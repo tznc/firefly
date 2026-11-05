@@ -3,7 +3,7 @@ defmodule FireflyWeb.MessagesLiveTest do
   # Emails go to the test process (they're tested in MessagesTest).
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
+  # Mail is sent from other processes (LiveViews).
   setup :set_swoosh_global
 
   require Ecto.Query
@@ -11,11 +11,10 @@ defmodule FireflyWeb.MessagesLiveTest do
   alias Firefly.{Accounts, Messaging, Notifications}
 
   setup do
-    {:ok, _} = Notifications.start_link()
     %{alice: user_fixture(%{username: "alice"}), bob: user_fixture(%{username: "bob"})}
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp start(sender, recipients, body \\ "Secret plans") do
     {:ok, conversation} =

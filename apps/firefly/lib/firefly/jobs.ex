@@ -31,6 +31,26 @@ defmodule Firefly.Jobs do
   @spec insert(Ecto.Changeset.t()) :: {:ok, Oban.Job.t()} | {:error, term}
   def insert(%Ecto.Changeset{} = changeset), do: OpentelemetryOban.insert(changeset)
 
+  @doc """
+  Enqueues `changeset` (see `insert/1`), or with `inline: true` runs its
+  worker at once in the calling process instead: for work whose tests run it
+  in their own process (`config ..., async: false`). Returns `:ok`, or the
+  inline run's result.
+  """
+  @spec enqueue(Ecto.Changeset.t(), keyword) :: term
+  def enqueue(%Ecto.Changeset{} = changeset, opts \\ []) do
+    if opts[:inline] do
+      %{worker: worker, args: args} = changeset.changes
+      worker = Module.safe_concat([worker])
+      # As stored: JSON, string keys.
+      args = args |> Jason.encode!() |> Jason.decode!()
+      worker.perform(%Oban.Job{args: args, attempt: 1, max_attempts: 1, worker: inspect(worker)})
+    else
+      {:ok, _job} = insert(changeset)
+      :ok
+    end
+  end
+
   @doc "The periodic tasks' cron schedule (see `Firefly.Jobs.Periodic`)."
   @spec crontab() :: [{String.t(), module}]
   defdelegate crontab, to: Firefly.Jobs.Periodic

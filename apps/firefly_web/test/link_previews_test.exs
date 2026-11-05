@@ -163,6 +163,9 @@ defmodule FireflyWeb.LinkPreviewsTest do
     end
   end
 
+  # Runs the fetch jobs posting enqueued.
+  defp fetch_previews, do: Oban.drain_queue(queue: :default)
+
   defp thread_with(body) do
     user = user_fixture()
     thread = thread_fixture(category_fixture(), user)
@@ -181,7 +184,8 @@ defmodule FireflyWeb.LinkPreviewsTest do
       :ok = Discussion.subscribe("forums:thread:#{thread.id}")
       {:ok, _post} = Discussion.create_post(thread, user, %{body: "Read this:\n\n#{base}/page"})
       thread_id = thread.id
-      assert_receive {:link_previews_ready, ^thread_id}, 5_000
+      fetch_previews()
+      assert_receive {:link_previews_ready, ^thread_id}
 
       preview = Repo.get_by!(LinkPreview, url: base <> "/page") |> Repo.preload(:image_upload)
       assert preview.status == "ok"
@@ -202,7 +206,8 @@ defmodule FireflyWeb.LinkPreviewsTest do
 
     test "page values are text, and other sites' images are never linked", %{base: base} do
       {_thread, _post} = thread_with("#{base}/xss")
-      assert_receive {:link_previews_ready, _}, 5_000
+      fetch_previews()
+      assert_receive {:link_previews_ready, _}
 
       preview = Repo.get_by!(LinkPreview, url: base <> "/xss")
       assert preview.title == "\">"
@@ -221,7 +226,8 @@ defmodule FireflyWeb.LinkPreviewsTest do
 
     test "a page without a title is remembered as failed, and shows nothing", %{base: base} do
       {thread, _post} = thread_with("#{base}/json")
-      assert_receive {:link_previews_ready, _}, 5_000
+      fetch_previews()
+      assert_receive {:link_previews_ready, _}
 
       assert %LinkPreview{status: "failed", title: nil} =
                Repo.get_by!(LinkPreview, url: base <> "/json")
@@ -234,13 +240,15 @@ defmodule FireflyWeb.LinkPreviewsTest do
       {:ok, _} = SiteSettings.update(%{"link_previews" => "false"}, admin_fixture())
       thread_with("#{base}/page")
 
-      refute_receive {:link_previews_ready, _}, 300
+      fetch_previews()
+      refute_received {:link_previews_ready, _}
       refute Repo.get_by(LinkPreview, url: base <> "/page")
     end
 
     test "unseen previews are deleted with their images", %{base: base} do
       thread_with("#{base}/page")
-      assert_receive {:link_previews_ready, _}, 5_000
+      fetch_previews()
+      assert_receive {:link_previews_ready, _}
       preview = Repo.get_by!(LinkPreview, url: base <> "/page")
 
       assert LinkPreviews.run_due() == 0

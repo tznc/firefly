@@ -11,21 +11,13 @@ defmodule Firefly.ModerationActionsPropertyTest do
   use Firefly.DataCase, async: false
   use ExUnitProperties
 
-  import Swoosh.TestAssertions
   import Firefly.Generators
   import Firefly.Fixtures
 
-  alias Firefly.{Accounts, Notifications, SiteSettings}
+  alias Firefly.{Accounts, SiteSettings}
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Moderation.{Flags, Penalties, TopicTimers}
-
-  setup :set_swoosh_global
-
-  setup do
-    {:ok, _} = Notifications.start_link()
-    :ok
-  end
 
   defp member(trust_level \\ 1) do
     {:ok, user} = Accounts.confirm_user(user_fixture())

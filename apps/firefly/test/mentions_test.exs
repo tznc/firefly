@@ -2,9 +2,6 @@ defmodule Firefly.MentionsTest do
   use Firefly.DataCase
   import Swoosh.TestAssertions
 
-  # Mail is sent from other processes (the notifications process, LiveViews).
-  setup :set_swoosh_global
-
   alias Firefly.{Accounts, Discussion, Notifications}
   alias Firefly.Discussion.Mentions
   alias Firefly.Rendering.Markdown
@@ -48,8 +45,7 @@ defmodule Firefly.MentionsTest do
     end
   end
 
-  # Casts are async; a call to the server waits for them.
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp mentions(user),
     do: Enum.filter(Notifications.notifications_for(user), &(&1.kind == "mentioned"))
@@ -150,7 +146,6 @@ defmodule Firefly.MentionsTest do
 
   describe "notifications" do
     setup do
-      {:ok, _} = Notifications.start_link()
       {:ok, category} = Discussion.create_category(%{title: "Elixir"})
       author = user("author")
       {:ok, thread} = Discussion.create_thread(category, author, %{title: "OTP", body: "Cool?"})

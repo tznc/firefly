@@ -60,14 +60,11 @@ defmodule FireflyWeb.OpenTelemetryTest do
       thread = thread_fixture(category_fixture(), author)
 
       Tracer.with_span "test" do
-        {:ok, post} = Firefly.Discussion.create_post(thread, author, %{body: "A reply"})
-
-        # The fan-out gets the caller's context with the message.
-        message = {{:post_edited, post}, Firefly.Telemetry.current_context()}
-
-        Task.async(fn -> Firefly.Notifications.Dispatcher.handle_cast(message, :nostate) end)
-        |> Task.await()
+        {:ok, _post} = Firefly.Discussion.create_post(thread, author, %{body: "A reply"})
       end
+
+      # The fan-out job carries the enqueuer's trace context.
+      run_notifications()
 
       spans = spans(&(span(&1, :name) == "test"))
       root = Enum.find(spans, &(span(&1, :name) == "test"))
@@ -80,7 +77,7 @@ defmodule FireflyWeb.OpenTelemetryTest do
       assert span(post, :parent_span_id) == span(root, :span_id)
       assert attribute(post, "firefly.result") == "ok"
       assert span(dispatch, :trace_id) == span(root, :trace_id)
-      assert attribute(dispatch, "firefly.event") == "post_edited"
+      assert attribute(dispatch, "firefly.event") == "post_created"
     end
 
     test "a background job joins its enqueuer's trace" do
