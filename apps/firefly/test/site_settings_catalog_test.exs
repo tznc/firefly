@@ -124,6 +124,37 @@ defmodule Firefly.SiteSettingsCatalogTest do
   end
 
   describe "import and export" do
+    # Found by Firefly.SiteSettingsPropertyTest (in CI): Postgres can't store
+    # "\0" in text, so saving one raised instead of failing validation.
+    test "a value with a null character is refused", %{admin: admin} do
+      assert SiteSettings.update(
+               %{"title" => <<"a", 0>>, "reserved_usernames" => ["b", <<0>>]},
+               admin
+             ) ==
+               {:error,
+                %{
+                  "title" => "can't contain a null character",
+                  "reserved_usernames" => "can't contain a null character"
+                }}
+    end
+
+    # Found by Firefly.SiteSettingsPropertyTest: values that aren't text or
+    # lists of text (an object, a nested list) raised in to_string/1.
+    test "an import with values of the wrong shape is refused", %{admin: admin} do
+      assert {:error, errors} =
+               Transfer.import(%{"title" => %{"a" => 1}, "reserved_usernames" => [[nil]]}, admin)
+
+      assert errors == %{"title" => "is invalid", "reserved_usernames" => "is invalid"}
+    end
+
+    # Found by Firefly.SiteSettingsPropertyTest: a list item holding a
+    # comma was kept whole, then stored joined with commas and read back
+    # as two items.
+    test "list items split on commas however they come", %{admin: admin} do
+      set(admin, %{"reserved_usernames" => ["support,staff", "help"]})
+      assert SiteSettings.get("reserved_usernames") == ["support", "staff", "help"]
+    end
+
     test "round-trips changed settings through JSON and YAML, never secrets", %{admin: admin} do
       set(admin, %{
         "title" => "Glow \"worm\"",
