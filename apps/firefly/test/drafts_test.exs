@@ -133,6 +133,7 @@ defmodule Firefly.DraftsTest do
     {:ok, _} = AccountDeletion.delete_account(user, user.username)
     assert Repo.aggregate(Draft, :count) == 0
   end
+
   test "a title or tags too long in code points is refused, not a crash", %{
     user: user,
     category: category
