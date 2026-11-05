@@ -109,6 +109,12 @@ defmodule Firefly.Accounts do
   def users_by_username([]), do: %{}
 
   def users_by_username(names) do
+    # Postgres refuses NUL and invalid UTF-8, and no username has them.
+    names = Enum.filter(names, &(String.valid?(&1) and not String.contains?(&1, <<0>>)))
+    if names == [], do: %{}, else: find_by_username(names)
+  end
+
+  defp find_by_username(names) do
     by_lower =
       User
       |> where([u], fragment("lower(?)", u.username) in ^Enum.map(names, &String.downcase/1))

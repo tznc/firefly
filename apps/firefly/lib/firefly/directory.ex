@@ -90,9 +90,17 @@ defmodule Firefly.Directory do
       %DirectoryItem{period: "all", user_id: user_id}
   end
 
-  defp search(query, name) when is_binary(name) and name != "" do
-    pattern = "%" <> String.replace(String.trim(name), ~r/[\\%_]/, "\\\\\\0") <> "%"
-    where(query, [u], ilike(u.username, ^pattern) or ilike(u.name, ^pattern))
+  # Postgres refuses NUL and invalid UTF-8 (anyone can put them in the
+  # URL): they're dropped.
+  defp search(query, name) when is_binary(name) do
+    case name |> String.replace_invalid("") |> String.replace(<<0>>, "") |> String.trim() do
+      "" ->
+        query
+
+      name ->
+        pattern = "%" <> String.replace(name, ~r/[\\%_]/, "\\\\\\0") <> "%"
+        where(query, [u], ilike(u.username, ^pattern) or ilike(u.name, ^pattern))
+    end
   end
 
   defp search(query, _name), do: query

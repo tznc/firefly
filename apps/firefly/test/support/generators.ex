@@ -112,6 +112,9 @@ defmodule Firefly.Generators do
     "1,5"
   ]
 
+  @doc "Numbers as text: huge, negative, signed, non-ASCII digits, floats..."
+  def numbers, do: @numbers
+
   @doc "One adversarial snippet: a mark, control character, traversal, number..."
   def adversarial_snippet do
     one_of([
@@ -148,6 +151,18 @@ defmodule Firefly.Generators do
         String.duplicate(piece, n)
       end)
     end)
+  end
+
+  @doc """
+  "Zalgo" text: letters each stacked with combining marks, so it has
+  far more code points (what Postgres counts) than graphemes (what
+  `String.length/1` and Ecto's `validate_length/3` count by default).
+  """
+  def zalgo(max_graphemes \\ 260) do
+    map(
+      {integer(1..max_graphemes), integer(1..4)},
+      fn {n, marks} -> String.duplicate("e" <> String.duplicate("\u0301", marks), n) end
+    )
   end
 
   @doc "Any binary at all, invalid UTF-8 included."
@@ -535,8 +550,14 @@ defmodule Firefly.Generators do
         adversarial_text(4),
         member_of(@numbers)
       ]),
+      # Objects from key/value pairs, a repeated key keeping its last value:
+      # map_of/3 needs distinct keys, and small odd strings are mostly "",
+      # so it gave up (TooManyDuplicatesError) on some seeds.
       fn child ->
-        one_of([list_of(child, max_length: 4), map_of(adversarial_text(3), child, max_length: 4)])
+        one_of([
+          list_of(child, max_length: 4),
+          map(list_of(tuple({adversarial_text(3), child}), max_length: 4), &Map.new/1)
+        ])
       end
     )
     |> scale(&min(&1, 12))
