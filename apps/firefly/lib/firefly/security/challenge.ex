@@ -153,8 +153,8 @@ defmodule Firefly.Security.Challenge do
 
   defp verify_pow(_response), do: :error
 
-  # Built here rather than with Altcha.V1.Payload.from_json/1, which makes
-  # an atom of every key the browser sends.
+  # Built here rather than with Altcha.V1.Payload.from_json/1 (`altcha`
+  # 2.2.0), which makes an atom of every key the browser sends.
   defp payload(%{
          "algorithm" => "SHA-256",
          "challenge" => challenge,
@@ -176,6 +176,7 @@ defmodule Firefly.Security.Challenge do
 
   defp payload(_answer), do: :error
 
+  # Checked here because `altcha` 2.2.0's own expiry check has no effect.
   defp unexpired?(payload) do
     case Integer.parse(Altcha.V1.extract_params(payload)["expires"] || "") do
       {expires, ""} -> System.system_time(:second) <= expires

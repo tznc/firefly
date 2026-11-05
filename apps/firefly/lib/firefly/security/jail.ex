@@ -163,7 +163,7 @@ defmodule Firefly.Security.Jail do
             min: 1,
             max: 10_000,
             help:
-              "Points within the find time below that ban an address (see the README's Banning)."
+              "Points within the find time below that ban an address (see Banning in docs/security.md)."
           },
           %{
             key: "jail_#{name}_findtime",
