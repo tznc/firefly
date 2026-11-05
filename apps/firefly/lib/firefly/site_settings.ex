@@ -1819,7 +1819,7 @@ defmodule Firefly.SiteSettings do
 
   # Adds the setting to the changes (if its value changed) or the errors.
   defp collect(%{key: key} = definition, raw, current, {changes, errors}) do
-    case {cast(definition, raw), System.get_env(definition.env)} do
+    case {cast_storable(definition, raw), System.get_env(definition.env)} do
       {{:ok, value}, _pinned} when value == :erlang.map_get(key, current) ->
         {changes, errors}
 
@@ -1832,6 +1832,13 @@ defmodule Firefly.SiteSettings do
       {{:error, message}, nil} ->
         {changes, Map.put(errors, key, message)}
     end
+  end
+
+  # Postgres can't store a NUL character in text.
+  defp cast_storable(definition, raw) do
+    if Enum.any?(List.wrap(raw), &(is_binary(&1) and String.contains?(&1, <<0>>))),
+      do: {:error, "can't contain a null character"},
+      else: cast(definition, raw)
   end
 
   defp save(changes, current, admin) do
@@ -1936,24 +1943,11 @@ defmodule Firefly.SiteSettings do
     do: cast(definition, String.split(value, ~r/[,\n]/))
 
   def cast(%{type: :list} = definition, values) when is_list(values) do
-    values =
-      values
-      |> Enum.map(&(&1 |> to_string() |> String.trim()))
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.uniq()
-
-    allowed = definition[:options]
-
-    cond do
-      Enum.any?(values, &(String.length(&1) > 100)) ->
-        {:error, "has an item longer than 100 characters"}
-
-      allowed && Enum.any?(values, &(&1 not in allowed)) ->
-        {:error, "may only hold #{Enum.join(allowed, ", ")}"}
-
-      true ->
-        {:ok, values}
-    end
+    # Items split as typed ones do: stored joined with commas, an item
+    # holding one would come back as two.
+    if Enum.all?(values, &is_binary/1),
+      do: cast_list(definition, Enum.flat_map(values, &String.split(&1, ~r/[,\n]/))),
+      else: {:error, "is invalid"}
   end
 
   def cast(%{type: :color}, value) when is_binary(value) do
@@ -1981,4 +1975,25 @@ defmodule Firefly.SiteSettings do
   end
 
   def cast(_definition, _value), do: {:error, "is invalid"}
+
+  defp cast_list(definition, values) do
+    values =
+      values
+      |> Enum.map(&(&1 |> to_string() |> String.trim()))
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.uniq()
+
+    allowed = definition[:options]
+
+    cond do
+      Enum.any?(values, &(String.length(&1) > 100)) ->
+        {:error, "has an item longer than 100 characters"}
+
+      allowed && Enum.any?(values, &(&1 not in allowed)) ->
+        {:error, "may only hold #{Enum.join(allowed, ", ")}"}
+
+      true ->
+        {:ok, values}
+    end
+  end
 end

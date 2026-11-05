@@ -40,8 +40,10 @@ defmodule Firefly.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    # Deep fuzz runs (`:fuzz`) hold the sandbox for minutes.
-    timeout = if tags[:fuzz], do: [ownership_timeout: :infinity], else: []
+    # Deep fuzz runs (`:fuzz`, or properties given more runs) hold the
+    # sandbox for minutes.
+    long? = tags[:fuzz] || System.get_env("FIREFLY_PROPERTY_RUNS")
+    timeout = if long?, do: [ownership_timeout: :infinity], else: []
 
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Firefly.Repo, [shared: not tags[:async]] ++ timeout)
