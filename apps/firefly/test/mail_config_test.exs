@@ -43,6 +43,8 @@ defmodule Firefly.MailConfigTest do
 
   test "production won't start without an adapter" do
     fails(%{}, "no outbound email is configured: set FIREFLY_MAIL_ADAPTER")
+    # A provider's key alone doesn't pick an adapter.
+    fails(%{"FIREFLY_SENDGRID_API_KEY" => "SG.key"}, "set FIREFLY_MAIL_ADAPTER")
   end
 
   test "development keeps the local mailbox, unless told otherwise" do
@@ -173,10 +175,12 @@ defmodule Firefly.MailConfigTest do
     end
   end
 
-  test "SendGrid, also from its key alone (as before)" do
+  test "SendGrid" do
     expected = [adapter: Swoosh.Adapters.Sendgrid, api_key: "SG.key"]
-    assert mailer(%{"FIREFLY_SENDGRID_API_KEY" => "SG.key"}) == expected
-    assert mailer(%{"FIREFLY_MAIL_ADAPTER" => "sendgrid"}) == expected
+
+    assert mailer(%{"FIREFLY_MAIL_ADAPTER" => "sendgrid", "FIREFLY_SENDGRID_API_KEY" => "SG.key"}) ==
+             expected
+
     System.delete_env("FIREFLY_SENDGRID_API_KEY")
     fails(%{"FIREFLY_MAIL_ADAPTER" => "sendgrid"}, "FIREFLY_SENDGRID_API_KEY is missing")
   end
