@@ -89,8 +89,17 @@ defmodule Firefly.Accounts.User do
     |> validate_change(:username, fn :username, username ->
       if reserved_username?(username), do: [username: "is reserved"], else: []
     end)
-    |> unique_constraint(:username)
+    |> unique_username()
+    |> unique_constraint(:email, name: :forums_users_lower_email_index)
   end
+
+  @doc """
+  Usernames are unique in any case ("Alice" and "alice" are the same name;
+  each account keeps the case it chose): the unique index on
+  `lower(username)` refuses a taken one as "has already been taken".
+  """
+  def unique_username(changeset),
+    do: unique_constraint(changeset, :username, name: :forums_users_lower_username_index)
 
   @doc """
   Usernames nobody can pick: `deleted-user-<id>` is what account deletion
@@ -249,7 +258,7 @@ defmodule Firefly.Accounts.User do
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "must be a valid email")
     |> validate_length(:email, max: 160)
     |> validate_password_length()
-    |> unsafe_validate_unique(:username, Firefly.Repo)
+    |> validate_username_free()
     |> put_password_hash()
     |> invalid_text_errors(invalid, [:username, :email, :name, :password])
   end
@@ -267,6 +276,16 @@ defmodule Firefly.Accounts.User do
       changeset -> add_error(changeset, field, "isn't valid text")
     end
   end
+
+  # The form says a name is taken before submitting (any case); the unique
+  # index has the last word.
+  defp validate_username_free(%Ecto.Changeset{valid?: true} = changeset) do
+    if Firefly.Accounts.get_user_by_username(get_field(changeset, :username)),
+      do: add_error(changeset, :username, "has already been taken"),
+      else: changeset
+  end
+
+  defp validate_username_free(changeset), do: changeset
 
   def add_roles(changeset, params) do
     import Ecto.Query

@@ -17,7 +17,7 @@ defmodule Firefly.Import.Writer do
 
   import Ecto.Query
 
-  alias Firefly.{Repo, Uploads}
+  alias Firefly.{Accounts, Repo, Uploads}
   alias Firefly.Accounts.User
   alias Firefly.Chat
   alias Firefly.Discussion.{Category, Poll, Post, PostLike, Tag, TagGroup, Thread}
@@ -162,11 +162,7 @@ defmodule Firefly.Import.Writer do
     )
   end
 
-  defp username_taken?(username) do
-    Repo.exists?(
-      from(u in User, where: fragment("lower(?)", u.username) == ^String.downcase(username))
-    )
-  end
+  defp username_taken?(username), do: Accounts.get_user_by_username(username) != nil
 
   @doc "Sets the user's avatar to the image `data` (named `filename`)."
   def avatar(%User{} = user, data, filename) do
