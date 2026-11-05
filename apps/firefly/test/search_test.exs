@@ -142,4 +142,15 @@ defmodule Firefly.SearchTest do
     refute headline =~ "<b>"
     refute headline =~ "\u0001"
   end
+
+  # Found by Firefly.PolicyPropertyTest: Postgres refused a query holding
+  # NUL or invalid UTF-8, and the search page raised.
+  test "a query with NUL or invalid UTF-8 searches the rest of it" do
+    for query <- [<<"supervisors", 0>>, <<"supervisors ", 0xFF>>] do
+      assert [%{thread: %{title: "Supervisors explained"}} | _] =
+               Search.run(Search.parse(query), nil).entries
+    end
+
+    assert Search.parse("x", %{"category" => <<"el", 0, "ixir">>}).category == "elixir"
+  end
 end

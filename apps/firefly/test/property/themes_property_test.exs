@@ -5,7 +5,8 @@ defmodule Firefly.ThemesPropertyTest do
   be broken out of by what admins or packages name things; edits never
   crash validation; and contrast checks are symmetric and bounded.
   """
-  use Firefly.DataCase, async: true
+  # Sync: it holds the shared "admin" role (admin_fixture/1) for its whole run.
+  use Firefly.DataCase, async: false
   use ExUnitProperties
 
   import Firefly.Generators
