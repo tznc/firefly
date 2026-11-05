@@ -473,10 +473,27 @@ defmodule Firefly.Packages do
   defp css_value(false), do: "0"
   defp css_value(value) when is_integer(value), do: Integer.to_string(value)
 
+  # Bare when it's simple and its brackets balance (an open one would take
+  # in the rest of the stylesheet); else a string, escaping what would end
+  # it (a quote, a backslash, and the newlines: \n, \r and \f) or the
+  # page's <style>.
   defp css_value(value) when is_binary(value) do
-    if value =~ ~r{^[#%(),./\w\s+-]*$},
+    if value =~ ~r{\A[#%(),./\w\s+-]*\z} and balanced?(value),
       do: value,
-      else: ~s{"} <> String.replace(value, ~r{[\\"\n\r<>]}, &"\\#{Base.encode16(&1)} ") <> ~s{"}
+      else: ~s{"} <> String.replace(value, ~r{[\\"\n\r\f<>]}, &"\\#{Base.encode16(&1)} ") <> ~s{"}
+  end
+
+  # By code point: a combining mark after "(" makes one grapheme of them.
+  defp balanced?(value) do
+    value
+    |> String.codepoints()
+    |> Enum.reduce_while(0, fn
+      "(", depth -> {:cont, depth + 1}
+      ")", 0 -> {:halt, -1}
+      ")", depth -> {:cont, depth - 1}
+      _char, depth -> {:cont, depth}
+    end)
+    |> Kernel.==(0)
   end
 
   ## Uninstall
