@@ -5,7 +5,8 @@ defmodule Firefly.Moderation.Akismet do
   messages, chat messages and profile edits (each kind its own setting) by
   members below the `akismet_trust_level` trust level are sent to
   Akismet's `comment-check` in the background. Posting never waits for
-  it, nor fails with it: errors are logged and the content stands.
+  it, nor fails with it: errors are logged and retried, and the content
+  stands; a check still failing on the job's last attempt ends `"failed"`.
 
   Akismet's spam:
 
@@ -22,12 +23,14 @@ defmodule Firefly.Moderation.Akismet do
   wasn't), which trains Akismet for the site. For private messages and
   profiles, "Confirm spam" deletes the message or clears the profile's
   bio, website and location; "Not spam" leaves them. Detections and those
-  decisions go to the staff log. Every verdict is kept
+  decisions go to the staff log. Every check is kept
   (`Firefly.Moderation.AkismetCheck`) for the reports.
 
   The request's client (IP address, user agent, referrer), which Akismet
   weighs, is what the web layer recorded for the process that posted
-  (`put_client/1`).
+  (`put_client/1`). It goes, with the content and author, into the check's
+  row (status `"queued"`) when the content is posted; the job carries only
+  the row's id, so no personal data shows in `/staff/jobs`.
   """
 
   import Ecto.Query
@@ -142,7 +145,21 @@ defmodule Firefly.Moderation.Akismet do
         |> Map.merge(fields)
         |> Map.reject(fn {_key, value} -> value in [nil, ""] end)
 
-      background(%{op: "check", kind: kind, id: id, user_id: user.id, params: params})
+      # The row and its job commit together (in the caller's transaction,
+      # if any).
+      {:ok, :ok} =
+        Repo.transact(fn ->
+          check =
+            Repo.insert!(%AkismetCheck{
+              kind: kind,
+              subject_id: id,
+              user_id: user.id,
+              status: "queued",
+              params: params
+            })
+
+          {:ok, background(%{op: "check", check_id: check.id})}
+        end)
     end
 
     :ok
@@ -164,52 +181,56 @@ defmodule Firefly.Moderation.Akismet do
   end
 
   @doc false
-  # The job's work (see Firefly.Moderation.Akismet.Worker).
-  def run(%{
-        "op" => "check",
-        "kind" => kind,
-        "id" => id,
-        "user_id" => user_id,
-        "params" => params
-      }) do
-    case Repo.get(User, user_id) do
+  # The job's work (see Firefly.Moderation.Akismet.Worker): from the check's
+  # row, which a retry rereads. A row gone, already answered, or whose
+  # author was deleted is left alone. `last?`: whether this is the job's
+  # last attempt.
+  def run(%{"op" => "check", "check_id" => id}, last?) do
+    with %AkismetCheck{status: "queued"} = check <- Repo.get(AkismetCheck, id),
+         %User{} = user <- check.user_id && Repo.get(User, check.user_id) do
+      check(check, user, last?)
+    else
+      _gone_or_done -> :ok
+    end
+  end
+
+  def run(%{"op" => "submit", "check_id" => id, "verdict" => verdict}, _last?) do
+    case Repo.get(AkismetCheck, id) do
       nil -> :ok
-      user -> check(kind, id, user, params)
+      check -> submit(verdict, check.params)
     end
   end
 
-  def run(%{"op" => "submit", "verdict" => verdict, "params" => params}) do
-    submit(verdict, params)
-    :ok
-  end
+  # Asks Akismet about the queued `check` by `user`, records the verdict
+  # and acts on spam. A failure is retried (the job's attempts); the
+  # content stands meanwhile, and after the last one the check is "failed".
+  defp check(check, user, last?) do
+    case request("comment-check", check.params) do
+      {:ok, "true"} ->
+        record(check, user, true)
 
-  @doc """
-  Asks Akismet about content `kind` `id` by `user` (`params`, as
-  `comment-check` takes them), records the verdict and acts on spam.
-  """
-  def check(kind, id, user, params) do
-    case request("comment-check", params) do
-      {:ok, "true"} -> record(kind, id, user, params, true)
-      {:ok, "false"} -> record(kind, id, user, params, false)
-      other -> Logger.warning("Akismet check of #{kind} #{id} failed: #{inspect(other)}")
+      {:ok, "false"} ->
+        record(check, user, false)
+
+      other ->
+        Logger.warning(
+          "Akismet check of #{check.kind} #{check.subject_id} failed: #{inspect(other)}"
+        )
+
+        if last?, do: Repo.update!(Ecto.Changeset.change(check, status: "failed"))
+        {:error, :akismet_failed}
     end
-
-    :ok
   end
 
-  defp record(kind, id, user, params, spam?) do
+  defp record(check, user, spam?) do
     check =
-      Repo.insert!(%AkismetCheck{
-        kind: kind,
-        subject_id: id,
-        user_id: user.id,
-        spam: spam?,
-        status: if(spam?, do: "pending", else: "clean"),
-        params: params
-      })
+      check
+      |> Ecto.Changeset.change(spam: spam?, status: if(spam?, do: "pending", else: "clean"))
+      |> Repo.update!()
 
     if spam?, do: Firefly.Security.Jail.signal(params["user_ip"], "akismet_spam")
     if spam?, do: caught(check, user)
+    :ok
   end
 
   defp caught(check, user) do
@@ -267,7 +288,7 @@ defmodule Firefly.Moderation.Akismet do
   defp latest(kind, id) do
     Repo.one(
       from(c in AkismetCheck,
-        where: c.kind == ^kind and c.subject_id == ^id,
+        where: c.kind == ^kind and c.subject_id == ^id and c.status not in ["queued", "failed"],
         order_by: [desc: c.id],
         limit: 1
       )
@@ -283,7 +304,7 @@ defmodule Firefly.Moderation.Akismet do
            set: [feedback: verdict]
          ) do
       {1, _} ->
-        background(%{op: "submit", verdict: verdict, check_id: check.id, params: check.params})
+        background(%{op: "submit", verdict: verdict, check_id: check.id})
 
       {0, _} ->
         :ok
@@ -292,8 +313,12 @@ defmodule Firefly.Moderation.Akismet do
 
   defp submit(verdict, params) do
     case request("submit-#{verdict}", params) do
-      {:ok, _thanks} -> :ok
-      other -> Logger.warning("Akismet submit-#{verdict} failed: #{inspect(other)}")
+      {:ok, _thanks} ->
+        :ok
+
+      other ->
+        Logger.warning("Akismet submit-#{verdict} failed: #{inspect(other)}")
+        {:error, :akismet_failed}
     end
   end
 
@@ -408,15 +433,18 @@ end
 defmodule Firefly.Moderation.Akismet.Worker do
   @moduledoc """
   Checks content with Akismet, or reports a verdict to it (see
-  `Firefly.Moderation.Akismet`), in the background: a check isn't queued
-  twice for the same content while one waits, nor a report twice for a
-  check.
+  `Firefly.Moderation.Akismet`), in the background. Its args are the `op`
+  (`"check"`, or `"submit"` with its `verdict`) and the
+  `Firefly.Moderation.AkismetCheck`'s id, never the request's data; no
+  check or report is queued twice for the same row. A check still failing
+  on its last attempt marks the row `"failed"`.
   """
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:op, :kind, :id, :check_id], period: :infinity, states: :incomplete]
+    unique: [keys: [:op, :check_id], period: :infinity, states: :incomplete]
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: args}), do: Firefly.Moderation.Akismet.run(args)
+  def perform(%Oban.Job{args: args, attempt: attempt, max_attempts: max_attempts}),
+    do: Firefly.Moderation.Akismet.run(args, attempt >= max_attempts)
 end
