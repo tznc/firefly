@@ -133,4 +133,19 @@ defmodule Firefly.DraftsTest do
     {:ok, _} = AccountDeletion.delete_account(user, user.username)
     assert Repo.aggregate(Draft, :count) == 0
   end
+
+  test "a title or tags too long in code points is refused, not a crash", %{
+    user: user,
+    category: category
+  } do
+    # 100 graphemes but 300 code points, past the varchar(255) column.
+    zalgo = String.duplicate("e\u0301\u0308", 100)
+
+    for field <- [:title, :tags] do
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Drafts.save(user, {:new_thread, category}, %{field => zalgo})
+
+      assert changeset.errors[field]
+    end
+  end
 end
