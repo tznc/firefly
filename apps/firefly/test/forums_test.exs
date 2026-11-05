@@ -510,5 +510,14 @@ defmodule Firefly.ForumsTest do
     attrs = %{title: String.duplicate("9", 256), body: "Long."}
     assert {:error, changeset} = Firefly.Discussion.create_thread(home, user, attrs)
     assert "should be at most 255 character(s)" in errors_on(changeset).title
+
+    # Counted as Postgres does, by code point: 100 graphemes of a letter
+    # and two combining marks are 300 (found by NotificationsPropertyTest).
+    zalgo = String.duplicate("e\u0301\u0308", 100)
+    assert {:error, changeset} = Firefly.Discussion.create_category(%{title: zalgo})
+    assert errors_on(changeset).title != []
+    attrs = %{title: zalgo, body: "Long."}
+    assert {:error, changeset} = Firefly.Discussion.create_thread(home, user, attrs)
+    assert errors_on(changeset).title != []
   end
 end
