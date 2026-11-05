@@ -9,16 +9,8 @@ defmodule FireflyWeb.OpenTelemetryTest do
   @span_fields Record.extract(:span, from_lib: "opentelemetry/include/otel_span.hrl")
   Record.defrecordp(:span, @span_fields)
 
-  @metrics_hrl "opentelemetry_experimental/include/otel_metrics.hrl"
-  Record.defrecordp(:metric, Record.extract(:metric, from_lib: @metrics_hrl))
-  Record.defrecordp(:sum, Record.extract(:sum, from_lib: @metrics_hrl))
-  Record.defrecordp(:datapoint, Record.extract(:datapoint, from_lib: @metrics_hrl))
-  Record.defrecordp(:histogram, Record.extract(:histogram, from_lib: @metrics_hrl))
-
-  Record.defrecordp(
-    :histogram_datapoint,
-    Record.extract(:histogram_datapoint, from_lib: @metrics_hrl)
-  )
+  alias OtelMetricExporter.Opentelemetry.Proto.Collector.Metrics.V1.ExportMetricsServiceRequest
+  alias OtelMetricExporter.Opentelemetry.Proto.Metrics.V1.{Gauge, Histogram, Sum}
 
   @root Path.expand("../../..", __DIR__)
 
@@ -161,11 +153,24 @@ defmodule FireflyWeb.OpenTelemetryTest do
   end
 
   describe "metrics over OTLP" do
-    test "report the Prometheus metric definitions" do
-      # The test config's metric reader sends to this name on a flush.
-      Process.register(self(), :firefly_otel_metrics_test)
+    setup do
+      collector =
+        start_supervised!({Bandit, plug: {__MODULE__.Collector, self()}, port: 0, ip: :loopback})
 
-      start_supervised!({FireflyWeb.OpenTelemetry.Metrics, FireflyWeb.Telemetry.metrics()})
+      {:ok, {_ip, port}} = ThousandIsland.listener_info(collector)
+
+      # What config/runtime.exs sets from the OTEL_* variables.
+      Application.put_env(:otel_metric_exporter, :otlp_endpoint, "http://127.0.0.1:#{port}")
+      Application.put_env(:otel_metric_exporter, :export_period, 100)
+
+      on_exit(fn ->
+        Application.delete_env(:otel_metric_exporter, :otlp_endpoint)
+        Application.delete_env(:otel_metric_exporter, :export_period)
+      end)
+    end
+
+    test "report the Prometheus metric definitions, with their tags and buckets" do
+      start_supervised!(FireflyWeb.Telemetry.exporter_spec())
 
       Firefly.Telemetry.execute([:firefly, :notifications, :created], %{count: 1}, %{
         kind: "mentioned"
@@ -175,26 +180,86 @@ defmodule FireflyWeb.OpenTelemetryTest do
         {:ok, %{}}
       end)
 
-      :otel_meter_server.force_flush()
+      Firefly.Telemetry.execute([:firefly, :queue, :depth], %{depth: 3}, %{queue: "webhooks"})
 
-      created = receive_metric(:"firefly.notifications.created.count")
+      metrics =
+        receive_metrics(~w(firefly.notifications.created.count
+                           firefly.scheduler.job.stop.duration.microseconds
+                           firefly.queue.depth))
 
-      assert [datapoint(attributes: %{"kind" => "mentioned"}, value: 1)] =
-               sum(metric(created, :data), :datapoints)
+      # The traces' resource.
+      resource = FireflyWeb.OpenTelemetry.resource()
+      assert metrics.resource["service.name"] == resource["service.name"]
+      assert metrics.resource["service.instance.id"] == resource["service.instance.id"]
+      assert is_binary(resource["service.name"])
 
-      job = receive_metric(:"firefly.scheduler.job.stop.duration.microseconds")
+      assert {:sum, %Sum{is_monotonic: true, data_points: [created]}} =
+               metrics["firefly.notifications.created.count"].data
 
-      assert [histogram_datapoint(attributes: %{"job" => "Firefly.Badges"}, count: 1) = point] =
-               histogram(metric(job, :data), :datapoints)
+      assert attributes(created) == %{"kind" => "mentioned"}
+      assert created.value == {:as_int, 1}
 
-      assert hd(histogram_datapoint(point, :explicit_bounds)) == 500.0
+      job = metrics["firefly.scheduler.job.stop.duration.microseconds"]
+      assert job.unit == "us"
+      assert {:histogram, %Histogram{data_points: [point]}} = job.data
+      assert attributes(point) == %{"job" => "Firefly.Badges"}
+      assert point.count == 1
+      assert Enum.sum(point.bucket_counts) == 1
+
+      # Prometheus' buckets (Peep's upper bounds, the last one +Inf).
+      buckets = FireflyWeb.Telemetry.Buckets
+
+      peep_bounds =
+        for index <- 0..(buckets.number_of_buckets(%{}) - 1),
+            do: index |> buckets.upper_bound(%{}) |> String.to_float()
+
+      assert point.explicit_bounds == peep_bounds
+      assert length(point.bucket_counts) == length(peep_bounds) + 1
+
+      assert {:gauge, %Gauge{data_points: [depth]}} = metrics["firefly.queue.depth"].data
+      assert attributes(depth) == %{"queue" => "webhooks"}
+      assert depth.value == {:as_int, 3}
+    end
+
+    test "a query without a queue time leaves the query metrics reporting" do
+      FireflyWeb.Telemetry.attach_queue_time()
+      on_exit(fn -> :telemetry.detach({FireflyWeb.Telemetry, :queue_time}) end)
+      start_supervised!(FireflyWeb.Telemetry.exporter_spec())
+
+      ms = System.convert_time_unit(1, :millisecond, :native)
+      :telemetry.execute([:firefly, :repo, :query], %{total_time: ms}, %{source: "otel_test"})
+
+      :telemetry.execute([:firefly, :repo, :query], %{total_time: 3 * ms, queue_time: 2 * ms}, %{
+        source: "otel_test"
+      })
+
+      metrics =
+        receive_metrics(~w(firefly.repo.query.total_time.microseconds
+                           firefly.repo.query.queue_time.microseconds))
+
+      # Points may come in more than one export.
+      {:histogram, %Histogram{data_points: points}} =
+        metrics["firefly.repo.query.total_time.microseconds"].data
+
+      ours = Enum.filter(points, &(attributes(&1) == %{"source" => "otel_test"}))
+      assert ours |> Enum.map(& &1.count) |> Enum.sum() == 2
+
+      {:histogram, %Histogram{data_points: queued}} =
+        metrics["firefly.repo.query.queue_time.microseconds"].data
+
+      assert queued |> Enum.map(& &1.count) |> Enum.sum() == 1
+      assert queued |> Enum.map(& &1.sum) |> Enum.sum() == 2_000.0
     end
   end
 
   describe "configuration" do
     setup do
       vars = ~w(OTEL_EXPORTER_OTLP_ENDPOINT OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-                OTEL_TRACES_EXPORTER FIREFLY_OTEL_METRICS FIREFLY_OTEL_LOGS)
+                OTEL_EXPORTER_OTLP_METRICS_ENDPOINT OTEL_EXPORTER_OTLP_PROTOCOL
+                OTEL_EXPORTER_OTLP_METRICS_PROTOCOL OTEL_EXPORTER_OTLP_HEADERS
+                OTEL_EXPORTER_OTLP_METRICS_HEADERS OTEL_EXPORTER_OTLP_TIMEOUT
+                OTEL_EXPORTER_OTLP_METRICS_TIMEOUT OTEL_METRIC_EXPORT_INTERVAL
+                OTEL_TRACES_EXPORTER OTEL_METRICS_EXPORTER FIREFLY_OTEL_METRICS FIREFLY_OTEL_LOGS)
 
       saved = Map.new(vars, &{&1, System.get_env(&1)})
       Enum.each(vars, &System.delete_env/1)
@@ -221,9 +286,9 @@ defmodule FireflyWeb.OpenTelemetryTest do
              ]
 
       refute runtime[:opentelemetry][:traces_exporter]
-      refute runtime[:opentelemetry_experimental]
+      refute runtime[:otel_metric_exporter]
 
-      # Opting into the experimental signals isn't enough either.
+      # Opting into metrics and logs isn't enough either.
       System.put_env("FIREFLY_OTEL_METRICS", "true")
       System.put_env("FIREFLY_OTEL_LOGS", "true")
       refute runtime_config()[:firefly_web][FireflyWeb.OpenTelemetry][:metrics]
@@ -252,10 +317,53 @@ defmodule FireflyWeb.OpenTelemetryTest do
                logs: true
              ]
 
-      assert [%{module: :otel_metric_reader}] = runtime[:opentelemetry_experimental][:readers]
+      assert runtime[:otel_metric_exporter] == [
+               otlp_endpoint: "http://collector:4318",
+               otlp_headers: %{},
+               otlp_timeout: 10_000,
+               export_period: 60_000
+             ]
 
       System.put_env("OTEL_TRACES_EXPORTER", "none")
-      refute runtime_config()[:firefly_web][FireflyWeb.OpenTelemetry][:traces]
+      System.put_env("OTEL_METRICS_EXPORTER", "none")
+      runtime = runtime_config()
+      refute runtime[:firefly_web][FireflyWeb.OpenTelemetry][:traces]
+      refute runtime[:firefly_web][FireflyWeb.OpenTelemetry][:metrics]
+      refute runtime[:otel_metric_exporter]
+    end
+
+    test "the metrics exporter gets the OTEL_* variables as the SDK reads them" do
+      System.put_env("FIREFLY_OTEL_METRICS", "true")
+      System.put_env("OTEL_EXPORTER_OTLP_ENDPOINT", "http://collector:4317")
+      System.put_env("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+
+      # Only http/protobuf: a clear error rather than metrics lost.
+      assert_raise RuntimeError, ~r/http\/protobuf only/, &runtime_config/0
+
+      # The signal's own variables win; its endpoint is the full URL.
+      System.put_env("OTEL_EXPORTER_OTLP_METRICS_PROTOCOL", "http/protobuf")
+
+      System.put_env(
+        "OTEL_EXPORTER_OTLP_METRICS_ENDPOINT",
+        "https://otlp.example/otlp/v1/metrics"
+      )
+
+      System.put_env("OTEL_EXPORTER_OTLP_HEADERS", "x-ignored=1")
+
+      System.put_env(
+        "OTEL_EXPORTER_OTLP_METRICS_HEADERS",
+        "authorization=Basic dXNlcjpwYXNz==, x-team = forum"
+      )
+
+      System.put_env("OTEL_EXPORTER_OTLP_METRICS_TIMEOUT", "5000")
+      System.put_env("OTEL_METRIC_EXPORT_INTERVAL", "15000")
+
+      assert runtime_config()[:otel_metric_exporter] == [
+               otlp_endpoint: "https://otlp.example/otlp",
+               otlp_headers: %{"authorization" => "Basic dXNlcjpwYXNz==", "x-team" => "forum"},
+               otlp_timeout: 5_000,
+               export_period: 15_000
+             ]
     end
   end
 
@@ -289,13 +397,34 @@ defmodule FireflyWeb.OpenTelemetryTest do
         do: :telemetry.detach(id)
   end
 
-  defp receive_metric(name) do
+  # The metrics named, by name, with their data points from every export
+  # the collector receives until they're all in, and the next one (for
+  # points recorded across an export), and the resource they came with.
+  defp receive_metrics(names, acc \\ %{}) do
     receive do
-      {:otel_metric, metric(name: ^name) = metric} -> metric
+      {:otlp, "/v1/metrics", body} ->
+        %{resource_metrics: [%{resource: resource, scope_metrics: scopes}]} =
+          body |> :zlib.gunzip() |> ExportMetricsServiceRequest.decode()
+
+        all_in? = Enum.all?(names, &Map.has_key?(acc, &1))
+
+        acc =
+          for %{metrics: metrics} <- scopes, metric <- metrics, reduce: acc do
+            acc -> Map.update(acc, metric.name, metric, &merge_points(&1, metric))
+          end
+          |> Map.put(:resource, attributes(resource))
+
+        if all_in?, do: acc, else: receive_metrics(names, acc)
     after
-      5_000 -> flunk("no metric #{name}")
+      5_000 -> flunk("no metrics #{inspect(names -- Map.keys(acc))}")
     end
   end
+
+  defp merge_points(%{data: {type, data}} = metric, %{data: {type, more}}),
+    do: %{metric | data: {type, %{data | data_points: data.data_points ++ more.data_points}}}
+
+  defp attributes(%{attributes: attributes}),
+    do: Map.new(attributes, fn %{key: key, value: %{value: {_type, value}}} -> {key, value} end)
 
   defp attribute(span, key), do: :otel_attributes.map(span(span, :attributes))[key]
 end
