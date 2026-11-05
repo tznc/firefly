@@ -231,6 +231,14 @@ defmodule Firefly.Uploads do
             uploader: upload.user && upload.user.username,
             signature: signature
           })
+
+          Firefly.Security.record(
+            "upload.quarantine",
+            upload.user_id,
+            %{filename: upload.filename, signature: signature},
+            ip: nil,
+            user_agent: nil
+          )
         end
 
         {:ok, quarantined}

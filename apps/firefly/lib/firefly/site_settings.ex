@@ -48,7 +48,7 @@ defmodule Firefly.SiteSettings do
     {"Posting",
      ["Content", "Spam and new users", "Akismet", "Uploads", "Link previews", "Search"]},
     {"Email", ["Email"]},
-    {"Security", ["Rate limits", "API"]},
+    {"Security", ["Rate limits", "API", "Security log"]},
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
@@ -1002,6 +1002,17 @@ defmodule Firefly.SiteSettings do
         min: 0,
         max: 30,
         help: "Automatic backups, every this many days. 0: off."
+      },
+      %{
+        key: "ip_retention_days",
+        section: "Security log",
+        type: :integer,
+        label: "Keep full IP addresses (days)",
+        default: 90,
+        min: 1,
+        max: 3650,
+        help:
+          "After this many days, stored IP addresses (the security log, members' addresses, API keys' last use, spam checks) are cut to their network (/24 for IPv4, /48 for IPv6), or deleted where a partial address is no use."
       },
       %{
         key: "job_retention_days",

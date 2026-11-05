@@ -70,7 +70,7 @@ msgstr "管理"
 msgid "Already have one?"
 msgstr "已经有账户了？"
 
-#: lib/firefly_web/live/settings_live/index.ex:676
+#: lib/firefly_web/live/settings_live/index.ex:680
 #, elixir-autogen, elixir-format
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr "在你登录的所有地方生效。顶部栏的切换按钮也能更改。"
@@ -81,7 +81,7 @@ msgstr "在你登录的所有地方生效。顶部栏的切换按钮也能更改
 msgid "Attempting to reconnect"
 msgstr "正在尝试重新连接"
 
-#: lib/firefly_web/staff_nav.ex:212
+#: lib/firefly_web/staff_nav.ex:219
 #, elixir-autogen, elixir-format
 msgid "Backups"
 msgstr "备份"
@@ -168,7 +168,7 @@ msgstr "注册账户"
 msgid "Creating..."
 msgstr "正在创建..."
 
-#: lib/firefly_web/live/settings_live/index.ex:672
+#: lib/firefly_web/live/settings_live/index.ex:676
 #: lib/firefly_web/live/staff_live/theme.ex:240
 #, elixir-autogen, elixir-format
 msgid "Dark"
@@ -206,7 +206,7 @@ msgstr "邮件登录链接已关闭。"
 msgid "Email me a login link"
 msgstr "给我发送登录链接"
 
-#: lib/firefly_web/staff_nav.ex:195
+#: lib/firefly_web/staff_nav.ex:202
 #, elixir-autogen, elixir-format
 msgid "Embedding"
 msgstr "嵌入"
@@ -231,12 +231,12 @@ msgstr "GitHub 上的 Firefly"
 msgid "Firestorm patrons"
 msgstr "Firestorm 赞助者"
 
-#: lib/firefly_web/live/settings_live/index.ex:682
+#: lib/firefly_web/live/settings_live/index.ex:686
 #, elixir-autogen, elixir-format
 msgid "Follow my browser"
 msgstr "跟随浏览器"
 
-#: lib/firefly_web/live/settings_live/index.ex:670
+#: lib/firefly_web/live/settings_live/index.ex:674
 #, elixir-autogen, elixir-format
 msgid "Follow my system"
 msgstr "跟随系统"
@@ -261,7 +261,7 @@ msgid "Groups"
 msgstr "群组"
 
 #: lib/firefly_web/live/staff_live/settings.ex:421
-#: lib/firefly_web/staff_nav.ex:228
+#: lib/firefly_web/staff_nav.ex:235
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr "导入"
@@ -271,7 +271,7 @@ msgstr "导入"
 msgid "Invites"
 msgstr "邀请"
 
-#: lib/firefly_web/live/settings_live/index.ex:681
+#: lib/firefly_web/live/settings_live/index.ex:685
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "语言"
@@ -281,7 +281,7 @@ msgstr "语言"
 msgid "Latest"
 msgstr "最新"
 
-#: lib/firefly_web/live/settings_live/index.ex:671
+#: lib/firefly_web/live/settings_live/index.ex:675
 #: lib/firefly_web/live/staff_live/theme.ex:239
 #, elixir-autogen, elixir-format
 msgid "Light"
@@ -318,7 +318,7 @@ msgstr "请使用单点登录。"
 msgid "Log out"
 msgstr "退出登录"
 
-#: lib/firefly_web/live/settings_live/index.ex:686
+#: lib/firefly_web/live/settings_live/index.ex:690
 #, elixir-autogen, elixir-format
 msgid "Machine translations, pending a native speaker's review: please report anything that reads wrong."
 msgstr "机器翻译，尚待母语者校对：发现表述不当请告诉我们。"
@@ -410,13 +410,13 @@ msgstr "重置密码"
 msgid "Review"
 msgstr "审核"
 
-#: lib/firefly_web/live/settings_live/index.ex:693
+#: lib/firefly_web/live/settings_live/index.ex:697
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "保存"
 
 #: lib/firefly_web/live/auth_live/reset_password.ex:74
-#: lib/firefly_web/live/settings_live/index.ex:693
+#: lib/firefly_web/live/settings_live/index.ex:697
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
 #: lib/firefly_web/live/staff_live/user.ex:369
@@ -462,7 +462,7 @@ msgstr "使用密码登录"
 
 #: lib/firefly_web/live/staff_live/settings.ex:28
 #: lib/firefly_web/live/staff_live/settings.ex:259
-#: lib/firefly_web/staff_nav.ex:173
+#: lib/firefly_web/staff_nav.ex:180
 #, elixir-autogen, elixir-format
 msgid "Site settings"
 msgstr "站点设置"
@@ -472,7 +472,7 @@ msgstr "站点设置"
 msgid "Something went wrong!"
 msgstr "出错了！"
 
-#: lib/firefly_web/staff_nav.ex:146
+#: lib/firefly_web/staff_nav.ex:153
 #, elixir-autogen, elixir-format
 msgid "Staff log"
 msgstr "管理日志"
@@ -497,7 +497,7 @@ msgstr "该重置链接无效或已过期。"
 msgid "The forum is read-only for maintenance (%{reason}). You can read, but not post or change anything for now."
 msgstr "论坛因维护处于只读状态（%{reason}）。你可以浏览，但暂时无法发帖或修改。"
 
-#: lib/firefly_web/live/settings_live/index.ex:668
+#: lib/firefly_web/live/settings_live/index.ex:672
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "主题"
@@ -507,7 +507,7 @@ msgstr "主题"
 msgid "Toggle navigation"
 msgstr "切换导航"
 
-#: lib/firefly_web/staff_nav.ex:235
+#: lib/firefly_web/staff_nav.ex:242
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr "升级"
@@ -563,7 +563,7 @@ msgstr "我们会通过邮件发送一个登录链接。"
 msgid "We'll email you a link to choose a new one."
 msgstr "我们会通过邮件发送设置新密码的链接。"
 
-#: lib/firefly_web/staff_nav.ex:163
+#: lib/firefly_web/staff_nav.ex:170
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr "Webhook"
@@ -666,7 +666,7 @@ msgstr "首页"
 msgid "Keyboard shortcuts"
 msgstr "键盘快捷键"
 
-#: lib/firefly_web/live/settings_live/index.ex:691
+#: lib/firefly_web/live/settings_live/index.ex:695
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts (press ? for the list)"
 msgstr "键盘快捷键（按 ? 查看列表）"
@@ -932,12 +932,12 @@ msgstr "可阅读"
 msgid "Category deleted."
 msgstr "分类已删除。"
 
-#: lib/firefly_web/staff_nav.ex:152
+#: lib/firefly_web/staff_nav.ex:159
 #, elixir-autogen, elixir-format
 msgid "Communication"
 msgstr "沟通"
 
-#: lib/firefly_web/staff_nav.ex:169
+#: lib/firefly_web/staff_nav.ex:176
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr "配置"
@@ -1021,7 +1021,7 @@ msgstr "要向该成员发送密码重置链接吗？"
 #: lib/firefly_web/live/staff_live/emails.ex:23
 #: lib/firefly_web/live/staff_live/emails.ex:131
 #: lib/firefly_web/live/staff_live/screening.ex:73
-#: lib/firefly_web/staff_nav.ex:156
+#: lib/firefly_web/staff_nav.ex:163
 #, elixir-autogen, elixir-format
 msgid "Emails"
 msgstr "邮件"
@@ -1166,7 +1166,7 @@ msgstr "锁定（自动评估不会更改）"
 msgid "Logins"
 msgstr "登录方式"
 
-#: lib/firefly_web/staff_nav.ex:208
+#: lib/firefly_web/staff_nav.ex:215
 #, elixir-autogen, elixir-format
 msgid "Maintenance"
 msgstr "维护"
@@ -1846,6 +1846,7 @@ msgstr "值"
 msgid "Waiting for approval"
 msgstr "等待批准"
 
+#: lib/firefly_web/components/security_components.ex:49
 #: lib/firefly_web/live/staff_live/emails.ex:177
 #, elixir-autogen, elixir-format
 msgid "When"
@@ -2458,7 +2459,7 @@ msgstr "主题 HTML 中的脚本会在每个页面上、以每位成员的会话
 msgid "Scripts, event handlers and inline styles are removed."
 msgstr "脚本、事件处理程序和内联样式会被移除。"
 
-#: lib/firefly_web/live/settings_live/index.ex:701
+#: lib/firefly_web/live/settings_live/index.ex:705
 #, elixir-autogen, elixir-format
 msgid "Site theme"
 msgstr "网站主题"
@@ -2488,7 +2489,7 @@ msgstr "网站已恢复使用内置外观。"
 msgid "The site uses the built-in look: no theme is the default."
 msgstr "网站使用内置外观：没有默认主题。"
 
-#: lib/firefly_web/live/settings_live/index.ex:703
+#: lib/firefly_web/live/settings_live/index.ex:707
 #, elixir-autogen, elixir-format
 msgid "The site's default"
 msgstr "网站默认"
@@ -2503,7 +2504,7 @@ msgstr "主题组件"
 msgid "Theme deleted."
 msgstr "主题已删除。"
 
-#: lib/firefly_web/live/settings_live/index.ex:285
+#: lib/firefly_web/live/settings_live/index.ex:289
 #: lib/firefly_web/live/staff_live/theme.ex:98
 #, elixir-autogen, elixir-format
 msgid "Theme saved."
@@ -2512,7 +2513,7 @@ msgstr "主题已保存。"
 #: lib/firefly_web/live/staff_live/themes.ex:20
 #: lib/firefly_web/live/staff_live/themes.ex:80
 #: lib/firefly_web/live/staff_live/themes.ex:89
-#: lib/firefly_web/staff_nav.ex:180
+#: lib/firefly_web/staff_nav.ex:187
 #, elixir-autogen, elixir-format
 msgid "Themes"
 msgstr "主题"
@@ -2537,7 +2538,7 @@ msgstr "最大 100 KB。用 theme-asset(名称) 引用资源，例如 background
 msgid "Use the built-in look"
 msgstr "使用内置外观"
 
-#: lib/firefly_web/live/settings_live/index.ex:705
+#: lib/firefly_web/live/settings_live/index.ex:709
 #, elixir-autogen, elixir-format
 msgid "Use this theme"
 msgstr "使用此主题"
@@ -2618,7 +2619,7 @@ msgstr "已取消移动。%{item} 回到第 %{position} 位，共 %{count} 位�
 msgid "That category can't go there."
 msgstr "该分类不能移到那里。"
 
-#: lib/firefly_web/staff_nav.ex:241
+#: lib/firefly_web/staff_nav.ex:248
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "高级"
@@ -2628,7 +2629,7 @@ msgstr "高级"
 msgid "Back to the staff admin"
 msgstr "返回管理后台"
 
-#: lib/firefly_web/staff_nav.ex:246
+#: lib/firefly_web/staff_nav.ex:253
 #, elixir-autogen, elixir-format
 msgid "Database"
 msgstr "数据库"
@@ -2673,7 +2674,7 @@ msgstr "来自软件包 %{name} %{version}。"
 msgid "Install a theme"
 msgstr "安装主题"
 
-#: lib/firefly_web/staff_nav.ex:187
+#: lib/firefly_web/staff_nav.ex:194
 #, elixir-autogen, elixir-format
 msgid "Packages"
 msgstr "软件包"
@@ -2728,7 +2729,7 @@ msgstr "邮件发送方式：%{adapter}"
 msgid "Test email sent to %{to} with %{adapter}."
 msgstr "已通过 %{adapter} 向 %{to} 发送测试邮件。"
 
-#: lib/firefly_web/staff_nav.ex:220
+#: lib/firefly_web/staff_nav.ex:227
 #, elixir-autogen, elixir-format
 msgid "Jobs"
 msgstr "后台任务"
@@ -2742,3 +2743,191 @@ msgstr "已隔离：已感染"
 #, elixir-autogen, elixir-format
 msgid "Waiting for virus scan"
 msgstr "等待病毒扫描"
+
+#: lib/firefly_web/components/security_components.ex:25
+#, elixir-autogen, elixir-format
+msgid "API key created"
+msgstr "已创建 API 密钥"
+
+#: lib/firefly_web/components/security_components.ex:27
+#, elixir-autogen, elixir-format
+msgid "API key revoked"
+msgstr "已撤销 API 密钥"
+
+#: lib/firefly_web/components/security_components.ex:26
+#, elixir-autogen, elixir-format
+msgid "API key used from a new address"
+msgstr "API 密钥从新地址使用"
+
+#: lib/firefly_web/components/security_components.ex:31
+#, elixir-autogen, elixir-format
+msgid "Account silenced"
+msgstr "账户已禁言"
+
+#: lib/firefly_web/components/security_components.ex:29
+#, elixir-autogen, elixir-format
+msgid "Account suspended"
+msgstr "账户已停用"
+
+#: lib/firefly_web/live/staff_live/security.ex:76
+#, elixir-autogen, elixir-format
+msgid "Any event"
+msgstr "任意事件"
+
+#: lib/firefly_web/components/security_components.ex:17
+#, elixir-autogen, elixir-format
+msgid "Authenticator app turned off"
+msgstr "已关闭身份验证器应用"
+
+#: lib/firefly_web/components/security_components.ex:53
+#, elixir-autogen, elixir-format
+msgid "Browser"
+msgstr "浏览器"
+
+#: lib/firefly_web/components/security_components.ex:51
+#: lib/firefly_web/live/staff_live/security.ex:75
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr "事件"
+
+#: lib/firefly_web/components/security_components.ex:13
+#, elixir-autogen, elixir-format
+msgid "Failed login"
+msgstr "登录失败"
+
+#: lib/firefly_web/components/security_components.ex:52
+#, elixir-autogen, elixir-format
+msgid "IP address"
+msgstr "IP 地址"
+
+#: lib/firefly_web/components/security_components.ex:33
+#, elixir-autogen, elixir-format
+msgid "IP address banned"
+msgstr "IP 地址已封禁"
+
+#: lib/firefly_web/components/security_components.ex:34
+#, elixir-autogen, elixir-format
+msgid "IP address unbanned"
+msgstr "IP 地址已解封"
+
+#: lib/firefly_web/components/security_components.ex:12
+#, elixir-autogen, elixir-format
+msgid "Logged in"
+msgstr "已登录"
+
+#: lib/firefly_web/live/staff_live/security.ex:59
+#, elixir-autogen, elixir-format
+msgid "Logins, failed attempts and account security changes, newest first."
+msgstr "登录、失败的尝试和账户安全变更，最新的在前。"
+
+#: lib/firefly_web/live/settings_live/index.ex:1137
+#, elixir-autogen, elixir-format
+msgid "Logins, failed attempts and changes to how you log in. Don't recognize one? Change your password and check your passkeys and keys."
+msgstr "登录、失败的尝试以及登录方式的变更。有不认识的记录？请更改密码并检查你的通行密钥和密钥。"
+
+#: lib/firefly_web/components/security_components.ex:50
+#, elixir-autogen, elixir-format
+msgid "Member"
+msgstr "成员"
+
+#: lib/firefly_web/components/security_components.ex:18
+#, elixir-autogen, elixir-format
+msgid "New backup codes"
+msgstr "新的备用码"
+
+#: lib/firefly_web/live/staff_live/security.ex:88
+#, elixir-autogen, elixir-format
+msgid "No security events."
+msgstr "没有安全事件。"
+
+#: lib/firefly_web/live/settings_live/index.ex:1140
+#, elixir-autogen, elixir-format
+msgid "Nothing yet."
+msgstr "暂无。"
+
+#: lib/firefly_web/components/security_components.ex:22
+#, elixir-autogen, elixir-format
+msgid "Passkey added"
+msgstr "已添加通行密钥"
+
+#: lib/firefly_web/components/security_components.ex:15
+#, elixir-autogen, elixir-format
+msgid "Passkey refused"
+msgstr "通行密钥被拒绝"
+
+#: lib/firefly_web/components/security_components.ex:23
+#, elixir-autogen, elixir-format
+msgid "Passkey removed"
+msgstr "已移除通行密钥"
+
+#: lib/firefly_web/components/security_components.ex:24
+#, elixir-autogen, elixir-format
+msgid "Password changed"
+msgstr "密码已更改"
+
+#: lib/firefly_web/live/settings_live/index.ex:1135
+#, elixir-autogen, elixir-format
+msgid "Recent security activity"
+msgstr "最近的安全活动"
+
+#: lib/firefly_web/live/staff_live/security.ex:21
+#: lib/firefly_web/live/staff_live/security.ex:57
+#: lib/firefly_web/staff_nav.ex:146
+#, elixir-autogen, elixir-format
+msgid "Security"
+msgstr "安全"
+
+#: lib/firefly_web/components/security_components.ex:19
+#, elixir-autogen, elixir-format
+msgid "Security key added"
+msgstr "已添加安全密钥"
+
+#: lib/firefly_web/components/security_components.ex:20
+#, elixir-autogen, elixir-format
+msgid "Security key removed"
+msgstr "已移除安全密钥"
+
+#: lib/firefly_web/live/staff_live/security.ex:64
+#, elixir-autogen, elixir-format
+msgid "Security log"
+msgstr "安全日志"
+
+#: lib/firefly_web/components/security_components.ex:28
+#, elixir-autogen, elixir-format
+msgid "Signed out a device"
+msgstr "已登出一台设备"
+
+#: lib/firefly_web/components/security_components.ex:32
+#, elixir-autogen, elixir-format
+msgid "Silence lifted"
+msgstr "已解除禁言"
+
+#: lib/firefly_web/components/security_components.ex:30
+#, elixir-autogen, elixir-format
+msgid "Suspension lifted"
+msgstr "已解除停用"
+
+#: lib/firefly_web/components/security_components.ex:21
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication reset by staff"
+msgstr "管理人员重置了双重验证"
+
+#: lib/firefly_web/components/security_components.ex:16
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication turned on"
+msgstr "已开启双重验证"
+
+#: lib/firefly_web/components/security_components.ex:35
+#, elixir-autogen, elixir-format
+msgid "Upload quarantined by the virus scanner"
+msgstr "上传文件已被病毒扫描隔离"
+
+#: lib/firefly_web/live/staff_live/security.ex:82
+#, elixir-autogen, elixir-format
+msgid "Username or IP address"
+msgstr "用户名或 IP 地址"
+
+#: lib/firefly_web/components/security_components.ex:14
+#, elixir-autogen, elixir-format
+msgid "Wrong two-factor code"
+msgstr "双重验证码错误"

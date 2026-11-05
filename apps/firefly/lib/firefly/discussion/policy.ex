@@ -77,7 +77,8 @@ defmodule Firefly.Discussion.Policy do
       email log, test emails and previews), `:manage_themes` (themes and
       their components, scripts included, see `Firefly.Themes`), `:manage_groups`,
       `:manage_tags` (tag groups and synonyms), `:manage_badges`, `:manage_plugins`,
-      `:manage_uploads` (list and delete any upload), `:manage_emoji`
+      `:manage_uploads` (list and delete any upload), `:manage_security` (the
+      security log; IP bans), `:manage_emoji`
       (custom emoji), `:manage_watched_words`, `:manage_webhooks`,
       `:manage_api_keys` (every API key, and global keys),
       `:manage_sso_clients` (the DiscourseConnect provider's sites),
@@ -260,6 +261,7 @@ defmodule Firefly.Discussion.Policy do
              :manage_tags,
              :manage_plugins,
              :manage_uploads,
+             :manage_security,
              :manage_emoji,
              :manage_watched_words,
              :manage_webhooks,

@@ -73,7 +73,7 @@ msgstr ""
 msgid "Already have one?"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:676
+#: lib/firefly_web/live/settings_live/index.ex:680
 #, elixir-autogen, elixir-format
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr ""
@@ -84,7 +84,7 @@ msgstr ""
 msgid "Attempting to reconnect"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:212
+#: lib/firefly_web/staff_nav.ex:219
 #, elixir-autogen, elixir-format
 msgid "Backups"
 msgstr ""
@@ -171,7 +171,7 @@ msgstr ""
 msgid "Creating..."
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:672
+#: lib/firefly_web/live/settings_live/index.ex:676
 #: lib/firefly_web/live/staff_live/theme.ex:240
 #, elixir-autogen, elixir-format
 msgid "Dark"
@@ -209,7 +209,7 @@ msgstr ""
 msgid "Email me a login link"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:195
+#: lib/firefly_web/staff_nav.ex:202
 #, elixir-autogen, elixir-format
 msgid "Embedding"
 msgstr ""
@@ -234,12 +234,12 @@ msgstr ""
 msgid "Firestorm patrons"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:682
+#: lib/firefly_web/live/settings_live/index.ex:686
 #, elixir-autogen, elixir-format
 msgid "Follow my browser"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:670
+#: lib/firefly_web/live/settings_live/index.ex:674
 #, elixir-autogen, elixir-format
 msgid "Follow my system"
 msgstr ""
@@ -264,7 +264,7 @@ msgid "Groups"
 msgstr ""
 
 #: lib/firefly_web/live/staff_live/settings.ex:421
-#: lib/firefly_web/staff_nav.ex:228
+#: lib/firefly_web/staff_nav.ex:235
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr ""
@@ -274,7 +274,7 @@ msgstr ""
 msgid "Invites"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:681
+#: lib/firefly_web/live/settings_live/index.ex:685
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
@@ -284,7 +284,7 @@ msgstr ""
 msgid "Latest"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:671
+#: lib/firefly_web/live/settings_live/index.ex:675
 #: lib/firefly_web/live/staff_live/theme.ex:239
 #, elixir-autogen, elixir-format
 msgid "Light"
@@ -321,7 +321,7 @@ msgstr ""
 msgid "Log out"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:686
+#: lib/firefly_web/live/settings_live/index.ex:690
 #, elixir-autogen, elixir-format
 msgid "Machine translations, pending a native speaker's review: please report anything that reads wrong."
 msgstr ""
@@ -413,13 +413,13 @@ msgstr ""
 msgid "Review"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:693
+#: lib/firefly_web/live/settings_live/index.ex:697
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr ""
 
 #: lib/firefly_web/live/auth_live/reset_password.ex:74
-#: lib/firefly_web/live/settings_live/index.ex:693
+#: lib/firefly_web/live/settings_live/index.ex:697
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
 #: lib/firefly_web/live/staff_live/user.ex:369
@@ -465,7 +465,7 @@ msgstr ""
 
 #: lib/firefly_web/live/staff_live/settings.ex:28
 #: lib/firefly_web/live/staff_live/settings.ex:259
-#: lib/firefly_web/staff_nav.ex:173
+#: lib/firefly_web/staff_nav.ex:180
 #, elixir-autogen, elixir-format
 msgid "Site settings"
 msgstr ""
@@ -475,7 +475,7 @@ msgstr ""
 msgid "Something went wrong!"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:146
+#: lib/firefly_web/staff_nav.ex:153
 #, elixir-autogen, elixir-format
 msgid "Staff log"
 msgstr ""
@@ -500,7 +500,7 @@ msgstr ""
 msgid "The forum is read-only for maintenance (%{reason}). You can read, but not post or change anything for now."
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:668
+#: lib/firefly_web/live/settings_live/index.ex:672
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr ""
@@ -510,7 +510,7 @@ msgstr ""
 msgid "Toggle navigation"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:235
+#: lib/firefly_web/staff_nav.ex:242
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr ""
@@ -566,7 +566,7 @@ msgstr ""
 msgid "We'll email you a link to choose a new one."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:163
+#: lib/firefly_web/staff_nav.ex:170
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr ""
@@ -669,7 +669,7 @@ msgstr ""
 msgid "Keyboard shortcuts"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:691
+#: lib/firefly_web/live/settings_live/index.ex:695
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts (press ? for the list)"
 msgstr ""
@@ -936,12 +936,12 @@ msgstr ""
 msgid "Category deleted."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:152
+#: lib/firefly_web/staff_nav.ex:159
 #, elixir-autogen, elixir-format
 msgid "Communication"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:169
+#: lib/firefly_web/staff_nav.ex:176
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr ""
@@ -1025,7 +1025,7 @@ msgstr ""
 #: lib/firefly_web/live/staff_live/emails.ex:23
 #: lib/firefly_web/live/staff_live/emails.ex:131
 #: lib/firefly_web/live/staff_live/screening.ex:73
-#: lib/firefly_web/staff_nav.ex:156
+#: lib/firefly_web/staff_nav.ex:163
 #, elixir-autogen, elixir-format
 msgid "Emails"
 msgstr ""
@@ -1170,7 +1170,7 @@ msgstr ""
 msgid "Logins"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:208
+#: lib/firefly_web/staff_nav.ex:215
 #, elixir-autogen, elixir-format
 msgid "Maintenance"
 msgstr ""
@@ -1850,6 +1850,7 @@ msgstr ""
 msgid "Waiting for approval"
 msgstr ""
 
+#: lib/firefly_web/components/security_components.ex:49
 #: lib/firefly_web/live/staff_live/emails.ex:177
 #, elixir-autogen, elixir-format
 msgid "When"
@@ -2463,7 +2464,7 @@ msgstr ""
 msgid "Scripts, event handlers and inline styles are removed."
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:701
+#: lib/firefly_web/live/settings_live/index.ex:705
 #, elixir-autogen, elixir-format
 msgid "Site theme"
 msgstr ""
@@ -2493,7 +2494,7 @@ msgstr ""
 msgid "The site uses the built-in look: no theme is the default."
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:703
+#: lib/firefly_web/live/settings_live/index.ex:707
 #, elixir-autogen, elixir-format
 msgid "The site's default"
 msgstr ""
@@ -2508,7 +2509,7 @@ msgstr ""
 msgid "Theme deleted."
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:285
+#: lib/firefly_web/live/settings_live/index.ex:289
 #: lib/firefly_web/live/staff_live/theme.ex:98
 #, elixir-autogen, elixir-format
 msgid "Theme saved."
@@ -2517,7 +2518,7 @@ msgstr ""
 #: lib/firefly_web/live/staff_live/themes.ex:20
 #: lib/firefly_web/live/staff_live/themes.ex:80
 #: lib/firefly_web/live/staff_live/themes.ex:89
-#: lib/firefly_web/staff_nav.ex:180
+#: lib/firefly_web/staff_nav.ex:187
 #, elixir-autogen, elixir-format
 msgid "Themes"
 msgstr ""
@@ -2542,7 +2543,7 @@ msgstr ""
 msgid "Use the built-in look"
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:705
+#: lib/firefly_web/live/settings_live/index.ex:709
 #, elixir-autogen, elixir-format
 msgid "Use this theme"
 msgstr ""
@@ -2623,7 +2624,7 @@ msgstr ""
 msgid "That category can't go there."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:241
+#: lib/firefly_web/staff_nav.ex:248
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr ""
@@ -2633,7 +2634,7 @@ msgstr ""
 msgid "Back to the staff admin"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:246
+#: lib/firefly_web/staff_nav.ex:253
 #, elixir-autogen, elixir-format
 msgid "Database"
 msgstr ""
@@ -2678,7 +2679,7 @@ msgstr ""
 msgid "Install a theme"
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:187
+#: lib/firefly_web/staff_nav.ex:194
 #, elixir-autogen, elixir-format
 msgid "Packages"
 msgstr ""
@@ -2733,7 +2734,7 @@ msgstr ""
 msgid "Test email sent to %{to} with %{adapter}."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:220
+#: lib/firefly_web/staff_nav.ex:227
 #, elixir-autogen, elixir-format
 msgid "Jobs"
 msgstr ""
@@ -2746,4 +2747,192 @@ msgstr ""
 #: lib/firefly_web/live/staff_live/uploads.ex:89
 #, elixir-autogen, elixir-format
 msgid "Waiting for virus scan"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:25
+#, elixir-autogen, elixir-format
+msgid "API key created"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:27
+#, elixir-autogen, elixir-format
+msgid "API key revoked"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:26
+#, elixir-autogen, elixir-format
+msgid "API key used from a new address"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:31
+#, elixir-autogen, elixir-format
+msgid "Account silenced"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:29
+#, elixir-autogen, elixir-format
+msgid "Account suspended"
+msgstr ""
+
+#: lib/firefly_web/live/staff_live/security.ex:76
+#, elixir-autogen, elixir-format
+msgid "Any event"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:17
+#, elixir-autogen, elixir-format
+msgid "Authenticator app turned off"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:53
+#, elixir-autogen, elixir-format
+msgid "Browser"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:51
+#: lib/firefly_web/live/staff_live/security.ex:75
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:13
+#, elixir-autogen, elixir-format
+msgid "Failed login"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:52
+#, elixir-autogen, elixir-format
+msgid "IP address"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:33
+#, elixir-autogen, elixir-format
+msgid "IP address banned"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:34
+#, elixir-autogen, elixir-format
+msgid "IP address unbanned"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:12
+#, elixir-autogen, elixir-format
+msgid "Logged in"
+msgstr ""
+
+#: lib/firefly_web/live/staff_live/security.ex:59
+#, elixir-autogen, elixir-format
+msgid "Logins, failed attempts and account security changes, newest first."
+msgstr ""
+
+#: lib/firefly_web/live/settings_live/index.ex:1137
+#, elixir-autogen, elixir-format
+msgid "Logins, failed attempts and changes to how you log in. Don't recognize one? Change your password and check your passkeys and keys."
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:50
+#, elixir-autogen, elixir-format
+msgid "Member"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:18
+#, elixir-autogen, elixir-format
+msgid "New backup codes"
+msgstr ""
+
+#: lib/firefly_web/live/staff_live/security.ex:88
+#, elixir-autogen, elixir-format
+msgid "No security events."
+msgstr ""
+
+#: lib/firefly_web/live/settings_live/index.ex:1140
+#, elixir-autogen, elixir-format
+msgid "Nothing yet."
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:22
+#, elixir-autogen, elixir-format
+msgid "Passkey added"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:15
+#, elixir-autogen, elixir-format
+msgid "Passkey refused"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:23
+#, elixir-autogen, elixir-format
+msgid "Passkey removed"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:24
+#, elixir-autogen, elixir-format
+msgid "Password changed"
+msgstr ""
+
+#: lib/firefly_web/live/settings_live/index.ex:1135
+#, elixir-autogen, elixir-format
+msgid "Recent security activity"
+msgstr ""
+
+#: lib/firefly_web/live/staff_live/security.ex:21
+#: lib/firefly_web/live/staff_live/security.ex:57
+#: lib/firefly_web/staff_nav.ex:146
+#, elixir-autogen, elixir-format
+msgid "Security"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:19
+#, elixir-autogen, elixir-format
+msgid "Security key added"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:20
+#, elixir-autogen, elixir-format
+msgid "Security key removed"
+msgstr ""
+
+#: lib/firefly_web/live/staff_live/security.ex:64
+#, elixir-autogen, elixir-format
+msgid "Security log"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:28
+#, elixir-autogen, elixir-format
+msgid "Signed out a device"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:32
+#, elixir-autogen, elixir-format
+msgid "Silence lifted"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:30
+#, elixir-autogen, elixir-format
+msgid "Suspension lifted"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:21
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication reset by staff"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:16
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication turned on"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:35
+#, elixir-autogen, elixir-format
+msgid "Upload quarantined by the virus scanner"
+msgstr ""
+
+#: lib/firefly_web/live/staff_live/security.ex:82
+#, elixir-autogen, elixir-format
+msgid "Username or IP address"
+msgstr ""
+
+#: lib/firefly_web/components/security_components.ex:14
+#, elixir-autogen, elixir-format
+msgid "Wrong two-factor code"
 msgstr ""

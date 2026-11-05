@@ -83,8 +83,12 @@ defmodule FireflyWeb.AuthController do
       # Registering through an invite lands where the invite says.
       Login.complete(conn, user, ~p"/auth/identity", :password, params["return_to"] || "/")
     else
-      {:error, :rate_limited} -> Login.fail(conn, ~p"/auth/identity", RateLimit.message())
-      {:error, reason} -> Login.fail(conn, ~p"/auth/identity", reason)
+      {:error, :rate_limited} ->
+        Login.fail(conn, ~p"/auth/identity", RateLimit.message())
+
+      {:error, reason} ->
+        Login.failed("login.failure", user_params["username"], %{method: "password"})
+        Login.fail(conn, ~p"/auth/identity", reason)
     end
   end
 end

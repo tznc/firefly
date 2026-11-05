@@ -39,6 +39,7 @@ defmodule FireflyWeb do
       Firefly.Rendering,
       Firefly.Reports,
       Firefly.SEO,
+      Firefly.Security,
       Firefly.SiteSettings,
       Firefly.Themes,
       Firefly.TrustLevels,

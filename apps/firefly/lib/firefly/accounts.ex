@@ -300,7 +300,10 @@ defmodule Firefly.Accounts do
         do: changeset,
         else: Ecto.Changeset.put_change(changeset, :confirmed_at, DateTime.utc_now(:second))
 
-    Repo.update(changeset)
+    with {:ok, user} <- Repo.update(changeset) do
+      Firefly.Security.record("password.reset", user)
+      {:ok, user}
+    end
   end
 
   def update_preferences(%User{} = user, attrs) do

@@ -33,8 +33,12 @@ defmodule FireflyWeb.PasskeyController do
          {:ok, user} <- Passkeys.authenticate(stored, params["passkey"] || %{}) do
       Login.complete(conn, user, ~p"/login", :passkey)
     else
-      {:error, :rate_limited} -> Login.fail(conn, ~p"/login", RateLimit.message())
-      {:error, reason} -> Login.fail(conn, ~p"/login", Passkeys.message(reason))
+      {:error, :rate_limited} ->
+        Login.fail(conn, ~p"/login", RateLimit.message())
+
+      {:error, reason} ->
+        Login.failed("passkey.failure", nil, %{reason: to_string(reason)})
+        Login.fail(conn, ~p"/login", Passkeys.message(reason))
     end
   end
 
