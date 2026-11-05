@@ -2737,3 +2737,8 @@ msgstr "E-mail de test envoyé à %{to} avec %{adapter}."
 #, elixir-autogen, elixir-format
 msgid "Jobs"
 msgstr "Tâches"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "Une partie du texte contient des caractères qui ne peuvent pas être enregistrés. Retirez-les et réessayez."

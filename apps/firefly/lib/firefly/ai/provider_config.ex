@@ -12,7 +12,7 @@ defmodule Firefly.AI.ProviderConfig do
   model served on this machine or the local network.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   @adapters %{
     "anthropic" => Firefly.AI.Adapters.Anthropic,
