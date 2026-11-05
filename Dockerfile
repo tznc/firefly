@@ -91,7 +91,10 @@ FROM ${RUNNER_IMAGE} AS final
 # by postgresql-common's script) for backups: pg_dump and pg_restore must be
 # at least the server's major version (17 in the supabase/postgres image
 # docker-compose.yml and CI use; see Firefly.Backups).
+# `upgrade` takes the security fixes Debian released after the base image
+# was built (Trivy fails the CI build on fixable HIGH ones).
 RUN apt-get update \
+  && apt-get upgrade -y --no-install-recommends \
   && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses6 locales ca-certificates tini \
     libvips42t64 postgresql-common \
   && /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y \
