@@ -162,10 +162,7 @@ defmodule Firefly.Uploads do
              }
              |> Map.merge(stored)
              |> Repo.insert() do
-        if scan_status == "pending",
-          do: {:ok, _job} = Jobs.insert(ScanWorker.new(%{upload_id: upload.id, sha256: sha256}))
-
-        {:ok, upload}
+        scan_later(upload)
       else
         %Upload{} = upload -> {:ok, upload}
         {:error, message} -> {:error, message}
@@ -191,6 +188,13 @@ defmodule Firefly.Uploads do
       true -> {:ok, "pending"}
     end
   end
+
+  defp scan_later(%Upload{scan_status: "pending"} = upload) do
+    {:ok, _job} = Jobs.insert(ScanWorker.new(%{upload_id: upload.id, sha256: upload.sha256}))
+    {:ok, upload}
+  end
+
+  defp scan_later(upload), do: {:ok, upload}
 
   @doc """
   Records the virus scan's verdict on `upload`'s file (see

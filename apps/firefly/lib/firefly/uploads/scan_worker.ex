@@ -14,8 +14,7 @@ defmodule Firefly.Uploads.ScanWorker do
 
   require Logger
 
-  alias Firefly.Repo
-  alias Firefly.Uploads
+  alias Firefly.{Repo, Uploads}
   alias Firefly.Uploads.{Scanner, Upload}
 
   @impl Oban.Worker
