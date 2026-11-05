@@ -102,6 +102,15 @@ defmodule Firefly.SiteSettings.Transfer do
   end
 
   # What a form would post for the value.
-  defp form_value(value) when is_list(value), do: Enum.map_join(value, ",", &to_string/1)
-  defp form_value(value), do: to_string(value)
+  defp form_value(value) when is_list(value) do
+    if Enum.all?(value, &scalar?/1),
+      do: Enum.map_join(value, ",", &to_string/1),
+      else: value
+  end
+
+  defp form_value(value), do: if(scalar?(value), do: to_string(value), else: value)
+
+  # What a form field can hold. Anything else (an object, a nested list)
+  # is passed on for the setting's validation to refuse.
+  defp scalar?(value), do: is_binary(value) or is_number(value) or is_atom(value)
 end
