@@ -83,7 +83,7 @@ defmodule Firefly.Plugin.Runner do
 
     result =
       case Task.yield(task, timeout) || Task.shutdown(task, :brutal_kill) do
-        {:ok, value} -> normalize(value)
+        {:ok, value} -> normalize(hook, value)
         {:exit, reason} -> {:error, {:crash, Exception.format_exit(reason)}}
         nil -> {:error, {:timeout, "took longer than #{timeout}ms"}}
       end
@@ -92,13 +92,20 @@ defmodule Firefly.Plugin.Runner do
     result
   end
 
-  defp normalize(:ok), do: {:ok, nil}
+  defp normalize(_hook, :ok), do: {:ok, nil}
+
+  # An endpoint's response (its status and the body, or the whole result as
+  # the body) is served, not stored: a body may be any bytes, NUL included.
+  defp normalize("handle_request", {:ok, _response} = ok), do: ok
+
   # What a plugin hands back may end up stored: Postgres can't store a NUL.
-  defp normalize({:ok, value}), do: {:ok, Firefly.Text.strip_nul(value)}
-  defp normalize({:error, message} = error) when is_binary(message), do: error
+  defp normalize(_hook, {:ok, value}), do: {:ok, Firefly.Text.strip_nul(value)}
+  defp normalize(_hook, {:error, message} = error) when is_binary(message), do: error
 
-  defp normalize({:error, {kind, message}} = error) when is_atom(kind) and is_binary(message),
-    do: error
+  defp normalize(_hook, {:error, {kind, message}} = error)
+       when is_atom(kind) and is_binary(message),
+       do: error
 
-  defp normalize(other), do: {:error, {:bad_output, "unexpected return value #{inspect(other)}"}}
+  defp normalize(_hook, other),
+    do: {:error, {:bad_output, "unexpected return value #{inspect(other)}"}}
 end
