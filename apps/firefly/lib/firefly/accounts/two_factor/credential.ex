@@ -8,7 +8,7 @@ defmodule Firefly.Accounts.TwoFactor.Credential do
   """
   use Ecto.Schema
 
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   schema "webauthn_credentials" do
     field(:credential_id, :binary)

@@ -8,7 +8,7 @@ defmodule Firefly.Webhooks.Webhook do
   (`active`).
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   @types ~w(topic post user category tag group flag review like chat)
 

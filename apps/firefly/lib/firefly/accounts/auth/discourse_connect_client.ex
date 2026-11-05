@@ -8,7 +8,7 @@ defmodule Firefly.Accounts.Auth.DiscourseConnectClient do
 
   use Ecto.Schema
 
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   schema "discourse_connect_clients" do
     field(:name, :string)

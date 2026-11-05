@@ -221,7 +221,7 @@ defmodule FireflyWeb.StaffAdminTest do
       |> visit(~p"/staff/users/#{dupe.id}")
       |> within("#merge-form", fn session ->
         session
-        |> fill_in("Account to merge into", with: "@member")
+        |> fill_in("Account to merge into", with: "@MEMBER")
         |> click_button("Merge into")
       end)
       |> assert_path(~p"/staff/users/#{member.id}")

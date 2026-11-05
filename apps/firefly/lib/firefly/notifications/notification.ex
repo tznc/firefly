@@ -39,7 +39,7 @@ defmodule Firefly.Notifications.Notification do
   alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Chat
   alias Firefly.Messaging.{Conversation, Message}
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   @kinds ~w(new_thread new_post mentioned liked message silenced suspended post_hidden flagged post_rejected moved
              bookmark_reminder answer_accepted plugin_disabled plugin
