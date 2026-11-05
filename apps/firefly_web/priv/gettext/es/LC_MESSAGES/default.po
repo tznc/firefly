@@ -3177,3 +3177,8 @@ msgstr "muy débil"
 #, elixir-autogen, elixir-format
 msgid "weak"
 msgstr "débil"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "Parte del texto contiene caracteres que no se pueden guardar. Elimínalos e inténtalo de nuevo."

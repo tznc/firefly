@@ -875,6 +875,20 @@ at `/mcp`, with a member's API token as `Authorization: Bearer <token>`:
 tools `search`, `read_topic`, `list_latest` and `get_user_profile`, which
 see only what that member may read.
 
+### Security
+
+**NUL characters.** PostgreSQL can't store a NUL (`\0`) in text, or
+`\u0000` in JSON, so the application strips them from everything that
+comes in: request params and paths (`FireflyWeb.Plugs.StripNul`, right
+after the body parsers), LiveView events and URLs
+(`FireflyWeb.LiveStripNul`), search, importers and what plugins hand back,
+and, as the last application layer, every changeset as it casts
+(`Firefly.Changeset`) and as `Firefly.Repo` writes it. Binary fields are
+left alone. The database stays the backstop: a NUL that still reaches it is
+refused, and that is a 400 with a translated message (a flash in a
+LiveView, `{:error, changeset}` from `Repo.insert/update`), never a crash
+page. See `Firefly.Text`.
+
 ### Tests
 
 Page tests use [PhoenixTest](https://hexdocs.pm/phoenix_test); critical user

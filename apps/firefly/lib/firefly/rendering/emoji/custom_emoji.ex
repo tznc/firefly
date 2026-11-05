@@ -2,7 +2,7 @@ defmodule Firefly.Rendering.Emoji.CustomEmoji do
   @moduledoc "An emoji an admin added (see `Firefly.Rendering.Emoji`): `:name:` shows `upload`."
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Uploads.Upload

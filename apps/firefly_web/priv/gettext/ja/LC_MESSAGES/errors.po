@@ -76,3 +76,7 @@ msgstr "%{number} 以上にしてください"
 
 msgid "must be equal to %{number}"
 msgstr "%{number} と同じ値にしてください"
+
+## From Firefly.Repo (PostgreSQL refused the text: a NUL character)
+msgid "contains characters that can't be stored"
+msgstr "保存できない文字が含まれています"

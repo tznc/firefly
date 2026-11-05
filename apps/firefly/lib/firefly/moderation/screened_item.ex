@@ -6,7 +6,7 @@ defmodule Firefly.Moderation.ScreenedItem do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   @kinds ~w(email ip url)
 

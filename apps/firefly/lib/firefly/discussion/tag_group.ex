@@ -6,7 +6,7 @@ defmodule Firefly.Discussion.TagGroup do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Discussion.Tag
 
