@@ -82,3 +82,7 @@ msgstr "deve ser maior ou igual a %{number}"
 
 msgid "must be equal to %{number}"
 msgstr "deve ser igual a %{number}"
+
+## From Firefly.Repo (PostgreSQL refused the text: a NUL character)
+msgid "contains characters that can't be stored"
+msgstr "contém caracteres que não podem ser salvos"

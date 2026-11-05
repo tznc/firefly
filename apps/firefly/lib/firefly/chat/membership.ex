@@ -8,7 +8,7 @@ defmodule Firefly.Chat.Membership do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Chat.Channel

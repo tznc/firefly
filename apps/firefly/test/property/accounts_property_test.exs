@@ -86,10 +86,15 @@ defmodule Firefly.AccountsPropertyTest do
   end
 
   describe "lookups" do
-    property "usernames match in any case, the exact one first" do
+    property "a username is one account in any case: lookups find it, case-variants are taken" do
       check all(name <- username(), max_runs: runs(15)) do
         name = unique(name)
         user = user_fixture(%{username: name})
+
+        assert {:error, changeset} =
+                 Accounts.create_user(%{username: String.upcase(name), name: "Another"})
+
+        assert "has already been taken" in errors_on(changeset).username
 
         for variant <- [name, String.upcase(name), String.downcase(name)] do
           assert %{^variant => %User{id: id}} = Accounts.users_by_username([variant])

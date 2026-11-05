@@ -12,7 +12,7 @@ defmodule Firefly.Discussion.Category do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset, warn: false
+  use Firefly.Changeset
 
   alias Firefly.Discussion.Thread
   alias Firefly.Groups.Role

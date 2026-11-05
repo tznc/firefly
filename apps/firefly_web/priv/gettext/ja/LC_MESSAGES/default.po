@@ -2931,3 +2931,8 @@ msgstr "ユーザー名またはIPアドレス"
 #, elixir-autogen, elixir-format
 msgid "Wrong two-factor code"
 msgstr "2段階認証コードの誤り"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "テキストに保存できない文字が含まれています。取り除いてからもう一度お試しください。"

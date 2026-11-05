@@ -5,7 +5,7 @@ defmodule Firefly.Discussion.View do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   schema "abstract table: views" do
     # This will be used by associations on each "concrete" table

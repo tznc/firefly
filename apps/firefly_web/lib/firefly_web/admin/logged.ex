@@ -52,7 +52,7 @@ defmodule FireflyWeb.Admin.Logged do
 
     if function_exported?(schema, :changeset, 2),
       do: schema.changeset(entry, attrs),
-      else: Ecto.Changeset.cast(entry, attrs, Enum.map(editable, &String.to_existing_atom/1))
+      else: Firefly.Changeset.cast(entry, attrs, Enum.map(editable, &String.to_existing_atom/1))
   end
 
   @doc false

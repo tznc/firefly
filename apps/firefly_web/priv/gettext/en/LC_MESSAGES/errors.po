@@ -91,3 +91,7 @@ msgstr ""
 
 msgid "must be equal to %{number}"
 msgstr ""
+
+## From Firefly.Repo (PostgreSQL refused the text: a NUL character)
+msgid "contains characters that can't be stored"
+msgstr ""

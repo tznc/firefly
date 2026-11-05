@@ -2931,3 +2931,8 @@ msgstr "用户名或 IP 地址"
 #, elixir-autogen, elixir-format
 msgid "Wrong two-factor code"
 msgstr "双重验证码错误"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "部分文本包含无法保存的字符。请删除后重试。"
