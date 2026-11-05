@@ -15,6 +15,8 @@ defmodule Firefly.Reports.Akismet do
     rows =
       Firefly.Repo.all(
         from(c in "akismet_checks",
+          # Checks Akismet answered.
+          where: c.status != "queued",
           where:
             c.inserted_at >= type(^start, :naive_datetime) and
               c.inserted_at < type(^stop, :naive_datetime),

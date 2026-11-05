@@ -86,7 +86,8 @@ defmodule Firefly.AkismetTest do
       FakeAkismet.setup(%{}, fn _call, _params -> "oops" end)
       post = reply(ctx, "viagra")
       refute Post.hidden?(post)
-      assert Repo.all(AkismetCheck) == []
+      # Left queued for the job's retries.
+      assert [%AkismetCheck{status: "queued", spam: nil}] = Repo.all(AkismetCheck)
     end
 
     test "staff confirming spam or finding it isn't is reported back once", ctx do
@@ -185,6 +186,97 @@ defmodule Firefly.AkismetTest do
       # Other profile changes aren't checked.
       {:ok, _} = Accounts.update_user(user, %{name: "Alice"})
       refute_received {:akismet, "comment-check", _}
+    end
+  end
+
+  describe "jobs" do
+    # Jobs are only enqueued here, as in production; the tests run them.
+    setup do
+      config = Application.get_env(:firefly, Akismet)
+      Application.put_env(:firefly, Akismet, Keyword.put(config, :async, true))
+    end
+
+    defp job_args do
+      assert [%{args: args}] = all_enqueued(worker: Akismet.Worker)
+      args
+    end
+
+    test "carry only the check's id: the request's data waits in its queued row", ctx do
+      post = reply(ctx, "Cheap viagra here")
+      refute_received {:akismet, _, _}
+
+      check = check("post", post.id)
+      assert %AkismetCheck{status: "queued", spam: nil, params: params} = check
+      assert params["user_ip"] == "203.0.113.9"
+      assert params["comment_author_email"] == ctx.alice.email
+
+      # What /staff/jobs (Oban Web) shows.
+      assert job_args() == %{"op" => "check", "check_id" => check.id}
+
+      for private <- ["203.0.113.9", "Spambot", ctx.alice.email, "viagra"],
+          do: refute(inspect(job_args()) =~ private)
+
+      # Queued checks aren't for staff or the report yet.
+      assert Review.pending_count() == 0
+      {:series, series} = Reports.get("akismet").run(Reports.last(1))
+      assert Enum.all?(series, fn %{points: points} -> Enum.all?(points, &(elem(&1, 1) == 0)) end)
+
+      assert :ok = perform_job(Akismet.Worker, job_args())
+      assert_received {:akismet, "comment-check", %{"comment_content" => "Cheap viagra here"}}
+      assert %AkismetCheck{status: "pending", spam: true} = check("post", post.id)
+      assert Post.hidden?(Repo.get!(Post, post.id))
+      assert Repo.get_by(StaffAction, action: "akismet.spam")
+
+      # A rerun rereads the row: answered, it asks Akismet nothing more.
+      assert :ok = perform_job(Akismet.Worker, job_args())
+      refute_received {:akismet, _, _}
+    end
+
+    test "ham ends clean", ctx do
+      post = reply(ctx, "A thoughtful reply")
+      assert :ok = perform_job(Akismet.Worker, job_args())
+      assert %AkismetCheck{status: "clean", spam: false} = check("post", post.id)
+      refute Post.hidden?(Repo.get!(Post, post.id))
+    end
+
+    @tag :capture_log
+    test "a failure is retried with the same row", ctx do
+      FakeAkismet.setup(%{}, fn _call, _params -> "oops" end)
+      config = Application.get_env(:firefly, Akismet)
+      Application.put_env(:firefly, Akismet, Keyword.put(config, :async, true))
+      post = reply(ctx, "viagra")
+
+      assert {:error, _} = perform_job(Akismet.Worker, job_args())
+      assert %AkismetCheck{status: "queued"} = check("post", post.id)
+    end
+
+    test "a missing row is a no-op" do
+      assert :ok = perform_job(Akismet.Worker, %{"op" => "check", "check_id" => -1})
+
+      assert :ok =
+               perform_job(Akismet.Worker, %{
+                 "op" => "submit",
+                 "check_id" => -1,
+                 "verdict" => "spam"
+               })
+
+      refute_received {:akismet, _, _}
+    end
+
+    test "a report back carries the check's id and the verdict", ctx do
+      post = reply(ctx, "viagra")
+      assert :ok = perform_job(Akismet.Worker, job_args())
+      %{id: id} = check("post", post.id)
+
+      assert {:ok, _} = Review.agree(post, ctx.admin, :delete)
+
+      assert [%{args: args}] =
+               Enum.filter(all_enqueued(worker: Akismet.Worker), &(&1.args["op"] == "submit"))
+
+      assert args == %{"op" => "submit", "check_id" => id, "verdict" => "spam"}
+
+      assert :ok = perform_job(Akismet.Worker, args)
+      assert_received {:akismet, "submit-spam", %{"comment_content" => "viagra"}}
     end
   end
 
