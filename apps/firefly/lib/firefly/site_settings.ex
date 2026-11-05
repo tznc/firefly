@@ -1807,6 +1807,8 @@ defmodule Firefly.SiteSettings do
   and new values.
   """
   def update(params, admin) do
+    # Saved as raw structs below: Postgres can't store a NUL character.
+    params = Firefly.Text.strip_nul(params)
     current = all()
 
     {changes, errors} =

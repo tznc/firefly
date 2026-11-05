@@ -27,7 +27,7 @@ defmodule Firefly.Plugins.ModerationHooks do
   `hide` hides the post until staff review it, as enough flags would.
   """
 
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.{Accounts, Discussion, Plugin, Plugins}
   alias Firefly.Accounts.User

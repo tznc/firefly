@@ -10,7 +10,7 @@ defmodule Firefly.Discussion.Tag do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Discussion.{TagGroup, Thread}
 

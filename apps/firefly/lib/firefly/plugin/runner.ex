@@ -93,7 +93,8 @@ defmodule Firefly.Plugin.Runner do
   end
 
   defp normalize(:ok), do: {:ok, nil}
-  defp normalize({:ok, _value} = ok), do: ok
+  # What a plugin hands back may end up stored: Postgres can't store a NUL.
+  defp normalize({:ok, value}), do: {:ok, Firefly.Text.strip_nul(value)}
   defp normalize({:error, message} = error) when is_binary(message), do: error
 
   defp normalize({:error, {kind, message}} = error) when is_atom(kind) and is_binary(message),

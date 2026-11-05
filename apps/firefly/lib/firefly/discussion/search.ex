@@ -80,8 +80,12 @@ defmodule Firefly.Discussion.Search do
   """
   @spec parse(String.t() | nil, map) :: t
   def parse(query, controls \\ %{}) do
+    # Postgres refuses a NUL character in a query's parameters too.
+    query = Firefly.Text.strip_nul(query || "")
+    controls = Firefly.Text.strip_nul(controls)
+
     {filters, words} =
-      (query || "")
+      query
       |> String.split()
       |> Enum.split_with(
         &Regex.match?(~r/^(?:(?:category|tag|order|status):.|in:title$|@.)/i, &1)
