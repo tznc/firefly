@@ -87,6 +87,9 @@ defmodule FireflyImport.Sources.Slack do
     end
   end
 
+  # Sobelow: removes the temporary directory this function made; :zip.extract/2 refuses entries
+  # outside it.
+  # sobelow_skip ["Traversal.FileModule"]
   defp unzip(path) do
     dir = Path.join(System.tmp_dir!(), "firefly-import-#{System.unique_integer([:positive])}")
 
@@ -124,6 +127,8 @@ defmodule FireflyImport.Sources.Slack do
     }
   end
 
+  # Sobelow: fixed file names inside the extracted export.
+  # sobelow_skip ["Traversal.FileModule"]
   defp json(dir, file) do
     path = Path.join(dir, file)
     if File.exists?(path), do: path |> File.read!() |> Jason.decode!(), else: []
@@ -169,6 +174,8 @@ defmodule FireflyImport.Sources.Slack do
   end
 
   # A channel's messages: one JSON file per day in its directory.
+  # Sobelow: JSON files inside the extracted export.
+  # sobelow_skip ["Traversal.FileModule"]
   defp messages(dir, folder, channel_id, names, headers) do
     dir
     |> Path.join(folder)

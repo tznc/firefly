@@ -9,6 +9,8 @@ defmodule FireflyWeb.SettingsController do
 
   alias Firefly.SiteSettings.Transfer
 
+  # Sobelow: admins only; JSON or YAML, as a download (content-disposition: attachment).
+  # sobelow_skip ["XSS.ContentType", "XSS.SendResp"]
   def export(conn, %{"format" => format} = params) when format in ~w(json yaml) do
     opts = [all: params["all"] == "1"]
 

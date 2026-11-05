@@ -115,6 +115,8 @@ defmodule Firefly.Backups do
   end
 
   @doc "Makes a backup now, in the caller (see `create/2`): `{:ok, name}`."
+  # Sobelow: a staging file this function created.
+  # sobelow_skip ["Traversal.FileModule"]
   def make_backup(opts, log \\ fn _line -> :ok end) do
     name = name()
     staging = Path.join(System.tmp_dir!(), "firefly-#{System.unique_integer([:positive])}.tar.gz")
@@ -237,6 +239,8 @@ defmodule Firefly.Backups do
     end
   end
 
+  # Sobelow: a temporary directory Archive.extract/1 created.
+  # sobelow_skip ["Traversal.FileModule"]
   defp do_restore(name, admin, opts, log) do
     before = read_only()
     log.("Turning on read-only mode")
@@ -267,6 +271,8 @@ defmodule Firefly.Backups do
     end
   end
 
+  # Sobelow: a temporary download Store.fetch/1 created.
+  # sobelow_skip ["Traversal.FileModule"]
   defp extract(path, temporary?) do
     result = Archive.extract(path)
     if temporary?, do: File.rm(path)
@@ -282,6 +288,8 @@ defmodule Firefly.Backups do
     end
   end
 
+  # Sobelow: from the extracted archive to the configured upload root.
+  # sobelow_skip ["Traversal.FileModule"]
   defp restore_uploads(source, log) do
     cond do
       not File.dir?(source) ->

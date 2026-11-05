@@ -108,6 +108,8 @@ defmodule Firefly.Uploads do
        else: {:error, "That file type isn't allowed here."}
   end
 
+  # Sobelow: the temporary file of an upload in progress (Plug or LiveView).
+  # sobelow_skip ["Traversal.FileModule"]
   defp read(path) do
     case File.stat(path) do
       {:ok, %{size: 0}} -> {:error, "That file is empty."}
@@ -284,6 +286,8 @@ defmodule Firefly.Uploads do
   The stored file's bytes (for exporting a theme's assets, see
   `Firefly.Themes`): `{:ok, data}` or `{:error, reason}`.
   """
+  # Sobelow: the path Storage.locate/3 builds from the upload's key.
+  # sobelow_skip ["Traversal.FileModule"]
   def contents(%Upload{} = upload) do
     case Storage.locate(key(upload), upload.content_type, "attachment") do
       {:file, path} ->

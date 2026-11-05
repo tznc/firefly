@@ -5,6 +5,8 @@ defmodule FireflyWeb.CrawlerHTML do
   alias Firefly.Moderation.WatchedWords
   alias Firefly.Rendering.Markdown
 
+  # Sobelow: Markdown.render/1 returns sanitized HTML.
+  # sobelow_skip ["XSS.Raw"]
   def thread(assigns) do
     ~H"""
     <main class="mx-auto max-w-3xl space-y-4 p-4">

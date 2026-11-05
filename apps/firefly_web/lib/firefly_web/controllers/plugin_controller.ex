@@ -12,6 +12,9 @@ defmodule FireflyWeb.PluginController do
   @sdk_path "plugins/sdk/widget.js"
 
   @doc "A plugin asset."
+  # Sobelow: plugin assets are served with the plugin sandbox CSP (Plugins.UI.csp/0: sandbox, an
+  # opaque origin) and nosniff.
+  # sobelow_skip ["XSS.ContentType", "XSS.SendResp"]
   def asset(conn, %{"id" => id, "path" => path}) do
     case UI.asset(id, Enum.join(path, "/")) do
       {:ok, data} ->
@@ -26,6 +29,8 @@ defmodule FireflyWeb.PluginController do
   end
 
   @doc "The widget SDK (`Firefly.ready`, `Firefly.call`, `Firefly.storage`, `Firefly.resize`)."
+  # Sobelow: a fixed path inside the release.
+  # sobelow_skip ["Traversal.FileModule"]
   def sdk(conn, _params) do
     conn
     |> sandbox_headers()
