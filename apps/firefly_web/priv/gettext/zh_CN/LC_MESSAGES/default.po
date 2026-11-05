@@ -2732,3 +2732,8 @@ msgstr "已通过 %{adapter} 向 %{to} 发送测试邮件。"
 #, elixir-autogen, elixir-format
 msgid "Jobs"
 msgstr "后台任务"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "部分文本包含无法保存的字符。请删除后重试。"

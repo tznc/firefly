@@ -5,7 +5,7 @@ defmodule Firefly.Accounts.User do
 
   use Ecto.Schema
 
-  import Ecto.Changeset, warn: false
+  use Firefly.Changeset
   alias Firefly.Accounts.UserIdentity
   alias Firefly.Discussion.Post
   alias Firefly.Groups.{Role, RoleMembership}

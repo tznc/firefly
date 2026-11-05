@@ -2,7 +2,7 @@ defmodule Firefly.Messaging.Message do
   @moduledoc "A message in a private conversation (markdown, like a post)."
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Messaging.Conversation

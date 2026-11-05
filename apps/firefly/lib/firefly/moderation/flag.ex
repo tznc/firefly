@@ -6,7 +6,7 @@ defmodule Firefly.Moderation.Flag do
   `"deferred"`. One per user per post. See `Firefly.Moderation.Flags`.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Discussion.Post

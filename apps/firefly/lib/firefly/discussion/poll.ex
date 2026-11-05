@@ -12,7 +12,7 @@ defmodule Firefly.Discussion.Poll do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Discussion.{PollOption, PollVote, Post}
 

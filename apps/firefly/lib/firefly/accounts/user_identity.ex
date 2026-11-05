@@ -7,7 +7,7 @@ defmodule Firefly.Accounts.UserIdentity do
 
   use Ecto.Schema
 
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
 

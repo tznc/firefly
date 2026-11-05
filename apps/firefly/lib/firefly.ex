@@ -2,7 +2,8 @@ defmodule Firefly do
   @moduledoc """
   The domain's shared kernel: the repo, the port to the web interface
   (`Firefly.Endpoint`, `Firefly.URLs`), the mailer, rate limits, local
-  times and address ranges, used by every context.
+  times and address ranges, and text the database can store
+  (`Firefly.Text`, `Firefly.Changeset`), used by every context.
 
   ## Bounded contexts
 
@@ -45,5 +46,16 @@ defmodule Firefly do
   use Boundary,
     top_level?: true,
     check: [out: false],
-    exports: [Repo, Endpoint, URLs, Mailer, RateLimit, LocalTime, IPRange, Telemetry]
+    exports: [
+      Repo,
+      Endpoint,
+      URLs,
+      Mailer,
+      RateLimit,
+      LocalTime,
+      IPRange,
+      Telemetry,
+      Text,
+      Changeset
+    ]
 end
