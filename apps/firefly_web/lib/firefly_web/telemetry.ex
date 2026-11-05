@@ -143,6 +143,9 @@ defmodule FireflyWeb.Telemetry do
       duration("firefly.mailer.deliver.stop.duration", tags: [:adapter]),
       counter("firefly.mailer.deliver.exception.count", tags: [:adapter]),
       counter("firefly.cluster.node.count", tags: [:event]),
+      # The jail (see Firefly.Security.Jail): never the address.
+      counter("firefly.security.signal.count", tags: [:jail, :kind]),
+      counter("firefly.security.ban.count", tags: [:jail, :source]),
       last_value("firefly.cluster.nodes.connected",
         event_name: [:firefly, :cluster, :node],
         measurement: :connected

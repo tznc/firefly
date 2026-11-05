@@ -124,7 +124,7 @@ msgid "Chat"
 msgstr "聊天"
 
 #: lib/firefly_web/live/auth_live/reset_password.ex:16
-#: lib/firefly_web/live/auth_live/reset_password.ex:52
+#: lib/firefly_web/live/auth_live/reset_password.ex:55
 #, elixir-autogen, elixir-format
 msgid "Choose a new password"
 msgstr "设置新密码"
@@ -135,7 +135,7 @@ msgstr "设置新密码"
 msgid "Close menu"
 msgstr "关闭菜单"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:71
+#: lib/firefly_web/live/auth_live/reset_password.ex:74
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr "确认新密码"
@@ -339,7 +339,7 @@ msgstr "消息"
 msgid "New here?"
 msgstr "第一次来？"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:65
+#: lib/firefly_web/live/auth_live/reset_password.ex:68
 #, elixir-autogen, elixir-format
 msgid "New password"
 msgstr "新密码"
@@ -376,7 +376,7 @@ msgstr "参与中"
 msgid "Password"
 msgstr "密码"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:39
+#: lib/firefly_web/live/auth_live/reset_password.ex:42
 #, elixir-autogen, elixir-format
 msgid "Password reset. Log in with your new password."
 msgstr "密码已重置，请用新密码登录。"
@@ -415,7 +415,7 @@ msgstr "审核"
 msgid "Save"
 msgstr "保存"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/auth_live/reset_password.ex:77
 #: lib/firefly_web/live/settings_live/index.ex:697
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
@@ -487,7 +487,7 @@ msgstr "标签组"
 msgid "Tags"
 msgstr "标签"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:23
+#: lib/firefly_web/live/auth_live/reset_password.ex:26
 #, elixir-autogen, elixir-format
 msgid "That reset link is invalid or has expired."
 msgstr "该重置链接无效或已过期。"
@@ -616,7 +616,7 @@ msgstr "给我发送链接"
 msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
 msgstr "Firefly 在没有 JavaScript 时也能使用：页面、主题和搜索由服务器渲染，链接可正常跳转。发帖、聊天和实时更新需要 JavaScript。"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:75
+#: lib/firefly_web/live/auth_live/reset_password.ex:78
 #, elixir-autogen, elixir-format
 msgid "Reset password"
 msgstr "重置密码"
@@ -750,6 +750,7 @@ msgid "Account to merge into"
 msgstr "要合并到的账户"
 
 #: lib/firefly_web/live/staff_live/screening.ex:129
+#: lib/firefly_web/live/staff_live/security.ex:166
 #: lib/firefly_web/live/staff_live/users.ex:134
 #, elixir-autogen, elixir-format
 msgid "Actions"
@@ -800,6 +801,8 @@ msgstr "添加者"
 msgid "Added to %{group}."
 msgstr "已加入 %{group}。"
 
+#: lib/firefly_web/live/staff_live/security.ex:162
+#: lib/firefly_web/live/staff_live/security.ex:211
 #: lib/firefly_web/live/staff_live/user.ex:510
 #, elixir-autogen, elixir-format
 msgid "Address"
@@ -1289,6 +1292,7 @@ msgstr "当前没有生效的处罚。"
 msgid "None recorded yet."
 msgstr "还没有记录。"
 
+#: lib/firefly_web/live/staff_live/security.ex:206
 #: lib/firefly_web/live/staff_live/user.ex:432
 #: lib/firefly_web/live/staff_live/user.ex:535
 #, elixir-autogen, elixir-format
@@ -2769,7 +2773,7 @@ msgstr "账户已禁言"
 msgid "Account suspended"
 msgstr "账户已停用"
 
-#: lib/firefly_web/live/staff_live/security.ex:76
+#: lib/firefly_web/live/staff_live/security.ex:240
 #, elixir-autogen, elixir-format
 msgid "Any event"
 msgstr "任意事件"
@@ -2785,7 +2789,7 @@ msgid "Browser"
 msgstr "浏览器"
 
 #: lib/firefly_web/components/security_components.ex:51
-#: lib/firefly_web/live/staff_live/security.ex:75
+#: lib/firefly_web/live/staff_live/security.ex:239
 #, elixir-autogen, elixir-format
 msgid "Event"
 msgstr "事件"
@@ -2815,7 +2819,7 @@ msgstr "IP 地址已解封"
 msgid "Logged in"
 msgstr "已登录"
 
-#: lib/firefly_web/live/staff_live/security.ex:59
+#: lib/firefly_web/live/staff_live/security.ex:125
 #, elixir-autogen, elixir-format
 msgid "Logins, failed attempts and account security changes, newest first."
 msgstr "登录、失败的尝试和账户安全变更，最新的在前。"
@@ -2835,7 +2839,7 @@ msgstr "成员"
 msgid "New backup codes"
 msgstr "新的备用码"
 
-#: lib/firefly_web/live/staff_live/security.ex:88
+#: lib/firefly_web/live/staff_live/security.ex:252
 #, elixir-autogen, elixir-format
 msgid "No security events."
 msgstr "没有安全事件。"
@@ -2870,8 +2874,8 @@ msgstr "密码已更改"
 msgid "Recent security activity"
 msgstr "最近的安全活动"
 
-#: lib/firefly_web/live/staff_live/security.ex:21
-#: lib/firefly_web/live/staff_live/security.ex:57
+#: lib/firefly_web/live/staff_live/security.ex:29
+#: lib/firefly_web/live/staff_live/security.ex:123
 #: lib/firefly_web/staff_nav.ex:146
 #, elixir-autogen, elixir-format
 msgid "Security"
@@ -2887,7 +2891,7 @@ msgstr "已添加安全密钥"
 msgid "Security key removed"
 msgstr "已移除安全密钥"
 
-#: lib/firefly_web/live/staff_live/security.ex:64
+#: lib/firefly_web/live/staff_live/security.ex:228
 #, elixir-autogen, elixir-format
 msgid "Security log"
 msgstr "安全日志"
@@ -2922,7 +2926,7 @@ msgstr "已开启双重验证"
 msgid "Upload quarantined by the virus scanner"
 msgstr "上传文件已被病毒扫描隔离"
 
-#: lib/firefly_web/live/staff_live/security.ex:82
+#: lib/firefly_web/live/staff_live/security.ex:246
 #, elixir-autogen, elixir-format
 msgid "Username or IP address"
 msgstr "用户名或 IP 地址"
@@ -2931,3 +2935,119 @@ msgstr "用户名或 IP 地址"
 #, elixir-autogen, elixir-format
 msgid "Wrong two-factor code"
 msgstr "双重验证码错误"
+
+#: lib/firefly_web/live/staff_live/security.ex:71
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr "1 天"
+
+#: lib/firefly_web/live/staff_live/security.ex:70
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr "1 小时"
+
+#: lib/firefly_web/live/staff_live/security.ex:72
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr "1 周"
+
+#: lib/firefly_web/live/staff_live/security.ex:73
+#, elixir-autogen, elixir-format
+msgid "30 days"
+msgstr "30 天"
+
+#: lib/firefly_web/live/staff_live/security.ex:204
+#, elixir-autogen, elixir-format
+msgid "Addresses with points towards a ban on this server now, closest first."
+msgstr "目前在此服务器上累积封禁积分的地址，最接近封禁的在前。"
+
+#: lib/firefly_web/live/staff_live/security.ex:150
+#, elixir-autogen, elixir-format
+msgid "Ban"
+msgstr "封禁"
+
+#: lib/firefly_web/live/staff_live/security.ex:90
+#, elixir-autogen, elixir-format
+msgid "Banned %{ip}."
+msgstr "已封禁 %{ip}。"
+
+#: lib/firefly_web/live/staff_live/security.ex:130
+#, elixir-autogen, elixir-format
+msgid "Banned addresses"
+msgstr "已封禁的地址"
+
+#: lib/firefly_web/live/staff_live/security.ex:132
+#, elixir-autogen, elixir-format
+msgid "Banning is off (Settings > Security > Banning): these bans aren't enforced."
+msgstr "封禁已关闭（设置 > 安全 > 封禁）：这些封禁不会生效。"
+
+#: lib/firefly_web/live/staff_live/security.ex:164
+#, elixir-autogen, elixir-format
+msgid "Bans"
+msgstr "封禁次数"
+
+#: lib/firefly_web/live/staff_live/security.ex:145
+#, elixir-autogen, elixir-format
+msgid "For"
+msgstr "时长"
+
+#: lib/firefly_web/live/staff_live/security.ex:141
+#, elixir-autogen, elixir-format
+msgid "IP address or range"
+msgstr "IP 地址或范围"
+
+#: lib/firefly_web/live/staff_live/security.ex:212
+#, elixir-autogen, elixir-format
+msgid "Jail"
+msgstr "类别"
+
+#: lib/firefly_web/live/staff_live/security.ex:155
+#, elixir-autogen, elixir-format
+msgid "No address is banned."
+msgstr "没有被封禁的地址。"
+
+#: lib/firefly_web/live/staff_live/security.ex:213
+#, elixir-autogen, elixir-format
+msgid "Points"
+msgstr "积分"
+
+#: lib/firefly_web/live/staff_live/security.ex:148
+#, elixir-autogen, elixir-format
+msgid "Reason"
+msgstr "原因"
+
+#: lib/firefly_web/live/staff_live/security.ex:202
+#, elixir-autogen, elixir-format
+msgid "Recent offenders"
+msgstr "最近的违规者"
+
+#: lib/firefly_web/live/staff_live/security.ex:194
+#, elixir-autogen, elixir-format
+msgid "Unban"
+msgstr "解封"
+
+#: lib/firefly_web/live/staff_live/security.ex:192
+#, elixir-autogen, elixir-format
+msgid "Unban %{ip}"
+msgstr "解封 %{ip}"
+
+#: lib/firefly_web/live/staff_live/security.ex:108
+#, elixir-autogen, elixir-format
+msgid "Unbanned %{ip}."
+msgstr "已解封 %{ip}。"
+
+#: lib/firefly_web/live/staff_live/security.ex:165
+#, elixir-autogen, elixir-format
+msgid "Until"
+msgstr "截至"
+
+#: lib/firefly_web/live/staff_live/security.ex:68
+#: lib/firefly_web/live/staff_live/security.ex:183
+#, elixir-autogen, elixir-format
+msgid "Until unbanned"
+msgstr "直到解封"
+
+#: lib/firefly_web/live/staff_live/security.ex:163
+#, elixir-autogen, elixir-format
+msgid "Why"
+msgstr "原因"

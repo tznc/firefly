@@ -21,6 +21,10 @@ config :firefly, Firefly.Upgrades,
 config :firefly_web, FireflyWeb.ClientIP,
   trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
 
+# The jail never bans the trusted proxies (see Firefly.Security.Jail).
+config :firefly, Firefly.Security.Jail,
+  trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
+
 # The secret AI providers' API keys are encrypted with at rest (see
 # Firefly.AI.Encrypted); without it, a key derived from the secret key base.
 if ai_key = System.get_env("FIREFLY_AI_ENCRYPTION_KEY") do

@@ -66,6 +66,10 @@ defmodule FireflyWeb.Endpoint do
 
   # The client's IP behind trusted proxies, for per-IP rate limits.
   plug(FireflyWeb.ClientIP)
+  # Banned addresses go no further (see Firefly.Security.Jail), and
+  # scanners' requests count towards a ban.
+  plug(FireflyWeb.Plugs.Jail)
+  plug(FireflyWeb.Plugs.Probes)
 
   plug(Plug.RequestId)
   plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])

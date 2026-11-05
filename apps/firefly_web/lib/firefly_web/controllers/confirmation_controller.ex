@@ -12,6 +12,8 @@ defmodule FireflyWeb.ConfirmationController do
         |> redirect(to: ~p"/")
 
       {:error, _} ->
+        Firefly.Security.Jail.signal(conn.remote_ip, "invalid_token")
+
         conn
         |> put_flash(:error, "That confirmation link is invalid or has expired.")
         |> redirect(to: ~p"/")

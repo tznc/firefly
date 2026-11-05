@@ -25,13 +25,13 @@ defmodule Firefly.Security do
   useless (see `ip_tables/0`).
   """
 
-  use Boundary, top_level?: true, check: [out: false], exports: [Event]
+  use Boundary, top_level?: true, check: [out: false], exports: [Event, Ban, Jail]
 
   import Ecto.Query
 
   alias Firefly.{Accounts, Backups, Repo, SiteSettings}
   alias Firefly.Accounts.User
-  alias Firefly.Security.Event
+  alias Firefly.Security.{Event, Jail}
 
   @kinds ~w(
     login.success login.failure two_factor.failure passkey.failure
@@ -80,13 +80,18 @@ defmodule Firefly.Security do
   @doc """
   A failed login attempt (`kind`: `"login.failure"`, `"two_factor.failure"`,
   `"passkey.failure"`) for the account named `username` (or `user`), if
-  there's one: recorded against it, so its member sees it.
+  there's one: recorded against it, so its member sees it, and a signal
+  for the jail (see `Firefly.Security.Jail`).
   """
   def login_failed(kind, user_or_username, details \\ %{})
 
-  def login_failed(kind, %User{} = user, details), do: record(kind, user, details)
+  def login_failed(kind, %User{} = user, details) do
+    Jail.signal_client(String.replace(kind, ".", "_"), %{user: user.username})
+    record(kind, user, details)
+  end
 
   def login_failed(kind, username, details) do
+    Jail.signal_client(String.replace(kind, ".", "_"))
     user = if is_binary(username) and username != "", do: Accounts.get_user_by_username(username)
     record(kind, user, Map.put(details, :username, username))
   end
@@ -153,6 +158,7 @@ defmodule Firefly.Security do
       # The addresses staff look members up by: a truncated one would match
       # strangers (and collide with the per-member unique index).
       {"user_ips", "ip", "last_seen_at", :delete},
+      # Bans are deleted by Jail.run_cleanup/1 once ended this long ago.
       # The client sent with each Akismet check, in its params.
       {"akismet_checks", "params->>'user_ip'", "inserted_at", :truncate}
     ]

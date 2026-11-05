@@ -208,6 +208,7 @@ defmodule Firefly.Moderation.Akismet do
         params: params
       })
 
+    if spam?, do: Firefly.Security.Jail.signal(params["user_ip"], "akismet_spam")
     if spam?, do: caught(check, user)
   end
 

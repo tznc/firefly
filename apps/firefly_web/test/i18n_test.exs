@@ -181,7 +181,7 @@ defmodule FireflyWeb.I18nTest do
       "es" => ~w(Chat Normal Scripts Webhooks),
       "fr" =>
         ["Notifications (%{count})", "version %{version}"] ++
-          ~w(Actions Badges Communication Configuration Description Forum Maintenance Messages
+          ~w(Actions Badges Communication Configuration Description Forum Maintenance Messages Points
              Normal Notifications Scripts Webhooks),
       "de" =>
         ["Link (optional)"] ++

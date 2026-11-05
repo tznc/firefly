@@ -95,6 +95,8 @@ defmodule FireflyWeb.StaffLive.Log do
     "plugin.secret" => "Changed plugin endpoint secret",
     "upload.delete" => "Deleted upload",
     "upload.quarantine" => "Quarantined infected upload",
+    "ip.ban" => "Banned IP address",
+    "ip.unban" => "Unbanned IP address",
     "emoji.create" => "Added emoji",
     "emoji.delete" => "Removed emoji",
     "badge.create" => "Created badge",
@@ -196,6 +198,9 @@ defmodule FireflyWeb.StaffLive.Log do
 
   defp target_link(%{target_type: "plugin", details: %{"plugin" => id}}, _target),
     do: {id, ~p"/staff/plugins/#{id}"}
+
+  defp target_link(%{target_type: "ban", details: %{"ip" => ip}}, _target),
+    do: {ip, ~p"/staff/security"}
 
   defp target_link(%{target_type: "upload", details: %{"filename" => name}}, _target),
     do: {name, ~p"/staff/uploads"}

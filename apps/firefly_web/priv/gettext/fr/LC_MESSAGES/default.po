@@ -127,7 +127,7 @@ msgid "Chat"
 msgstr "Discussion"
 
 #: lib/firefly_web/live/auth_live/reset_password.ex:16
-#: lib/firefly_web/live/auth_live/reset_password.ex:52
+#: lib/firefly_web/live/auth_live/reset_password.ex:55
 #, elixir-autogen, elixir-format
 msgid "Choose a new password"
 msgstr "Choisissez un nouveau mot de passe"
@@ -138,7 +138,7 @@ msgstr "Choisissez un nouveau mot de passe"
 msgid "Close menu"
 msgstr "Fermer le menu"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:71
+#: lib/firefly_web/live/auth_live/reset_password.ex:74
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr "Confirmez le nouveau mot de passe"
@@ -342,7 +342,7 @@ msgstr "Messages"
 msgid "New here?"
 msgstr "Nouveau ici ?"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:65
+#: lib/firefly_web/live/auth_live/reset_password.ex:68
 #, elixir-autogen, elixir-format
 msgid "New password"
 msgstr "Nouveau mot de passe"
@@ -379,7 +379,7 @@ msgstr "Mes participations"
 msgid "Password"
 msgstr "Mot de passe"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:39
+#: lib/firefly_web/live/auth_live/reset_password.ex:42
 #, elixir-autogen, elixir-format
 msgid "Password reset. Log in with your new password."
 msgstr "Mot de passe réinitialisé. Connectez-vous avec le nouveau."
@@ -418,7 +418,7 @@ msgstr "Modération"
 msgid "Save"
 msgstr "Enregistrer"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/auth_live/reset_password.ex:77
 #: lib/firefly_web/live/settings_live/index.ex:697
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
@@ -490,7 +490,7 @@ msgstr "Groupes d'étiquettes"
 msgid "Tags"
 msgstr "Étiquettes"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:23
+#: lib/firefly_web/live/auth_live/reset_password.ex:26
 #, elixir-autogen, elixir-format
 msgid "That reset link is invalid or has expired."
 msgstr "Ce lien de réinitialisation est invalide ou a expiré."
@@ -619,7 +619,7 @@ msgstr "Envoyez-moi un lien"
 msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
 msgstr "Firefly fonctionne sans JavaScript : les pages, les sujets et la recherche sont rendus sur le serveur et les liens fonctionnent. Publier, la discussion et les mises à jour en direct en ont besoin."
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:75
+#: lib/firefly_web/live/auth_live/reset_password.ex:78
 #, elixir-autogen, elixir-format
 msgid "Reset password"
 msgstr "Réinitialiser le mot de passe"
@@ -754,6 +754,7 @@ msgid "Account to merge into"
 msgstr "Compte dans lequel fusionner"
 
 #: lib/firefly_web/live/staff_live/screening.ex:129
+#: lib/firefly_web/live/staff_live/security.ex:166
 #: lib/firefly_web/live/staff_live/users.ex:134
 #, elixir-autogen, elixir-format
 msgid "Actions"
@@ -804,6 +805,8 @@ msgstr "Ajouté par"
 msgid "Added to %{group}."
 msgstr "Ajouté à %{group}."
 
+#: lib/firefly_web/live/staff_live/security.ex:162
+#: lib/firefly_web/live/staff_live/security.ex:211
 #: lib/firefly_web/live/staff_live/user.ex:510
 #, elixir-autogen, elixir-format
 msgid "Address"
@@ -1293,6 +1296,7 @@ msgstr "Aucune en cours."
 msgid "None recorded yet."
 msgstr "Rien d'enregistré pour l'instant."
 
+#: lib/firefly_web/live/staff_live/security.ex:206
 #: lib/firefly_web/live/staff_live/user.ex:432
 #: lib/firefly_web/live/staff_live/user.ex:535
 #, elixir-autogen, elixir-format
@@ -2774,7 +2778,7 @@ msgstr "Compte réduit au silence"
 msgid "Account suspended"
 msgstr "Compte suspendu"
 
-#: lib/firefly_web/live/staff_live/security.ex:76
+#: lib/firefly_web/live/staff_live/security.ex:240
 #, elixir-autogen, elixir-format
 msgid "Any event"
 msgstr "Tout événement"
@@ -2790,7 +2794,7 @@ msgid "Browser"
 msgstr "Navigateur"
 
 #: lib/firefly_web/components/security_components.ex:51
-#: lib/firefly_web/live/staff_live/security.ex:75
+#: lib/firefly_web/live/staff_live/security.ex:239
 #, elixir-autogen, elixir-format
 msgid "Event"
 msgstr "Événement"
@@ -2820,7 +2824,7 @@ msgstr "Adresse IP débannie"
 msgid "Logged in"
 msgstr "Connexion"
 
-#: lib/firefly_web/live/staff_live/security.ex:59
+#: lib/firefly_web/live/staff_live/security.ex:125
 #, elixir-autogen, elixir-format
 msgid "Logins, failed attempts and account security changes, newest first."
 msgstr "Connexions, tentatives échouées et changements de sécurité des comptes, les plus récents d'abord."
@@ -2840,7 +2844,7 @@ msgstr "Membre"
 msgid "New backup codes"
 msgstr "Nouveaux codes de secours"
 
-#: lib/firefly_web/live/staff_live/security.ex:88
+#: lib/firefly_web/live/staff_live/security.ex:252
 #, elixir-autogen, elixir-format
 msgid "No security events."
 msgstr "Aucun événement de sécurité."
@@ -2875,8 +2879,8 @@ msgstr "Mot de passe modifié"
 msgid "Recent security activity"
 msgstr "Activité de sécurité récente"
 
-#: lib/firefly_web/live/staff_live/security.ex:21
-#: lib/firefly_web/live/staff_live/security.ex:57
+#: lib/firefly_web/live/staff_live/security.ex:29
+#: lib/firefly_web/live/staff_live/security.ex:123
 #: lib/firefly_web/staff_nav.ex:146
 #, elixir-autogen, elixir-format
 msgid "Security"
@@ -2892,7 +2896,7 @@ msgstr "Clé de sécurité ajoutée"
 msgid "Security key removed"
 msgstr "Clé de sécurité supprimée"
 
-#: lib/firefly_web/live/staff_live/security.ex:64
+#: lib/firefly_web/live/staff_live/security.ex:228
 #, elixir-autogen, elixir-format
 msgid "Security log"
 msgstr "Journal de sécurité"
@@ -2927,7 +2931,7 @@ msgstr "Authentification à deux facteurs activée"
 msgid "Upload quarantined by the virus scanner"
 msgstr "Fichier mis en quarantaine par l'antivirus"
 
-#: lib/firefly_web/live/staff_live/security.ex:82
+#: lib/firefly_web/live/staff_live/security.ex:246
 #, elixir-autogen, elixir-format
 msgid "Username or IP address"
 msgstr "Nom d'utilisateur ou adresse IP"
@@ -2936,3 +2940,119 @@ msgstr "Nom d'utilisateur ou adresse IP"
 #, elixir-autogen, elixir-format
 msgid "Wrong two-factor code"
 msgstr "Code à deux facteurs erroné"
+
+#: lib/firefly_web/live/staff_live/security.ex:71
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr "1 jour"
+
+#: lib/firefly_web/live/staff_live/security.ex:70
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr "1 heure"
+
+#: lib/firefly_web/live/staff_live/security.ex:72
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr "1 semaine"
+
+#: lib/firefly_web/live/staff_live/security.ex:73
+#, elixir-autogen, elixir-format
+msgid "30 days"
+msgstr "30 jours"
+
+#: lib/firefly_web/live/staff_live/security.ex:204
+#, elixir-autogen, elixir-format
+msgid "Addresses with points towards a ban on this server now, closest first."
+msgstr "Adresses ayant des points vers un bannissement sur ce serveur en ce moment, les plus proches d'abord."
+
+#: lib/firefly_web/live/staff_live/security.ex:150
+#, elixir-autogen, elixir-format
+msgid "Ban"
+msgstr "Bannir"
+
+#: lib/firefly_web/live/staff_live/security.ex:90
+#, elixir-autogen, elixir-format
+msgid "Banned %{ip}."
+msgstr "%{ip} bannie."
+
+#: lib/firefly_web/live/staff_live/security.ex:130
+#, elixir-autogen, elixir-format
+msgid "Banned addresses"
+msgstr "Adresses bannies"
+
+#: lib/firefly_web/live/staff_live/security.ex:132
+#, elixir-autogen, elixir-format
+msgid "Banning is off (Settings > Security > Banning): these bans aren't enforced."
+msgstr "Le bannissement est désactivé (Paramètres > Sécurité > Bannissement) : ces bannissements ne s'appliquent pas."
+
+#: lib/firefly_web/live/staff_live/security.ex:164
+#, elixir-autogen, elixir-format
+msgid "Bans"
+msgstr "Bannissements"
+
+#: lib/firefly_web/live/staff_live/security.ex:145
+#, elixir-autogen, elixir-format
+msgid "For"
+msgstr "Pendant"
+
+#: lib/firefly_web/live/staff_live/security.ex:141
+#, elixir-autogen, elixir-format
+msgid "IP address or range"
+msgstr "Adresse IP ou plage"
+
+#: lib/firefly_web/live/staff_live/security.ex:212
+#, elixir-autogen, elixir-format
+msgid "Jail"
+msgstr "Catégorie"
+
+#: lib/firefly_web/live/staff_live/security.ex:155
+#, elixir-autogen, elixir-format
+msgid "No address is banned."
+msgstr "Aucune adresse n'est bannie."
+
+#: lib/firefly_web/live/staff_live/security.ex:213
+#, elixir-autogen, elixir-format
+msgid "Points"
+msgstr "Points"
+
+#: lib/firefly_web/live/staff_live/security.ex:148
+#, elixir-autogen, elixir-format
+msgid "Reason"
+msgstr "Raison"
+
+#: lib/firefly_web/live/staff_live/security.ex:202
+#, elixir-autogen, elixir-format
+msgid "Recent offenders"
+msgstr "Contrevenants récents"
+
+#: lib/firefly_web/live/staff_live/security.ex:194
+#, elixir-autogen, elixir-format
+msgid "Unban"
+msgstr "Débannir"
+
+#: lib/firefly_web/live/staff_live/security.ex:192
+#, elixir-autogen, elixir-format
+msgid "Unban %{ip}"
+msgstr "Débannir %{ip}"
+
+#: lib/firefly_web/live/staff_live/security.ex:108
+#, elixir-autogen, elixir-format
+msgid "Unbanned %{ip}."
+msgstr "%{ip} débannie."
+
+#: lib/firefly_web/live/staff_live/security.ex:165
+#, elixir-autogen, elixir-format
+msgid "Until"
+msgstr "Jusqu'au"
+
+#: lib/firefly_web/live/staff_live/security.ex:68
+#: lib/firefly_web/live/staff_live/security.ex:183
+#, elixir-autogen, elixir-format
+msgid "Until unbanned"
+msgstr "Jusqu'au débannissement"
+
+#: lib/firefly_web/live/staff_live/security.ex:163
+#, elixir-autogen, elixir-format
+msgid "Why"
+msgstr "Pourquoi"
