@@ -112,6 +112,9 @@ defmodule Firefly.Generators do
     "1,5"
   ]
 
+  @doc "Numbers as text: huge, negative, signed, non-ASCII digits, floats..."
+  def numbers, do: @numbers
+
   @doc "One adversarial snippet: a mark, control character, traversal, number..."
   def adversarial_snippet do
     one_of([
