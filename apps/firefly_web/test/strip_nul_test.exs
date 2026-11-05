@@ -118,10 +118,10 @@ defmodule FireflyWeb.StripNulTest do
         """
       end
 
-      # A raw struct (no changeset): the NUL gets as far as Postgres.
+      # Text Postgres can't store (bytes that aren't UTF-8) gets as far as it.
       @impl true
       def handle_event("raw", _params, socket) do
-        Repo.insert!(%Category{title: <<"raw", 0>>})
+        Repo.insert!(%Category{title: <<"raw", 0xFF>>})
         {:noreply, socket}
       end
     end
@@ -134,7 +134,9 @@ defmodule FireflyWeb.StripNulTest do
     end
 
     test "a request Postgres refuses is a 400 with a translated message" do
-      error = assert_raise Postgrex.Error, fn -> Repo.insert!(%Category{title: <<"raw", 0>>}) end
+      error =
+        assert_raise Postgrex.Error, fn -> Repo.insert!(%Category{title: <<"raw", 0xFF>>}) end
+
       assert Text.unstorable?(error)
       assert Plug.Exception.status(error) == 400
 

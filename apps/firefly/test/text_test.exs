@@ -97,14 +97,23 @@ defmodule Firefly.TextTest do
       assert [%{body: "Body text"}] = thread.posts
     end
 
-    # The backstop: what skips the changesets (a raw struct) still reaches
-    # Postgres, which refuses it; the repo turns that into an error result.
-    test "Postgres refuses a NUL in a raw struct, and the repo returns an error" do
-      assert {:error, changeset} = Repo.insert(%Category{title: <<"raw", 0>>})
+    # Found by Firefly.BadgesPropertyTest: a badge granted with a reason
+    # holding NUL went in as a raw struct and Postgres refused it.
+    test "a raw struct's text is saved without the NUL" do
+      category = Repo.insert!(%Category{title: <<"raw", 0>>, slug: "raw-struct"})
+      assert Repo.get!(Category, category.id).title == "raw"
+    end
+
+    # The backstop: text Postgres still can't store (bytes that aren't UTF-8)
+    # reaches it, it refuses it, and the repo turns that into an error result.
+    test "Postgres refuses unstorable text, and the repo returns an error" do
+      assert {:error, changeset} = Repo.insert(%Category{title: <<"raw", 0xFF>>})
       assert {"contains characters that can't be stored", []} = changeset.errors[:base]
       assert changeset.action == :insert
 
-      error = assert_raise Postgrex.Error, fn -> Repo.insert!(%Category{title: <<"raw", 0>>}) end
+      error =
+        assert_raise Postgrex.Error, fn -> Repo.insert!(%Category{title: <<"raw", 0xFF>>}) end
+
       assert Text.unstorable?(error)
 
       # jsonb refuses "\u0000" with its own code.
