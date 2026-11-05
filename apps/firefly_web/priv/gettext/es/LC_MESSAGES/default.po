@@ -3056,3 +3056,8 @@ msgstr "Hasta que se desbloquee"
 #, elixir-autogen, elixir-format
 msgid "Why"
 msgstr "Por qué"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "Parte del texto contiene caracteres que no se pueden guardar. Elimínalos e inténtalo de nuevo."

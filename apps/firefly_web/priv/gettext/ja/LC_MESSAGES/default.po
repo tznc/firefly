@@ -3051,3 +3051,8 @@ msgstr "解除されるまで"
 #, elixir-autogen, elixir-format
 msgid "Why"
 msgstr "理由"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "テキストに保存できない文字が含まれています。取り除いてからもう一度お試しください。"

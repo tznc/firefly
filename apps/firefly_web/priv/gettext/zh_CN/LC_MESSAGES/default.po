@@ -3051,3 +3051,8 @@ msgstr "直到解封"
 #, elixir-autogen, elixir-format
 msgid "Why"
 msgstr "原因"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "部分文本包含无法保存的字符。请删除后重试。"

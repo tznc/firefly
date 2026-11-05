@@ -24,7 +24,7 @@ defmodule Firefly.Groups.Role do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset, warn: false
+  use Firefly.Changeset
   alias Firefly.Accounts.User
   alias Firefly.Groups.RoleMembership
 

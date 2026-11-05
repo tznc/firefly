@@ -6,7 +6,7 @@ defmodule Firefly.Discussion.Draft do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Category, Post, Thread}

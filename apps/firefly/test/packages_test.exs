@@ -369,16 +369,18 @@ defmodule Firefly.PackagesTest do
     ]
 
     # Found by Firefly.PackagesPropertyTest: Postgres can't store "\0" in
-    # JSON, so saving one raised instead of failing validation.
-    test "refuse a null character", %{admin: admin} do
+    # JSON, so saving one raised. It's stripped.
+    test "drop a null character", %{admin: admin} do
       package = install!(theme_zip(%{"settings" => @settings}), admin)
 
-      assert {:error, %{"font" => "can't contain a null character"}} =
+      assert {:ok, package} =
                Packages.update_settings(
                  package,
                  %{"radius" => "4", "accent" => "#0b6bcb", "font" => <<"a", 0>>},
                  admin
                )
+
+      assert package.settings["font"] == "a"
     end
 
     # Found by Firefly.PackagesPropertyTest: an unbalanced bracket left the

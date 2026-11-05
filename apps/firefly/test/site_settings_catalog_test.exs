@@ -128,17 +128,16 @@ defmodule Firefly.SiteSettingsCatalogTest do
 
   describe "import and export" do
     # Found by Firefly.SiteSettingsPropertyTest (in CI): Postgres can't store
-    # "\0" in text, so saving one raised instead of failing validation.
-    test "a value with a null character is refused", %{admin: admin} do
-      assert SiteSettings.update(
-               %{"title" => <<"a", 0>>, "reserved_usernames" => ["b", <<0>>]},
-               admin
-             ) ==
-               {:error,
-                %{
-                  "title" => "can't contain a null character",
-                  "reserved_usernames" => "can't contain a null character"
-                }}
+    # "\0" in text, so saving one raised. It's stripped.
+    test "a value with a null character is saved without it", %{admin: admin} do
+      assert {:ok, _changes} =
+               SiteSettings.update(
+                 %{"title" => <<"a", 0>>, "reserved_usernames" => ["b", <<"c", 0>>]},
+                 admin
+               )
+
+      assert SiteSettings.get("title") == "a"
+      assert SiteSettings.get("reserved_usernames") == ["b", "c"]
     end
 
     # Found by Firefly.SiteSettingsPropertyTest: values that aren't text or

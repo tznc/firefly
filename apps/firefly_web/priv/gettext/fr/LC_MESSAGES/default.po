@@ -3056,3 +3056,8 @@ msgstr "Jusqu'au débannissement"
 #, elixir-autogen, elixir-format
 msgid "Why"
 msgstr "Pourquoi"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "Une partie du texte contient des caractères qui ne peuvent pas être enregistrés. Retirez-les et réessayez."

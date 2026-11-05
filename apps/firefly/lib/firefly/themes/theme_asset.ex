@@ -6,7 +6,7 @@ defmodule Firefly.Themes.ThemeAsset do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   schema "theme_assets" do
     field(:name, :string)

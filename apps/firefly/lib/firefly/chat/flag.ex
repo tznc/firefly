@@ -7,7 +7,7 @@ defmodule Firefly.Chat.Flag do
   `"agreed"` (the message was deleted) or `"disagreed"`.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Chat.Message
