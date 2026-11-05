@@ -59,6 +59,25 @@ defmodule Firefly.ModerationPropertyTest do
   end
 
   # The words as WatchedWords holds them: those the changeset accepts.
+  # Whether masking `words` in `text` keeps its characters (graphemes)
+  # apart: every match starts and ends between characters, and no ■ joins
+  # what's next to it (a mark after a control character stands alone, but
+  # attaches to a ■). The same words as links give the matches.
+  defp whole_characters?(text, words) do
+    parts = WatchedWords.render_text(text, true, matchers(words, "link"))
+
+    masked =
+      Enum.map(parts, fn
+        {:text, t} -> t
+        {:link, t, _url} -> String.duplicate("■", String.length(t))
+      end)
+
+    lengths = Enum.map(masked, &String.length/1)
+
+    Enum.sum(lengths) == String.length(text) and
+      Enum.sum(lengths) == String.length(Enum.join(masked))
+  end
+
   defp matchers(words, action) do
     words
     |> Enum.map(
@@ -137,7 +156,13 @@ defmodule Firefly.ModerationPropertyTest do
         matchers = matchers(Enum.reject(words, & &1.regex), "censor")
         once = WatchedWords.censor(text, matchers)
         assert WatchedWords.censor(once, matchers) == once
-        assert String.length(once) == String.length(text)
+
+        # The mask has a ■ per character matched, so the count of
+        # characters holds unless a match falls inside a character (a
+        # combining mark, a zero-width joiner in an emoji sequence, half a
+        # flag) or a ■ joins a neighbour (see whole_characters?/2).
+        if whole_characters?(text, Enum.reject(words, & &1.regex)),
+          do: assert(String.length(once) == String.length(text))
       end
     end
 
