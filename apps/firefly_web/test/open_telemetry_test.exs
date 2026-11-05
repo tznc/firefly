@@ -70,8 +70,11 @@ defmodule FireflyWeb.OpenTelemetryTest do
 
       spans = spans(&(span(&1, :name) == "test"))
       root = Enum.find(spans, &(span(&1, :name) == "test"))
-      post = Enum.find(spans, &(span(&1, :name) == "firefly.discussion.create_post"))
-      dispatch = Enum.find(spans, &(span(&1, :name) == "firefly.notifications.dispatch"))
+      # Earlier tests leave their own spans in the exporter's queue; only this trace counts.
+      in_trace = &(span(&1, :trace_id) == span(root, :trace_id))
+      named = fn name -> Enum.find(spans, &(in_trace.(&1) and span(&1, :name) == name)) end
+      post = named.("firefly.discussion.create_post")
+      dispatch = named.("firefly.notifications.dispatch")
 
       assert span(post, :parent_span_id) == span(root, :span_id)
       assert attribute(post, "firefly.result") == "ok"
