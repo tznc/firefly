@@ -550,8 +550,14 @@ defmodule Firefly.Generators do
         adversarial_text(4),
         member_of(@numbers)
       ]),
+      # Objects from key/value pairs, a repeated key keeping its last value:
+      # map_of/3 needs distinct keys, and small odd strings are mostly "",
+      # so it gave up (TooManyDuplicatesError) on some seeds.
       fn child ->
-        one_of([list_of(child, max_length: 4), map_of(adversarial_text(3), child, max_length: 4)])
+        one_of([
+          list_of(child, max_length: 4),
+          map(list_of(tuple({adversarial_text(3), child}), max_length: 4), &Map.new/1)
+        ])
       end
     )
     |> scale(&min(&1, 12))
