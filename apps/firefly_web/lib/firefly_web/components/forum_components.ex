@@ -49,10 +49,8 @@ defmodule FireflyWeb.ForumComponents do
   def category_color(%{color: "#" <> _ = color}), do: color
 
   def category_color(category) do
-    hue =
-      for(<<num <- :crypto.hash(:sha, category.slug)>>, do: num)
-      |> Enum.sum()
-      |> rem(360)
+    # A stable hash, not a cryptographic one: it only spreads the hues.
+    hue = :erlang.phash2(category.slug, 360)
 
     "oklch(55% 0.13 #{hue})"
   end
@@ -806,6 +804,8 @@ defmodule FireflyWeb.ForumComponents do
     default: false,
     doc: "the hook reports clicks on outbound links (see `FireflyWeb.AnalyticsController`)"
 
+  # Sobelow: Markdown.render/3 returns HTML from MDEx's allow-list sanitizer.
+  # sobelow_skip ["XSS.Raw"]
   def markdown(assigns) do
     ~H"""
     <div
@@ -859,6 +859,8 @@ defmodule FireflyWeb.ForumComponents do
     """
   end
 
+  # Sobelow: OEmbed.to_html/1 escapes the photo URL and scrubs provider HTML.
+  # sobelow_skip ["XSS.Raw"]
   defp render_oembed(oembed), do: Phoenix.HTML.raw(Firefly.Rendering.OEmbed.to_html(oembed))
 
   @doc """

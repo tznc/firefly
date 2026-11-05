@@ -169,6 +169,8 @@ defmodule FireflyWeb.StaffLive.Settings do
     end
   end
 
+  # Sobelow: LiveView's own temporary file for the upload.
+  # sobelow_skip ["Traversal.FileModule"]
   defp settings_event("import", _params, socket) do
     text =
       consume_uploaded_entries(socket, :import, fn %{path: path}, _entry ->
@@ -225,6 +227,8 @@ defmodule FireflyWeb.StaffLive.Settings do
   end
 
   # Form fields are atoms; keys come from the definitions, never from input.
+  # Sobelow: keys come from the setting definitions, a fixed set.
+  # sobelow_skip ["DOS.StringToAtom"]
   defp field(key), do: String.to_atom(key)
 
   defp input_type(%{secret: true}), do: "password"

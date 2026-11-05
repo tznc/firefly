@@ -30,6 +30,8 @@ defmodule FireflyImport.SQL do
   end
 
   @doc "A result's rows as maps with atom keys (the source's column names)."
+  # Sobelow: column names of the importers' own fixed queries against the source database.
+  # sobelow_skip ["DOS.StringToAtom"]
   def maps(%{columns: columns, rows: rows}) do
     keys = Enum.map(columns, &String.to_atom/1)
     Enum.map(rows || [], &Map.new(Enum.zip(keys, &1)))

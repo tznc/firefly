@@ -269,6 +269,8 @@ defmodule FireflyPlugins.Runtime do
   The compiled module and its engine, compiled once per node. Raises if the
   `.wasm` doesn't match its committed checksum.
   """
+  # Sobelow: a fixed path inside the release, checked against its committed SHA-256.
+  # sobelow_skip ["Traversal.FileModule"]
   def compiled do
     case :persistent_term.get(@module_key, nil) do
       nil ->
@@ -286,6 +288,8 @@ defmodule FireflyPlugins.Runtime do
   end
 
   @doc "The runtime's SHA-256, as committed next to it."
+  # Sobelow: a fixed path inside the release.
+  # sobelow_skip ["Traversal.FileModule"]
   def checksum do
     path = Application.app_dir(:firefly_plugins, ["priv", @wasm_path <> ".sha256"])
     path |> File.read!() |> String.split() |> hd()

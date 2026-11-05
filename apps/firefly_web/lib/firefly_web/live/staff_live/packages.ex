@@ -60,6 +60,8 @@ defmodule FireflyWeb.StaffLive.Packages do
 
   defp package_event("validate", _params, socket), do: {:noreply, socket}
 
+  # Sobelow: LiveView's own temporary file for the upload.
+  # sobelow_skip ["Traversal.FileModule"]
   defp package_event("upload", _params, socket) do
     case consume_uploaded_entries(socket, :package, fn %{path: path}, _entry ->
            {:ok, Packages.read(File.read!(path))}

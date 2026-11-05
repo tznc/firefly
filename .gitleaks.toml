@@ -1,0 +1,27 @@
+# gitleaks configuration: the default rules, minus findings reviewed as not
+# secret. CI scans the whole history (see the Security job in
+# .github/workflows/ci.yml); add an entry here only with a reason.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Test fixtures: throwaway keys generated for the SAML tests"
+paths = ['''^apps/firefly/test/fixtures/saml/[^/]+\.pem$''']
+
+[[allowlists]]
+description = "A sample signed token in a URL test, not a credential"
+paths = ['''^apps/firefly_web/test/urls_test\.exs$''']
+regexes = ['''SFMyNTY\.g2gDYQFuBgB-ZXhhbXBsZQ\.a_b-c''']
+
+[[allowlists]]
+description = """
+Development cookie-signing keys committed with the original Phoenix
+generators: the dev endpoint's key (config/dev.exs, formerly config.exs), the
+2017 UI prototype's, and the 2017 config/prod.secret.exs one, which was
+deleted long ago. Production reads FIREFLY_SECRET_KEY_BASE from the
+environment (config/runtime.exs) and never used any of these."""
+regexes = [
+  '''Q1bBtoEs8F2\+MsssVU8zHXvhJBVFDI/4EFEINldDXBlVsBkNr30gi4WIGNwds\+YO''',
+  '''wnsNTUQ4XZU2JFWDXcFkpukz3oNxZMXa1/RHlcOcin6BnAxLMYbTmm/L85ODpUhn''',
+  '''WWB1EdJl5bJrrhAxdCuXva0dk1gb6RRGr8jqj6x7ozLDzZjB\+7VxQgg49K6jOZI3''',
+]

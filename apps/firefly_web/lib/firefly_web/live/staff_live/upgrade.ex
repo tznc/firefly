@@ -44,6 +44,8 @@ defmodule FireflyWeb.StaffLive.Upgrade do
   end
 
   @impl true
+  # Sobelow: release notes are rendered by Markdown.render/1, which sanitizes.
+  # sobelow_skip ["XSS.Raw"]
   def render(assigns) do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)} staff>

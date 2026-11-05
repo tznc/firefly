@@ -179,6 +179,9 @@ defmodule FireflyWeb.SEO do
   @doc "Renders the page's tags; see the moduledoc. `seo` may be nil (the defaults)."
   attr :seo, :any, default: nil
 
+  # Sobelow: JSON-LD encoded with Jason's escape: :html_safe, so it can't close the script
+  # element.
+  # sobelow_skip ["XSS.Raw"]
   def tags(assigns) do
     assigns = assign(assigns, :seo, defaults(assigns.seo || %{}))
 
