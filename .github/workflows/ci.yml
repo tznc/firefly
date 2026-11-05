@@ -238,11 +238,19 @@ jobs:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
 
-      - name: Cache deps
+      # Mix compiles the dependencies before running any project task
+      # (deps.audit, sobelow), and Vix builds against the system libvips.
+      - name: Install libvips
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvips-dev
+
+      - name: Cache deps and _build
         uses: actions/cache@v6
         with:
-          path: deps
-          key: security-deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+          path: |
+            deps
+            _build
+          key: security-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('mix.lock') }}
+          restore-keys: security-${{ runner.os }}-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
       - run: mix deps.get
 
