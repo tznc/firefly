@@ -33,6 +33,7 @@ defmodule Firefly.Moderation.WatchedWord do
   def changeset(%__MODULE__{} = word, attrs) do
     word
     |> cast(attrs, [:word, :action, :regex, :replacement])
+    |> refuse_invalid_text([:word, :replacement])
     |> update_change(:word, &String.trim/1)
     |> update_change(:replacement, &String.trim/1)
     |> validate_required([:word, :action])
@@ -45,6 +46,22 @@ defmodule Firefly.Moderation.WatchedWord do
       name: :watched_words_action_word_index,
       message: "is already watched for this action"
     )
+  end
+
+  # Text that isn't UTF-8 is refused before the length checks, which
+  # raise on it.
+  defp refuse_invalid_text(changeset, fields) do
+    Enum.reduce(fields, changeset, fn field, changeset ->
+      case get_change(changeset, field) do
+        text when is_binary(text) ->
+          if String.valid?(text),
+            do: changeset,
+            else: changeset |> delete_change(field) |> add_error(field, "is not valid text")
+
+        _none ->
+          changeset
+      end
+    end)
   end
 
   defp validate_pattern(changeset) do
