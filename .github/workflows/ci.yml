@@ -272,8 +272,10 @@ jobs:
             echo "::endgroup::"
           done
 
-      # Committed secrets, in every commit (reviewed exceptions: .gitleaks.toml).
+      # Committed secrets, in every commit of this branch's history (reviewed
+      # exceptions: .gitleaks.toml). HEAD only: the full fetch also brings
+      # other branches, whose exceptions live on those branches.
       - name: gitleaks
         run: >-
           docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1
-          git --redact --no-banner --exit-code 1 .
+          git --redact --no-banner --exit-code 1 --log-opts=HEAD .
