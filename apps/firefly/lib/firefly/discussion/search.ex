@@ -80,8 +80,11 @@ defmodule Firefly.Discussion.Search do
   """
   @spec parse(String.t() | nil, map) :: t
   def parse(query, controls \\ %{}) do
+    controls = Map.new(controls, fn {key, value} -> {key, clean(value)} end)
+
     {filters, words} =
       (query || "")
+      |> clean()
       |> String.split()
       |> Enum.split_with(
         &Regex.match?(~r/^(?:(?:category|tag|order|status):.|in:title$|@.)/i, &1)
@@ -91,6 +94,12 @@ defmodule Firefly.Discussion.Search do
     |> Enum.reduce(%__MODULE__{terms: Enum.join(words, " ")}, &put_filter/2)
     |> override(controls)
   end
+
+  # Postgres refuses NUL and invalid UTF-8 in a query: anyone can type them.
+  defp clean(text) when is_binary(text),
+    do: text |> String.replace_invalid("") |> String.replace(<<0>>, "")
+
+  defp clean(other), do: other
 
   defp put_filter("@" <> user, search), do: %{search | user: user}
 

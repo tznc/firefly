@@ -126,6 +126,13 @@ defmodule Firefly.Accounts do
 
   @doc "Up to `limit` users whose username starts with `prefix` (any case), shortest first."
   def search_usernames(prefix, limit \\ 6) do
+    # Postgres can't take NUL or invalid UTF-8, and no username has them.
+    if String.valid?(prefix) and not String.contains?(prefix, <<0>>),
+      do: do_search_usernames(prefix, limit),
+      else: []
+  end
+
+  defp do_search_usernames(prefix, limit) do
     pattern = String.replace(String.downcase(prefix), ~r/[\\%_]/, "\\\\\\0") <> "%"
 
     # `lower(username) LIKE` rather than ILIKE, so it can use the index.
