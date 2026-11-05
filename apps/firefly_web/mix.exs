@@ -63,10 +63,12 @@ defmodule FireflyWeb.MixProject do
       {:opentelemetry_bandit, "~> 0.3.0"},
       {:opentelemetry_phoenix, "~> 2.0"},
       {:opentelemetry_ecto, "~> 1.2"},
-      # Metrics and logs over OTLP are still experimental in the Erlang SDK:
-      # pinned, and only used with FIREFLY_OTEL_METRICS / FIREFLY_OTEL_LOGS.
+      # Metrics over OTLP, from the same Telemetry.Metrics definitions as
+      # Prometheus (with FIREFLY_OTEL_METRICS).
+      {:otel_metric_exporter, "~> 0.4.4"},
+      # Logs over OTLP are still experimental in the Erlang SDK: pinned, and
+      # only used with FIREFLY_OTEL_LOGS.
       {:opentelemetry_experimental, "== 0.6.0"},
-      {:opentelemetry_api_experimental, "== 0.6.0"},
       {:jason, "~> 1.4"},
       {:gettext, "~> 1.0"},
       # The optional raw-records admin at /staff/db (see FireflyWeb.Admin).

@@ -166,7 +166,19 @@ defmodule Firefly.Notifications.Notification do
       :conversation_id,
       :chat_channel_id
     ])
+    # Subjects quote titles (a thread's, up to 255 characters): cut to
+    # what the column holds, rather than failing the like, move or mention.
+    |> update_change(:subject, &truncate(&1, 255))
     |> validate_required([:user_id, :body, :subject, :url])
     |> validate_inclusion(:kind, @kinds)
+  end
+
+  # By code point, as Postgres counts (graphemes can hold several).
+  defp truncate(text, max) do
+    codepoints = String.codepoints(text)
+
+    if length(codepoints) > max,
+      do: Enum.join(Enum.take(codepoints, max - 1)) <> "…",
+      else: text
   end
 end

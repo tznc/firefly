@@ -318,4 +318,47 @@ defmodule Firefly.MessagesTest do
     assert Notifications.notifications_for(carol) == []
     assert Discussion.participating_threads(bob) == []
   end
+
+  # Found by Firefly.MessagingPropertyTest: a group member who had left a
+  # conversation sent to the group could still reply from its inbox, but
+  # joining back in inserted a second participant row and raised.
+  test "a group member who left a group conversation can reply and is back in", %{
+    alice: alice,
+    bob: bob
+  } do
+    admin = Firefly.Fixtures.admin_fixture()
+    {:ok, team} = Groups.create_group(%{name: "team"}, admin)
+
+    {:ok, team} =
+      Groups.update_settings(team, %{visibility: "public", messageable: "everyone"}, admin)
+
+    {:ok, _} = Groups.add_member(team, bob.username, admin)
+
+    {:ok, conversation} =
+      Messaging.start_conversation(alice, %{
+        "title" => "For the team",
+        "body" => "Hello team.",
+        "recipients" => "team, bob"
+      })
+
+    :ok = Messaging.leave(conversation, bob)
+    refute Messaging.participant?(conversation, bob)
+    assert {:ok, _} = Messaging.reply(conversation, bob, %{"body" => "Back again."})
+    assert Messaging.participant?(conversation, bob)
+  end
+
+  # Found by Firefly.MessagingPropertyTest: Postgres refused a recipient
+  # name holding NUL, and starting the conversation raised.
+  test "a recipient name with NUL is an unknown user, not a crash", %{alice: alice} do
+    assert {:error, changeset} =
+             Messaging.start_conversation(alice, %{
+               "title" => "A fine title",
+               "body" => "Hello there.",
+               "recipients" => <<"bob", 0>>
+             })
+
+    assert changeset.errors[:recipients]
+    assert Accounts.users_by_username([<<"bob", 0>>, <<0xFF>>]) == %{}
+    assert Groups.by_names([<<"team", 0>>]) == %{}
+  end
 end
