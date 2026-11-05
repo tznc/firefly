@@ -294,7 +294,7 @@ defmodule Firefly.Badges do
   @doc """
   Grants `badge` to `user` as `admin`, with an optional `reason`
   (staff-logged). Errors: `:disabled`, `:already_granted` (a badge granted
-  once).
+  once, or a multiple one already granted by hand: those are once per post).
   """
   def grant(%Badge{} = badge, %User{} = user, %User{} = admin, reason \\ nil) do
     result =
@@ -305,7 +305,7 @@ defmodule Firefly.Badges do
           not badge.enabled ->
             {:error, :disabled}
 
-          not badge.multiple_grant and holds?(user, badge) ->
+          granted_by_hand?(badge, user) ->
             {:error, :already_granted}
 
           true ->
@@ -332,6 +332,19 @@ defmodule Firefly.Badges do
       {:ok, user_badge}
     end
   end
+
+  # A badge granted once: whether `user` holds it. A multiple one is
+  # granted once per post (the unique index), so by hand, with no post,
+  # only once too.
+  defp granted_by_hand?(%Badge{multiple_grant: false} = badge, user), do: holds?(user, badge)
+
+  defp granted_by_hand?(%Badge{id: badge_id}, %User{id: user_id}),
+    do:
+      Repo.exists?(
+        from(ub in UserBadge,
+          where: ub.user_id == ^user_id and ub.badge_id == ^badge_id and is_nil(ub.post_id)
+        )
+      )
 
   defp blank_to_nil(nil), do: nil
 
