@@ -1,6 +1,9 @@
 defmodule FireflyWeb.ReviewTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Groups, Notifications, Repo}
   alias Firefly.Moderation.{Flags, Penalties, Review}
@@ -105,7 +108,7 @@ defmodule FireflyWeb.ReviewTest do
 
       refute_received {:post_deleted, _}
       assert Notifications.notifications_for(author) == []
-      assert_no_emails_delivered()
+      assert_no_email_sent()
       refute Repo.get!(User, author.id).silenced_until
       refute Repo.get!(Post, reply.id).deleted_at
 

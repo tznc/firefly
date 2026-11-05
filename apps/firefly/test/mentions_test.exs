@@ -1,6 +1,9 @@
 defmodule Firefly.MentionsTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Notifications}
   alias Firefly.Discussion.Mentions
@@ -172,8 +175,8 @@ defmodule Firefly.MentionsTest do
       assert notification.subject == ~s(@author mentioned you in "OTP")
       assert notification.emailed_at
 
-      assert_email_delivered_with(
-        to: [nil: "bob@example.com"],
+      assert_email_sent(
+        to: "bob@example.com",
         subject: "@author mentioned you on Firefly"
       )
 

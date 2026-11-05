@@ -1,6 +1,9 @@
 defmodule FireflyWeb.SiteSettingsTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
   import Firefly.DataCase, only: [errors_on: 1]
@@ -320,7 +323,7 @@ defmodule FireflyWeb.SiteSettingsTest do
       :sys.get_state(Notifications)
 
       assert [%{kind: "mentioned"}] = Notifications.notifications_for(trusted)
-      assert_no_emails_delivered()
+      assert_no_email_sent()
 
       set(admin, %{"require_email_confirmation" => "true"})
       assert Posting.check(trusted) == {:error, :unconfirmed}

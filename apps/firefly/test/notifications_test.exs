@@ -1,6 +1,9 @@
 defmodule Firefly.NotificationsTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Notifications}
   alias Firefly.Notifications.Subscriptions
@@ -88,7 +91,7 @@ defmodule Firefly.NotificationsTest do
     assert notification.kind == "new_post"
     assert notification.subject == ~s(@reader replied in "OTP")
     assert notification.emailed_at
-    assert_email_delivered_with(to: [nil: "author@example.com"])
+    assert_email_sent(to: "author@example.com")
 
     assert notifications(reader) == []
   end
@@ -98,7 +101,7 @@ defmodule Firefly.NotificationsTest do
     reply(thread, author, "thanks")
 
     assert [%{kind: "new_post", emailed_at: nil}] = notifications(reader)
-    refute_email_delivered_with(to: [nil: "reader@example.com"])
+    refute_email_sent(to: "reader@example.com")
   end
 
   test "normal and muted aren't notified", %{author: author, reader: reader, thread: thread} do
@@ -135,7 +138,7 @@ defmodule Firefly.NotificationsTest do
     {:ok, _} = Accounts.update_preferences(author, %{email_notifications: false})
     reply(thread, reader, "one")
     assert [%{emailed_at: nil}] = notifications(author)
-    assert_no_emails_delivered()
+    assert_no_email_sent()
   end
 
   test "category watchers hear about new threads and their posts", %{
@@ -203,7 +206,7 @@ defmodule Firefly.NotificationsTest do
     flush()
 
     assert notifications(author) == []
-    assert_no_emails_delivered()
+    assert_no_email_sent()
   end
 
   test "new threads email watchers as a new thread, not a reply", %{
@@ -215,8 +218,8 @@ defmodule Firefly.NotificationsTest do
     {:ok, _} = Discussion.create_thread(category, author, %{title: "Fresh", body: "Hi"})
     flush()
 
-    assert_email_delivered_with(
-      to: [nil: "reader@example.com"],
+    assert_email_sent(
+      to: "reader@example.com",
       subject: "A new thread was started in a category you are watching on Firefly",
       text_body: ~r/A new Firefly thread was started: Fresh.*because you watch its category/s
     )
@@ -237,7 +240,7 @@ defmodule Firefly.NotificationsTest do
 
     assert MapSet.member?(Discussion.users_who_read(thread, post), author.id)
     assert notifications(author) == []
-    assert_no_emails_delivered()
+    assert_no_email_sent()
   end
 
   test "a parent category's level applies to its subcategories' threads", %{

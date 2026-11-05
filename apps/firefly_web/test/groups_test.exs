@@ -1,6 +1,9 @@
 defmodule FireflyWeb.GroupsTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
   import Phoenix.LiveViewTest, only: [live: 2, render_click: 3]
@@ -342,7 +345,7 @@ defmodule FireflyWeb.GroupsTest do
 
       assert [%{subject: subject}] = kinds(owner, "group_message")
       assert subject =~ "@mia messaged @team"
-      assert_delivered_email_matches(%{to: [{_, "user" <> _}]})
+      assert_received {:email, %{to: [{_, "user" <> _}]}}
       assert [_] = kinds(tracker, "group_message")
       assert kinds(quiet, "group_message") == []
 

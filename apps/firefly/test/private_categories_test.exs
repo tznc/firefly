@@ -1,7 +1,10 @@
 defmodule Firefly.PrivateCategoriesTest do
   @moduledoc "Categories restricted to groups: no path may leak their threads."
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Groups, Messaging, Notifications, Repo}
   alias Firefly.Accounts.AccountExport
@@ -217,7 +220,7 @@ defmodule Firefly.PrivateCategoriesTest do
       assert [%{kind: "new_post"}, %{kind: "new_thread"}] =
                Notifications.notifications_for(reader)
 
-      refute_email_delivered_with(to: [nil: "outsider@example.com"])
+      refute_email_sent(to: "outsider@example.com")
     end
 
     test "a mention doesn't notify someone who can't read it", ctx do

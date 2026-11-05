@@ -1,7 +1,10 @@
 defmodule Firefly.WatchedWordsTest do
   use Firefly.DataCase
   # A silenced author is emailed.
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Messaging}
   alias Firefly.Accounts.User

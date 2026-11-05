@@ -87,15 +87,29 @@ defmodule FireflyWeb.StaffLive.Emails do
         :ok ->
           {:noreply,
            socket
-           |> put_flash(:info, gettext("Test email sent to %{to}.", to: String.trim(to)))
+           |> put_flash(
+             :info,
+             gettext("Test email sent to %{to} with %{adapter}.",
+               to: String.trim(to),
+               adapter: Firefly.Mailer.adapter_label()
+             )
+           )
            |> assign(:counts, EmailLog.last_day_counts())}
 
         {:error, :invalid_address} ->
           {:noreply, put_flash(socket, :error, gettext("That isn't an email address."))}
 
-        {:error, _error} ->
+        {:error, error} ->
           {:noreply,
-           put_flash(socket, :error, gettext("It couldn't be sent: see the log for why."))}
+           socket
+           |> put_flash(
+             :error,
+             gettext("%{adapter} couldn't send it: %{error}",
+               adapter: Firefly.Mailer.adapter_label(),
+               error: EmailLog.describe(error)
+             )
+           )
+           |> assign(:counts, EmailLog.last_day_counts())}
       end
     else
       {:noreply, put_flash(socket, :error, denied_message(admin))}
@@ -194,6 +208,9 @@ defmodule FireflyWeb.StaffLive.Emails do
         <div class="card-body gap-3">
           <p class="text-sm text-base-content/70">
             {gettext("Sends a short email through the configured mailer, to check delivery works. It shows in the log.")}
+          </p>
+          <p id="mail-adapter" class="text-sm">
+            {gettext("Mailer: %{adapter}", adapter: Firefly.Mailer.adapter_label())}
           </p>
           <div class="flex flex-wrap items-end gap-2">
             <.input name="to" type="email" value={@current_user.email || ""} label={gettext("Send to")} />

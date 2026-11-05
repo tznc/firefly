@@ -134,6 +134,131 @@ if config_env() != :test do
     region: System.get_env("FIREFLY_AWS_S3_REGION")
 end
 
+# Outbound email (see Firefly.Mailer): FIREFLY_MAIL_ADAPTER picks the adapter,
+# each with its own variables. Production refuses to start without one;
+# development keeps mail in memory, the tests in the test adapter.
+mail_adapter = System.get_env("FIREFLY_MAIL_ADAPTER")
+
+if config_env() != :test and mail_adapter do
+  required = fn name ->
+    System.get_env(name) ||
+      raise "environment variable #{name} is missing (needed with FIREFLY_MAIL_ADAPTER=#{mail_adapter})"
+  end
+
+  choice = fn name, default, choices ->
+    value = System.get_env(name, default)
+
+    Map.get(choices, value) ||
+      raise "#{name}=#{value} isn't one of #{Enum.join(Map.keys(choices), ", ")}"
+  end
+
+  mail =
+    case mail_adapter do
+      "smtp" ->
+        relay = required.("FIREFLY_SMTP_RELAY")
+        ssl? = System.get_env("FIREFLY_SMTP_SSL") in ~w(true 1)
+
+        # Certificates are checked unless FIREFLY_SMTP_VERIFY=false: against the
+        # system's CAs, or FIREFLY_SMTP_CA_CERT_FILE.
+        tls_options =
+          if System.get_env("FIREFLY_SMTP_VERIFY") in ~w(false 0) do
+            [verify: :verify_none]
+          else
+            cas =
+              if file = System.get_env("FIREFLY_SMTP_CA_CERT_FILE"),
+                do: [cacertfile: file],
+                else: [cacerts: :public_key.cacerts_get()]
+
+            [
+              verify: :verify_peer,
+              versions: [:"tlsv1.2", :"tlsv1.3"],
+              server_name_indication: String.to_charlist(relay),
+              depth: 99,
+              customize_hostname_check: [
+                match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+              ]
+            ] ++ cas
+          end
+
+        modes = %{"always" => :always, "if_available" => :if_available, "never" => :never}
+        default_port = if ssl?, do: "465", else: "587"
+
+        [
+          adapter: Swoosh.Adapters.SMTP,
+          relay: relay,
+          port: String.to_integer(System.get_env("FIREFLY_SMTP_PORT", default_port)),
+          username: System.get_env("FIREFLY_SMTP_USERNAME"),
+          password: System.get_env("FIREFLY_SMTP_PASSWORD"),
+          # Implicit TLS (FIREFLY_SMTP_SSL, port 465), else STARTTLS.
+          ssl: ssl?,
+          tls: if(ssl?, do: :never, else: choice.("FIREFLY_SMTP_TLS", "always", modes)),
+          auth: choice.("FIREFLY_SMTP_AUTH", "if_available", modes),
+          retries: String.to_integer(System.get_env("FIREFLY_SMTP_RETRIES", "2")),
+          no_mx_lookups: true,
+          tls_options: tls_options,
+          sockopts: if(ssl?, do: tls_options, else: [])
+        ]
+
+      "ses" ->
+        # Static credentials (an IAM user's, or temporary ones with
+        # AWS_SESSION_TOKEN): Swoosh's SES adapter doesn't fetch instance or
+        # task role credentials itself.
+        [
+          adapter: Swoosh.Adapters.AmazonSES,
+          region:
+            System.get_env("FIREFLY_SES_REGION") || System.get_env("AWS_REGION") ||
+              required.("AWS_DEFAULT_REGION"),
+          access_key: required.("AWS_ACCESS_KEY_ID"),
+          secret: required.("AWS_SECRET_ACCESS_KEY"),
+          provider_options:
+            Map.reject(
+              %{
+                security_token: System.get_env("AWS_SESSION_TOKEN"),
+                configuration_set_name: System.get_env("FIREFLY_SES_CONFIGURATION_SET")
+              },
+              fn {_key, value} -> is_nil(value) end
+            )
+        ]
+
+      "sendgrid" ->
+        [adapter: Swoosh.Adapters.Sendgrid, api_key: required.("FIREFLY_SENDGRID_API_KEY")]
+
+      "mailgun" ->
+        [
+          adapter: Swoosh.Adapters.Mailgun,
+          api_key: required.("FIREFLY_MAILGUN_API_KEY"),
+          domain: required.("FIREFLY_MAILGUN_DOMAIN"),
+          # EU domains: https://api.eu.mailgun.net/v3
+          base_url: System.get_env("FIREFLY_MAILGUN_BASE_URL")
+        ]
+
+      "postmark" ->
+        stream = System.get_env("FIREFLY_POSTMARK_MESSAGE_STREAM")
+
+        [
+          adapter: Swoosh.Adapters.Postmark,
+          api_key: required.("FIREFLY_POSTMARK_API_KEY"),
+          provider_options: if(stream, do: %{message_stream: stream}, else: %{})
+        ]
+
+      "local" ->
+        [adapter: Swoosh.Adapters.Local]
+
+      other ->
+        raise "FIREFLY_MAIL_ADAPTER=#{other} isn't one of smtp, ses, sendgrid, mailgun, postmark, local"
+    end
+
+  config :firefly, Firefly.Mailer, mail
+end
+
+if config_env() == :prod and is_nil(mail_adapter) do
+  raise """
+  no outbound email is configured: set FIREFLY_MAIL_ADAPTER to smtp, ses,
+  sendgrid, mailgun, postmark or local, with that adapter's variables (see
+  "Email" in README.md).
+  """
+end
+
 # Prometheus metrics (see FireflyWeb.Metrics): off unless a port of their own
 # or a bearer token for /metrics on the main endpoint is set.
 if port = System.get_env("FIREFLY_METRICS_PORT") do
@@ -307,10 +432,6 @@ if config_env() == :prod do
     url: [host: host, port: 443, scheme: "https"],
     http: [ip: ip, port: port],
     secret_key_base: secret_key_base
-
-  config :firefly, Firefly.Mailer,
-    adapter: Bamboo.SendGridAdapter,
-    api_key: System.get_env("FIREFLY_SENDGRID_API_KEY")
 
   config :firefly, :email,
     from: {"Firefly", System.get_env("FIREFLY_EMAIL_FROM", "noreply@#{host}")},

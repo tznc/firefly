@@ -1,7 +1,10 @@
 defmodule FireflyWeb.MessagesLiveTest do
   use FireflyWeb.ConnCase
   # Emails go to the test process (they're tested in MessagesTest).
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   require Ecto.Query
 

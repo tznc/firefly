@@ -69,7 +69,13 @@ defmodule Firefly.MixProject do
       {:wax_, "~> 0.7.0"},
       {:mdex, "~> 0.14"},
       {:scrivener_ecto, "~> 3.1"},
-      {:bamboo, "~> 2.5"},
+      # Email (see Firefly.Mailer): Swoosh, with gen_smtp for SMTP (and the
+      # MIME Amazon SES sends); its HTTP APIs (SendGrid, Mailgun, Postmark,
+      # SES) go through Req, below.
+      {:swoosh, "~> 1.29"},
+      {:gen_smtp, "~> 1.3"},
+      # The Mailgun adapter's form bodies.
+      {:multipart, "~> 0.6.1"},
       {:ecto_autoslug_field, "~> 3.1"},
       {:bcrypt_elixir, "~> 3.3"},
       {:exgravatar, "~> 2.0"},

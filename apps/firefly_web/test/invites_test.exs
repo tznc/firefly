@@ -1,6 +1,9 @@
 defmodule FireflyWeb.InvitesTest do
   use FireflyWeb.ConnCase, async: false
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Groups, Repo, SiteSettings}
   alias Firefly.Accounts.{Invites, User}

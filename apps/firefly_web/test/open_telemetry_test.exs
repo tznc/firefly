@@ -18,6 +18,8 @@ defmodule FireflyWeb.OpenTelemetryTest do
     setup do
       # Ended spans come here when flushed (see spans/0); once this test's
       # process is gone, sending them is a no-op.
+      # Spans other tests left unexported go to the old exporter first.
+      :otel_tracer_provider.force_flush()
       :otel_batch_processor.set_exporter(:otel_exporter_pid, self())
       FireflyWeb.OpenTelemetry.instrument()
       on_exit(&uninstrument/0)

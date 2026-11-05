@@ -56,6 +56,9 @@ defmodule FireflyWeb.MetricsTest do
       :telemetry.execute([:vm, :system_counts], %{process_count: 42, port_count: 3}, %{})
       Firefly.Telemetry.measure_queues()
 
+      {:ok, _} =
+        Firefly.Mailer.deliver_now(Firefly.Notifications.Emails.test_email("ops@example.com"))
+
       Firefly.Telemetry.execute([:firefly, :cluster, :node], %{count: 1, connected: 2}, %{
         event: :up,
         node: :"firefly@10.0.0.8"
@@ -75,6 +78,7 @@ defmodule FireflyWeb.MetricsTest do
       node = ~s{node="#{node()}"}
       assert body =~ ~s|vm_memory_total{#{node}} 1024|
       assert body =~ ~s|vm_system_counts_process_count{#{node}} 42|
+      assert body =~ ~s|firefly_mailer_deliver_stop_count{adapter="test",#{node},result="sent"} 1|
       assert body =~ ~s|firefly_queue_depth{#{node},queue="plugin_events"} 0|
       assert body =~ ~s|firefly_queue_depth{#{node},queue="webhooks"} 0|
       assert body =~ "firefly_repo_query_total_time_microseconds_bucket"

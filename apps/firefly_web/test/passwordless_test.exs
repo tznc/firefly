@@ -1,6 +1,9 @@
 defmodule FireflyWeb.PasswordlessTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Phoenix.LiveViewTest, only: [live: 2, render_hook: 3, assert_reply: 2, render: 1]
   require Phoenix.LiveViewTest
@@ -145,7 +148,7 @@ defmodule FireflyWeb.PasswordlessTest do
     end
 
     defp delivered_token do
-      assert_received {:delivered_email, email}
+      assert_received {:email, email}
       [_, token] = Regex.run(~r{/login/email/([A-Za-z0-9_-]+)}, email.text_body)
       {email, token}
     end
@@ -154,7 +157,7 @@ defmodule FireflyWeb.PasswordlessTest do
       user = user_fixture(%{email: "Grace@Example.com"})
       request_link(" grace@example.com ")
       {email, token} = delivered_token()
-      assert email.to == [{nil, "Grace@Example.com"}]
+      assert email.to == [{"", "Grace@Example.com"}]
       assert email.subject =~ "login link"
 
       # Opening the page doesn't use the link.
@@ -187,8 +190,8 @@ defmodule FireflyWeb.PasswordlessTest do
         |> assert_has("#flash-info", text: "If that address can log in here")
       end
 
-      assert_received {:delivered_email, %{to: [{nil, "known@example.com"}]}}
-      refute_received {:delivered_email, _}
+      assert_received {:email, %{to: [{"", "known@example.com"}]}}
+      refute_received {:email, _}
     end
 
     test "never go to unconfirmed addresses", %{conn: _conn} do
@@ -200,7 +203,7 @@ defmodule FireflyWeb.PasswordlessTest do
         })
 
       request_link("new@example.com")
-      refute_received {:delivered_email, _}
+      refute_received {:email, _}
     end
 
     test "expire after 15 minutes", %{conn: conn} do
@@ -225,7 +228,7 @@ defmodule FireflyWeb.PasswordlessTest do
 
     test "sign up a new address only when the site allows it", %{conn: conn} do
       request_link("newbie@example.com")
-      refute_received {:delivered_email, _}
+      refute_received {:email, _}
 
       setting(%{"magic_link_signup" => "true"})
       request_link("newbie@example.com")
@@ -241,7 +244,7 @@ defmodule FireflyWeb.PasswordlessTest do
 
       setting(%{"allow_registrations" => "false"})
       request_link("another@example.com")
-      refute_received {:delivered_email, _}
+      refute_received {:email, _}
     end
 
     test "are rate limited per address and IP" do

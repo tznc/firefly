@@ -72,14 +72,12 @@ config :firefly, Firefly.Backups, dir: Path.join(System.tmp_dir!(), "firefly-tes
 # Each test reads its own (transactional) site settings: no shared cache.
 config :firefly, site_settings_cache: false
 
-config :firefly, Firefly.Mailer, adapter: Bamboo.TestAdapter
+config :firefly, Firefly.Mailer, adapter: Swoosh.Adapters.Test
 
 config :firefly, :email,
   from: {"Firefly", "noreply@firefly.tznc.dev"},
   reply_domain: "reply.firefly.tznc.dev",
   inbound_token: "test-inbound-token"
-
-config :bamboo, :refute_timeout, 10
 
 config :bcrypt_elixir, :log_rounds, 4
 

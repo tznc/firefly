@@ -1,6 +1,9 @@
 defmodule FireflyWeb.PasswordResetTest do
   use FireflyWeb.ConnCase, async: false
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.Accounts
   alias Firefly.Accounts.PasswordReset
@@ -30,8 +33,8 @@ defmodule FireflyWeb.PasswordResetTest do
     |> click_button("Send reset link")
     |> assert_has("#flash-info", text: "we've sent it a link")
 
-    assert_email_delivered_with(
-      to: [nil: "Newbie@Example.com"],
+    assert_email_sent(
+      to: "Newbie@Example.com",
       subject: "Reset your Firefly password"
     )
   end
@@ -43,7 +46,7 @@ defmodule FireflyWeb.PasswordResetTest do
     |> click_button("Send reset link")
     |> assert_has("#flash-info", text: "we've sent it a link")
 
-    assert_no_emails_delivered()
+    assert_no_email_sent()
   end
 
   test "accounts without a password (GitHub) get no reset email", %{conn: conn} do
@@ -61,7 +64,7 @@ defmodule FireflyWeb.PasswordResetTest do
     |> fill_in("Email", with: "octo@example.com")
     |> click_button("Send reset link")
 
-    assert_no_emails_delivered()
+    assert_no_email_sent()
   end
 
   test "a reset link sets a new password once and confirms the email", %{conn: conn, user: user} do

@@ -94,7 +94,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_SAML_SP_KEY`, `FIREFLY_SAML_SP_CERT` | The private key and certificate (PEM) SAML login requests are signed with, when "Sign login requests" is on. SAML itself is set up under SAML in the site settings (the identity provider's metadata URL or XML, attribute mapping); give the identity provider `https://<domain>/saml/metadata` (assertion consumer service: `https://<domain>/auth/saml/acs`) |
 | `FIREFLY_LDAP_HOST`, `FIREFLY_LDAP_BASE_DN` | Logging in with an LDAP directory (OpenLDAP, Active Directory...): its host and where to search for people. Optional: `FIREFLY_LDAP_PORT`, `FIREFLY_LDAP_ENCRYPTION` (`starttls`, the default, `ldaps` or `none`), `FIREFLY_LDAP_VERIFY` (`false` skips certificate checks), `FIREFLY_LDAP_CA_CERT_FILE` (default: the system's CAs), `FIREFLY_LDAP_BIND_DN` and `FIREFLY_LDAP_BIND_PASSWORD` (the account searches run as; default anonymous), `FIREFLY_LDAP_USER_FILTER` (default `(uid=%{username})`; Active Directory: `(sAMAccountName=%{username})`), `FIREFLY_LDAP_UID_ATTRIBUTE` (default `entryUUID`; Active Directory: `objectGUID`), `_USERNAME_ATTRIBUTE`, `_EMAIL_ATTRIBUTE`, `_NAME_ATTRIBUTE` (default `uid`, `mail`, `cn`), `FIREFLY_LDAP_GROUP_BASE_DN` (syncs groups by name), `FIREFLY_LDAP_GROUP_FILTER` (default `(member=%{dn})`), `FIREFLY_LDAP_GROUP_NAME_ATTRIBUTE` (default `cn`), `FIREFLY_LDAP_NAME` (the button's name). "LDAP replaces local passwords" in the site settings turns password logins off |
 | `FIREFLY_SSO_ONLY` | `true`: single sign-on is the only way to log in (no social logins, passwords or registration form) |
-| `FIREFLY_SENDGRID_API_KEY` | Outbound email |
+| `FIREFLY_MAIL_ADAPTER` | Outbound email: `smtp`, `ses`, `sendgrid`, `mailgun`, `postmark` or `local`, with that adapter's variables (see "Email"). Required: production won't start without one |
 | `FIREFLY_VAPID_PUBLIC_KEY`, `FIREFLY_VAPID_PRIVATE_KEY`, `FIREFLY_VAPID_SUBJECT` | Browser push notifications: a VAPID key pair (make one with `mix firefly.gen.vapid_keys`) and a contact URL (`mailto:admin@example.com`). Push is off and hidden without them |
 | `FIREFLY_EMAIL_FROM` | Sender, default `noreply@<FIREFLY_DOMAIN>` |
 | `FIREFLY_REPLY_EMAIL_DOMAIN` | Reply-by-email domain, default `reply.<FIREFLY_DOMAIN>` (needs an MX record pointing at SendGrid Inbound Parse) |
@@ -140,8 +140,8 @@ docker run --rm --env-file .env firefly /app/bin/migrate
 docker run -d -p 4000:4000 --env-file .env firefly
 ```
 
-The image needs at least `FIREFLY_DATABASE_URL` and `FIREFLY_SECRET_KEY_BASE` (generate one with
-`mix phx.gen.secret`); `FIREFLY_DOMAIN` sets the public domain. It listens on IPv4 port
+The image needs at least `FIREFLY_DATABASE_URL`, `FIREFLY_SECRET_KEY_BASE` (generate one with
+`mix phx.gen.secret`) and a mail adapter (`FIREFLY_MAIL_ADAPTER`, see "Email"); `FIREFLY_DOMAIN` sets the public domain. It listens on IPv4 port
 `FIREFLY_PORT` (default 4000); set `FIREFLY_IPV6=true` to listen on IPv6 as well. Set
 `FIREFLY_DATABASE_SSL=false` for a database without TLS. Any PostgreSQL 17 or
 newer with pgvector works (a managed one too); the `supabase/postgres` image
@@ -277,6 +277,29 @@ readinessProbe:
   failureThreshold: 2
 ```
 
+### Email
+
+Firefly sends email with [Swoosh](https://hexdocs.pm/swoosh) through the
+adapter `FIREFLY_MAIL_ADAPTER` names; production refuses to start without
+one. Development keeps sent mail in memory, readable at
+<http://localhost:4000/dev/mailbox>. Every email, whatever the adapter, is
+logged at `/staff/emails`, which also sends a test email and shows the
+adapter in use and, when sending fails, its error.
+
+| Adapter | Variables |
+| --- | --- |
+| `smtp` | `FIREFLY_SMTP_RELAY` (required), `FIREFLY_SMTP_PORT` (default 587, or 465 with SSL), `FIREFLY_SMTP_USERNAME`, `FIREFLY_SMTP_PASSWORD`, `FIREFLY_SMTP_TLS` (STARTTLS: `always`, the default, `if_available` or `never`), `FIREFLY_SMTP_SSL` (`true` for implicit TLS, usually port 465), `FIREFLY_SMTP_AUTH` (`always`, `if_available`, the default, or `never`), `FIREFLY_SMTP_RETRIES` (default 2). The relay's certificate is verified against the system's CAs (or `FIREFLY_SMTP_CA_CERT_FILE`) and its name; `FIREFLY_SMTP_VERIFY=false` turns that off |
+| `ses` | Amazon SES: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (required), `AWS_SESSION_TOKEN` for temporary credentials, the region in `FIREFLY_SES_REGION`, `AWS_REGION` or `AWS_DEFAULT_REGION`; optional `FIREFLY_SES_CONFIGURATION_SET`. The adapter signs with these static credentials: it doesn't fetch EC2 instance or ECS task role credentials, so give it an IAM user's keys (with `ses:SendRawEmail`) |
+| `sendgrid` | `FIREFLY_SENDGRID_API_KEY` |
+| `mailgun` | `FIREFLY_MAILGUN_API_KEY`, `FIREFLY_MAILGUN_DOMAIN`; `FIREFLY_MAILGUN_BASE_URL=https://api.eu.mailgun.net/v3` for EU domains |
+| `postmark` | `FIREFLY_POSTMARK_API_KEY` (the server token); optional `FIREFLY_POSTMARK_MESSAGE_STREAM` |
+| `local` | None: mail is kept in memory (staging, demos) |
+
+`FIREFLY_EMAIL_FROM` sets the sender address. Reply-by-email (notification
+replies posting to the thread) comes in through SendGrid Inbound Parse,
+whichever adapter sends (see `FIREFLY_REPLY_EMAIL_DOMAIN` and
+`FIREFLY_INBOUND_EMAIL_TOKEN` above). Credentials are never logged or shown.
+
 ### Metrics
 
 Firefly exports metrics in Prometheus' text format at `/metrics`, off by
@@ -306,6 +329,7 @@ What's exported (durations are histograms in microseconds, named
 | `firefly_queue_depth` | `queue` (`plugin_events`, `webhooks`) |
 | `firefly_webhooks_delivery_stop_duration_microseconds`, `firefly_webhooks_delivery_exception_count` | `type`, `result` (`success`, `failure`) |
 | `firefly_scheduler_job_stop_duration_microseconds`, `firefly_scheduler_job_exception_count` | `job` |
+| `firefly_mailer_deliver_stop_count`, `firefly_mailer_deliver_stop_duration_microseconds`, `firefly_mailer_deliver_exception_count` | `adapter` (`smtp`, `ses`, `sendgrid`, `mailgun`, `postmark`, `local`), `result` (`sent`, `failed`, `skipped`) |
 | `firefly_cluster_node_count`, `firefly_cluster_nodes_connected` | `event` (`up`, `down`) on the count |
 
 Every series also has a `node` label, the node it was measured on
@@ -350,8 +374,9 @@ What's exported:
   1.11): a server span per request (Bandit), with Phoenix's route and
   LiveView mounts and events, Ecto queries, the AI client's HTTP requests
   (Req) as child spans, and spans for the domain's operations: post
-  creation, notification fan-out, plugin hook runs and event deliveries,
-  webhook deliveries, scheduler jobs and AI requests (see
+  creation, notification fan-out, email sends (with the adapter and
+  template), plugin hook runs and event deliveries, webhook deliveries,
+  scheduler jobs and AI requests (see
   `Firefly.Telemetry`). Background tasks and the notification dispatcher
   carry the trace on. Outgoing requests don't send trace headers to third
   parties.

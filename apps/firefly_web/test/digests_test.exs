@@ -1,6 +1,9 @@
 defmodule FireflyWeb.DigestsTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Discussion, Groups, JobRuns, Notifications, Repo}
   alias Firefly.Accounts.Ignores
@@ -35,7 +38,7 @@ defmodule FireflyWeb.DigestsTest do
 
   defp digest_to(user) do
     receive do
-      {:delivered_email, %{to: [{_, address}]} = email} when address == user.email -> email
+      {:email, %{to: [{_, address}]} = email} when address == user.email -> email
     after
       0 -> nil
     end

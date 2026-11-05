@@ -174,6 +174,9 @@ defmodule FireflyWeb.Telemetry do
         tags: [:job]
       ),
       counter("firefly.scheduler.job.exception.count", tags: [:job]),
+      counter("firefly.mailer.deliver.stop.count", tags: [:adapter, :result]),
+      duration("firefly.mailer.deliver.stop.duration", tags: [:adapter]),
+      counter("firefly.mailer.deliver.exception.count", tags: [:adapter]),
       counter("firefly.cluster.node.count", tags: [:event]),
       last_value("firefly.cluster.nodes.connected",
         event_name: [:firefly, :cluster, :node],
