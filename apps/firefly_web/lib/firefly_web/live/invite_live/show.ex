@@ -9,6 +9,7 @@ defmodule FireflyWeb.InviteLive.Show do
 
   alias Firefly.{Accounts, RateLimit}
   alias Firefly.Accounts.{Auth, EmailConfirmation, Invite, Invites, User}
+  alias FireflyWeb.BotChallenge
 
   @impl true
   def mount(%{"key" => key}, _session, socket) do
@@ -29,6 +30,8 @@ defmodule FireflyWeb.InviteLive.Show do
          |> assign(:password_login, Auth.password_login?())
          |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
          |> assign(:trigger_submit, false)
+         |> assign(:registered, nil)
+         |> BotChallenge.assign_challenge()
          |> assign_form(Accounts.change_registration(%User{}, %{"email" => invite.email}))}
     end
   end
@@ -47,10 +50,11 @@ defmodule FireflyWeb.InviteLive.Show do
     {:noreply, assign_form(socket, Map.put(changeset, :action, :validate))}
   end
 
-  def handle_event("save", %{"user" => params}, socket) do
+  def handle_event("save", %{"user" => params} = form, socket) do
     params = fixed_email(params, socket)
 
     with :ok <- RateLimit.check_register(socket.assigns.remote_ip),
+         {:ok, socket} <- BotChallenge.check(socket, form),
          {:ok, user} <- Invites.register(socket.assigns.invite, params) do
       unless User.confirmed?(user), do: EmailConfirmation.deliver(user)
 
@@ -58,8 +62,10 @@ defmodule FireflyWeb.InviteLive.Show do
       {:noreply,
        socket
        |> assign(:trigger_submit, true)
+       |> assign(:registered, BotChallenge.registered_token(user))
        |> assign(:form, to_form(params, as: :user))}
     else
+      {:error, %Phoenix.LiveView.Socket{} = socket} -> {:noreply, socket}
       {:error, %Ecto.Changeset{} = changeset} -> {:noreply, assign_form(socket, changeset)}
       {:error, :rate_limited} -> {:noreply, put_flash(socket, :error, RateLimit.message())}
       {:error, reason} -> {:noreply, put_flash(socket, :error, Invites.message(reason))}
@@ -125,6 +131,7 @@ defmodule FireflyWeb.InviteLive.Show do
             class="space-y-2"
           >
             <input type="hidden" name="return_to" value={Invites.destination(@invite)} />
+            <input :if={@registered} type="hidden" name="registered" value={@registered} />
             <.input field={@form[:username]} type="text" label="Username" autocomplete="username" />
             <.input
               field={@form[:email]}
@@ -145,6 +152,7 @@ defmodule FireflyWeb.InviteLive.Show do
               password={@form[:password].value}
               words={[@form[:username].value, @form[:email].value]}
             />
+            <BotChallenge.bot_challenge id={@bot_challenge_id} widget={@bot_challenge} />
             <.button variant="primary" class="btn btn-primary w-full" phx-disable-with="Creating...">
               Create account
             </.button>

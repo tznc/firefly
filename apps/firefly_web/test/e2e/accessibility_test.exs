@@ -152,6 +152,21 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
     |> audit(context.axe, "settings (dark)")
   end
 
+  test "the bot challenge has none, while checking or done", context do
+    previous = Application.get_env(:firefly, Firefly.Security.Challenge)
+    Application.put_env(:firefly, Firefly.Security.Challenge, enabled: true)
+    on_exit(fn -> Application.put_env(:firefly, Firefly.Security.Challenge, previous) end)
+
+    for path <- ["/register", "/auth/identity?challenge=1", "/reset-password", "/login/email"] do
+      context.conn
+      |> visit(path)
+      |> assert_has("[data-phx-main].phx-connected")
+      |> audit(context.axe, "bot challenge #{path}")
+      |> assert_has("[role=status]", text: "Checked: you can go on.")
+      |> audit(context.axe, "bot challenge #{path} (checked)")
+    end
+  end
+
   test "a visitor's pages have none either", context do
     %{conn: conn, category: category, thread: thread} = context
 

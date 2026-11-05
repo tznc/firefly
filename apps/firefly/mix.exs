@@ -84,6 +84,8 @@ defmodule Firefly.MixProject do
       {:bcrypt_elixir, "~> 3.3"},
       # Password strength (see Firefly.Accounts.Passwords).
       {:zxcvbn, "~> 0.3.0"},
+      # The proof-of-work bot challenge (see Firefly.Security.Challenge).
+      {:altcha, "~> 2.2"},
       {:exgravatar, "~> 2.0"},
       {:bodyguard, "~> 2.4"},
       {:html_sanitize_ex, "~> 1.5"},

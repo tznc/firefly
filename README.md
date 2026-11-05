@@ -720,6 +720,32 @@ notification settings. Password logins slow down after repeated failures:
 nothing for 3, then 250 ms doubling with each, up to 5 seconds, counted per
 account and per address (the jail's `auth` points), whichever is more.
 
+### Bot challenge
+
+Sign-up (including invitations), password reset and login link requests ask
+for a bot challenge, and so do password logins after
+`bot_challenge_login_failures` (default 3) recent failures of the account or
+the address. Nobody solves a puzzle. The browser answers in the background
+while a status line (a polite live region) says it's checking. Pick it in
+Security > Bot challenge:
+
+- **Proof of work** (default, self-hosted): ALTCHA's scheme
+  ([altcha](https://hex.pm/packages/altcha)). The server signs a challenge
+  with a key derived from the secret key base, good for 20 minutes. The
+  browser looks for a secret number below `bot_challenge_difficulty`
+  (default 100,000: about a second on a phone). The server checks the
+  signature, the answer and the expiry, and accepts each challenge once,
+  per node. Nothing leaves the site. It needs a secure context (HTTPS or
+  localhost) for the browser's SHA-256.
+- **Cloudflare Turnstile** or **hCaptcha**: set the site key and secret
+  key. Answers are checked with the provider's `siteverify`, and a check
+  that can't reach it fails. The pages' Content-Security-Policy allows
+  the provider's script.
+- **Off**.
+
+Each failed answer is a `bot_challenge` signal for the jail's `bot` jail. The
+JSON API's login isn't challenged: login delays and the jail cover it.
+
 ### Banning (fail2ban)
 
 Addresses that keep failing are banned for a while: every page answers them

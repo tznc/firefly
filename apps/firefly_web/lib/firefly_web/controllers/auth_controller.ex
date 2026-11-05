@@ -9,7 +9,7 @@ defmodule FireflyWeb.AuthController do
 
   alias Firefly.{Accounts, RateLimit}
   alias Firefly.Accounts.{Auth, User}
-  alias FireflyWeb.{InviteController, Login}
+  alias FireflyWeb.{BotChallenge, InviteController, Login}
 
   # Ueberauth redirects GET /auth/:provider for OAuth providers before this
   # action runs; we only get here for unknown providers, or when the
@@ -79,6 +79,7 @@ defmodule FireflyWeb.AuthController do
     Process.sleep(Firefly.Security.login_delay(user_params["username"], conn.remote_ip))
 
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
+         :ok <- BotChallenge.check_login(params, conn.remote_ip),
          {:ok, user} <-
            Accounts.authenticate_by_password(user_params["username"], user_params["password"]) do
       # Registering through an invite lands where the invite says.
@@ -88,6 +89,10 @@ defmodule FireflyWeb.AuthController do
     else
       {:error, :rate_limited} ->
         Login.fail(conn, ~p"/auth/identity", RateLimit.message())
+
+      # The login form shows the challenge on the way back.
+      {:error, :bot_challenge} ->
+        Login.fail(conn, ~p"/auth/identity?challenge=1", BotChallenge.failed_message())
 
       {:error, reason} ->
         Login.failed("login.failure", user_params["username"], %{method: "password"})

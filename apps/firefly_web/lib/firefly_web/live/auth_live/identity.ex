@@ -4,16 +4,29 @@ defmodule FireflyWeb.AuthLive.Identity do
   identity callback, which writes the session. New accounts register at
   `/register`. Passkeys work here too, also through the browser's autofill
   on the username field (see `AuthLive.Login.passkey_form/1`).
+
+  After repeated failures a login needs the bot challenge (see
+  `Firefly.Security.Challenge.required_for_login?/2`): the form shows it
+  when the address needs it, when the callback asked for it
+  (`?challenge=1`), or when the username needs it on submit. The callback
+  checks the answer (`FireflyWeb.BotChallenge.check_login/2`).
   """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :password_login})
 
+  alias Firefly.Security.Challenge
+  alias FireflyWeb.BotChallenge
+
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
+    remote_ip = FireflyWeb.ClientIP.from_socket(socket)
+
     {:ok,
      socket
      |> assign(:page_title, gettext("Log in"))
+     |> assign(:remote_ip, remote_ip)
+     |> challenge(params["challenge"] == "1" or Challenge.required_for_login?(nil, remote_ip))
      |> assign(:trigger_submit, false)
      |> assign(:passkeys, Firefly.Accounts.Passkeys.enabled?())
      |> assign(:magic_links, Firefly.Accounts.MagicLinks.enabled?())
@@ -28,21 +41,37 @@ defmodule FireflyWeb.AuthLive.Identity do
     {:noreply, assign(socket, :form, to_form(params, as: :user))}
   end
 
-  def handle_event("submit", %{"user" => params}, socket) do
+  def handle_event("submit", %{"user" => params} = form, socket) do
     errors =
       for field <- ~w(username password), blank?(params[field]) do
         {String.to_existing_atom(field), {"can't be blank", [validation: :required]}}
       end
 
-    if errors == [] do
-      {:noreply, assign(socket, form: to_form(params, as: :user), trigger_submit: true)}
-    else
-      {:noreply,
-       assign(socket, :form, to_form(params, as: :user, errors: errors, action: :validate))}
+    socket = assign(socket, :form, to_form(params, as: :user))
+
+    cond do
+      errors != [] ->
+        {:noreply,
+         assign(socket, :form, to_form(params, as: :user, errors: errors, action: :validate))}
+
+      is_nil(socket.assigns.bot_challenge) and
+          Challenge.required_for_login?(params["username"], socket.assigns.remote_ip) ->
+        {:noreply, socket |> challenge(true) |> put_flash(:error, BotChallenge.wait_message())}
+
+      socket.assigns.bot_challenge && blank?(form["bot_challenge"]) ->
+        {:noreply, put_flash(socket, :error, BotChallenge.wait_message())}
+
+      true ->
+        {:noreply, assign(socket, :trigger_submit, true)}
     end
   end
 
   defp blank?(value), do: is_nil(value) or String.trim(value) == ""
+
+  defp challenge(socket, true), do: BotChallenge.assign_challenge(socket)
+
+  defp challenge(socket, false),
+    do: assign(socket, bot_challenge: nil, bot_challenge_id: "bot-challenge")
 
   @impl true
   def render(assigns) do
@@ -82,6 +111,7 @@ defmodule FireflyWeb.AuthLive.Identity do
             type="checkbox"
             label={gettext("Keep me logged in")}
           />
+          <BotChallenge.bot_challenge id={@bot_challenge_id} widget={@bot_challenge} />
           <.button variant="primary" class="btn btn-primary w-full">{gettext("Log in")}</.button>
           <p class="text-center text-sm">
             <.link navigate={~p"/reset-password"} class="link">{gettext("Forgot your password?")}</.link>

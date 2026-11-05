@@ -24,6 +24,7 @@ defmodule Firefly.Security.Jail.Tables do
 
   @counters Module.concat(__MODULE__, Counters)
   @bans Module.concat(__MODULE__, Bans)
+  @challenges Module.concat(__MODULE__, Challenges)
   @topic "security:bans"
   @prune_every :timer.minutes(1)
   # Counters older than this are no use to any window (findtime's max).
@@ -38,6 +39,12 @@ defmodule Firefly.Security.Jail.Tables do
   @doc "The ban cache."
   def bans, do: @bans
 
+  @doc """
+  The bot challenges answered on this node, until they'd have expired
+  (`{salt, expires_s}`, see `Firefly.Security.Challenge`).
+  """
+  def challenges, do: @challenges
+
   @doc "The PubSub topic bans and unbans are broadcast on."
   def topic, do: @topic
 
@@ -45,6 +52,7 @@ defmodule Firefly.Security.Jail.Tables do
   def init(_opts) do
     :ets.new(@counters, [:named_table, :public, :set, write_concurrency: true])
     :ets.new(@bans, [:named_table, :public, :set, read_concurrency: true])
+    :ets.new(@challenges, [:named_table, :public, :set, write_concurrency: true])
     Phoenix.PubSub.subscribe(Firefly.PubSub, @topic)
     Process.send_after(self(), :prune, @prune_every)
     {:ok, %{}, {:continue, :load}}
@@ -91,5 +99,7 @@ defmodule Firefly.Security.Jail.Tables do
     :ets.select_delete(@bans, [
       {{:_, :"$1", :_, :_}, [{:is_integer, :"$1"}, {:"=<", :"$1", now_ms}], [true]}
     ])
+
+    :ets.select_delete(@challenges, [{{:_, :"$1"}, [{:<, :"$1", div(now_ms, 1000)}], [true]}])
   end
 end
