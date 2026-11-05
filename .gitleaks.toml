@@ -14,6 +14,11 @@ paths = ['''^apps/firefly_web/test/urls_test\.exs$''']
 regexes = ['''SFMyNTY\.g2gDYQFuBgB-ZXhhbXBsZQ\.a_b-c''']
 
 [[allowlists]]
+description = "The made-up password the password strength and breach tests use"
+paths = ['''^apps/firefly(_web)?/test/.+\.exs$''']
+regexes = ['''tangerine-otter-galaxy''']
+
+[[allowlists]]
 description = """
 Development cookie-signing keys committed with the original Phoenix
 generators: the dev endpoint's key (config/dev.exs, formerly config.exs), the
