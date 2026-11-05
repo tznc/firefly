@@ -264,7 +264,7 @@ msgid "Groups"
 msgstr "Grupos"
 
 #: lib/firefly_web/live/staff_live/settings.ex:417
-#: lib/firefly_web/staff_nav.ex:219
+#: lib/firefly_web/staff_nav.ex:228
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr "Importar"
@@ -510,7 +510,7 @@ msgstr "Tema"
 msgid "Toggle navigation"
 msgstr "Mostrar ou ocultar a navegação"
 
-#: lib/firefly_web/staff_nav.ex:226
+#: lib/firefly_web/staff_nav.ex:235
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr "Atualização"
@@ -2623,7 +2623,7 @@ msgstr "Movimento cancelado. %{item} voltou à posição %{position} de %{count}
 msgid "That category can't go there."
 msgstr "Essa categoria não pode ir para lá."
 
-#: lib/firefly_web/staff_nav.ex:232
+#: lib/firefly_web/staff_nav.ex:241
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "Avançado"
@@ -2633,7 +2633,7 @@ msgstr "Avançado"
 msgid "Back to the staff admin"
 msgstr "Voltar à administração"
 
-#: lib/firefly_web/staff_nav.ex:237
+#: lib/firefly_web/staff_nav.ex:246
 #, elixir-autogen, elixir-format
 msgid "Database"
 msgstr "Banco de dados"
@@ -2732,3 +2732,8 @@ msgstr "Serviço de e-mail: %{adapter}"
 #, elixir-autogen, elixir-format
 msgid "Test email sent to %{to} with %{adapter}."
 msgstr "E-mail de teste enviado para %{to} com %{adapter}."
+
+#: lib/firefly_web/staff_nav.ex:220
+#, elixir-autogen, elixir-format
+msgid "Jobs"
+msgstr "Tarefas"

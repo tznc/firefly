@@ -82,7 +82,8 @@ defmodule Firefly.Discussion.Policy do
       `:manage_api_keys` (every API key, and global keys),
       `:manage_sso_clients` (the DiscourseConnect provider's sites),
       `:view_reports` (the dashboard and reports), `:manage_backups` (and
-      read-only mode), `:manage_imports` (the import runs, see
+      read-only mode), `:manage_jobs` (the background jobs dashboard, see
+      `Firefly.Jobs`), `:manage_imports` (the import runs, see
       `Firefly.Import`), `:manage_upgrades` (the upgrade page),
       `:manage_embedding` (embeddable hosts), `:manage_ai` (AI providers
       and features, see `Firefly.AI`) - admins
@@ -266,6 +267,7 @@ defmodule Firefly.Discussion.Policy do
              :manage_sso_clients,
              :view_reports,
              :manage_backups,
+             :manage_jobs,
              :manage_imports,
              :manage_upgrades,
              :manage_embedding,

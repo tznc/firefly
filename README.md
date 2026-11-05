@@ -62,7 +62,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Jobs`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -114,6 +114,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
 | `FIREFLY_METRICS_PORT`, `FIREFLY_METRICS_IP`, `FIREFLY_METRICS_TOKEN` | Prometheus metrics, off by default: a port of their own for `/metrics` (bound to `FIREFLY_METRICS_IP`, default `0.0.0.0`), and/or a bearer token that serves `/metrics` on the main port too (see "Metrics") |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` and the other standard `OTEL_*` variables | OpenTelemetry traces over OTLP, off without an endpoint; `FIREFLY_OTEL_METRICS=true` and `FIREFLY_OTEL_LOGS=true` add metrics and logs (see "Observability") |
+| `FIREFLY_JOBS_<QUEUE>` | Background job concurrency on this node per queue (`DEFAULT`, `MAILERS`, `NOTIFICATIONS`, `WEBHOOKS`, `PLUGINS`, `AI`, `MAINTENANCE`), e.g. `FIREFLY_JOBS_MAILERS=20`; `0` leaves that queue to other nodes (see "Background jobs") |
 | `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
 | `FIREFLY_CLUSTER`, `FIREFLY_CLUSTER_NAME`, `FIREFLY_CLUSTER_HEARTBEAT_MS`, `FIREFLY_NODE_HOST`, `FIREFLY_DIST_PORT`, `RELEASE_COOKIE` | Running several nodes as one cluster, off by default (see "Running several nodes") |
@@ -276,6 +277,46 @@ readinessProbe:
   periodSeconds: 5
   failureThreshold: 2
 ```
+
+### Background jobs
+
+Background and scheduled work runs on [Oban](https://hexdocs.pm/oban),
+with its jobs in the `oban_jobs` table of Firefly's own PostgreSQL
+database. The database coordinates every node, with no clustering or
+distributed Erlang: nodes take jobs with `FOR UPDATE SKIP LOCKED`, hear of
+new ones over `LISTEN/NOTIFY`, and elect one leader through the database
+for what must run once per cluster (pruning, scheduled jobs). A job a
+crashed node left running is rescued after 30 minutes.
+
+| Queue | Concurrency per node | |
+| --- | --- | --- |
+| `default` | 10 | anything else |
+| `mailers` | 10 | email |
+| `notifications` | 10 | notification fan-out |
+| `webhooks` | 5 | webhook deliveries |
+| `plugins` | 5 | plugin events and jobs |
+| `ai` | 3 | AI work |
+| `maintenance` | 2 | scheduled housekeeping |
+
+Set a queue's concurrency on a node with `FIREFLY_JOBS_<QUEUE>` (e.g.
+`FIREFLY_JOBS_AI=0` on web nodes that shouldn't run AI work).
+
+Finished jobs (completed, cancelled and discarded) are kept for the
+`job_retention_days` site setting (Advanced, Jobs; default 14 days,
+`FIREFLY_SETTING_JOB_RETENTION_DAYS` pins it), then pruned by the leader
+once a minute; a change applies at the next run, without a restart.
+
+Admins watch and manage jobs at `/staff/jobs`: [Oban
+Web](https://github.com/oban-bg/oban_web) (open source, Apache-2.0), with
+queues, jobs by state, their errors and retries, and retry, cancel, delete,
+pause and scale controls. Access is checked on every request and every
+page mount; every action is in the staff log. `/ready` reports whether jobs
+run on the node (`"jobs": {"running": true, "leader": false}`) without
+failing on it. Metrics: `oban_job_stop_duration_microseconds` and
+`oban_job_exception_count` by queue, worker and state,
+`oban_job_stop_queue_time_microseconds` by queue and `firefly_jobs_depth`
+by queue and state (never job arguments); with OpenTelemetry on, each job
+is a span in the trace of the request that enqueued it.
 
 ### Email
 

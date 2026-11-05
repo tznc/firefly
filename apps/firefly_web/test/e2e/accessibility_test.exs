@@ -128,6 +128,13 @@ defmodule FireflyWeb.E2E.AccessibilityTest do
     end
   end
 
+  # Not audited: the jobs dashboard (`/staff/jobs`, see FireflyWeb.JobsDashboard)
+  # is Oban Web's own markup, under its own layout and stylesheet, which axe
+  # finds serious violations in (color contrast in its state counts and
+  # headers; the refresh menu toggle's name not matching its text) that we
+  # can't fix from here. It's an admin-only operations tool; report them
+  # upstream rather than patch its CSS.
+
   test "the dark theme has no contrast violations either", context do
     %{conn: conn, category: category, thread: thread} = context
 

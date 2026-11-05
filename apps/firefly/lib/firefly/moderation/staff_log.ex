@@ -49,6 +49,7 @@ defmodule Firefly.Moderation.StaffLog do
     api_key.create api_key.revoke
     discourse_connect_client.create discourse_connect_client.update discourse_connect_client.delete
     backup.create backup.delete backup.download backup.restore backup.read_only
+    job.retry job.cancel job.delete queue.pause queue.resume queue.scale queue.stop
     embed_host.create embed_host.delete
     ai_provider.create ai_provider.update ai_provider.delete ai_feature.update ai.flag ai.hide
     akismet.spam akismet.confirm akismet.not_spam

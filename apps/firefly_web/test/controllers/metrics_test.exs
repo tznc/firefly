@@ -4,6 +4,13 @@ defmodule FireflyWeb.MetricsTest do
 
   alias FireflyWeb.Metrics
 
+  defmodule Noop do
+    @moduledoc false
+    use Oban.Worker, queue: :default
+    @impl Oban.Worker
+    def perform(_job), do: :ok
+  end
+
   setup do
     on_exit(fn -> Application.delete_env(:firefly_web, Metrics) end)
   end
@@ -55,6 +62,8 @@ defmodule FireflyWeb.MetricsTest do
       :telemetry.execute([:vm, :memory], %{total: 1024, processes: 1, binary: 1, ets: 1}, %{})
       :telemetry.execute([:vm, :system_counts], %{process_count: 42, port_count: 3}, %{})
       Firefly.Telemetry.measure_queues()
+      {:ok, _} = Firefly.Jobs.insert(Noop.new(%{secret: "never a label"}))
+      Oban.drain_queue(queue: :default)
 
       {:ok, _} =
         Firefly.Mailer.deliver_now(Firefly.Notifications.Emails.test_email("ops@example.com"))
@@ -80,6 +89,12 @@ defmodule FireflyWeb.MetricsTest do
       assert body =~ ~s|vm_system_counts_process_count{#{node}} 42|
       assert body =~ ~s|firefly_mailer_deliver_stop_count{adapter="test",#{node},result="sent"} 1|
       assert body =~ ~s|firefly_queue_depth{#{node},queue="plugin_events"} 0|
+      assert body =~ ~s|firefly_jobs_depth{#{node},queue="mailers",state="available"} 0|
+
+      assert body =~
+               ~r/oban_job_stop_duration_microseconds_count\{[^}]*worker="FireflyWeb.MetricsTest.Noop"[^}]*\} 1/
+
+      refute body =~ "never a label"
       assert body =~ ~s|firefly_queue_depth{#{node},queue="webhooks"} 0|
       assert body =~ "firefly_repo_query_total_time_microseconds_bucket"
 

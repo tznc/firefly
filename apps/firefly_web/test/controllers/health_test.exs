@@ -26,7 +26,9 @@ defmodule FireflyWeb.HealthTest do
              "read_only" => %{"ok" => true, "enabled" => false},
              "plugin_sandbox" => %{"ok" => true, "available" => available},
              # Reported, never failing: clustering is off in tests.
-             "cluster" => %{"ok" => true, "enabled" => false, "nodes" => 0}
+             "cluster" => %{"ok" => true, "enabled" => false, "nodes" => 0},
+             # Reported, never failing: jobs wait for a node that runs them.
+             "jobs" => %{"ok" => true, "running" => true}
            } = body["checks"]
 
     assert is_boolean(available)

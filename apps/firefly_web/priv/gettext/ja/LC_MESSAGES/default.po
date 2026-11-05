@@ -261,7 +261,7 @@ msgid "Groups"
 msgstr "グループ"
 
 #: lib/firefly_web/live/staff_live/settings.ex:417
-#: lib/firefly_web/staff_nav.ex:219
+#: lib/firefly_web/staff_nav.ex:228
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr "インポート"
@@ -507,7 +507,7 @@ msgstr "テーマ"
 msgid "Toggle navigation"
 msgstr "ナビゲーションの表示切り替え"
 
-#: lib/firefly_web/staff_nav.ex:226
+#: lib/firefly_web/staff_nav.ex:235
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr "アップグレード"
@@ -2618,7 +2618,7 @@ msgstr "移動を取り消しました。%{item} は %{count} 件中 %{position}
 msgid "That category can't go there."
 msgstr "そのカテゴリはそこに移動できません。"
 
-#: lib/firefly_web/staff_nav.ex:232
+#: lib/firefly_web/staff_nav.ex:241
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "詳細"
@@ -2628,7 +2628,7 @@ msgstr "詳細"
 msgid "Back to the staff admin"
 msgstr "管理画面に戻る"
 
-#: lib/firefly_web/staff_nav.ex:237
+#: lib/firefly_web/staff_nav.ex:246
 #, elixir-autogen, elixir-format
 msgid "Database"
 msgstr "データベース"
@@ -2727,3 +2727,8 @@ msgstr "メール送信: %{adapter}"
 #, elixir-autogen, elixir-format
 msgid "Test email sent to %{to} with %{adapter}."
 msgstr "%{adapter} でテストメールを %{to} に送信しました。"
+
+#: lib/firefly_web/staff_nav.ex:220
+#, elixir-autogen, elixir-format
+msgid "Jobs"
+msgstr "ジョブ"

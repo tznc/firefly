@@ -182,6 +182,24 @@ defmodule FireflyWeb.Telemetry do
         event_name: [:firefly, :cluster, :node],
         measurement: :connected
       )
+    ] ++ job_metrics()
+  end
+
+  # Background jobs (see Firefly.Jobs), by queue, worker and outcome: never
+  # their args.
+  defp job_metrics do
+    [
+      duration("oban.job.stop.duration",
+        tags: [:queue, :worker, :state],
+        tag_values: &job_tags/1
+      ),
+      duration("oban.job.stop.queue_time", tags: [:queue], tag_values: &job_tags/1),
+      counter("oban.job.exception.count", tags: [:queue, :worker], tag_values: &job_tags/1),
+      last_value("firefly.jobs.depth",
+        event_name: [:firefly, :jobs, :depth],
+        measurement: :count,
+        tags: [:queue, :state]
+      )
     ]
   end
 
@@ -223,6 +241,10 @@ defmodule FireflyWeb.Telemetry do
       ] ++ opts
     )
     |> Map.update!(:name, &(&1 ++ [:microseconds]))
+  end
+
+  defp job_tags(metadata) do
+    %{queue: metadata[:queue], worker: metadata[:worker], state: metadata[:state]}
   end
 
   # The route's pattern (`/t/:id`), never the path; unmatched requests

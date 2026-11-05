@@ -52,6 +52,7 @@ defmodule Firefly.BoundariesTest do
     for context <- [
           Firefly.Cluster,
           Firefly.Health,
+          Firefly.Jobs,
           Firefly.Packages,
           Firefly.Plugins,
           Firefly.Plugin,

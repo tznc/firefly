@@ -8,8 +8,8 @@ defmodule FireflyWeb.OpenTelemetry do
   turns each signal on; see `config :firefly_web, FireflyWeb.OpenTelemetry`):
 
     * `traces`: spans for Bandit's requests, Phoenix's routes and
-      LiveViews, Ecto's queries, the AI client's HTTP calls and the
-      domain's operations (see `Firefly.Telemetry`).
+      LiveViews, Ecto's queries, background jobs (Oban), the AI client's
+      HTTP calls and the domain's operations (see `Firefly.Telemetry`).
     * `metrics` (`FIREFLY_OTEL_METRICS=true`): the Prometheus metrics'
       definitions, pushed by `OtelMetricExporter` (see
       `FireflyWeb.Telemetry`), over http/protobuf only, with the traces'
@@ -43,6 +43,8 @@ defmodule FireflyWeb.OpenTelemetry do
     :ok = OpentelemetryBandit.setup()
     :ok = OpentelemetryPhoenix.setup(adapter: :bandit)
     :ok = OpentelemetryEcto.setup([:firefly, :repo])
+    # Job spans, children of the enqueuer's span (see Firefly.Jobs.insert/1).
+    OpentelemetryOban.setup(job: [span_relationship: :child])
   end
 
   @doc """
