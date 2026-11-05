@@ -1,16 +1,19 @@
 defmodule Firefly.Repo.Migrations.CreateAkismetChecks do
   use Ecto.Migration
 
-  # Akismet's verdicts on new content (see Firefly.Moderation.Akismet): what
-  # was sent (to report it back as spam or not), the verdict, and what
-  # staff decided and told Akismet.
+  # Akismet checks of new content (see Firefly.Moderation.Akismet), made
+  # when it's posted: what to send (the job carries only the row's id),
+  # Akismet's verdict once it answers, and what staff decided and told it.
   def change do
     create table(:akismet_checks) do
       add :kind, :string, null: false
       add :subject_id, :bigint, null: false
       add :user_id, references(:forums_users, on_delete: :nilify_all)
-      add :spam, :boolean, null: false
-      # "clean", "pending" (spam, waiting for staff), "confirmed", "not_spam".
+      # Nil until Akismet answers.
+      add :spam, :boolean
+      # "queued" (waiting for Akismet), "failed" (it never answered: the job
+      # ran out of attempts), "clean", "pending" (spam, waiting for staff),
+      # "confirmed", "not_spam".
       add :status, :string, null: false
       add :params, :map, null: false, default: %{}
       # What we told Akismet afterwards: "spam" or "ham".
