@@ -4,7 +4,7 @@ defmodule Firefly.Discussion.Post do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset, warn: false
+  use Firefly.Changeset
   import Ecto.Query
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Poll, Thread, View}

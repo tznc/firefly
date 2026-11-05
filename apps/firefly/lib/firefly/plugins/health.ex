@@ -85,7 +85,8 @@ defmodule Firefly.Plugins.Health do
         plugin_id: plugin_id,
         hook: hook,
         kind: to_string(kind),
-        message: String.slice(message, 0, 4_000)
+        # A plugin's own message: Postgres can't store a NUL character.
+        message: message |> Firefly.Text.strip_nul() |> String.slice(0, 4_000)
       })
 
     # Pruned now and then rather than on every insert.

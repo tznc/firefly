@@ -57,12 +57,20 @@ defmodule Firefly.ThemesTest do
 
   describe "editing and compiling" do
     # Found by Firefly.ThemesPropertyTest: Postgres can't store "\0" in
-    # text, so saving one raised instead of failing validation.
-    test "HTML or CSS with a null character is refused", %{admin: admin} do
-      assert {:error, changeset} =
-               Themes.create_theme(%{"name" => "Nul", "head_html" => <<"<p>", 0, "</p>">>}, admin)
+    # text, so saving one raised. NUL means nothing in a theme: it's stripped.
+    test "a null character in the name, HTML or CSS is stripped", %{admin: admin} do
+      assert {:ok, theme} =
+               Themes.create_theme(
+                 %{
+                   "name" => <<"Nu", 0, "l">>,
+                   "head_html" => <<"<p>", 0, "</p>">>,
+                   "css" => <<"body{color:red}", 0>>
+                 },
+                 admin
+               )
 
-      assert "can't contain a null character" in errors_on(changeset).head_html
+      assert {theme.name, theme.head_html, theme.css} == {"Nul", "<p></p>", "body{color:red}"}
+      refute theme.compiled_css =~ <<0>>
     end
 
     # Found by Firefly.ThemesPropertyTest: taking "*/" out of the name once

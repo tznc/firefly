@@ -7,7 +7,7 @@ defmodule Firefly.Moderation.WatchedWord do
   `replacement`.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
 

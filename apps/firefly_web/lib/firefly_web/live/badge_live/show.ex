@@ -41,7 +41,7 @@ defmodule FireflyWeb.BadgeLive.Show do
     username = params |> Map.get("username", "") |> String.trim() |> String.trim_leading("@")
 
     with %{} = user <-
-           Accounts.users_by_username([username])[String.downcase(username)] || :no_user,
+           Accounts.users_by_username([username])[username] || :no_user,
          {:ok, _} <- Badges.grant(badge, user, admin, params["reason"]) do
       {:noreply,
        socket

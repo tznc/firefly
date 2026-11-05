@@ -129,9 +129,7 @@ defmodule Firefly.DiscussionPropertyTest do
       user = user_fixture()
       {:ok, category} = Discussion.create_category(%{title: "Home"})
 
-      # Without NUL: Postgres refuses it in any text column, which is
-      # reported, not fixed here (see the "nul" test below).
-      check all(title <- map(title(), &String.replace(&1, <<0>>, "")), max_runs: runs(60)) do
+      check all(title <- title(), max_runs: runs(60)) do
         case Discussion.create_category(%{title: title}) do
           {:ok, created} ->
             assert created.slug =~ ~r/\A[a-z0-9]+(-[a-z0-9]+)*\z/, inspect(created.slug)
@@ -274,11 +272,10 @@ defmodule Firefly.DiscussionPropertyTest do
     end
   end
 
-  # Not fixed here (see the PR): Postgres refuses NUL in text columns and
-  # nothing refuses or strips it first, so saving one raises a Postgrex
-  # error instead of returning a changeset error. Found by the slug property.
-  @tag :pending
-  test "nul: a title holding a NUL is refused, not raised" do
-    assert {:error, %Ecto.Changeset{}} = Discussion.create_category(%{title: <<"a", 0>>})
+  # Found by the slug property: Postgres refuses NUL in text columns, so
+  # saving one raised. Casting strips it (see Firefly.Changeset).
+  test "nul: a title holding a NUL is saved without it" do
+    assert {:ok, category} = Discussion.create_category(%{title: <<"a", 0>>})
+    assert Repo.reload!(category).title == "a"
   end
 end
