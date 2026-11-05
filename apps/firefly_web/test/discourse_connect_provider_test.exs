@@ -155,7 +155,7 @@ defmodule FireflyWeb.DiscourseConnectProviderTest do
   test "a logout request logs out here and goes back", %{conn: conn} do
     conn = conn |> log_in_as(user_fixture()) |> get(request_path(%{"logout" => "true"}))
     assert redirected_to(conn) == "https://docs.example.com/sso"
-    refute get_session(conn, :current_user)
+    refute session_user_id(conn)
   end
 
   describe "the staff page" do

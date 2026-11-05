@@ -28,8 +28,7 @@ defmodule FireflyWeb.AuthController do
 
   def delete(conn, _params) do
     conn
-    |> configure_session(renew: true)
-    |> clear_session()
+    |> FireflyWeb.Session.stop()
     |> put_flash(:info, "You have been logged out!")
     |> redirect(to: ~p"/")
   end
@@ -81,7 +80,9 @@ defmodule FireflyWeb.AuthController do
          {:ok, user} <-
            Accounts.authenticate_by_password(user_params["username"], user_params["password"]) do
       # Registering through an invite lands where the invite says.
-      Login.complete(conn, user, ~p"/auth/identity", :password, params["return_to"] || "/")
+      conn
+      |> Login.put_remember(user_params["remember_me"] != "false")
+      |> Login.complete(user, ~p"/auth/identity", :password, params["return_to"] || "/")
     else
       {:error, :rate_limited} ->
         Login.fail(conn, ~p"/auth/identity", RateLimit.message())

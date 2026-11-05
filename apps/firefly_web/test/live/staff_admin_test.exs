@@ -256,8 +256,9 @@ defmodule FireflyWeb.StaffAdminTest do
 
       conn = conn |> log_in_as(admin) |> post(~p"/staff/users/#{member.id}/impersonate")
       assert redirected_to(conn) == "/"
-      assert get_session(conn, :current_user) == member.id
-      assert get_session(conn, :impersonator_id) == admin.id
+      # The admin's own session, seeing the site as the member.
+      assert session_user_id(conn) == admin.id
+      assert get_session(conn, :impersonate_id) == member.id
 
       conn
       |> recycle()
@@ -267,8 +268,8 @@ defmodule FireflyWeb.StaffAdminTest do
 
       back = conn |> recycle() |> delete(~p"/impersonate")
       assert redirected_to(back) == "/staff/users/#{member.id}"
-      assert get_session(back, :current_user) == admin.id
-      refute get_session(back, :impersonator_id)
+      assert session_user_id(back) == admin.id
+      refute get_session(back, :impersonate_id)
 
       assert ["user.impersonate", "user.impersonate_stop"] = actions()
     end
@@ -279,7 +280,7 @@ defmodule FireflyWeb.StaffAdminTest do
 
       denied = conn |> log_in_as(admin) |> post(~p"/staff/users/#{other_admin.id}/impersonate")
       assert redirected_to(denied) == "/staff/users"
-      assert get_session(denied, :current_user) == admin.id
+      assert session_user_id(denied) == admin.id
 
       refused = conn |> log_in_as(member) |> post(~p"/staff/users/#{admin.id}/impersonate")
       assert redirected_to(refused) == "/"

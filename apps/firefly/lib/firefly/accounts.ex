@@ -49,6 +49,7 @@ defmodule Firefly.Accounts do
       Profiles,
       Visits,
       UserSessions,
+      UserSession,
       Invites,
       Invite,
       InviteRedemption,
@@ -290,7 +291,7 @@ defmodule Firefly.Accounts do
 
   @doc """
   Sets a new password from a reset link. Following the emailed link proves the
-  address, so it also confirms the email.
+  address, so it also confirms the email. Every session of the user ends.
   """
   def reset_user_password(%User{} = user, attrs) do
     changeset = User.password_changeset(user, attrs)
@@ -302,6 +303,8 @@ defmodule Firefly.Accounts do
 
     with {:ok, user} <- Repo.update(changeset) do
       Firefly.Security.record("password.reset", user)
+      # Whoever knew the old password is signed out.
+      Firefly.Accounts.UserSessions.revoke_all(user, nil, %{reason: "password reset"})
       {:ok, user}
     end
   end

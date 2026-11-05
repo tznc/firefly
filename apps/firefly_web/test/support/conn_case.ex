@@ -55,8 +55,21 @@ defmodule FireflyWeb.ConnCase do
     :ok
   end
 
-  @doc "Logs `user` in by storing their id in the session."
+  @doc "Logs `user` in: a new server-side session, its token in the session cookie."
   def log_in_as(conn, user) do
-    Plug.Test.init_test_session(conn, %{current_user: user.id})
+    {token, session} = Firefly.Accounts.UserSessions.create(user)
+
+    Plug.Test.init_test_session(conn, %{
+      session_token: token,
+      live_socket_id: Firefly.Accounts.UserSessions.live_socket_id(session)
+    })
+  end
+
+  @doc "The id of the user `conn`'s session cookie is logged in as, or nil."
+  def session_user_id(conn) do
+    case Firefly.Accounts.UserSessions.get_user(Plug.Conn.get_session(conn, :session_token)) do
+      {user, _session} -> user.id
+      nil -> nil
+    end
   end
 end

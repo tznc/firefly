@@ -89,6 +89,7 @@ defmodule FireflyWeb.StaffLive.User do
     "add_group" => :manage_groups,
     "remove_group" => :manage_groups,
     "password_reset" => :manage_users,
+    "sign_out" => :manage_users,
     "send_notification" => :manage_users,
     "delete_notification" => :manage_users,
     "revoke_api_key" => :manage_api_keys,
@@ -197,6 +198,11 @@ defmodule FireflyWeb.StaffLive.User do
     group
     |> Groups.remove_member(socket.assigns.user, socket.assigns.current_user)
     |> done(socket, gettext("Removed from %{group}.", group: group.name))
+  end
+
+  defp act("sign_out", _params, socket) do
+    UserAdmin.sign_out_everywhere(socket.assigns.user, socket.assigns.current_user)
+    {:noreply, put_flash(socket, :info, gettext("Signed them out of every device."))}
   end
 
   defp act("password_reset", _params, socket) do
@@ -374,6 +380,14 @@ defmodule FireflyWeb.StaffLive.User do
                 class="btn"
               >
                 {gettext("Send password reset")}
+              </button>
+              <button
+                type="button"
+                phx-click="sign_out"
+                data-confirm={gettext("Sign this member out of every device?")}
+                class="btn"
+              >
+                {gettext("Sign out everywhere")}
               </button>
             </div>
           </.form>

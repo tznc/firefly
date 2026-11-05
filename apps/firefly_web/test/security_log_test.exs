@@ -29,7 +29,7 @@ defmodule FireflyWeb.SecurityLogTest do
     |> put_req_header("user-agent", "TestBrowser/1.0")
     |> attempt(user.username, "wrong-password")
 
-    assert get_session(attempt(build_conn(), user.username, "right-password"), :current_user)
+    assert session_user_id(attempt(build_conn(), user.username, "right-password")) == user.id
 
     assert [
              %{kind: "login.success", details: %{"method" => "password"}, ip: "127.0.0.1"},

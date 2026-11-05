@@ -145,8 +145,9 @@ defmodule Firefly.Accounts.AccountDeletion do
       # recounted (or removed when no likes remain).
       Discussion.refresh_like_notifications(liked_post_ids)
 
-      # Open LiveViews of this user (any browser) are disconnected; they come
-      # back logged out.
+      # Every session ends, and open LiveViews of this user (any browser)
+      # are disconnected; they come back logged out.
+      UserSessions.revoke_all(deleted, nil, %{reason: "account deleted"})
       UserSessions.reload_pages(deleted)
       {:ok, deleted}
     end

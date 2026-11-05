@@ -17,7 +17,7 @@ defmodule Firefly.Jobs.Periodic do
   | `Badges` | every 15 minutes | maintenance |
   | `JailCleanup` (ended IP bans, see `Firefly.Security.Jail`) | every 10 minutes | maintenance |
   | `Digests` | every 15 minutes | mailers |
-  | `TrustLevels`, `Analytics`, `EmbedFeed`, `ChatRetention`, `EmailLog`, `EgressLog`, `Directory`, `Backups`, `IPRetention` | hourly | maintenance |
+  | `TrustLevels`, `Analytics`, `EmbedFeed`, `ChatRetention`, `EmailLog`, `EgressLog`, `Directory`, `Backups`, `IPRetention`, `Sessions` | hourly | maintenance |
   | `VersionCheck` | daily | maintenance |
   """
 
@@ -42,6 +42,7 @@ defmodule Firefly.Jobs.Periodic do
     {Directory, "35 * * * *", :maintenance, {Firefly.Directory, :run_due}},
     {Backups, "45 * * * *", :maintenance, {Firefly.Backups, :run_due}},
     {IPRetention, "50 * * * *", :maintenance, {Firefly.Security, :run_retention}},
+    {Sessions, "55 * * * *", :maintenance, {Firefly.Accounts.UserSessions, :run_cleanup}},
     {JailCleanup, "*/10 * * * *", :maintenance, {Firefly.Security.Jail, :run_cleanup}},
     {VersionCheck, "23 4 * * *", :maintenance, {Firefly.Upgrades, :run_due}}
   ]
