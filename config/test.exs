@@ -36,16 +36,6 @@ config :firefly_web, sql_sandbox: true
 # itself, with the instrumentation attached for its own tests only.
 config :opentelemetry, traces_exporter: :none
 
-# A metric reader that exports only when flushed, to the process registered
-# as :firefly_otel_metrics_test (see FireflyWeb.OpenTelemetryTest).
-config :opentelemetry_experimental,
-  readers: [
-    %{
-      module: :otel_metric_reader,
-      config: %{exporter: {:otel_metric_exporter_pid, {:otel_metric, :firefly_otel_metrics_test}}}
-    }
-  ]
-
 config :phoenix_test,
   otp_app: :firefly_web,
   endpoint: FireflyWeb.Endpoint,
