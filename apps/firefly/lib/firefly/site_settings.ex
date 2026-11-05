@@ -1487,6 +1487,26 @@ defmodule Firefly.SiteSettings do
           "How many characters a new password must have at least (72 is the most passwords can have)."
       },
       %{
+        key: "min_password_score",
+        section: "Registration",
+        type: :integer,
+        label: "Weakest password allowed (0-4)",
+        default: 2,
+        min: 0,
+        max: 4,
+        help:
+          "New passwords are scored by how easily they're guessed (zxcvbn): 0 in moments, 4 hardly ever. Lower scores are refused; 0 allows any."
+      },
+      %{
+        key: "check_breached_passwords",
+        section: "Registration",
+        type: :boolean,
+        label: "Refuse passwords known from breaches",
+        default: true,
+        help:
+          "New passwords are checked against Have I Been Pwned's Pwned Passwords: only the first 5 characters of the password's SHA-1 hash are sent. If it can't be reached, the password is allowed."
+      },
+      %{
         key: "reserved_usernames",
         section: "Registration",
         type: :list,

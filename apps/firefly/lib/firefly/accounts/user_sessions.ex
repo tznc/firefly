@@ -33,8 +33,13 @@ defmodule Firefly.Accounts.UserSessions do
   @doc """
   Starts a session for `user`: `{token, session}`, the token going in the
   browser's cookie. Options: `:remember`, `:ip`, `:user_agent`.
+
+  A login from a browser and network the account hasn't used before (no
+  earlier session or login with the same device label and /24 or /48) is
+  emailed to the member, unless they turned that off
+  (`new_device_emails`) or it's their first login.
   """
-  def create(%User{id: user_id}, opts \\ []) do
+  def create(%User{id: user_id} = user, opts \\ []) do
     token = :crypto.strong_rand_bytes(32)
     now = DateTime.utc_now(:second)
     agent = opts[:user_agent] && String.slice(opts[:user_agent], 0, 512)
@@ -51,8 +56,38 @@ defmodule Firefly.Accounts.UserSessions do
         inserted_at: now
       })
 
+    alert_if_new(user, session)
     {Base.url_encode64(token, padding: false), session}
   end
+
+  defp alert_if_new(%User{new_device_emails: true, email: email} = user, session)
+       when is_binary(email) do
+    if new_device?(user, session), do: Notifications.email_new_device(user, session)
+  end
+
+  defp alert_if_new(_user, _session), do: :ok
+
+  defp new_device?(user, session) do
+    sessions =
+      Repo.all(
+        from(s in UserSession,
+          where: s.user_id == ^user.id and s.id != ^session.id,
+          select: {s.device, s.ip}
+        )
+      )
+
+    logins =
+      for %{kind: "login.success"} = event <- Security.for_user(user, 200),
+          do: {device(event.user_agent), event.ip}
+
+    seen = sessions ++ logins
+    here = {session.device, network(session.ip)}
+
+    seen != [] and not Enum.any?(seen, fn {device, ip} -> {device, network(ip)} == here end)
+  end
+
+  defp network(nil), do: nil
+  defp network(ip), do: Security.anonymize_ip(ip)
 
   defp hash(token), do: :crypto.hash(:sha256, token)
 

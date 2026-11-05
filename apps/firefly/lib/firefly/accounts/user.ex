@@ -60,6 +60,7 @@ defmodule Firefly.Accounts.User do
     # count of emails sent on `mailing_list_sent_on`.
     field(:mailing_list_mode, :boolean, default: false)
     field(:mailing_list_no_echo, :boolean, default: true)
+    field(:new_device_emails, :boolean, default: true)
     field(:mailing_list_sent_on, :date)
     field(:mailing_list_sent_count, :integer, default: 0)
     # The theme they picked among the selectable ones (see Firefly.Themes).
@@ -135,7 +136,8 @@ defmodule Firefly.Accounts.User do
       :digest_frequency,
       :push_only_when_away,
       :mailing_list_mode,
-      :mailing_list_no_echo
+      :mailing_list_no_echo,
+      :new_device_emails
     ])
     |> validate_required([:theme, :reply_level, :new_thread_level])
     |> validate_inclusion(:theme, themes())
@@ -177,6 +179,7 @@ defmodule Firefly.Accounts.User do
     |> cast(attrs, [:password])
     |> validate_required([:password])
     |> validate_password_length()
+    |> Firefly.Accounts.Passwords.validate_strength([user.username, user.email])
     |> validate_confirmation(:password, message: "does not match password")
     |> put_password_hash()
     |> invalid_text_errors(invalid, [:password, :password_confirmation])
@@ -249,6 +252,7 @@ defmodule Firefly.Accounts.User do
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "must be a valid email")
     |> validate_length(:email, max: 160)
     |> validate_password_length()
+    |> Firefly.Accounts.Passwords.validate_strength([attrs["username"], attrs["email"]])
     |> unsafe_validate_unique(:username, Firefly.Repo)
     |> put_password_hash()
     |> invalid_text_errors(invalid, [:username, :email, :name, :password])

@@ -17,13 +17,14 @@ defmodule Firefly.Rendering.LinkPreviews.Fetcher do
 
   @doc """
   GETs `url`. Options: `:types` (accepted content types, e.g.
-  `["text/html"]`) and `:max_bytes`. Returns `{:ok, %{url: final_url,
+  `["text/html"]`), `:max_bytes` and `:deadline` (milliseconds for the
+  whole fetch, 10 seconds by default). Returns `{:ok, %{url: final_url,
   content_type: type, body: body}}` or `{:error, reason}`.
   """
   def get(url, opts) when is_binary(url) do
     task = Task.async(fn -> follow(URI.parse(url), opts, 0) end)
 
-    case Task.yield(task, @deadline) || Task.shutdown(task, :brutal_kill) do
+    case Task.yield(task, opts[:deadline] || @deadline) || Task.shutdown(task, :brutal_kill) do
       {:ok, result} -> result
       _timed_out -> {:error, :timeout}
     end

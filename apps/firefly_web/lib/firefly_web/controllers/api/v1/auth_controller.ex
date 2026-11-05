@@ -13,6 +13,8 @@ defmodule FireflyWeb.Api.V1.AuthController do
   alias FireflyWeb.Api.Problem
 
   def identity(conn, %{"user" => %{} = user_params}) do
+    Process.sleep(Security.login_delay(user_params["username"], conn.remote_ip))
+
     with true <- Firefly.Accounts.Auth.password_login?() || {:error, :sso_only},
          :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-

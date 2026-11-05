@@ -101,6 +101,11 @@ defmodule FireflyWeb.AuthLive.Registration do
             autocomplete="new-password"
             value={@form[:password].value}
           />
+          <FireflyWeb.PasswordComponents.strength_meter
+            id="password-strength"
+            password={@form[:password].value}
+            words={[@form[:username].value, @form[:email].value]}
+          />
           <div class="hidden" aria-hidden="true">
             <label for="user_website">{gettext("Website")}</label>
             <input type="text" id="user_website" name="user[website]" tabindex="-1" autocomplete="off" />

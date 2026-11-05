@@ -111,10 +111,13 @@ defmodule FireflyWeb.Login do
   """
   def log_in(conn, user, notice \\ "Successfully authenticated.", to \\ "/") do
     to = if to == "/", do: get_session(conn, :return_to) || to, else: to
-    Security.record("login.success", user, %{method: login_method(conn)})
+    method = login_method(conn)
+    # The session first: whether it's a new device is judged against
+    # earlier logins only.
+    conn = FireflyWeb.Session.start(conn, user, remember?(conn))
+    Security.record("login.success", user, %{method: method})
 
     conn
-    |> FireflyWeb.Session.start(user, remember?(conn))
     |> put_flash(:info, notice)
     |> redirect(to: local_path(to))
   end

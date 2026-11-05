@@ -81,6 +81,14 @@ defmodule Firefly.Notifications do
 
   ## Fan-out (background jobs, see `Firefly.Notifications.FanOut`)
 
+  @doc """
+  Emails `user` that their account was logged into from a new device
+  (`session`, see `Firefly.Accounts.UserSessions`), in the background.
+  """
+  defdelegate email_new_device(user, session),
+    to: Firefly.Notifications.EmailWorker,
+    as: :new_device_later
+
   @doc "Notify subscribers about a new reply."
   def post_created(%Firefly.Discussion.Post{id: id}), do: fan_out("post_created", %{post_id: id})
 

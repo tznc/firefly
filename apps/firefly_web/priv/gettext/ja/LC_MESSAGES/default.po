@@ -135,7 +135,7 @@ msgstr "新しいパスワードを設定"
 msgid "Close menu"
 msgstr "メニューを閉じる"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/auth_live/reset_password.ex:79
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr "新しいパスワード（確認）"
@@ -151,7 +151,7 @@ msgid "Contact us"
 msgstr "お問い合わせ"
 
 #: lib/firefly_web/live/auth_live/login.ex:76
-#: lib/firefly_web/live/auth_live/registration.ex:109
+#: lib/firefly_web/live/auth_live/registration.ex:114
 #, elixir-autogen, elixir-format
 msgid "Create account"
 msgstr "アカウントを作成"
@@ -163,7 +163,7 @@ msgstr "アカウントを作成"
 msgid "Create an account"
 msgstr "アカウントを作成する"
 
-#: lib/firefly_web/live/auth_live/registration.ex:108
+#: lib/firefly_web/live/auth_live/registration.ex:113
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr "作成中..."
@@ -415,7 +415,7 @@ msgstr "レビュー"
 msgid "Save"
 msgstr "保存"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:77
+#: lib/firefly_web/live/auth_live/reset_password.ex:82
 #: lib/firefly_web/live/settings_live/index.ex:737
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
@@ -568,7 +568,7 @@ msgstr "新しいパスワードを設定するリンクをメールでお送り
 msgid "Webhooks"
 msgstr "Webhook"
 
-#: lib/firefly_web/live/auth_live/registration.ex:105
+#: lib/firefly_web/live/auth_live/registration.ex:110
 #, elixir-autogen, elixir-format
 msgid "Website"
 msgstr "ウェブサイト"
@@ -616,7 +616,7 @@ msgstr "リンクをメールで送る"
 msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
 msgstr "Firefly は JavaScript なしでも動きます。ページ・トピック・検索はサーバー側で描画され、リンクも使えます。投稿・チャット・リアルタイム更新には必要です。"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:78
+#: lib/firefly_web/live/auth_live/reset_password.ex:83
 #, elixir-autogen, elixir-format
 msgid "Reset password"
 msgstr "パスワードを再設定する"
@@ -2824,7 +2824,7 @@ msgstr "ログイン"
 msgid "Logins, failed attempts and account security changes, newest first."
 msgstr "ログイン、失敗した試行、アカウントのセキュリティ変更（新しい順）。"
 
-#: lib/firefly_web/live/settings_live/index.ex:1226
+#: lib/firefly_web/live/settings_live/index.ex:1231
 #, elixir-autogen, elixir-format
 msgid "Logins, failed attempts and changes to how you log in. Don't recognize one? Change your password and check your passkeys and keys."
 msgstr "ログイン、失敗した試行、ログイン方法の変更。心当たりのないものがあれば、パスワードを変更し、パスキーとキーを確認してください。"
@@ -2844,7 +2844,7 @@ msgstr "新しいバックアップコード"
 msgid "No security events."
 msgstr "セキュリティイベントはありません。"
 
-#: lib/firefly_web/live/settings_live/index.ex:1229
+#: lib/firefly_web/live/settings_live/index.ex:1234
 #, elixir-autogen, elixir-format
 msgid "Nothing yet."
 msgstr "まだありません。"
@@ -2869,7 +2869,7 @@ msgstr "パスキーを削除"
 msgid "Password changed"
 msgstr "パスワードを変更"
 
-#: lib/firefly_web/live/settings_live/index.ex:1224
+#: lib/firefly_web/live/settings_live/index.ex:1229
 #, elixir-autogen, elixir-format
 msgid "Recent security activity"
 msgstr "最近のセキュリティアクティビティ"
@@ -3052,7 +3052,7 @@ msgstr "解除されるまで"
 msgid "Why"
 msgstr "理由"
 
-#: lib/firefly_web/live/settings_live/index.ex:1175
+#: lib/firefly_web/live/settings_live/index.ex:1180
 #, elixir-autogen, elixir-format
 msgid "Devices"
 msgstr "デバイス"
@@ -3062,12 +3062,12 @@ msgstr "デバイス"
 msgid "Keep me logged in"
 msgstr "ログインしたままにする"
 
-#: lib/firefly_web/live/settings_live/index.ex:1205
+#: lib/firefly_web/live/settings_live/index.ex:1210
 #, elixir-autogen, elixir-format
 msgid "Sign out"
 msgstr "サインアウト"
 
-#: lib/firefly_web/live/settings_live/index.ex:1203
+#: lib/firefly_web/live/settings_live/index.ex:1208
 #, elixir-autogen, elixir-format
 msgid "Sign out %{device}"
 msgstr "%{device} からサインアウト"
@@ -3077,12 +3077,12 @@ msgstr "%{device} からサインアウト"
 msgid "Sign out everywhere"
 msgstr "すべてからサインアウト"
 
-#: lib/firefly_web/live/settings_live/index.ex:1216
+#: lib/firefly_web/live/settings_live/index.ex:1221
 #, elixir-autogen, elixir-format
 msgid "Sign out of all other devices"
 msgstr "他のすべてのデバイスからサインアウト"
 
-#: lib/firefly_web/live/settings_live/index.ex:1214
+#: lib/firefly_web/live/settings_live/index.ex:1219
 #, elixir-autogen, elixir-format
 msgid "Sign out of every other device?"
 msgstr "他のすべてのデバイスからサインアウトしますか？"
@@ -3107,23 +3107,68 @@ msgstr "サインアウトしました。"
 msgid "Signed them out of every device."
 msgstr "すべてのデバイスからサインアウトさせました。"
 
-#: lib/firefly_web/live/settings_live/index.ex:1177
+#: lib/firefly_web/live/settings_live/index.ex:1182
 #, elixir-autogen, elixir-format
 msgid "The browsers you're logged in on. Sign out any you don't recognize."
 msgstr "ログインしているブラウザです。心当たりのないものはサインアウトしてください。"
 
-#: lib/firefly_web/live/settings_live/index.ex:1189
+#: lib/firefly_web/live/settings_live/index.ex:1194
 #, elixir-autogen, elixir-format
 msgid "This browser"
 msgstr "このブラウザ"
 
-#: lib/firefly_web/live/settings_live/index.ex:1187
-#: lib/firefly_web/live/settings_live/index.ex:1203
+#: lib/firefly_web/live/settings_live/index.ex:1192
+#: lib/firefly_web/live/settings_live/index.ex:1208
 #, elixir-autogen, elixir-format
 msgid "Unknown browser"
 msgstr "不明なブラウザ"
 
-#: lib/firefly_web/live/settings_live/index.ex:1194
+#: lib/firefly_web/live/settings_live/index.ex:1199
 #, elixir-autogen, elixir-format
 msgid "last active"
 msgstr "最終アクティブ"
+
+#: lib/firefly_web/live/settings_live/index.ex:762
+#, elixir-autogen, elixir-format
+msgid "Email me when my account is logged into from a new device"
+msgstr "新しいデバイスからアカウントにログインがあったらメールで知らせる"
+
+#: lib/firefly_web/components/password_components.ex:31
+#, elixir-autogen, elixir-format
+msgid "Password strength"
+msgstr "パスワードの強度"
+
+#: lib/firefly_web/components/password_components.ex:35
+#, elixir-autogen, elixir-format
+msgid "Password strength: %{label}"
+msgstr "パスワードの強度: %{label}"
+
+#: lib/firefly_web/components/password_components.ex:50
+#, elixir-autogen, elixir-format
+msgid "fair"
+msgstr "普通"
+
+#: lib/firefly_web/components/password_components.ex:51
+#, elixir-autogen, elixir-format
+msgid "good"
+msgstr "良い"
+
+#: lib/firefly_web/components/password_components.ex:52
+#, elixir-autogen, elixir-format
+msgid "strong"
+msgstr "強い"
+
+#: lib/firefly_web/components/password_components.ex:37
+#, elixir-autogen, elixir-format
+msgid "too easy to guess: add words or make it longer"
+msgstr "推測されやすすぎます：単語を足すか長くしてください"
+
+#: lib/firefly_web/components/password_components.ex:48
+#, elixir-autogen, elixir-format
+msgid "very weak"
+msgstr "とても弱い"
+
+#: lib/firefly_web/components/password_components.ex:49
+#, elixir-autogen, elixir-format
+msgid "weak"
+msgstr "弱い"

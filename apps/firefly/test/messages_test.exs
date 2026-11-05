@@ -119,7 +119,11 @@ defmodule Firefly.MessagesTest do
 
   test "posting checks: confirmation and the new-conversation rate limit", %{alice: alice} do
     {:ok, unconfirmed} =
-      Accounts.register_user(%{username: "fresh", email: "f@example.com", password: "password1"})
+      Accounts.register_user(%{
+        username: "fresh",
+        email: "f@example.com",
+        password: "tangerine-otter-galaxy"
+      })
 
     assert Posting.check(unconfirmed, :new_conversation) == {:error, :unconfirmed}
 
@@ -165,7 +169,7 @@ defmodule Firefly.MessagesTest do
         Accounts.register_user(%{
           username: "unc",
           email: "unc@example.com",
-          password: "password1"
+          password: "tangerine-otter-galaxy"
         })
 
       start(alice, "quiet unc")

@@ -123,7 +123,7 @@ defmodule Firefly.BBCodeTest do
       Firefly.Accounts.register_user(%{
         username: "admin#{System.unique_integer([:positive])}",
         email: "admin#{System.unique_integer([:positive])}@example.com",
-        password: "password123"
+        password: "tangerine-otter-galaxy"
       })
 
     {:ok, role} = Firefly.Groups.create_role("admin")

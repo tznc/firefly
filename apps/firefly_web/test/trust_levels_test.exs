@@ -63,7 +63,7 @@ defmodule FireflyWeb.TrustLevelsTest do
         Accounts.register_user(%{
           username: "newbie",
           email: "n@example.com",
-          password: "password1"
+          password: "tangerine-otter-galaxy"
         })
 
       assert user.trust_level == 0
@@ -153,7 +153,7 @@ defmodule FireflyWeb.TrustLevelsTest do
         Accounts.register_user(%{
           username: "unconf",
           email: "u@example.com",
-          password: "password1"
+          password: "tangerine-otter-galaxy"
         })
 
       for user <- [locked, unconfirmed] do

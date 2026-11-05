@@ -14,6 +14,7 @@ defmodule FireflyWeb.URLsTest do
     assert URLs.magic_link_url(token) == url(~p"/login/email/#{token}")
     assert URLs.digest_unsubscribe_url(token) == url(~p"/email/unsubscribe/#{token}")
     assert URLs.notification_settings_url() == url(~p"/settings/notifications")
+    assert URLs.security_settings_url() == url(~p"/settings/security")
     assert URLs.notifications_url() == url(~p"/notifications")
     assert URLs.user_url(%{id: 7}) == url(~p"/users/7")
     assert URLs.invite_url("aB-_1") == url(~p"/invites/aB-_1")

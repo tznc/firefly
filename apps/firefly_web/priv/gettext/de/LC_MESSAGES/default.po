@@ -138,7 +138,7 @@ msgstr "Neues Passwort wählen"
 msgid "Close menu"
 msgstr "Menü schließen"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/auth_live/reset_password.ex:79
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr "Neues Passwort bestätigen"
@@ -154,7 +154,7 @@ msgid "Contact us"
 msgstr "Kontakt"
 
 #: lib/firefly_web/live/auth_live/login.ex:76
-#: lib/firefly_web/live/auth_live/registration.ex:109
+#: lib/firefly_web/live/auth_live/registration.ex:114
 #, elixir-autogen, elixir-format
 msgid "Create account"
 msgstr "Konto erstellen"
@@ -166,7 +166,7 @@ msgstr "Konto erstellen"
 msgid "Create an account"
 msgstr "Konto anlegen"
 
-#: lib/firefly_web/live/auth_live/registration.ex:108
+#: lib/firefly_web/live/auth_live/registration.ex:113
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr "Wird erstellt..."
@@ -418,7 +418,7 @@ msgstr "Prüfung"
 msgid "Save"
 msgstr "Speichern"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:77
+#: lib/firefly_web/live/auth_live/reset_password.ex:82
 #: lib/firefly_web/live/settings_live/index.ex:737
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
@@ -571,7 +571,7 @@ msgstr "Wir senden dir per E-Mail einen Link für ein neues Passwort."
 msgid "Webhooks"
 msgstr "Webhooks"
 
-#: lib/firefly_web/live/auth_live/registration.ex:105
+#: lib/firefly_web/live/auth_live/registration.ex:110
 #, elixir-autogen, elixir-format
 msgid "Website"
 msgstr "Website"
@@ -619,7 +619,7 @@ msgstr "Link per E-Mail senden"
 msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
 msgstr "Firefly funktioniert ohne JavaScript: Seiten, Themen und Suche werden auf dem Server gerendert, und Links funktionieren. Für Beiträge, Chat und Live-Aktualisierungen wird es gebraucht."
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:78
+#: lib/firefly_web/live/auth_live/reset_password.ex:83
 #, elixir-autogen, elixir-format
 msgid "Reset password"
 msgstr "Passwort zurücksetzen"
@@ -2829,7 +2829,7 @@ msgstr "Angemeldet"
 msgid "Logins, failed attempts and account security changes, newest first."
 msgstr "Anmeldungen, fehlgeschlagene Versuche und Sicherheitsänderungen an Konten, neueste zuerst."
 
-#: lib/firefly_web/live/settings_live/index.ex:1226
+#: lib/firefly_web/live/settings_live/index.ex:1231
 #, elixir-autogen, elixir-format
 msgid "Logins, failed attempts and changes to how you log in. Don't recognize one? Change your password and check your passkeys and keys."
 msgstr "Anmeldungen, fehlgeschlagene Versuche und Änderungen an deinen Anmeldemethoden. Du erkennst etwas nicht wieder? Ändere dein Passwort und prüfe deine Passkeys und Schlüssel."
@@ -2849,7 +2849,7 @@ msgstr "Neue Backup-Codes"
 msgid "No security events."
 msgstr "Keine Sicherheitsereignisse."
 
-#: lib/firefly_web/live/settings_live/index.ex:1229
+#: lib/firefly_web/live/settings_live/index.ex:1234
 #, elixir-autogen, elixir-format
 msgid "Nothing yet."
 msgstr "Noch nichts."
@@ -2874,7 +2874,7 @@ msgstr "Passkey entfernt"
 msgid "Password changed"
 msgstr "Passwort geändert"
 
-#: lib/firefly_web/live/settings_live/index.ex:1224
+#: lib/firefly_web/live/settings_live/index.ex:1229
 #, elixir-autogen, elixir-format
 msgid "Recent security activity"
 msgstr "Letzte Sicherheitsaktivität"
@@ -3057,7 +3057,7 @@ msgstr "Bis zur Entsperrung"
 msgid "Why"
 msgstr "Warum"
 
-#: lib/firefly_web/live/settings_live/index.ex:1175
+#: lib/firefly_web/live/settings_live/index.ex:1180
 #, elixir-autogen, elixir-format
 msgid "Devices"
 msgstr "Geräte"
@@ -3067,12 +3067,12 @@ msgstr "Geräte"
 msgid "Keep me logged in"
 msgstr "Angemeldet bleiben"
 
-#: lib/firefly_web/live/settings_live/index.ex:1205
+#: lib/firefly_web/live/settings_live/index.ex:1210
 #, elixir-autogen, elixir-format
 msgid "Sign out"
 msgstr "Abmelden"
 
-#: lib/firefly_web/live/settings_live/index.ex:1203
+#: lib/firefly_web/live/settings_live/index.ex:1208
 #, elixir-autogen, elixir-format
 msgid "Sign out %{device}"
 msgstr "%{device} abmelden"
@@ -3082,12 +3082,12 @@ msgstr "%{device} abmelden"
 msgid "Sign out everywhere"
 msgstr "Überall abmelden"
 
-#: lib/firefly_web/live/settings_live/index.ex:1216
+#: lib/firefly_web/live/settings_live/index.ex:1221
 #, elixir-autogen, elixir-format
 msgid "Sign out of all other devices"
 msgstr "Von allen anderen Geräten abmelden"
 
-#: lib/firefly_web/live/settings_live/index.ex:1214
+#: lib/firefly_web/live/settings_live/index.ex:1219
 #, elixir-autogen, elixir-format
 msgid "Sign out of every other device?"
 msgstr "Von jedem anderen Gerät abmelden?"
@@ -3112,23 +3112,68 @@ msgstr "Abgemeldet."
 msgid "Signed them out of every device."
 msgstr "Von jedem Gerät abgemeldet."
 
-#: lib/firefly_web/live/settings_live/index.ex:1177
+#: lib/firefly_web/live/settings_live/index.ex:1182
 #, elixir-autogen, elixir-format
 msgid "The browsers you're logged in on. Sign out any you don't recognize."
 msgstr "Die Browser, in denen du angemeldet bist. Melde alle ab, die du nicht kennst."
 
-#: lib/firefly_web/live/settings_live/index.ex:1189
+#: lib/firefly_web/live/settings_live/index.ex:1194
 #, elixir-autogen, elixir-format
 msgid "This browser"
 msgstr "Dieser Browser"
 
-#: lib/firefly_web/live/settings_live/index.ex:1187
-#: lib/firefly_web/live/settings_live/index.ex:1203
+#: lib/firefly_web/live/settings_live/index.ex:1192
+#: lib/firefly_web/live/settings_live/index.ex:1208
 #, elixir-autogen, elixir-format
 msgid "Unknown browser"
 msgstr "Unbekannter Browser"
 
-#: lib/firefly_web/live/settings_live/index.ex:1194
+#: lib/firefly_web/live/settings_live/index.ex:1199
 #, elixir-autogen, elixir-format
 msgid "last active"
 msgstr "zuletzt aktiv"
+
+#: lib/firefly_web/live/settings_live/index.ex:762
+#, elixir-autogen, elixir-format
+msgid "Email me when my account is logged into from a new device"
+msgstr "Mir eine E-Mail schicken, wenn sich jemand von einem neuen Gerät in mein Konto einloggt"
+
+#: lib/firefly_web/components/password_components.ex:31
+#, elixir-autogen, elixir-format
+msgid "Password strength"
+msgstr "Passwortstärke"
+
+#: lib/firefly_web/components/password_components.ex:35
+#, elixir-autogen, elixir-format
+msgid "Password strength: %{label}"
+msgstr "Passwortstärke: %{label}"
+
+#: lib/firefly_web/components/password_components.ex:50
+#, elixir-autogen, elixir-format
+msgid "fair"
+msgstr "mittel"
+
+#: lib/firefly_web/components/password_components.ex:51
+#, elixir-autogen, elixir-format
+msgid "good"
+msgstr "gut"
+
+#: lib/firefly_web/components/password_components.ex:52
+#, elixir-autogen, elixir-format
+msgid "strong"
+msgstr "stark"
+
+#: lib/firefly_web/components/password_components.ex:37
+#, elixir-autogen, elixir-format
+msgid "too easy to guess: add words or make it longer"
+msgstr "zu leicht zu erraten: füge Wörter hinzu oder mach es länger"
+
+#: lib/firefly_web/components/password_components.ex:48
+#, elixir-autogen, elixir-format
+msgid "very weak"
+msgstr "sehr schwach"
+
+#: lib/firefly_web/components/password_components.ex:49
+#, elixir-autogen, elixir-format
+msgid "weak"
+msgstr "schwach"

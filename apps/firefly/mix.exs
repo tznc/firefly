@@ -82,6 +82,8 @@ defmodule Firefly.MixProject do
       {:multipart, "~> 0.6.1"},
       {:ecto_autoslug_field, "~> 3.1"},
       {:bcrypt_elixir, "~> 3.3"},
+      # Password strength (see Firefly.Accounts.Passwords).
+      {:zxcvbn, "~> 0.3.0"},
       {:exgravatar, "~> 2.0"},
       {:bodyguard, "~> 2.4"},
       {:html_sanitize_ex, "~> 1.5"},
