@@ -222,6 +222,8 @@ defmodule Firefly.Accounts.Auth.DiscourseConnect do
 
   # Fetched like a link preview's image (public addresses only, size-capped);
   # a failure leaves the avatar as it was.
+  # Sobelow: writes to a fresh Plug.Upload temporary file.
+  # sobelow_skip ["Traversal.FileModule"]
   defp fetch_avatar(user, url) do
     with {:ok, file} <- Fetcher.get(url, types: @image_types, max_bytes: Uploads.max_size()),
          path = Plug.Upload.random_file!("discourse-connect-avatar"),

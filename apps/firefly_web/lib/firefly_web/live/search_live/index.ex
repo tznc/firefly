@@ -87,6 +87,8 @@ defmodule FireflyWeb.SearchLive.Index do
   end
 
   @impl true
+  # Sobelow: the headline is HTML-escaped by Discussion.Search before its own marks become <mark>.
+  # sobelow_skip ["XSS.Raw"]
   def render(assigns) do
     ~H"""
     <Layouts.app {Layouts.shell(assigns)}>

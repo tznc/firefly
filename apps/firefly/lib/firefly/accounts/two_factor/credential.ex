@@ -33,5 +33,7 @@ defmodule Firefly.Accounts.TwoFactor.Credential do
   end
 
   @doc "The credential's public key (a COSE key map)."
+  # Sobelow: a term this app encoded when the passkey was registered, decoded with :safe.
+  # sobelow_skip ["Misc.BinToTerm"]
   def cose_key(%__MODULE__{public_key: key}), do: :erlang.binary_to_term(key, [:safe])
 end

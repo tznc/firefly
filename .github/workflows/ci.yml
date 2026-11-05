@@ -197,6 +197,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Known vulnerabilities in the image's OS packages and anything else
+      # Trivy recognizes in it. Fails on HIGH or CRITICAL ones that have a
+      # fix (an unfixed one can't be acted on until Debian ships it). The
+      # action is pinned by commit, as is the Trivy version it runs.
+      - name: Scan the image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: firefly:ci
+          version: v0.76.1
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+          format: table
+
       - name: Check the release boots
         # runtime.exs requires these (mail too: SMTP checks its TLS setup builds);
         # eval doesn't start the app, so dummies suffice
@@ -208,3 +223,49 @@ jobs:
             firefly:ci /app/bin/firefly eval 'IO.puts(Application.spec(:firefly_web, :vsn))'
           # Backups need PostgreSQL client tools at least as new as the server (17).
           docker run --rm --entrypoint /usr/lib/postgresql/18/bin/pg_restore firefly:ci --version
+
+  security:
+    name: Security
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # gitleaks scans the whole history.
+          fetch-depth: 0
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Cache deps
+        uses: actions/cache@v6
+        with:
+          path: deps
+          key: security-deps-${{ runner.os }}-${{ hashFiles('mix.lock') }}
+
+      - run: mix deps.get
+
+      # Known advisories against the locked Hex packages, from the Elixir
+      # security advisory database (hex.audit, for retired releases, runs in
+      # the test job).
+      - run: mix deps.audit
+
+      # Static analysis, app by app (Sobelow scans an umbrella's apps
+      # separately), each with its reviewed apps/<app>/.sobelow-conf: any
+      # finding fails. Its config checks read <app root>/config, and the
+      # umbrella keeps config/ at the top, hence the link for the web app.
+      - name: Sobelow
+        run: |
+          ln -s ../../config apps/firefly_web/config
+          for app in firefly firefly_web firefly_plugins firefly_import; do
+            echo "::group::$app"
+            mix sobelow --root "apps/$app"
+            echo "::endgroup::"
+          done
+
+      # Committed secrets, in every commit (reviewed exceptions: .gitleaks.toml).
+      - name: gitleaks
+        run: >-
+          docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1
+          git --redact --no-banner --exit-code 1 .

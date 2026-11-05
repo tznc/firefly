@@ -103,6 +103,8 @@ defmodule FireflyWeb.Editor do
   attr :placeholder, :string, default: "Type post content here. Use markdown syntax."
   attr :user, :any, default: nil, doc: "the writer, for plugins' composer widgets"
 
+  # Sobelow: Markdown.render/1 returns sanitized HTML.
+  # sobelow_skip ["XSS.Raw"]
   def body_editor(assigns) do
     assigns =
       assigns

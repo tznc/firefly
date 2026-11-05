@@ -9,6 +9,8 @@ defmodule Firefly.Uploads.Storage.Local do
   @behaviour Firefly.Uploads.Storage
 
   @impl true
+  # Sobelow: keys are built by Uploads from the content's SHA-256 and a fixed extension.
+  # sobelow_skip ["Traversal.FileModule"]
   def put(key, data, _content_type) do
     path = path(key)
     # Written aside and renamed, so a reader never sees half a file.
@@ -21,6 +23,8 @@ defmodule Firefly.Uploads.Storage.Local do
   end
 
   @impl true
+  # Sobelow: keys are built by Uploads from the content's SHA-256 and a fixed extension.
+  # sobelow_skip ["Traversal.FileModule"]
   def delete(key) do
     case File.rm(path(key)) do
       {:error, :enoent} -> :ok

@@ -242,6 +242,9 @@ defmodule Firefly.Badges do
     Repo.insert_all(Badge, rows, on_conflict: :nothing)
   end
 
+  # Sobelow: query is a system badge's fixed SQL (system_badges/0), never input; values are
+  # parameters.
+  # sobelow_skip ["SQL.Query"]
   defp grant_query(badge, query, user_ids) do
     # A single badge goes to users who don't hold it; a multiple one, for
     # posts it wasn't granted for (the unique index).

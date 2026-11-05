@@ -44,6 +44,8 @@ defmodule FireflyWeb.OpenTelemetry.Metrics do
 
   defp version, do: to_string(Application.spec(:firefly_web, :vsn))
 
+  # Sobelow: metric names come from FireflyWeb.Telemetry's fixed definitions.
+  # sobelow_skip ["DOS.StringToAtom"]
   defp instrument(meter, metric) do
     name = metric.name |> Enum.join(".") |> String.to_atom()
     opts = %{description: metric.description, unit: unit(metric.unit)}

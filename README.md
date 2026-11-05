@@ -838,6 +838,33 @@ mix test --include ldap
 `FIREFLY_IMPORT_MYSQL_URL`, `FIREFLY_IMPORT_MONGO_URL` and
 `FIREFLY_IMPORT_REDIS_URL` point them elsewhere.
 
+### Security checks
+
+CI's Security job fails on any of these; the Docker image job also scans the
+built image with [Trivy](https://trivy.dev) (HIGH and CRITICAL
+vulnerabilities that have a fix). Dependabot (`.github/dependabot.yml`)
+opens weekly updates for Hex, npm and GitHub Actions.
+
+```sh
+mix deps.audit                        # advisories against mix.lock (mix hex.audit: retired releases)
+ln -s ../../config apps/firefly_web/config   # once: Sobelow's config checks look there
+mix sobelow --root apps/firefly_web   # and apps/firefly, apps/firefly_plugins, apps/firefly_import
+docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1 git --redact .
+```
+
+[Sobelow](https://github.com/sobelow/sobelow) reads each app's reviewed
+`.sobelow-conf` and fails on a finding of any confidence. A finding that's
+a false positive is skipped where it is, with its reason:
+
+```elixir
+# Sobelow: the path comes from a signed token whose name is validated.
+# sobelow_skip ["Traversal.SendDownload"]
+def download(conn, params) do
+```
+
+gitleaks' reviewed exceptions (test keys, the old development keys) are in
+`.gitleaks.toml`.
+
 ## Patrons
 
 Firestorm was funded by [a

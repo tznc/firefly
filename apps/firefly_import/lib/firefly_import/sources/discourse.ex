@@ -655,6 +655,8 @@ defmodule FireflyImport.Sources.Discourse do
 
   # The query's rows page by page, keyed by `key` (an id column, `$1` the
   # last one, `$2` the page size).
+  # Sobelow: key is one of this module's fixed column names.
+  # sobelow_skip ["DOS.StringToAtom"]
   defp paged(sql, %{conn: conn}, key) do
     field = key |> String.split(".") |> List.last() |> String.to_atom()
 

@@ -14,6 +14,8 @@ defmodule FireflyWeb.Router do
     plug(:accepts, ["json"])
   end
 
+  # Sobelow: FireflyWeb.Plugs.ContentSecurityPolicy sets the CSP, with a per-request nonce.
+  # sobelow_skip ["Config.CSP"]
   pipeline :browser do
     plug(:accepts, ["html"])
     plug(:fetch_session)
@@ -50,6 +52,8 @@ defmodule FireflyWeb.Router do
   # The jobs dashboard (Oban Web, see FireflyWeb.JobsDashboard): admins,
   # checked on every request; its own layout, under the forum's CSP (its
   # scripts carry the nonce).
+  # Sobelow: FireflyWeb.Plugs.ContentSecurityPolicy sets the CSP, with a per-request nonce.
+  # sobelow_skip ["Config.CSP"]
   pipeline :jobs_admin do
     plug(:accepts, ["html"])
     plug(:fetch_session)
@@ -73,6 +77,8 @@ defmodule FireflyWeb.Router do
 
   # Uploads are fetched by <img> tags and downloads, so any Accept; the
   # session says who's asking (see FireflyWeb.UploadController).
+  # Sobelow: GET routes only; uploads are created through LiveView and the API.
+  # sobelow_skip ["Config.CSRF"]
   pipeline :uploads do
     plug(:fetch_session)
     plug(FireflyWeb.Plugs.CurrentUser)
@@ -80,6 +86,8 @@ defmodule FireflyWeb.Router do
 
   # One-click unsubscribe (RFC 8058): mail clients POST without a session
   # or CSRF token; the signed token in the URL is the authorization.
+  # Sobelow: one route, a POST from mail clients answered with a short text/plain body.
+  # sobelow_skip ["Config.Headers"]
   pipeline :one_click do
     plug(:accepts, ["html", "text"])
   end
@@ -87,6 +95,8 @@ defmodule FireflyWeb.Router do
   # A SAML identity provider's response, posted from its page: no session
   # (the browser doesn't send it) and no CSRF token; the signed response is
   # the authorization (see FireflyWeb.SAMLController).
+  # Sobelow: one route that verifies the identity provider's POST and redirects.
+  # sobelow_skip ["Config.Headers"]
   pipeline :saml_acs do
     plug(:accepts, ["html"])
   end
@@ -279,6 +289,9 @@ defmodule FireflyWeb.Router do
   # Blog comments: the script sites include, and the framed comments page
   # (see FireflyWeb.EmbedController). No session: it's public, and framed
   # cross-site, where cookies don't go anyway.
+  # Sobelow: these pages are framed by other sites by design; EmbedController's CSP frame-
+  # ancestors names the embeddable hosts instead of X-Frame-Options.
+  # sobelow_skip ["Config.Headers"]
   pipeline :embed do
     plug(:accepts, ["html"])
   end
@@ -363,6 +376,8 @@ defmodule FireflyWeb.Router do
   get("/saml/metadata", FireflyWeb.SAMLController, :metadata)
 
   # Crawlers: robots.txt and the sitemaps (see Firefly.SEO). No session.
+  # Sobelow: robots.txt and XML sitemaps, no HTML.
+  # sobelow_skip ["Config.Headers"]
   pipeline :crawlers do
     plug(:accepts, ["xml", "txt", "html"])
   end
