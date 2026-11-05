@@ -153,6 +153,18 @@ defmodule Firefly.Generators do
     end)
   end
 
+  @doc """
+  "Zalgo" text: letters each stacked with combining marks, so it has
+  far more code points (what Postgres counts) than graphemes (what
+  `String.length/1` and Ecto's `validate_length/3` count by default).
+  """
+  def zalgo(max_graphemes \\ 260) do
+    map(
+      {integer(1..max_graphemes), integer(1..4)},
+      fn {n, marks} -> String.duplicate("e" <> String.duplicate("\u0301", marks), n) end
+    )
+  end
+
   @doc "Any binary at all, invalid UTF-8 included."
   def any_binary(max \\ 200), do: binary(max_length: max)
 
