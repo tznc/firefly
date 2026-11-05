@@ -14,7 +14,7 @@ defmodule Firefly.Notifications.EmailLog do
 
   require Logger
 
-  alias Firefly.{JobRuns, Mailer, Repo, SiteSettings}
+  alias Firefly.{Mailer, Repo, SiteSettings}
   alias Firefly.Accounts.User
   alias Firefly.Moderation.StaffLog
   alias Firefly.Notifications.Emails
@@ -161,17 +161,12 @@ defmodule Firefly.Notifications.EmailLog do
   end
 
   @doc """
-  Prunes entries older than the `email_log_days` setting (see the
-  scheduler, `Firefly.Moderation.TopicTimers.Scheduler`), once an hour.
-  Returns how many went.
+  Prunes entries older than the `email_log_days` setting, once an hour
+  across nodes (see `Firefly.Jobs.Periodic`). Returns how many went.
   """
   def run_due(now \\ DateTime.utc_now(:second)) do
-    if JobRuns.claim("email_log.prune", 3600) do
-      cutoff = DateTime.add(now, -SiteSettings.get("email_log_days"), :day)
-      {count, _} = Repo.delete_all(from(e in __MODULE__, where: e.inserted_at < ^cutoff))
-      count
-    else
-      0
-    end
+    cutoff = DateTime.add(now, -SiteSettings.get("email_log_days"), :day)
+    {count, _} = Repo.delete_all(from(e in __MODULE__, where: e.inserted_at < ^cutoff))
+    count
   end
 end

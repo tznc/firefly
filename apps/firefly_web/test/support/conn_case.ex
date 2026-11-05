@@ -22,6 +22,9 @@ defmodule FireflyWeb.ConnCase do
       import FireflyWeb.ConnCase
       import Firefly.Fixtures
       import FireflyWeb.ApiHelpers
+
+      # Jobs are only enqueued in tests: assert_enqueued/1, perform_job/2.
+      use Oban.Testing, repo: Firefly.Repo
     end
   end
 

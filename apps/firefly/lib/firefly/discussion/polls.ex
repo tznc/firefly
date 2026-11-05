@@ -13,8 +13,9 @@ defmodule Firefly.Discussion.Polls do
 
   The post's author and staff close and reopen it (the `:manage_poll`
   policy; staff on someone else's poll go to the staff log). A poll with a
-  `close_at` closes then, run by `Firefly.Moderation.TopicTimers.Scheduler`
-  (`run_due/1`), including when the time passed while the app was down.
+  `close_at` closes then, within a minute (`run_due/1`, run every minute
+  by `Firefly.Jobs.Periodic`), including when the time passed while the
+  app was down.
 
   A poll moves with its post (merge, split). Votes are in the voter's
   account export; when an account is deleted they stay, cast by its

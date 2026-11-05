@@ -20,7 +20,7 @@ defmodule Firefly.Telemetry do
   | `[:firefly, :plugins, :hook]` | `duration` (native), `count` | `plugin`, `hook`, `result` (`ok`, `error`) |
   | `[:firefly, :plugins, :event, :start \\| :stop \\| :exception]` | `duration` | `result` (`delivered`, `failed`, `dropped`) on stop |
   | `[:firefly, :webhooks, :delivery, :start \\| :stop \\| :exception]` | `duration` | `type` (event type), `result` (`success`, `failure`) on stop |
-  | `[:firefly, :scheduler, :job, :start \\| :stop \\| :exception]` | `duration` | `job` |
+  | `[:firefly, :scheduler, :job, :start \\| :stop \\| :exception]` | `duration` | `job` (the module whose periodic task ran, see `Firefly.Jobs.Periodic`) |
   | `[:firefly, :discussion, :create_post, :start \\| :stop \\| :exception]` | `duration` | `result` (`ok`, `error`) on stop |
   | `[:firefly, :plugins, :run_hook, :start \\| :stop \\| :exception]` | `duration` | `plugin`, `hook`; `result` on stop |
   | `[:firefly, :ai, :request, :start \\| :stop \\| :exception]` | `duration` | `adapter`; `result` on stop |

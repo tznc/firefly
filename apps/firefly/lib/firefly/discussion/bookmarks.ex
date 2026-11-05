@@ -14,8 +14,9 @@ defmodule Firefly.Discussion.Bookmarks do
   `list/1` and can't be changed, and its reminder, when due, is dropped
   without a notification. The bookmark comes back if the post does.
 
-  Reminders live in the database, so they survive restarts:
-  `Firefly.Moderation.TopicTimers.Scheduler` runs `run_due/1`, which fires each
+  Reminders live in the database, so they survive restarts: a job
+  scheduled for the reminder's time (and a sweep every minute, see
+  `Firefly.Jobs.Periodic`) runs `run_due/1`, which fires each
   due reminder exactly once: the bookmark is locked (`SKIP LOCKED`, so two
   nodes never take the same one), and its `remind_at` cleared in the same
   transaction that inserts the `bookmark_reminder` notification.
@@ -153,10 +154,17 @@ defmodule Firefly.Discussion.Bookmarks do
       bookmark ->
         at = remind_at(attrs["reminder"], attrs["custom_at"], offset)
 
-        bookmark
-        |> Bookmark.changeset(%{note: attrs["note"], remind_at: at})
-        |> require_custom_time(attrs["reminder"], at)
-        |> Repo.update()
+        result =
+          bookmark
+          |> Bookmark.changeset(%{note: attrs["note"], remind_at: at})
+          |> require_custom_time(attrs["reminder"], at)
+          |> Repo.update()
+
+        # The reminder fires on time, not at the next minute's sweep.
+        with {:ok, %Bookmark{remind_at: %DateTime{} = at}} <- result,
+             do: Firefly.Jobs.run_at(:BookmarkReminders, at)
+
+        result
     end
   end
 

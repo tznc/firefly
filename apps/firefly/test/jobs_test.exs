@@ -2,8 +2,6 @@ defmodule Firefly.JobsTest do
   # Not async: the job_retention_days setting is node-wide (cached).
   use Firefly.DataCase, async: false
 
-  use Oban.Testing, repo: Firefly.Repo
-
   import Firefly.Fixtures
 
   alias Firefly.{Jobs, SiteSettings}

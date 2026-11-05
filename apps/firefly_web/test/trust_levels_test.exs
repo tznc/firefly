@@ -4,7 +4,7 @@ defmodule FireflyWeb.TrustLevelsTest do
   import Ecto.Query, only: [where: 2]
   import Firefly.DataCase, only: [errors_on: 1]
 
-  alias Firefly.{Accounts, Discussion, Groups, JobRuns, Repo, TrustLevels}
+  alias Firefly.{Accounts, Discussion, Groups, Repo, TrustLevels}
   alias Firefly.Moderation.{Flags, Posting}
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Policy, Post}
@@ -169,9 +169,8 @@ defmodule FireflyWeb.TrustLevelsTest do
     end
 
     test "runs once an hour across nodes" do
-      assert JobRuns.claim("trust_levels", 3600)
-      assert TrustLevels.run_due() == :ok
-      refute JobRuns.claim("trust_levels", 3600)
+      assert {"5 * * * *", Firefly.Jobs.Periodic.TrustLevels} in Firefly.Jobs.crontab()
+      assert :ok = perform_job(Firefly.Jobs.Periodic.TrustLevels, %{})
     end
 
     test "progress lists what the next level needs", ctx do

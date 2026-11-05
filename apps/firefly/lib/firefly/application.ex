@@ -40,7 +40,10 @@ defmodule Firefly.Application do
         # Checks new content with Akismet in the background
         {Task.Supervisor, name: Firefly.Moderation.Akismet.TaskSupervisor},
         # Background and scheduled jobs (see Firefly.Jobs)
-        {Oban, Application.fetch_env!(:firefly, Oban)},
+        {Oban,
+         Keyword.put(Application.fetch_env!(:firefly, Oban), :cron,
+           crontab: Firefly.Jobs.crontab()
+         )},
         # Runs readiness probes' database checks, bounded by a timeout
         {Task.Supervisor, name: Firefly.Health.TaskSupervisor},
         # Posts as plugins transformed them
@@ -51,7 +54,7 @@ defmodule Firefly.Application do
         Firefly.Reports.Cache,
         # Runs backups and restores; applies read-only mode
         Firefly.Backups.Runner
-      ] ++ topic_timers() ++ plugin_queue()
+      ] ++ plugin_queue()
   end
 
   # Delivers plugin events and runs plugins' scheduled jobs. Off in tests,
@@ -60,15 +63,6 @@ defmodule Firefly.Application do
     if Application.get_env(:firefly, Firefly.Plugins.Queue, [])[:enabled] == false,
       do: [],
       else: [Firefly.Plugins.Queue]
-  end
-
-  # Runs due thread timers (close, reopen or delete at a set time),
-  # bookmark reminders and poll closings. Off in tests, which run them inside their own
-  # database transaction.
-  defp topic_timers do
-    if Application.get_env(:firefly, Firefly.Moderation.TopicTimers, [])[:enabled] == false,
-      do: [],
-      else: [Firefly.Moderation.TopicTimers.Scheduler]
   end
 
   defp children(false), do: default_children()

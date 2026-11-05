@@ -7,7 +7,6 @@ defmodule Firefly.BookmarksTest do
   alias Firefly.{Discussion, Groups, Notifications}
   alias Firefly.Accounts.{AccountDeletion, AccountExport}
   alias Firefly.Discussion.Bookmarks
-  alias Firefly.Moderation.TopicTimers
   alias Firefly.Moderation.TopicTools
   alias Firefly.Discussion.{Bookmark, Post}
   alias Firefly.Notifications.Notification
@@ -237,13 +236,17 @@ defmodule Firefly.BookmarksTest do
     assert url =~ "/threads/#{target_id}#post-#{reply.id}"
   end
 
-  test "the scheduler fires reminders that fell due while it was down", %{bob: bob, reply: reply} do
+  test "a reminder runs at its time; the sweep fires ones that fell due while down", %{
+    bob: bob,
+    reply: reply
+  } do
     {:ok, bookmark} = Bookmarks.bookmark(bob, reply)
     remind(bob, bookmark, in_seconds(60))
-    Repo.update_all(Bookmark, set: [remind_at: in_seconds(-3600)])
+    %{remind_at: at} = Repo.reload!(bookmark)
+    assert_enqueued(worker: Firefly.Jobs.Periodic.BookmarkReminders, scheduled_at: at)
 
-    start_supervised!({TopicTimers.Scheduler, interval: 50})
-    :sys.get_state(TopicTimers.Scheduler)
+    Repo.update_all(Bookmark, set: [remind_at: in_seconds(-3600)])
+    assert :ok = perform_job(Firefly.Jobs.Periodic.BookmarkReminders, %{})
 
     assert [_] = reminders(bob)
     assert Repo.reload!(bookmark).remind_at == nil

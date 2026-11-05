@@ -8,7 +8,7 @@ defmodule Firefly.PollsTest do
   alias Firefly.Accounts.{AccountDeletion, AccountExport}
   alias Firefly.Discussion.Polls
   alias Firefly.Moderation.Penalties
-  alias Firefly.Moderation.{TopicTimers, TopicTools}
+  alias Firefly.Moderation.TopicTools
   alias Firefly.Discussion.{Poll, PollVote, Post}
   alias Firefly.Moderation.StaffAction
 
@@ -313,8 +313,7 @@ defmodule Firefly.PollsTest do
         set: [close_at: DateTime.add(DateTime.utc_now(:second), -60)]
       )
 
-      start_supervised!({TopicTimers.Scheduler, interval: 50})
-      :sys.get_state(TopicTimers.Scheduler)
+      assert :ok = perform_job(Firefly.Jobs.Periodic.PollClosing, %{})
       assert Repo.reload!(later).closed_at
     end
   end

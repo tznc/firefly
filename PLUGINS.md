@@ -336,8 +336,8 @@ and received, the duration and the time. Request and response bodies and
 headers are never logged. Staff see the latest entries on
 `/staff/plugins/:id`, filtered by host and by allowed or blocked. Entries
 are kept for the `plugin_egress_days` site setting (14 days by default;
-`/staff/settings`, "Plugins") and pruned by the scheduler that runs topic
-timers; they stay after a plugin is uninstalled until then. Firefly's own
+`/staff/settings`, "Plugins") and pruned by an hourly background job;
+they stay after a plugin is uninstalled until then. Firefly's own
 requests (link previews) aren't plugin traffic and aren't logged here.
 
 ### What staff see

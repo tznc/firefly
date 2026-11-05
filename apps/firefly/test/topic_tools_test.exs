@@ -391,16 +391,19 @@ defmodule Firefly.TopicToolsTest do
       assert [_] = log_entries("thread.timer_cancel")
     end
 
-    test "the scheduler runs due timers, including ones that fell due while it was down", %{
+    test "a timer runs at its time, and the sweep catches ones that fell due while down", %{
       admin: admin,
       thread: thread
     } do
-      {:ok, _} = TopicTimers.set_timer(thread, %{action: "close", run_at: in_seconds(60)}, admin)
-      # As if it fell due while the app was down.
-      Repo.update_all(ThreadTimer, set: [run_at: in_seconds(-3600)])
+      at = in_seconds(60)
+      {:ok, _} = TopicTimers.set_timer(thread, %{action: "close", run_at: at}, admin)
 
-      start_supervised!({TopicTimers.Scheduler, interval: 50})
-      :sys.get_state(TopicTimers.Scheduler)
+      worker = Firefly.Jobs.Periodic.TopicTimers
+      assert_enqueued(worker: worker, scheduled_at: DateTime.truncate(at, :second))
+
+      # As if it fell due while the app was down: the minute's sweep runs it.
+      Repo.update_all(ThreadTimer, set: [run_at: in_seconds(-3600)])
+      assert :ok = perform_job(worker, %{})
 
       assert Repo.get!(Thread, thread.id).closed_at
       assert Repo.all(ThreadTimer) == []

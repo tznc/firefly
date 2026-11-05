@@ -5,7 +5,7 @@ defmodule FireflyWeb.DigestsTest do
   # Mail is sent from other processes (the notifications process, LiveViews).
   setup :set_swoosh_global
 
-  alias Firefly.{Discussion, Groups, JobRuns, Notifications, Repo}
+  alias Firefly.{Discussion, Groups, Notifications, Repo}
   alias Firefly.Accounts.Ignores
   alias Firefly.Notifications.Digests
   alias Firefly.Accounts.User
@@ -132,7 +132,7 @@ defmodule FireflyWeb.DigestsTest do
   test "the site setting turns digests off" do
     Repo.insert!(%SiteSetting{key: "digests_enabled", value: "false"})
     assert Digests.run_due() == :ok
-    assert JobRuns.claim("digests", 900)
+    assert_no_email_sent()
   end
 
   test "unsubscribing: one click, the page, and settings", %{conn: conn, reader: reader} do

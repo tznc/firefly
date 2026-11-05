@@ -29,7 +29,7 @@ defmodule Firefly.Embedding do
 
   require Logger
 
-  alias Firefly.{Accounts, Backups, Discussion, JobRuns, Repo, SiteSettings}
+  alias Firefly.{Accounts, Backups, Discussion, Repo, SiteSettings}
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Embedding.{EmbeddableHost, TopicEmbed}
@@ -350,12 +350,12 @@ defmodule Firefly.Embedding do
 
   @doc """
   Makes topics for the `embed_feed_url` feed's new entries, once an hour
-  across nodes (run by `Firefly.Moderation.TopicTimers.Scheduler`).
+  across nodes (see `Firefly.Jobs.Periodic`).
   """
   def run_due do
     url = String.trim(SiteSettings.get("embed_feed_url"))
 
-    if url != "" and JobRuns.claim("embed.feed", 3600) do
+    if url != "" do
       case poll_feed(url) do
         {:ok, _count} -> :ok
         {:error, reason} -> Logger.warning("Embed feed #{url}: #{inspect(reason)}")

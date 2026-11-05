@@ -15,8 +15,8 @@ defmodule Firefly.Notifications.Digests do
 
   Only confirmed, active (not suspended or deleted) accounts with an email
   get digests, and none while the `digests_enabled` site setting is off.
-  `run_due/0` runs from the scheduler (`Firefly.Moderation.TopicTimers.Scheduler`)
-  every 15 minutes across nodes (see `Firefly.JobRuns`), in batches.
+  `run_due/0` runs every 15 minutes across nodes (see
+  `Firefly.Jobs.Periodic`), in batches.
   Each member is claimed by setting `last_digest_at` in one conditional
   update before their digest is built, so two nodes never send the same
   one.
@@ -28,7 +28,7 @@ defmodule Firefly.Notifications.Digests do
   import Ecto.Query
   require Logger
 
-  alias Firefly.{Discussion, JobRuns, Mailer, Notifications, Repo, SiteSettings}
+  alias Firefly.{Discussion, Mailer, Notifications, Repo, SiteSettings}
   alias Firefly.Notifications.Emails
   alias Firefly.Accounts.User
   alias Firefly.Endpoint
@@ -41,7 +41,6 @@ defmodule Firefly.Notifications.Digests do
     {"Monthly", "monthly", 30}
   ]
 
-  @run_seconds 900
   @batch 200
   @salt "digest unsubscribe"
   # Unsubscribe links work for a year: digests linger in inboxes.
@@ -65,11 +64,9 @@ defmodule Firefly.Notifications.Digests do
 
   ## Sending
 
-  @doc "Sends the digests that are due, if 15 minutes have passed since the last run."
+  @doc "Sends the digests that are due (every 15 minutes across nodes, see `Firefly.Jobs.Periodic`)."
   def run_due do
-    if SiteSettings.get("digests_enabled") and JobRuns.claim("digests", @run_seconds),
-      do: send_due(),
-      else: :ok
+    if SiteSettings.get("digests_enabled"), do: send_due(), else: :ok
   end
 
   @doc "Sends a digest to every member it's due for (a batch per frequency). Returns how many."

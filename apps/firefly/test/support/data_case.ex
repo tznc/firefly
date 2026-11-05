@@ -25,6 +25,9 @@ defmodule Firefly.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Firefly.DataCase
+
+      # Jobs are only enqueued in tests: assert_enqueued/1, perform_job/2.
+      use Oban.Testing, repo: Firefly.Repo
     end
   end
 

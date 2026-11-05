@@ -22,8 +22,7 @@ defmodule Firefly.TrustLevels do
   `Firefly.Discussion.approval_required?/1`).
 
   Levels 1 to 3 are earned: `run_due/0` (run by
-  `Firefly.Moderation.TopicTimers.Scheduler`, once an hour across nodes; see
-  `Firefly.JobRuns`) promotes confirmed members who meet the next
+  `Firefly.Jobs.Periodic`, once an hour across nodes) promotes confirmed members who meet the next
   level's requirements (site settings with Discourse's defaults: topics
   entered, posts read, days visited, likes given and received, topics
   replied to; time spent reading isn't tracked, so it isn't required) and
@@ -45,7 +44,7 @@ defmodule Firefly.TrustLevels do
 
   import Ecto.Query
 
-  alias Firefly.{Accounts, JobRuns, Notifications, Repo, SiteSettings}
+  alias Firefly.{Accounts, Notifications, Repo, SiteSettings}
   alias Firefly.Moderation.StaffLog
   alias Firefly.Accounts.User
   alias Firefly.URLs
@@ -69,7 +68,6 @@ defmodule Firefly.TrustLevels do
   # A regular stays one until below this share of a requirement.
   @retention 0.9
 
-  @review_seconds 3600
   @batch 500
 
   @doc "Every level, lowest first."
@@ -155,10 +153,8 @@ defmodule Firefly.TrustLevels do
 
   ## The review
 
-  @doc "Reviews every member's level, if an hour has passed since the last review."
-  def run_due do
-    if JobRuns.claim("trust_levels", @review_seconds), do: review(), else: :ok
-  end
+  @doc "Reviews every member's level (hourly across nodes, see `Firefly.Jobs.Periodic`)."
+  def run_due, do: review()
 
   @doc "Promotes and demotes members as their activity warrants (see the moduledoc)."
   def review do
