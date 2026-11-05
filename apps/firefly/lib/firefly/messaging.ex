@@ -202,9 +202,15 @@ defmodule Firefly.Messaging do
     end
   end
 
-  # A group member replying from the group's inbox joins in.
+  # A group member replying from the group's inbox joins in, or back in
+  # if they had left (their row stays, so it's brought back).
   defp join_in(conversation, user) do
-    if not participant?(conversation, user), do: insert_participant(conversation, user)
+    if not participant?(conversation, user) do
+      Repo.insert!(%ConversationParticipant{conversation_id: conversation.id, user_id: user.id},
+        on_conflict: [set: [left_at: nil]],
+        conflict_target: [:user_id, :conversation_id]
+      )
+    end
   end
 
   defp insert_participant(conversation, user),
