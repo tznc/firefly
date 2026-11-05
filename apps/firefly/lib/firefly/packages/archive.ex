@@ -11,8 +11,9 @@ defmodule Firefly.Packages.Archive do
   `Firefly.Packages`), without running anything: a package that is only a
   theme needs no plugin sandbox.
 
-  Limits: the zip at most 5 MB, at most 200 files and 20 MB unpacked;
-  paths are relative, without `..`.
+  Limits: the zip at most 5 MB, at most 200 files and 20 MB unpacked
+  (counted as it inflates, whatever sizes the zip declares); paths are
+  relative, without `..`.
   """
 
   alias Firefly.Plugin.Manifest
@@ -80,14 +81,16 @@ defmodule Firefly.Packages.Archive do
     zip
   end
 
-  # Checks the sizes the zip declares before inflating anything.
+  # Checks the sizes the zip declares before inflating anything (they can
+  # lie: inflating counts again, see inflate_all/2).
   defp list(zip) do
     case :zip.list_dir(zip) do
       {:ok, [_comment | entries]} ->
+        # Name, declared size, and where its compressed data is.
         files =
-          for {:zip_file, name, info, _comment, _offset, _size} <- entries,
+          for {:zip_file, name, info, _comment, offset, compressed} <- entries,
               not String.ends_with?(to_string(name), "/"),
-              do: {to_string(name), elem(info, 1)}
+              do: {to_string(name), elem(info, 1), offset, compressed}
 
         cond do
           length(files) > @max_files ->
@@ -109,15 +112,85 @@ defmodule Firefly.Packages.Archive do
     names = MapSet.new(entries, &elem(&1, 0))
 
     with :ok <- check_paths(names),
-         {:ok, extracted} <- :zip.extract(zip, [:memory]) do
-      files = for {name, data} <- extracted, into: %{}, do: {to_string(name), data}
+         {:ok, files} <- inflate_all(zip, entries) do
+      {:ok, Map.drop(files, Enum.filter(Map.keys(files), &junk?/1))}
+    end
+  end
 
-      if Enum.sum_by(Map.values(files), &byte_size/1) > @max_unpacked,
-        do: {:error, "The package unpacks to more than #{div(@max_unpacked, 1024 * 1024)} MB."},
-        else: {:ok, Map.drop(files, Enum.filter(Map.keys(files), &junk?/1))}
-    else
-      {:error, message} when is_binary(message) -> {:error, message}
-      {:error, _} -> {:error, "The file isn't a valid .zip."}
+  # Inflates each file itself, counting what comes out against the limit:
+  # the sizes a zip declares can lie, and :zip.extract/2 inflates whole
+  # files before anything can be checked (a 5 MB zip can hold gigabytes).
+  defp inflate_all(zip, entries) do
+    entries
+    |> Enum.reduce_while({%{}, @max_unpacked}, fn {name, _size, offset, compressed},
+                                                  {files, left} ->
+      with {:ok, method, data} <- entry_data(zip, offset, compressed),
+           {:ok, inflated} <- inflate(method, data, left) do
+        {:cont, {Map.put(files, name, inflated), left - byte_size(inflated)}}
+      else
+        :too_big ->
+          {:halt,
+           {:error, "The package unpacks to more than #{div(@max_unpacked, 1024 * 1024)} MB."}}
+
+        :invalid ->
+          {:halt, {:error, "The file isn't a valid .zip."}}
+      end
+    end)
+    |> case do
+      {:error, message} -> {:error, message}
+      {files, _left} -> {:ok, files}
+    end
+  end
+
+  # A file's compression method and compressed data, after its local
+  # header (30 bytes, then its name and extra field).
+  defp entry_data(zip, offset, compressed) do
+    case zip do
+      <<_::binary-size(^offset), 0x04034B50::little-32, _version_flags::binary-4,
+        method::little-16, _times_crc_sizes::binary-16, name_length::little-16,
+        extra_length::little-16, rest::binary>> ->
+        case rest do
+          <<_::binary-size(^name_length + ^extra_length), data::binary-size(^compressed),
+            _::binary>> ->
+            {:ok, method, data}
+
+          _truncated ->
+            :invalid
+        end
+
+      _no_header ->
+        :invalid
+    end
+  end
+
+  # Stored.
+  defp inflate(0, data, left), do: if(byte_size(data) > left, do: :too_big, else: {:ok, data})
+
+  # Deflated: inflated a chunk at a time, stopping past `left` bytes.
+  defp inflate(8, data, left) do
+    z = :zlib.open()
+
+    try do
+      :ok = :zlib.inflateInit(z, -15)
+      inflate_chunks(z, :zlib.safeInflate(z, data), [], left)
+    catch
+      :error, _data_error -> :invalid
+    after
+      :zlib.close(z)
+    end
+  end
+
+  defp inflate(_method, _data, _left), do: :invalid
+
+  defp inflate_chunks(z, {status, chunk}, chunks, left) do
+    left = left - IO.iodata_length(chunk)
+
+    cond do
+      left < 0 -> :too_big
+      status == :finished -> {:ok, IO.iodata_to_binary(Enum.reverse([chunk | chunks]))}
+      # Out of input before the end of the stream: truncated.
+      IO.iodata_length(chunk) == 0 -> :invalid
+      true -> inflate_chunks(z, :zlib.safeInflate(z, []), [chunk | chunks], left)
     end
   end
 
