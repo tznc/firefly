@@ -12,6 +12,9 @@ end
 # Uploads stored by earlier runs (see config/test.exs).
 File.rm_rf!(Application.fetch_env!(:firefly, Firefly.Uploads)[:local_dir])
 
+# More property runs (see "Tests" in the README) take longer than a test may.
+if System.get_env("FIREFLY_PROPERTY_RUNS"), do: ExUnit.configure(timeout: :infinity)
+
 ExUnit.start()
 
 Ecto.Adapters.SQL.Sandbox.mode(Firefly.Repo, :manual)

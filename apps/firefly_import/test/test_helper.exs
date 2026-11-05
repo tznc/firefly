@@ -10,6 +10,9 @@ if !Code.ensure_loaded?(FireflyWeb.Endpoint) do
   Application.put_env(:firefly, Firefly.Endpoint, impl: Firefly.TestEndpoint)
 end
 
+# More property runs (see "Tests" in the README) take longer than a test may.
+if System.get_env("FIREFLY_PROPERTY_RUNS"), do: ExUnit.configure(timeout: :infinity)
+
 ExUnit.start()
 
 Ecto.Adapters.SQL.Sandbox.mode(Firefly.Repo, :manual)
