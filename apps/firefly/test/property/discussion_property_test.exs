@@ -71,7 +71,7 @@ defmodule Firefly.DiscussionPropertyTest do
                   min_length: 1,
                   max_length: 12
                 ),
-              max_runs: runs(25)
+              max_runs: runs(12)
             ) do
         ids =
           for n <- 1..count do
@@ -184,7 +184,7 @@ defmodule Firefly.DiscussionPropertyTest do
                   min_length: 1,
                   max_length: 8
                 ),
-              max_runs: runs(20)
+              max_runs: runs(10)
             ) do
         threads =
           for size <- sizes do

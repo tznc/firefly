@@ -118,15 +118,15 @@ defmodule Firefly.PackagesTest do
     # inflated everything, so a zip claiming tiny files could inflate to
     # gigabytes first.
     test "a zip that lies about its sizes stops inflating at the limit" do
-      zip = lying_zip(300 * 1024 * 1024)
+      zip = lying_zip(150 * 1024 * 1024)
       {:ok, entries} = :zip.list_dir(zip)
       assert Enum.all?(for({:zip_file, _, info, _, _, _} <- entries, do: elem(info, 1) == 10))
 
       task =
         Task.async(fn ->
-          # Killed if it holds more than 160 MB, binaries included.
+          # Killed if it holds more than 100 MB, binaries included.
           Process.flag(:max_heap_size, %{
-            size: div(160 * 1024 * 1024, :erlang.system_info(:wordsize)),
+            size: div(100 * 1024 * 1024, :erlang.system_info(:wordsize)),
             kill: true,
             error_logger: false,
             include_shared_binaries: true
