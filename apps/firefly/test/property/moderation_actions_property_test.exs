@@ -9,9 +9,9 @@ defmodule Firefly.ModerationActionsPropertyTest do
   """
   # Sync: it makes admins (the shared admin role) and sends mail.
   use Firefly.DataCase, async: false
-  use Bamboo.Test, shared: true
   use ExUnitProperties
 
+  import Swoosh.TestAssertions
   import Firefly.Generators
   import Firefly.Fixtures
 
@@ -19,6 +19,8 @@ defmodule Firefly.ModerationActionsPropertyTest do
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Moderation.{Flags, Penalties, TopicTimers}
+
+  setup :set_swoosh_global
 
   setup do
     {:ok, _} = Notifications.start_link()
