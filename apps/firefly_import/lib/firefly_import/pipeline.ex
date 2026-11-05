@@ -162,6 +162,7 @@ defmodule FireflyImport.Pipeline do
   end
 
   defp write_record(state, kind, record) do
+    record = strip_nul(record)
     result = isolated(Repo.in_transaction?(), fn -> write(state, kind, record) end)
 
     case result do
@@ -177,6 +178,20 @@ defmodule FireflyImport.Pipeline do
         |> log_failure(kind, record, reason)
     end
   end
+
+  # Postgres can't store a NUL character, and old forums' text can have
+  # them. A file's contents (`data`, in uploads and avatars) are bytes, not
+  # text: they're kept as they are.
+  defp strip_nul(%{data: data} = file) when is_binary(data),
+    do: file |> Map.delete(:data) |> strip_nul() |> Map.put(:data, data)
+
+  defp strip_nul(%_{} = struct), do: struct
+
+  defp strip_nul(map) when is_map(map),
+    do: Map.new(map, fn {k, v} -> {strip_nul(k), strip_nul(v)} end)
+
+  defp strip_nul(list) when is_list(list), do: Enum.map(list, &strip_nul/1)
+  defp strip_nul(other), do: Firefly.Text.strip_nul(other)
 
   defp remember(state, kind, %{id: id}, local_id) when is_integer(local_id) do
     case @id_kinds[kind] do

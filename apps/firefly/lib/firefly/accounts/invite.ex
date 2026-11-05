@@ -7,7 +7,7 @@ defmodule Firefly.Accounts.Invite do
   when set.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.{InviteRedemption, User}
   alias Firefly.Discussion.Thread

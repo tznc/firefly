@@ -9,7 +9,7 @@ defmodule Firefly.Badges.Badge do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   @types ~w(gold silver bronze)
   @groupings ~w(getting_started community posting trust_level other)

@@ -107,14 +107,13 @@ defmodule Firefly.MentionsTest do
       assert Mentions.usernames("@Bob and @Bob, @carol\n\n> @dave said") == ["Bob", "carol"]
     end
 
-    test "an exact-case match wins when usernames differ only in case" do
-      upper = user("Alice")
-      lower = user("alice")
+    test "any case names the one user" do
+      alice = user("Alice")
 
       assert Accounts.users_by_username(["alice", "Alice", "ALICE"]) == %{
-               "alice" => lower,
-               "Alice" => upper,
-               "ALICE" => upper
+               "alice" => alice,
+               "Alice" => alice,
+               "ALICE" => alice
              }
     end
 

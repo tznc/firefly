@@ -7,7 +7,7 @@ defmodule Firefly.Notifications.WebPush.Subscription do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   schema "push_subscriptions" do
     belongs_to(:user, Firefly.Accounts.User)

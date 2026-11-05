@@ -329,8 +329,9 @@ defmodule FireflyWeb.SSOTest do
       conn = dc_login(conn, @fields)
       assert logged_in_user(conn).id == existing.id
 
-      # Not when the provider asks for activation.
-      other = user_fixture(%{email: "linus@example.com"})
+      # Not when the provider asks for activation; emails being unique, it
+      # gets no account of its own either.
+      user_fixture(%{email: "linus@example.com"})
 
       conn =
         dc_login(build_conn(), %{
@@ -340,7 +341,7 @@ defmodule FireflyWeb.SSOTest do
           "require_activation" => "true"
         })
 
-      refute logged_in_user(conn).id == other.id
+      refute logged_in_user(conn)
     end
 
     test "rejects a tampered payload or signature", %{conn: conn} do

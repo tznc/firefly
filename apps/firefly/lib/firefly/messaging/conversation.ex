@@ -7,7 +7,7 @@ defmodule Firefly.Messaging.Conversation do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Messaging.{ConversationParticipant, Message}

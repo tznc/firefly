@@ -41,7 +41,7 @@ defmodule Firefly.Plugins.Bots do
   # A member may already have the name.
   defp free_username(base) do
     Enum.find(Stream.concat([base], Stream.map(2..1000, &"#{base}#{&1}")), fn name ->
-      not Repo.exists?(from(u in User, where: u.username == ^name))
+      is_nil(Accounts.get_user_by_username(name))
     end)
   end
 
