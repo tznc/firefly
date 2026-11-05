@@ -7,8 +7,8 @@ defmodule Firefly.Telemetry do
   Every `span/3` is also an OpenTelemetry span named after its event
   (`firefly.webhooks.delivery`), with the metadata as attributes, through
   the OpenTelemetry API alone: a no-op until the web app starts the SDK.
-  Background work started with `bind/1` (tasks, the notification
-  dispatcher) joins the trace of the process that started it.
+  Background work joins the trace of the process that started it: tasks
+  started with `bind/1`, and jobs (see `Firefly.Jobs.insert/1`).
 
   Metadata stays low-cardinality: kinds, names and outcomes, never user
   ids or free text.
@@ -20,11 +20,14 @@ defmodule Firefly.Telemetry do
   | `[:firefly, :plugins, :hook]` | `duration` (native), `count` | `plugin`, `hook`, `result` (`ok`, `error`) |
   | `[:firefly, :plugins, :event, :start \\| :stop \\| :exception]` | `duration` | `result` (`delivered`, `failed`, `dropped`) on stop |
   | `[:firefly, :webhooks, :delivery, :start \\| :stop \\| :exception]` | `duration` | `type` (event type), `result` (`success`, `failure`) on stop |
-  | `[:firefly, :scheduler, :job, :start \\| :stop \\| :exception]` | `duration` | `job` |
+  | `[:firefly, :scheduler, :job, :start \\| :stop \\| :exception]` | `duration` | `job` (the module whose periodic task ran, see `Firefly.Jobs.Periodic`) |
   | `[:firefly, :discussion, :create_post, :start \\| :stop \\| :exception]` | `duration` | `result` (`ok`, `error`) on stop |
   | `[:firefly, :plugins, :run_hook, :start \\| :stop \\| :exception]` | `duration` | `plugin`, `hook`; `result` on stop |
   | `[:firefly, :ai, :request, :start \\| :stop \\| :exception]` | `duration` | `adapter`; `result` on stop |
+  | `[:firefly, :mailer, :deliver, :start \\| :stop \\| :exception]` | `duration` | `adapter` (`smtp`, `ses`...), `template`; `result` (`sent`, `failed`, `skipped`) on stop |
   | `[:firefly, :queue, :depth]` | `depth` | `queue` (`plugin_events`, `webhooks`); from `measure_queues/0` |
+  | `[:firefly, :jobs, :depth]` | `count` | `queue`, `state`: background jobs (see `Firefly.Jobs`); from `measure_queues/0` |
+  | `[:firefly, :cluster, :node]` | `count`, `connected` (other nodes now) | `event` (`up`, `down`), `node` |
   """
 
   require OpenTelemetry.Tracer, as: Tracer
@@ -100,8 +103,8 @@ defmodule Firefly.Telemetry do
 
   @doc """
   Emits `[:firefly, :queue, :depth]` for each background queue: plugin
-  events and webhook deliveries waiting. Called periodically by the
-  reporter's poller (two counts).
+  events and webhook deliveries waiting, and background jobs by queue and
+  state. Called periodically by the reporter's poller (three counts).
   """
   @spec measure_queues() :: :ok
   def measure_queues do
@@ -112,5 +115,11 @@ defmodule Firefly.Telemetry do
     execute([:firefly, :queue, :depth], %{depth: Firefly.Webhooks.pending_count()}, %{
       queue: "webhooks"
     })
+
+    for {{queue, state}, count} <- Firefly.Jobs.counts() do
+      execute([:firefly, :jobs, :depth], %{count: count}, %{queue: queue, state: state})
+    end
+
+    :ok
   end
 end

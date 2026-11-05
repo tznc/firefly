@@ -4,7 +4,7 @@ defmodule FireflyWeb.BadgesTest do
   import Ecto.Query, only: [where: 2, where: 3]
   import Firefly.DataCase, only: [errors_on: 1]
 
-  alias Firefly.{Badges, Discussion, Groups, JobRuns, Repo, TrustLevels}
+  alias Firefly.{Badges, Discussion, Groups, Repo, TrustLevels}
   alias Firefly.Accounts.{AccountDeletion, AccountExport}
   alias Firefly.Accounts.User
   alias Firefly.Badges.{Badge, UserBadge}
@@ -103,8 +103,8 @@ defmodule FireflyWeb.BadgesTest do
     end
 
     test "the job runs every 15 minutes across nodes" do
-      assert Badges.run_due() == :ok
-      refute JobRuns.claim("badges", 900)
+      assert {"*/15 * * * *", Firefly.Jobs.Periodic.Badges} in Firefly.Jobs.crontab()
+      assert :ok = perform_job(Firefly.Jobs.Periodic.Badges, %{})
     end
   end
 

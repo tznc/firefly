@@ -10,7 +10,7 @@ defmodule Firefly.Themes.Theme do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Themes.{Palette, ThemeAsset}
 

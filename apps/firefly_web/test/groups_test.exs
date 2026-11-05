@@ -1,6 +1,9 @@
 defmodule FireflyWeb.GroupsTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (LiveViews).
+  setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
   import Phoenix.LiveViewTest, only: [live: 2, render_click: 3]
@@ -33,7 +36,7 @@ defmodule FireflyWeb.GroupsTest do
   defp kinds(user, kind),
     do: Enum.filter(Notifications.notifications_for(user), &(&1.kind == kind))
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   describe "visibility" do
     test "public groups for everyone, members groups for members, staff groups for staff", ctx do
@@ -229,7 +232,6 @@ defmodule FireflyWeb.GroupsTest do
 
   describe "mentions" do
     setup %{team: team, admin: admin} do
-      {:ok, _} = Notifications.start_link()
       category = category_fixture()
       thread = thread_fixture(category, user_fixture())
       flush()
@@ -295,7 +297,7 @@ defmodule FireflyWeb.GroupsTest do
 
     test "render as links to visible groups", %{team: team, admin: admin} do
       html = Markdown.render("Ask @team or @nobody", Mentions.refs(["Ask @team or @nobody"]))
-      assert html =~ ~s{href="http://localhost:4002/groups/team"}
+      assert html =~ ~s{href="#{FireflyWeb.Endpoint.url()}/groups/team"}
 
       settings(team, %{"visibility" => "staff"}, admin)
       refute Markdown.render("Ask @team", Mentions.refs(["Ask @team"])) =~ "/groups/team"
@@ -304,7 +306,6 @@ defmodule FireflyWeb.GroupsTest do
 
   describe "inboxes" do
     setup %{team: team, admin: admin} do
-      {:ok, _} = Notifications.start_link()
       %{team: settings(team, %{"visibility" => "public", "messageable" => "members"}, admin)}
     end
 
@@ -342,7 +343,7 @@ defmodule FireflyWeb.GroupsTest do
 
       assert [%{subject: subject}] = kinds(owner, "group_message")
       assert subject =~ "@mia messaged @team"
-      assert_delivered_email_matches(%{to: [{_, "user" <> _}]})
+      assert_received {:email, %{to: [{_, "user" <> _}]}}
       assert [_] = kinds(tracker, "group_message")
       assert kinds(quiet, "group_message") == []
 

@@ -142,8 +142,9 @@ jobs:
 
       # Every app's tests: unit, LiveView (PhoenixTest) and end-to-end browser
       # (PhoenixTest.Playwright) tests, and the importers' against the
-      # source databases and the directory above
-      - run: mix test --include import_mysql --include import_mongo --include import_redis --include ldap
+      # source databases and the directory above, and two nodes clustering
+      # through Postgres
+      - run: mix test --include import_mysql --include import_mongo --include import_redis --include ldap --include cluster
 
   dialyzer:
     name: Dialyzer
@@ -197,11 +198,13 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Check the release boots
-        # runtime.exs requires these; eval doesn't start the app, so dummies suffice
+        # runtime.exs requires these (mail too: SMTP checks its TLS setup builds);
+        # eval doesn't start the app, so dummies suffice
         run: |
           docker run --rm \
             -e FIREFLY_DATABASE_URL=ecto://user:pass@localhost/firefly \
             -e FIREFLY_SECRET_KEY_BASE="$(openssl rand -base64 48)" \
+            -e FIREFLY_MAIL_ADAPTER=smtp -e FIREFLY_SMTP_RELAY=smtp.example.com \
             firefly:ci /app/bin/firefly eval 'IO.puts(Application.spec(:firefly_web, :vsn))'
           # Backups need PostgreSQL client tools at least as new as the server (17).
           docker run --rm --entrypoint /usr/lib/postgresql/18/bin/pg_restore firefly:ci --version

@@ -6,14 +6,17 @@ defmodule Firefly.Health do
   `readiness/0` runs the checks: the database answers `SELECT 1` within a
   short timeout (`config :firefly, Firefly.Health, db_timeout:`, default
   2 seconds) and no migration of the running code is pending. Read-only
-  mode and the plugin sandbox are reported alongside, but never make the
-  node unready: a read-only forum still serves pages, and core plugins run
-  without the sandbox.
+  mode, the plugin sandbox, the cluster (how many other nodes this one is
+  connected to, see `Firefly.Cluster`) and the job runner (see
+  `Firefly.Jobs.status/0`) are reported alongside, but never make the node
+  unready: a read-only forum still serves pages, core plugins run without
+  the sandbox, a lone node still serves its clients, and jobs wait in the
+  database for a node that runs them.
   """
 
   use Boundary, top_level?: true, check: [out: false], exports: []
 
-  alias Firefly.{Backups, Repo, Upgrades}
+  alias Firefly.{Backups, Cluster, Jobs, Repo, Upgrades}
   alias Firefly.Plugin.Sandbox
 
   @typedoc "A check's outcome: `ok` and, when it isn't, why."
@@ -21,8 +24,8 @@ defmodule Firefly.Health do
 
   @doc """
   The readiness checks: `%{database: check, migrations: check, read_only:
-  check, plugin_sandbox: check}`. Only `database` and `migrations` can be
-  `ok: false`.
+  check, plugin_sandbox: check, cluster: check, jobs: check}`. Only
+  `database` and `migrations` can be `ok: false`.
   """
   @spec readiness() :: %{atom => check}
   def readiness do
@@ -33,7 +36,9 @@ defmodule Firefly.Health do
       # Without a database, the migrations can't be read either.
       migrations: if(database.ok, do: migrations(), else: %{ok: false, error: "database down"}),
       read_only: %{ok: true, enabled: Backups.read_only?()},
-      plugin_sandbox: %{ok: true, available: Sandbox.implementation() != nil}
+      plugin_sandbox: %{ok: true, available: Sandbox.implementation() != nil},
+      cluster: Map.put(Cluster.status(), :ok, true),
+      jobs: Map.put(Jobs.status(), :ok, true)
     }
   end
 

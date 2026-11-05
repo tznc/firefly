@@ -204,6 +204,7 @@ defmodule Firefly.Accounts.Invites do
     result =
       Repo.transact(fn ->
         with :ok <- open(),
+             :ok <- usable(invite),
              {:ok, user} <- Accounts.register_invited_user(attrs, Invite.email?(invite)),
              {:ok, _invite} <- use_invite(invite, user),
              do: {:ok, user}
@@ -214,6 +215,11 @@ defmodule Firefly.Accounts.Invites do
       {:ok, user}
     end
   end
+
+  # Checked before the account is made: a used-up email invite's address
+  # already has one, which would be the error otherwise.
+  defp usable(invite),
+    do: if(reason = Invite.problem(invite), do: {:error, reason}, else: :ok)
 
   @doc "Whether invited people may join (the `allow_registrations` setting)."
   def open,

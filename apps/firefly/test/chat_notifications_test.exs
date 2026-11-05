@@ -1,7 +1,5 @@
 defmodule Firefly.ChatNotificationsTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
-
   import Firefly.Fixtures
 
   alias Firefly.{Accounts, Chat, Groups, Notifications, Repo, SiteSettings, Webhooks}
@@ -12,7 +10,6 @@ defmodule Firefly.ChatNotificationsTest do
   alias Firefly.Webhooks.Delivery
 
   setup do
-    {:ok, _} = Notifications.start_link()
     admin = admin_fixture(%{username: "admin"})
     alice = member("alice")
     bob = member("bob")
@@ -28,7 +25,7 @@ defmodule Firefly.ChatNotificationsTest do
     Repo.update!(Ecto.Changeset.change(user, trust_level: 1))
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp send!(channel, user, body, attrs \\ %{}) do
     {:ok, message} = Chat.send_message(channel, user, Map.put(attrs, "body", body))
@@ -63,7 +60,7 @@ defmodule Firefly.ChatNotificationsTest do
       assert Notification.path(notification) =~ ~r"^/chat/c/general/\d+\?message=\d+$"
 
       # Bob was away (never seen); Carol was here.
-      assert_delivered_email_matches(%{subject: "@alice mentioned you in #General" <> _})
+      assert_received {:email, %{subject: "@alice mentioned you in #General" <> _}}
       assert [%{emailed_at: %DateTime{}}] = Notifications.notifications_for(ctx.bob)
 
       assert [%{emailed_at: nil}] = Notifications.notifications_for(ctx.carol)

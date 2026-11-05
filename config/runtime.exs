@@ -134,6 +134,143 @@ if config_env() != :test do
     region: System.get_env("FIREFLY_AWS_S3_REGION")
 end
 
+# Outbound email (see Firefly.Mailer): FIREFLY_MAIL_ADAPTER picks the adapter,
+# each with its own variables. Production refuses to start without one;
+# development keeps mail in memory, the tests in the test adapter.
+mail_adapter = System.get_env("FIREFLY_MAIL_ADAPTER")
+
+if config_env() != :test and mail_adapter do
+  required = fn name ->
+    System.get_env(name) ||
+      raise "environment variable #{name} is missing (needed with FIREFLY_MAIL_ADAPTER=#{mail_adapter})"
+  end
+
+  choice = fn name, default, choices ->
+    value = System.get_env(name, default)
+
+    Map.get(choices, value) ||
+      raise "#{name}=#{value} isn't one of #{Enum.join(Map.keys(choices), ", ")}"
+  end
+
+  mail =
+    case mail_adapter do
+      "smtp" ->
+        relay = required.("FIREFLY_SMTP_RELAY")
+        ssl? = System.get_env("FIREFLY_SMTP_SSL") in ~w(true 1)
+
+        # Certificates are checked unless FIREFLY_SMTP_VERIFY=false: against the
+        # system's CAs, or FIREFLY_SMTP_CA_CERT_FILE.
+        tls_options =
+          if System.get_env("FIREFLY_SMTP_VERIFY") in ~w(false 0) do
+            [verify: :verify_none]
+          else
+            cas =
+              if file = System.get_env("FIREFLY_SMTP_CA_CERT_FILE"),
+                do: [cacertfile: file],
+                else: [cacerts: :public_key.cacerts_get()]
+
+            [
+              verify: :verify_peer,
+              versions: [:"tlsv1.2", :"tlsv1.3"],
+              server_name_indication: String.to_charlist(relay),
+              depth: 99,
+              customize_hostname_check: [
+                match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+              ]
+            ] ++ cas
+          end
+
+        modes = %{"always" => :always, "if_available" => :if_available, "never" => :never}
+        default_port = if ssl?, do: "465", else: "587"
+
+        [
+          adapter: Swoosh.Adapters.SMTP,
+          relay: relay,
+          port: String.to_integer(System.get_env("FIREFLY_SMTP_PORT", default_port)),
+          username: System.get_env("FIREFLY_SMTP_USERNAME"),
+          password: System.get_env("FIREFLY_SMTP_PASSWORD"),
+          # Implicit TLS (FIREFLY_SMTP_SSL, port 465), else STARTTLS.
+          ssl: ssl?,
+          tls: if(ssl?, do: :never, else: choice.("FIREFLY_SMTP_TLS", "always", modes)),
+          auth: choice.("FIREFLY_SMTP_AUTH", "if_available", modes),
+          retries: String.to_integer(System.get_env("FIREFLY_SMTP_RETRIES", "2")),
+          no_mx_lookups: true,
+          tls_options: tls_options,
+          sockopts: if(ssl?, do: tls_options, else: [])
+        ]
+
+      "ses" ->
+        # Static credentials (an IAM user's, or temporary ones with
+        # AWS_SESSION_TOKEN): Swoosh's SES adapter doesn't fetch instance or
+        # task role credentials itself.
+        [
+          adapter: Swoosh.Adapters.AmazonSES,
+          region:
+            System.get_env("FIREFLY_SES_REGION") || System.get_env("AWS_REGION") ||
+              required.("AWS_DEFAULT_REGION"),
+          access_key: required.("AWS_ACCESS_KEY_ID"),
+          secret: required.("AWS_SECRET_ACCESS_KEY"),
+          provider_options:
+            Map.reject(
+              %{
+                security_token: System.get_env("AWS_SESSION_TOKEN"),
+                configuration_set_name: System.get_env("FIREFLY_SES_CONFIGURATION_SET")
+              },
+              fn {_key, value} -> is_nil(value) end
+            )
+        ]
+
+      "sendgrid" ->
+        [adapter: Swoosh.Adapters.Sendgrid, api_key: required.("FIREFLY_SENDGRID_API_KEY")]
+
+      "mailgun" ->
+        [
+          adapter: Swoosh.Adapters.Mailgun,
+          api_key: required.("FIREFLY_MAILGUN_API_KEY"),
+          domain: required.("FIREFLY_MAILGUN_DOMAIN"),
+          # EU domains: https://api.eu.mailgun.net/v3
+          base_url: System.get_env("FIREFLY_MAILGUN_BASE_URL")
+        ]
+
+      "postmark" ->
+        stream = System.get_env("FIREFLY_POSTMARK_MESSAGE_STREAM")
+
+        [
+          adapter: Swoosh.Adapters.Postmark,
+          api_key: required.("FIREFLY_POSTMARK_API_KEY"),
+          provider_options: if(stream, do: %{message_stream: stream}, else: %{})
+        ]
+
+      "local" ->
+        [adapter: Swoosh.Adapters.Local]
+
+      other ->
+        raise "FIREFLY_MAIL_ADAPTER=#{other} isn't one of smtp, ses, sendgrid, mailgun, postmark, local"
+    end
+
+  config :firefly, Firefly.Mailer, mail
+end
+
+if config_env() == :prod and is_nil(mail_adapter) do
+  raise """
+  no outbound email is configured: set FIREFLY_MAIL_ADAPTER to smtp, ses,
+  sendgrid, mailgun, postmark or local, with that adapter's variables (see
+  "Email" in README.md).
+  """
+end
+
+# Each job queue's concurrency on this node (see Firefly.Jobs):
+# FIREFLY_JOBS_<QUEUE>=<n>, e.g. FIREFLY_JOBS_MAILERS=20; 0 runs none of
+# that queue's jobs here (another node does).
+if config_env() != :test do
+  queues =
+    for {queue, _default} <- Application.get_env(:firefly, Oban)[:queues],
+        limit = System.get_env("FIREFLY_JOBS_#{String.upcase(to_string(queue))}"),
+        do: {queue, String.to_integer(limit)}
+
+  if queues != [], do: config(:firefly, Oban, queues: queues)
+end
+
 # Prometheus metrics (see FireflyWeb.Metrics): off unless a port of their own
 # or a bearer token for /metrics on the main endpoint is set.
 if port = System.get_env("FIREFLY_METRICS_PORT") do
@@ -151,9 +288,8 @@ if token = System.get_env("FIREFLY_METRICS_TOKEN") do
 end
 
 # OpenTelemetry (see FireflyWeb.OpenTelemetry), configured by the standard
-# OTEL_* variables, which the SDK reads itself: nothing is exported without
-# an OTLP endpoint. Metrics and logs over OTLP are experimental in the
-# Erlang SDK, so they're opt-in on top.
+# OTEL_* variables: nothing is exported without an OTLP endpoint. Metrics
+# and logs over OTLP are opt-in on top.
 otel_endpoint? = fn signal ->
   System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") != nil or
     System.get_env("OTEL_EXPORTER_OTLP_#{signal}_ENDPOINT") != nil
@@ -164,7 +300,8 @@ if config_env() != :test do
     otel_endpoint?.("TRACES") and System.get_env("OTEL_TRACES_EXPORTER", "otlp") != "none"
 
   metrics? =
-    otel_endpoint?.("METRICS") and System.get_env("FIREFLY_OTEL_METRICS") in ~w(true 1)
+    otel_endpoint?.("METRICS") and System.get_env("OTEL_METRICS_EXPORTER", "otlp") != "none" and
+      System.get_env("FIREFLY_OTEL_METRICS") in ~w(true 1)
 
   logs? = otel_endpoint?.("LOGS") and System.get_env("FIREFLY_OTEL_LOGS") in ~w(true 1)
 
@@ -172,18 +309,42 @@ if config_env() != :test do
 
   if traces?, do: config(:opentelemetry, traces_exporter: :otlp)
 
+  # The SDK reads its variables itself; OtelMetricExporter reads them too,
+  # but not as the spec (and the SDK) does, so they're mapped here: a
+  # signal's own variable wins, its endpoint is the full URL, and header
+  # values may contain "=". The resource is the traces' (see
+  # FireflyWeb.Telemetry).
   if metrics? do
-    config :opentelemetry_experimental,
-      readers: [
-        %{
-          module: :otel_metric_reader,
-          config: %{
-            exporter: {:otel_exporter_metrics_otlp, %{}},
-            export_interval_ms:
-              String.to_integer(System.get_env("OTEL_METRIC_EXPORT_INTERVAL", "60000"))
-          }
-        }
-      ]
+    otlp_env = fn var ->
+      System.get_env("OTEL_EXPORTER_OTLP_METRICS_#{var}") ||
+        System.get_env("OTEL_EXPORTER_OTLP_#{var}")
+    end
+
+    protocol = otlp_env.("PROTOCOL") || "http/protobuf"
+
+    if protocol != "http/protobuf" do
+      raise "FIREFLY_OTEL_METRICS sends OTLP over http/protobuf only, not #{protocol}: " <>
+              "set OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf " <>
+              "(and OTEL_EXPORTER_OTLP_METRICS_ENDPOINT to the collector's HTTP port)"
+    end
+
+    # The exporter appends /v1/metrics itself.
+    endpoint =
+      if url = System.get_env("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT"),
+        do: String.replace_suffix(url, "/v1/metrics", ""),
+        else: String.trim_trailing(System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT"), "/")
+
+    headers =
+      for pair <- String.split(otlp_env.("HEADERS") || "", ",", trim: true),
+          [key, value] <- [String.split(pair, "=", parts: 2)],
+          into: %{},
+          do: {String.trim(key), String.trim(value)}
+
+    config :otel_metric_exporter,
+      otlp_endpoint: endpoint,
+      otlp_headers: headers,
+      otlp_timeout: String.to_integer(otlp_env.("TIMEOUT") || "10000"),
+      export_period: String.to_integer(System.get_env("OTEL_METRIC_EXPORT_INTERVAL", "60000"))
   end
 end
 
@@ -191,6 +352,58 @@ end
 # stops listening (see FireflyWeb.Draining).
 if delay = System.get_env("FIREFLY_DRAIN_DELAY_MS") do
   config :firefly_web, FireflyWeb.Draining, delay: String.to_integer(delay)
+end
+
+# Clustering (see Firefly.Cluster and "Running several nodes" in README.md):
+# off unless FIREFLY_CLUSTER=postgres, which finds the other nodes through
+# the database. FIREFLY_CLUSTER_NAME keeps deployments sharing a database
+# server apart (their own Postgres channel).
+case System.get_env("FIREFLY_CLUSTER", "") do
+  off when off in ["", "none", "false", "0"] ->
+    :ok
+
+  "postgres" ->
+    channel =
+      case System.get_env("FIREFLY_CLUSTER_NAME", "") do
+        "" ->
+          "firefly_cluster"
+
+        name ->
+          # Part of a Postgres identifier: short, and nothing to quote.
+          if not Regex.match?(~r/\A[a-z0-9_]{1,40}\z/, name),
+            do: raise("FIREFLY_CLUSTER_NAME must be 1-40 of a-z, 0-9 and _")
+
+          "firefly_cluster_" <> name
+      end
+
+    # A release started without RELEASE_COOKIE uses the cookie baked into
+    # it at build time, which anyone with the image has: a cluster would
+    # accept them as a node.
+    if config_env() == :prod do
+      cookie = System.get_env("RELEASE_COOKIE", "")
+
+      built_in =
+        case File.read(Path.join(System.get_env("RELEASE_ROOT", ""), "releases/COOKIE")) do
+          {:ok, built_in} -> String.trim(built_in)
+          {:error, _} -> nil
+        end
+
+      if String.length(cookie) < 32 or cookie == built_in,
+        do:
+          raise("""
+          FIREFLY_CLUSTER=postgres needs RELEASE_COOKIE: a random secret of at
+          least 32 characters, the same on every node (e.g. openssl rand -hex 32).
+          """)
+    end
+
+    config :firefly, Firefly.Cluster,
+      strategy: :postgres,
+      channel: channel,
+      heartbeat_interval:
+        String.to_integer(System.get_env("FIREFLY_CLUSTER_HEARTBEAT_MS", "5000"))
+
+  other ->
+    raise "FIREFLY_CLUSTER must be postgres or unset, got: #{inspect(other)}"
 end
 
 if config_env() == :prod do
@@ -231,10 +444,6 @@ if config_env() == :prod do
     url: [host: host, port: 443, scheme: "https"],
     http: [ip: ip, port: port],
     secret_key_base: secret_key_base
-
-  config :firefly, Firefly.Mailer,
-    adapter: Bamboo.SendGridAdapter,
-    api_key: System.get_env("FIREFLY_SENDGRID_API_KEY")
 
   config :firefly, :email,
     from: {"Firefly", System.get_env("FIREFLY_EMAIL_FROM", "noreply@#{host}")},

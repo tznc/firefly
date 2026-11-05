@@ -9,7 +9,7 @@ plugins through it. There are two kinds:
 |---|---|---|
 | Written in | Elixir (or Elixir wrapping a Rust NIF) | JavaScript |
 | Runs | natively, in the BEAM | sandboxed: QuickJS compiled to WebAssembly, on wasmtime (Wasmex) |
-| Installed by | listing the module in config | staff uploading a `.zip` at `/staff/plugins` |
+| Installed by | listing the module in config | staff installing its package at `/staff/packages` (an upload, a URL or a GitHub repository) |
 | Trust | trusted; permissions granted without a prompt | staff see the requested permissions before installing |
 | Implementation | the module itself (`use Firefly.Plugin`) | `FireflyPlugins.Sandboxed`, one module serving every bundle |
 
@@ -17,8 +17,13 @@ Both kinds appear at `/staff/plugins`, can be enabled and disabled, have
 settings, statistics and an error log, can depend on each other, and are
 subject to the same time limits, permission checks and circuit breaker.
 
-There is no plugin registry yet. The manifest's `source` (`"upload"` or
-`"core"`) and the reserved `registry` key leave room for Firefly Cloud's.
+Uploaded plugins ship as packages (see "Uploaded plugins" below and
+"Packages" in the README): admins install, upgrade and uninstall them at
+`/staff/packages`, uploaded or fetched from a URL or a GitHub repository,
+with versions and dependencies checked across every package. The list is
+per site; there is no shared catalog yet. The manifest's `source`
+(`"upload"` or `"core"`) and the reserved `registry` key leave room for
+Firefly Cloud's.
 
 ## Core plugins
 
@@ -331,8 +336,8 @@ and received, the duration and the time. Request and response bodies and
 headers are never logged. Staff see the latest entries on
 `/staff/plugins/:id`, filtered by host and by allowed or blocked. Entries
 are kept for the `plugin_egress_days` site setting (14 days by default;
-`/staff/settings`, "Plugins") and pruned by the scheduler that runs topic
-timers; they stay after a plugin is uninstalled until then. Firefly's own
+`/staff/settings`, "Plugins") and pruned by an hourly background job;
+they stay after a plugin is uninstalled until then. Firefly's own
 requests (link previews) aren't plugin traffic and aren't logged here.
 
 ### What staff see
@@ -362,10 +367,10 @@ Subscribe with `events` (needs the `read` permission and the
 | `poll_closed` | `{poll_id, post_id, thread_id}` |
 
 A post is `{id, thread_id, user_id, author, body, url}`, a thread
-`{id, title, category_id, url}`. Events are queued in the database in the
-same transaction as the change and delivered by `Firefly.Plugins.Queue`
-(within about a second): a failure is retried after 30 s, 2, 8 and 32
-minutes, then dropped and logged. Only content anonymous visitors can read
+`{id, title, category_id, url}`. Each event is a background job (Oban's
+`plugins` queue, see "Background jobs" in the README) enqueued in the same
+transaction as the change and delivered within moments: a failure is
+retried after 30 s, 2, 8 and 32 minutes, then dropped and logged. Only content anonymous visitors can read
 produces events, and a plugin never hears about its own bot's actions.
 
 ## Scheduled jobs
@@ -373,7 +378,8 @@ produces events, and a plugin never hears about its own bot's actions.
 `jobs` entries are `{"name", "every": seconds}` (60 or more) or
 `{"name", "cron": "m h dom mon dow"}` (UTC). Due jobs call `run_job` with
 `{job}`; the next run time is stored, so jobs survive restarts and run once
-across nodes. A failed run isn't retried before its next time.
+across nodes. Due jobs are checked every minute (a background job on the
+`plugins` queue). A failed run isn't retried before its next time.
 
 ## Moderation
 
@@ -467,7 +473,7 @@ backed by `handle_widget` that counts each member's views in their own
 storage, a page and a frame app, a staff section, an
 endpoint (`GET /api/plugins/hello/stats`), events, a scheduled job,
 moderation driven by its settings, a flag hook, a public custom field and
-an export. Zip the folder and upload it at `/staff/plugins`.
+an export. Zip the folder and upload it at `/staff/packages`.
 
 ## Storage and custom fields
 

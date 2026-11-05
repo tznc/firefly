@@ -5,7 +5,8 @@ defmodule Firefly.ThemesPropertyTest do
   be broken out of by what admins or packages name things; edits never
   crash validation; and contrast checks are symmetric and bounded.
   """
-  use Firefly.DataCase, async: true
+  # Sync: it holds the shared "admin" role (admin_fixture/1) for its whole run.
+  use Firefly.DataCase, async: false
   use ExUnitProperties
 
   import Firefly.Generators
@@ -69,10 +70,11 @@ defmodule Firefly.ThemesPropertyTest do
               max_runs: runs(100)
             ) do
         css = Themes.compile(%Theme{name: name, version: 1, components: [], assets: [], css: ""})
-        [first | _] = String.split(css, "\n")
-        assert String.starts_with?(first, "/* ")
-        # The comment's only end is the one compile/1 writes.
-        assert length(String.split(first, "*/")) == 2, "the name closed the comment: #{first}"
+        assert String.starts_with?(css, "/* ")
+        # The comment's first end is the one compile/1 writes, after the
+        # version (a name may hold newlines: they're inside the comment).
+        [header | _] = String.split(css, "*/", parts: 2)
+        assert String.ends_with?(header, " v1 "), "the name closed the comment: #{inspect(css)}"
       end
     end
 
@@ -186,21 +188,24 @@ defmodule Firefly.ThemesPropertyTest do
       admin = admin_fixture()
 
       check all(input <- html_fragment(), max_runs: runs(15)) do
-        {:ok, theme} =
-          Themes.create_theme(
-            %{
-              "name" => "T#{System.unique_integer([:positive])}",
-              "head_html" => input,
-              "footer_html" => input
-            },
-            admin
-          )
+        attrs = %{
+          "name" => "T#{System.unique_integer([:positive])}",
+          "head_html" => input,
+          "footer_html" => input
+        }
 
-        theme = Themes.get_theme!(theme.id)
+        # Saved, or refused with a reason (never raised).
+        case Themes.create_theme(attrs, admin) do
+          {:ok, theme} ->
+            theme = Themes.get_theme!(theme.id)
 
-        for place <- [:head, :footer] do
-          assert HTMLSafety.unsafe(Themes.html(theme, place, "n"), allow_tags: ["meta", "link"]) ==
-                   []
+            for place <- [:head, :footer] do
+              html = Themes.html(theme, place, "n")
+              assert HTMLSafety.unsafe(html, allow_tags: ["meta", "link"]) == []
+            end
+
+          {:error, %Ecto.Changeset{}} ->
+            :ok
         end
       end
     end

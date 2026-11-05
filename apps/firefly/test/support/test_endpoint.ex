@@ -10,7 +10,7 @@ defmodule Firefly.TestEndpoint do
   @behaviour Firefly.Endpoint
 
   @impl true
-  def url, do: "http://localhost:4002"
+  def url, do: "http://localhost:#{System.get_env("FIREFLY_TEST_PORT", "4002")}"
 
   @impl true
   def path(path), do: path

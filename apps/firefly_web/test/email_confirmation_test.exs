@@ -1,6 +1,9 @@
 defmodule FireflyWeb.EmailConfirmationTest do
   use FireflyWeb.ConnCase, async: false
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.Accounts
   alias Firefly.Accounts.EmailConfirmation
@@ -18,8 +21,8 @@ defmodule FireflyWeb.EmailConfirmationTest do
   end
 
   defp assert_confirmation_sent(user) do
-    assert_email_delivered_with(
-      to: [nil: user.email],
+    assert_email_sent(
+      to: user.email,
       subject: "Confirm your email address for Firefly"
     )
   end

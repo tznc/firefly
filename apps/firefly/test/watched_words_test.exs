@@ -1,7 +1,10 @@
 defmodule Firefly.WatchedWordsTest do
   use Firefly.DataCase
   # A silenced author is emailed.
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Discussion, Messaging}
   alias Firefly.Accounts.User
@@ -34,6 +37,30 @@ defmodule Firefly.WatchedWordsTest do
       assert WatchedWords.match("you ass.", "flag") == ["ass"]
       assert WatchedWords.match("nothing", "block") == []
       assert WatchedWords.match(nil, "flag") == []
+    end
+
+    # Found by Firefly.ModerationPropertyTest: a regex that backtracks
+    # catastrophically reached PCRE's match limit after a fifth of a second,
+    # and Regex raised, failing the post and every page showing it.
+    test "a regex that backtracks too much gives up fast and matches nothing", %{
+      admin: admin,
+      author: author,
+      category: category
+    } do
+      for action <- ~w(block censor link) do
+        attrs = %{"regex" => "true", "replacement" => "https://example.com/rules"}
+        watch(admin, action, "(a+)+$", attrs)
+      end
+
+      text = String.duplicate("a", 30) <> "!"
+      {microseconds, matches} = :timer.tc(fn -> WatchedWords.match(text, "block") end)
+      assert matches == []
+      assert microseconds < 100_000
+      assert WatchedWords.censor(text) == text
+      assert Markdown.render(text) == "<p>#{text}</p>"
+
+      assert {:ok, _thread} =
+               Discussion.create_thread(category, author, %{title: "Hello there", body: text})
     end
 
     test "regex mode uses the expression as it is", %{admin: admin} do

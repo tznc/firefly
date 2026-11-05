@@ -11,8 +11,9 @@ defmodule FireflyWeb.Plugs.Health do
     * `GET /ready` (readiness): `200` when the node should get traffic,
       `503` naming the failing checks otherwise: the database answers,
       no migration is pending (see `Firefly.Health`) and the endpoint
-      isn't draining (see `FireflyWeb.Draining`). Read-only mode and the
-      plugin sandbox are reported but don't fail it.
+      isn't draining (see `FireflyWeb.Draining`). Read-only mode, the
+      plugin sandbox, the number of connected cluster nodes and the job
+      runner are reported but don't fail it.
 
   In production `force_ssl` skips these paths (see `config/prod.exs`), so
   probes over plain HTTP from inside the cluster get an answer instead of a

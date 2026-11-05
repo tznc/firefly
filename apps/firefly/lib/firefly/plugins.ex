@@ -56,8 +56,7 @@ defmodule Firefly.Plugins do
       Health,
       Bots,
       Registry,
-      InstalledPlugin,
-      Queue
+      InstalledPlugin
     ]
 
   import Ecto.Query
@@ -195,9 +194,20 @@ defmodule Firefly.Plugins do
   @spec active() :: [Plugin.t()]
   def active, do: cached(&load_active/0)
 
+  @doc "Runs the active plugins' due scheduled jobs (see `Firefly.Plugins.Jobs`)."
+  def run_due_jobs, do: Firefly.Plugins.Jobs.run_due()
+
   @doc "How many plugin events are waiting to be delivered (see `Firefly.Plugins.Events`)."
   @spec queue_depth() :: non_neg_integer
-  def queue_depth, do: Repo.aggregate(Firefly.Plugins.QueuedEvent, :count)
+  def queue_depth do
+    Repo.aggregate(
+      from(j in Oban.Job,
+        where: j.worker == "Firefly.Plugins.EventWorker",
+        where: j.state in ~w(available scheduled retryable executing)
+      ),
+      :count
+    )
+  end
 
   defp load_active do
     snapshot = snapshot()

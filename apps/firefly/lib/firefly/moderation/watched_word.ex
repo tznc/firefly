@@ -7,7 +7,7 @@ defmodule Firefly.Moderation.WatchedWord do
   `replacement`.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
 
@@ -33,6 +33,7 @@ defmodule Firefly.Moderation.WatchedWord do
   def changeset(%__MODULE__{} = word, attrs) do
     word
     |> cast(attrs, [:word, :action, :regex, :replacement])
+    |> refuse_invalid_text([:word, :replacement])
     |> update_change(:word, &String.trim/1)
     |> update_change(:replacement, &String.trim/1)
     |> validate_required([:word, :action])
@@ -45,6 +46,19 @@ defmodule Firefly.Moderation.WatchedWord do
       name: :watched_words_action_word_index,
       message: "is already watched for this action"
     )
+  end
+
+  # Text that isn't UTF-8 is refused before the length checks, which
+  # raise on it.
+  defp refuse_invalid_text(changeset, fields),
+    do: Enum.reduce(fields, changeset, &refuse_invalid_field/2)
+
+  defp refuse_invalid_field(field, changeset) do
+    text = get_change(changeset, field)
+
+    if is_binary(text) and not String.valid?(text),
+      do: changeset |> delete_change(field) |> add_error(field, "is not valid text"),
+      else: changeset
   end
 
   defp validate_pattern(changeset) do

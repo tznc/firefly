@@ -62,7 +62,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Jobs`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -94,7 +94,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_SAML_SP_KEY`, `FIREFLY_SAML_SP_CERT` | The private key and certificate (PEM) SAML login requests are signed with, when "Sign login requests" is on. SAML itself is set up under SAML in the site settings (the identity provider's metadata URL or XML, attribute mapping); give the identity provider `https://<domain>/saml/metadata` (assertion consumer service: `https://<domain>/auth/saml/acs`) |
 | `FIREFLY_LDAP_HOST`, `FIREFLY_LDAP_BASE_DN` | Logging in with an LDAP directory (OpenLDAP, Active Directory...): its host and where to search for people. Optional: `FIREFLY_LDAP_PORT`, `FIREFLY_LDAP_ENCRYPTION` (`starttls`, the default, `ldaps` or `none`), `FIREFLY_LDAP_VERIFY` (`false` skips certificate checks), `FIREFLY_LDAP_CA_CERT_FILE` (default: the system's CAs), `FIREFLY_LDAP_BIND_DN` and `FIREFLY_LDAP_BIND_PASSWORD` (the account searches run as; default anonymous), `FIREFLY_LDAP_USER_FILTER` (default `(uid=%{username})`; Active Directory: `(sAMAccountName=%{username})`), `FIREFLY_LDAP_UID_ATTRIBUTE` (default `entryUUID`; Active Directory: `objectGUID`), `_USERNAME_ATTRIBUTE`, `_EMAIL_ATTRIBUTE`, `_NAME_ATTRIBUTE` (default `uid`, `mail`, `cn`), `FIREFLY_LDAP_GROUP_BASE_DN` (syncs groups by name), `FIREFLY_LDAP_GROUP_FILTER` (default `(member=%{dn})`), `FIREFLY_LDAP_GROUP_NAME_ATTRIBUTE` (default `cn`), `FIREFLY_LDAP_NAME` (the button's name). "LDAP replaces local passwords" in the site settings turns password logins off |
 | `FIREFLY_SSO_ONLY` | `true`: single sign-on is the only way to log in (no social logins, passwords or registration form) |
-| `FIREFLY_SENDGRID_API_KEY` | Outbound email |
+| `FIREFLY_MAIL_ADAPTER` | Outbound email: `smtp`, `ses`, `sendgrid`, `mailgun`, `postmark` or `local`, with that adapter's variables (see "Email"). Required: production won't start without one |
 | `FIREFLY_VAPID_PUBLIC_KEY`, `FIREFLY_VAPID_PRIVATE_KEY`, `FIREFLY_VAPID_SUBJECT` | Browser push notifications: a VAPID key pair (make one with `mix firefly.gen.vapid_keys`) and a contact URL (`mailto:admin@example.com`). Push is off and hidden without them |
 | `FIREFLY_EMAIL_FROM` | Sender, default `noreply@<FIREFLY_DOMAIN>` |
 | `FIREFLY_REPLY_EMAIL_DOMAIN` | Reply-by-email domain, default `reply.<FIREFLY_DOMAIN>` (needs an MX record pointing at SendGrid Inbound Parse) |
@@ -113,12 +113,14 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
 | `FIREFLY_METRICS_PORT`, `FIREFLY_METRICS_IP`, `FIREFLY_METRICS_TOKEN` | Prometheus metrics, off by default: a port of their own for `/metrics` (bound to `FIREFLY_METRICS_IP`, default `0.0.0.0`), and/or a bearer token that serves `/metrics` on the main port too (see "Metrics") |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` and the other standard `OTEL_*` variables | OpenTelemetry traces over OTLP, off without an endpoint; `FIREFLY_OTEL_METRICS=true` and `FIREFLY_OTEL_LOGS=true` add metrics and logs (experimental; see "Observability") |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` and the other standard `OTEL_*` variables | OpenTelemetry traces over OTLP, off without an endpoint; `FIREFLY_OTEL_METRICS=true` and `FIREFLY_OTEL_LOGS=true` add metrics and logs (see "Observability") |
+| `FIREFLY_JOBS_<QUEUE>` | Background job concurrency on this node per queue (`DEFAULT`, `MAILERS`, `NOTIFICATIONS`, `WEBHOOKS`, `PLUGINS`, `AI`, `MAINTENANCE`), e.g. `FIREFLY_JOBS_MAILERS=20`; `0` leaves that queue to other nodes (see "Background jobs") |
 | `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
+| `FIREFLY_CLUSTER`, `FIREFLY_CLUSTER_NAME`, `FIREFLY_CLUSTER_HEARTBEAT_MS`, `FIREFLY_NODE_HOST`, `FIREFLY_DIST_PORT`, `RELEASE_COOKIE` | Running several nodes as one cluster, off by default (see "Running several nodes") |
 
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see
-`Firefly.RateLimit`.
+`Firefly.RateLimit` and "Running several nodes".
 
 Image uploads are processed with [libvips](https://www.libvips.org) (through
 [Vix](https://github.com/akash-akya/vix)), built against the system library:
@@ -139,8 +141,8 @@ docker run --rm --env-file .env firefly /app/bin/migrate
 docker run -d -p 4000:4000 --env-file .env firefly
 ```
 
-The image needs at least `FIREFLY_DATABASE_URL` and `FIREFLY_SECRET_KEY_BASE` (generate one with
-`mix phx.gen.secret`); `FIREFLY_DOMAIN` sets the public domain. It listens on IPv4 port
+The image needs at least `FIREFLY_DATABASE_URL`, `FIREFLY_SECRET_KEY_BASE` (generate one with
+`mix phx.gen.secret`) and a mail adapter (`FIREFLY_MAIL_ADAPTER`, see "Email"); `FIREFLY_DOMAIN` sets the public domain. It listens on IPv4 port
 `FIREFLY_PORT` (default 4000); set `FIREFLY_IPV6=true` to listen on IPv6 as well. Set
 `FIREFLY_DATABASE_SSL=false` for a database without TLS. Any PostgreSQL 17 or
 newer with pgvector works (a managed one too); the `supabase/postgres` image
@@ -153,6 +155,93 @@ for `GET /health` over bash's `/dev/tcp`: the image has no curl, and
 check readiness instead (`/app/bin/healthcheck /ready`), e.g. as a compose
 `healthcheck` that `depends_on: condition: service_healthy` waits for.
 
+### Running several nodes
+
+Several Firefly nodes can serve one forum behind a load balancer. They share
+the database and uploads (use `FIREFLY_UPLOAD_STORAGE=s3`, or one shared
+volume), and with clustering on they form one Erlang cluster, so what one
+node broadcasts reaches the others: live updates (new posts, notifications,
+chat, presence) and cache invalidation (site settings, emoji, watched words,
+plugins, read-only mode). Without clustering, each node only sees its own
+changes until it restarts.
+
+Nodes find each other through the database (libcluster's Postgres strategy):
+each `LISTEN`s on a Postgres channel and `NOTIFY`s its node name there every
+few seconds; the others connect to it. No DNS, headless service or
+Kubernetes API access is needed. It connects with the repo's settings
+(`FIREFLY_DATABASE_URL`, `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`)
+over two extra connections per node, outside the pool. A connection pooler
+in transaction mode (PgBouncer, Supavisor) drops `LISTEN`: point Firefly at
+the database itself, or at a session-mode port.
+
+| Variable | Purpose |
+| --- | --- |
+| `FIREFLY_CLUSTER` | `postgres` turns clustering on; unset (or `none`) leaves each node on its own |
+| `FIREFLY_CLUSTER_NAME` | Deployments sharing a database server use their own channel, `firefly_cluster_<name>` (`a-z`, `0-9`, `_`); default `firefly_cluster` |
+| `FIREFLY_CLUSTER_HEARTBEAT_MS` | How often a node announces itself (default 5000): how soon a new node is found |
+| `RELEASE_COOKIE` | Required with clustering: the secret nodes authenticate each other with, the same on every node, at least 32 characters (`openssl rand -hex 32`). The release refuses to start clustered without one, or with the one built into the image |
+| `FIREFLY_NODE_HOST` | The address other nodes reach this one at (its node name is `firefly@<host>`). Default: the machine's first address (`hostname -i`); in Kubernetes, the pod IP |
+| `FIREFLY_DIST_PORT` | The port the node listens on for other nodes (default 9100) |
+
+Each node listens on EPMD's port 4369 (the Erlang port mapper) and on
+`FIREFLY_DIST_PORT`; both must be open between the nodes, and only between
+them: anyone who can reach those ports with the cookie controls the node.
+Erlang distribution isn't encrypted, so keep the nodes on a private network.
+Remote consoles (`bin/firefly remote`) and `bin/firefly rpc` work as before
+from inside a node's container.
+
+What is and isn't cluster-wide:
+
+| | |
+| --- | --- |
+| Cluster-wide | PubSub: live pages, notifications, chat and presence; cache invalidation; the database and everything in it (sessions are cookies, so any node serves any request) |
+| Per node | Rate limits (Hammer's in-memory buckets): with N nodes behind a round-robin balancer, a client gets up to N times each limit. Lower the limits (the `rate_limit_*` site settings) or use sticky sessions if that matters. Also per node: metrics, the in-memory link preview and report caches, and the plugin sandbox's instances |
+| Not needed | Background work (thread timers and reminders, periodic jobs, plugin events and jobs, webhook deliveries) is claimed through the database (`SKIP LOCKED`, `Firefly.JobRuns`), so it runs once whichever nodes are up, clustered or not. Backups and restores are one at a time per node: start them from one node |
+
+A node that was cut off from the others while settings changed keeps its
+stale caches until the next change or a restart. `/ready` reports
+`"cluster": {"enabled": true, "nodes": 2}` (the other nodes this one is
+connected to) without ever failing on it, and nodes joining and leaving are
+logged and counted (`firefly_cluster_node_count`,
+`firefly_cluster_nodes_connected`).
+
+A Kubernetes example (no headless service needed):
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: firefly}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: firefly}}
+  template:
+    metadata: {labels: {app: firefly}}
+    spec:
+      containers:
+        - name: firefly
+          image: firefly:latest
+          ports:
+            - {name: http, containerPort: 4000}
+            - {name: epmd, containerPort: 4369}
+            - {name: dist, containerPort: 9100}
+          env:
+            - {name: FIREFLY_CLUSTER, value: postgres}
+            - name: FIREFLY_NODE_HOST
+              valueFrom: {fieldRef: {fieldPath: status.podIP}}
+            - name: RELEASE_COOKIE
+              valueFrom: {secretKeyRef: {name: firefly, key: release-cookie}}
+            # FIREFLY_DATABASE_URL, FIREFLY_SECRET_KEY_BASE... as for one node
+          readinessProbe:
+            httpGet: {path: /ready, port: http}
+```
+
+With a NetworkPolicy, allow ingress on 4369 and 9100 from pods labelled
+`app: firefly`. With Docker on several hosts, publish 4369 and 9100 on a
+private interface and set `FIREFLY_NODE_HOST` to that address. With
+`docker compose up --scale`, the defaults work: each container's own
+address on the compose network is its node host. IPv6-only networks also
+need `ELIXIR_ERL_OPTIONS="-proto_dist inet6_tcp"`.
+
 ### Monitoring
 
 Two unauthenticated JSON endpoints answer probes. They are handled at the
@@ -162,13 +251,14 @@ locale and theme, and aren't logged per request:
 | Endpoint | Answers |
 | --- | --- |
 | `GET /health` | Liveness: `200 {"status": "ok"}` while the VM runs and serves HTTP. No database call, so a database outage doesn't get every node restarted |
-| `GET /ready` | Readiness: `200` when the node should get traffic, else `503` with `"failing"` naming the failed checks. Checks: the database answers `SELECT 1` within 2 seconds, no migration is pending, and the node isn't shutting down (draining). Read-only mode and whether the plugin sandbox is available are reported in `"checks"` but never fail it |
+| `GET /ready` | Readiness: `200` when the node should get traffic, else `503` with `"failing"` naming the failed checks. Checks: the database answers `SELECT 1` within 2 seconds, no migration is pending, and the node isn't shutting down (draining). Read-only mode, whether the plugin sandbox is available and how many other cluster nodes this one is connected to are reported in `"checks"` but never fail it |
 
 ```json
 {"status": "unavailable", "failing": ["migrations"],
  "checks": {"database": {"ok": true}, "migrations": {"ok": false, "pending": [20261101000000]},
             "draining": {"ok": true}, "read_only": {"ok": true, "enabled": false},
-            "plugin_sandbox": {"ok": true, "available": true}}}
+            "plugin_sandbox": {"ok": true, "available": true},
+            "cluster": {"ok": true, "enabled": false, "nodes": 0}}}
 ```
 
 Production redirects HTTP to HTTPS (`force_ssl`), except for these two paths,
@@ -187,6 +277,80 @@ readinessProbe:
   periodSeconds: 5
   failureThreshold: 2
 ```
+
+### Background jobs
+
+Background and scheduled work runs on [Oban](https://hexdocs.pm/oban),
+with its jobs in the `oban_jobs` table of Firefly's own PostgreSQL
+database. The database coordinates every node, with no clustering or
+distributed Erlang: nodes take jobs with `FOR UPDATE SKIP LOCKED`, hear of
+new ones over `LISTEN/NOTIFY`, and elect one leader through the database
+for what must run once per cluster (pruning, scheduled jobs). A job a
+crashed node left running is rescued after 30 minutes.
+
+| Queue | Concurrency per node | |
+| --- | --- | --- |
+| `default` | 10 | anything else |
+| `mailers` | 10 | email |
+| `notifications` | 10 | notification fan-out |
+| `webhooks` | 5 | webhook deliveries (5 attempts: retried after 30 s, 2, 8 and 32 min; each attempt in the webhook's delivery log) |
+| `plugins` | 5 | plugin events (the same retries; the circuit breaker still applies) and plugins' scheduled jobs |
+| `ai` | 3 | AI work |
+| `maintenance` | 2 | scheduled housekeeping |
+
+Set a queue's concurrency on a node with `FIREFLY_JOBS_<QUEUE>` (e.g.
+`FIREFLY_JOBS_AI=0` on web nodes that shouldn't run AI work).
+
+Periodic work runs on cron schedules (Oban's cron, inserted by the leader
+only, so once per cluster; see `Firefly.Jobs.Periodic`): thread timers,
+bookmark reminders and poll closings every minute (timers and reminders
+also get a job at their own time, so they fire on time), unused uploads,
+link previews, semantic search embeddings and plugins' scheduled jobs every minute, badges and
+digests every 15 minutes, trust level reviews, analytics, the embed feed,
+chat retention, the email and egress logs, the user directory and
+scheduled backups hourly, and the version check daily. A task isn't
+queued again while its last run is waiting or running, and nothing runs
+while the site is read-only.
+
+Finished jobs (completed, cancelled and discarded) are kept for the
+`job_retention_days` site setting (Advanced, Jobs; default 14 days,
+`FIREFLY_SETTING_JOB_RETENTION_DAYS` pins it), then pruned by the leader
+once a minute; a change applies at the next run, without a restart.
+
+Admins watch and manage jobs at `/staff/jobs`: [Oban
+Web](https://github.com/oban-bg/oban_web) (open source, Apache-2.0), with
+queues, jobs by state, their errors and retries, and retry, cancel, delete,
+pause and scale controls. Access is checked on every request and every
+page mount; every action is in the staff log. `/ready` reports whether jobs
+run on the node (`"jobs": {"running": true, "leader": false}`) without
+failing on it. Metrics: `oban_job_stop_duration_microseconds` and
+`oban_job_exception_count` by queue, worker and state,
+`oban_job_stop_queue_time_microseconds` by queue and `firefly_jobs_depth`
+by queue and state (never job arguments); with OpenTelemetry on, each job
+is a span in the trace of the request that enqueued it.
+
+### Email
+
+Firefly sends email with [Swoosh](https://hexdocs.pm/swoosh) through the
+adapter `FIREFLY_MAIL_ADAPTER` names; production refuses to start without
+one. Development keeps sent mail in memory, readable at
+<http://localhost:4000/dev/mailbox>. Every email, whatever the adapter, is
+logged at `/staff/emails`, which also sends a test email and shows the
+adapter in use and, when sending fails, its error.
+
+| Adapter | Variables |
+| --- | --- |
+| `smtp` | `FIREFLY_SMTP_RELAY` (required), `FIREFLY_SMTP_PORT` (default 587, or 465 with SSL), `FIREFLY_SMTP_USERNAME`, `FIREFLY_SMTP_PASSWORD`, `FIREFLY_SMTP_TLS` (STARTTLS: `always`, the default, `if_available` or `never`), `FIREFLY_SMTP_SSL` (`true` for implicit TLS, usually port 465), `FIREFLY_SMTP_AUTH` (`always`, `if_available`, the default, or `never`), `FIREFLY_SMTP_RETRIES` (default 2). The relay's certificate is verified against the system's CAs (or `FIREFLY_SMTP_CA_CERT_FILE`) and its name; `FIREFLY_SMTP_VERIFY=false` turns that off |
+| `ses` | Amazon SES: `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` (required), `AWS_SESSION_TOKEN` for temporary credentials, the region in `FIREFLY_SES_REGION`, `AWS_REGION` or `AWS_DEFAULT_REGION`; optional `FIREFLY_SES_CONFIGURATION_SET`. The adapter signs with these static credentials: it doesn't fetch EC2 instance or ECS task role credentials, so give it an IAM user's keys (with `ses:SendRawEmail`) |
+| `sendgrid` | `FIREFLY_SENDGRID_API_KEY` |
+| `mailgun` | `FIREFLY_MAILGUN_API_KEY`, `FIREFLY_MAILGUN_DOMAIN`; `FIREFLY_MAILGUN_BASE_URL=https://api.eu.mailgun.net/v3` for EU domains |
+| `postmark` | `FIREFLY_POSTMARK_API_KEY` (the server token); optional `FIREFLY_POSTMARK_MESSAGE_STREAM` |
+| `local` | None: mail is kept in memory (staging, demos) |
+
+`FIREFLY_EMAIL_FROM` sets the sender address. Reply-by-email (notification
+replies posting to the thread) comes in through SendGrid Inbound Parse,
+whichever adapter sends (see `FIREFLY_REPLY_EMAIL_DOMAIN` and
+`FIREFLY_INBOUND_EMAIL_TOKEN` above). Credentials are never logged or shown.
 
 ### Metrics
 
@@ -217,8 +381,12 @@ What's exported (durations are histograms in microseconds, named
 | `firefly_queue_depth` | `queue` (`plugin_events`, `webhooks`) |
 | `firefly_webhooks_delivery_stop_duration_microseconds`, `firefly_webhooks_delivery_exception_count` | `type`, `result` (`success`, `failure`) |
 | `firefly_scheduler_job_stop_duration_microseconds`, `firefly_scheduler_job_exception_count` | `job` |
+| `firefly_mailer_deliver_stop_count`, `firefly_mailer_deliver_stop_duration_microseconds`, `firefly_mailer_deliver_exception_count` | `adapter` (`smtp`, `ses`, `sendgrid`, `mailgun`, `postmark`, `local`), `result` (`sent`, `failed`, `skipped`) |
+| `firefly_cluster_node_count`, `firefly_cluster_nodes_connected` | `event` (`up`, `down`) on the count |
 
-No label carries a user id or a request path. The VM and queue gauges are
+Every series also has a `node` label, the node it was measured on
+(`firefly@10.0.0.7`; one per node), so a cluster's series stay apart. No
+label carries a user id or a request path. The VM and queue gauges are
 measured every 10 seconds. The domain emits its events with `:telemetry`
 (listed in `Firefly.Telemetry`); `FireflyWeb.Telemetry` defines the metrics.
 A Prometheus scrape config:
@@ -239,18 +407,18 @@ scrape_configs:
 Firefly exports OpenTelemetry traces, and optionally metrics and logs, over
 OTLP to a collector (the OpenTelemetry Collector, Grafana Alloy, a vendor's
 endpoint). Nothing is exported unless an endpoint is set; everything is
-configured with the standard variables, which the SDK reads itself:
+configured with the standard variables:
 
 | Variable | |
 | --- | --- |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | The collector, e.g. `http://otel-collector:4318`; per signal: `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`, `_METRICS_ENDPOINT`, `_LOGS_ENDPOINT` |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc` (port 4317) |
-| `OTEL_EXPORTER_OTLP_HEADERS` | e.g. an API key: `x-api-key=...` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` (default) or `grpc` (port 4317; traces and logs only: metrics need `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=http/protobuf` and an HTTP `_METRICS_ENDPOINT`, or Firefly won't start) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | e.g. an API key: `x-api-key=...`; per signal: `_TRACES_HEADERS`... |
 | `OTEL_SERVICE_NAME` | Default `firefly` (the release's name) |
 | `OTEL_RESOURCE_ATTRIBUTES` | e.g. `deployment.environment=production,service.instance.id=web-1` |
 | `OTEL_TRACES_SAMPLER`, `OTEL_TRACES_SAMPLER_ARG` | e.g. `parentbased_traceidratio` and `0.1` to keep a tenth of traces |
-| `OTEL_TRACES_EXPORTER` | `none` turns traces off even with an endpoint |
-| `FIREFLY_OTEL_METRICS`, `FIREFLY_OTEL_LOGS` | `true` to also export metrics and logs (experimental, below); `OTEL_METRIC_EXPORT_INTERVAL` (ms, default 60000) |
+| `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER` | `none` turns traces or metrics off even with an endpoint |
+| `FIREFLY_OTEL_METRICS`, `FIREFLY_OTEL_LOGS` | `true` to also export metrics and logs (below); `OTEL_METRIC_EXPORT_INTERVAL` (ms, default 60000) |
 
 What's exported:
 
@@ -258,21 +426,32 @@ What's exported:
   1.11): a server span per request (Bandit), with Phoenix's route and
   LiveView mounts and events, Ecto queries, the AI client's HTTP requests
   (Req) as child spans, and spans for the domain's operations: post
-  creation, notification fan-out, plugin hook runs and event deliveries,
-  webhook deliveries, scheduler jobs and AI requests (see
-  `Firefly.Telemetry`). Background tasks and the notification dispatcher
-  carry the trace on. Outgoing requests don't send trace headers to third
+  creation, notification fan-out, email sends (with the adapter and
+  template), plugin hook runs and event deliveries, webhook deliveries,
+  scheduler jobs and AI requests (see
+  `Firefly.Telemetry`). Background jobs (Oban: the notification fan-out,
+  emails, pushes, AI and Akismet work...) carry the trace on. Outgoing requests don't send trace headers to third
   parties.
-- **Metrics** (`FIREFLY_OTEL_METRICS=true`, **experimental**): the same
-  metrics as Prometheus (see "Metrics" above), as OTLP counters, histograms
-  (same buckets) and gauges.
+- **Metrics** (`FIREFLY_OTEL_METRICS=true`; `otel_metric_exporter` 0.4,
+  over http/protobuf): the same `Telemetry.Metrics` definitions as
+  Prometheus (see "Metrics" above), as OTLP sums, histograms (the same
+  bucket bounds) and gauges, with the traces' resource (`service.name`,
+  `OTEL_RESOURCE_ATTRIBUTES`...). Names keep their dots
+  (`firefly.repo.query.total_time.microseconds`); instead of a `node`
+  label, the resource's `service.instance.id` (the node's name by default)
+  tells nodes apart. Each export
+  carries what was measured since the last one: a gauge that wasn't
+  measured in between (`firefly.cluster.nodes.connected` changes only as
+  nodes come and go) is left out of it.
 - **Logs** (`FIREFLY_OTEL_LOGS=true`, **experimental**): log events at
   `info` and up, with the trace and span ids of the span they were logged in.
   Console logs print `otel_trace_id` and `otel_span_id` too.
 
-OpenTelemetry metrics and logs are still experimental in the Erlang SDK
-(`opentelemetry_experimental` and `opentelemetry_api_experimental` 0.6.0,
-pinned exactly): their APIs may change between releases, hence the opt-in.
+OpenTelemetry logs are still experimental in the Erlang SDK
+(`opentelemetry_experimental` 0.6.0, pinned exactly): its API may change
+between releases, hence the opt-in. Metrics are opt-in too: the exporter
+is a 0.x third-party package, and Prometheus' `/metrics` is the
+established path.
 
 A local stack to try it with, as a `docker-compose.override.yml` next to
 Firefly (the collector sends traces to Jaeger, metrics to Prometheus; Tempo
@@ -609,6 +788,20 @@ forums on one server (a database per forum, routing by hostname, and a
 management API for the server admin) is in
 [docs/multitenancy.md](docs/multitenancy.md), with the plan to implement it.
 
+### Security
+
+**NUL characters.** PostgreSQL can't store a NUL (`\0`) in text, or
+`\u0000` in JSON, so the application strips them from everything that
+comes in: request params and paths (`FireflyWeb.Plugs.StripNul`, right
+after the body parsers), LiveView events and URLs
+(`FireflyWeb.LiveStripNul`), search, importers and what plugins hand back,
+and, as the last application layer, every changeset as it casts
+(`Firefly.Changeset`) and as `Firefly.Repo` writes it. Binary fields are
+left alone. The database stays the backstop: a NUL that still reaches it is
+refused, and that is a 400 with a translated message (a flash in a
+LiveView, `{:error, changeset}` from `Repo.insert/update`), never a crash
+page. See `Firefly.Text`.
+
 ### Tests
 
 Page tests use [PhoenixTest](https://hexdocs.pm/phoenix_test); critical user
@@ -627,7 +820,17 @@ mix precommit              # compile --warnings-as-errors, format, credo, test
 ```
 
 Set `FIREFLY_CHROMIUM_PATH` to use an already-installed Chromium, and
-`FIREFLY_PW_TRACE=true` to record Playwright traces.
+`FIREFLY_PW_TRACE=true` to record Playwright traces. The test server
+listens on `FIREFLY_TEST_PORT` (default 4002); with a different port and
+`MIX_TEST_PARTITION` (its own database), two suites can run side by side.
+
+The clustering test starts a second node (`:peer`) and has both find each
+other through the test database, so it needs `epmd` (it starts it) and is
+left out unless included (CI runs it):
+
+```sh
+(cd apps/firefly && mix test --only cluster)
+```
 
 Property-based and fuzz tests ([StreamData](https://hexdocs.pm/stream_data),
 in each app's `test/property`) check invariants over generated input: valid

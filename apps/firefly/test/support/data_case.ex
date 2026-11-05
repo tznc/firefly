@@ -25,6 +25,9 @@ defmodule Firefly.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Firefly.DataCase
+
+      # Jobs are only enqueued in tests: assert_enqueued/1, perform_job/2.
+      use Oban.Testing, repo: Firefly.Repo
     end
   end
 
@@ -37,14 +40,26 @@ defmodule Firefly.DataCase do
   Sets up the sandbox based on the test tags.
   """
   def setup_sandbox(tags) do
-    # Deep fuzz runs (`:fuzz`) hold the sandbox for minutes.
-    timeout = if tags[:fuzz], do: [ownership_timeout: :infinity], else: []
+    # Deep fuzz runs (`:fuzz`, or properties given more runs) hold the
+    # sandbox for minutes.
+    long? = tags[:fuzz] || System.get_env("FIREFLY_PROPERTY_RUNS")
+    timeout = if long?, do: [ownership_timeout: :infinity], else: []
 
     pid =
       Ecto.Adapters.SQL.Sandbox.start_owner!(Firefly.Repo, [shared: not tags[:async]] ++ timeout)
 
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
     pid
+  end
+
+  @doc """
+  Runs the notification jobs enqueued so far, in the test's process: the
+  fan-out (`Firefly.Notifications.FanOut`), then the emails it queued.
+  """
+  def run_notifications do
+    Oban.drain_queue(queue: :notifications, with_recursion: true)
+    Oban.drain_queue(queue: :mailers, with_recursion: true)
+    :ok
   end
 
   @doc """

@@ -1,8 +1,11 @@
 defmodule FireflyWeb.DigestsTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
 
-  alias Firefly.{Discussion, Groups, JobRuns, Notifications, Repo}
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
+
+  alias Firefly.{Discussion, Groups, Notifications, Repo}
   alias Firefly.Accounts.Ignores
   alias Firefly.Notifications.Digests
   alias Firefly.Accounts.User
@@ -35,7 +38,7 @@ defmodule FireflyWeb.DigestsTest do
 
   defp digest_to(user) do
     receive do
-      {:delivered_email, %{to: [{_, address}]} = email} when address == user.email -> email
+      {:email, %{to: [{_, address}]} = email} when address == user.email -> email
     after
       0 -> nil
     end
@@ -129,7 +132,7 @@ defmodule FireflyWeb.DigestsTest do
   test "the site setting turns digests off" do
     Repo.insert!(%SiteSetting{key: "digests_enabled", value: "false"})
     assert Digests.run_due() == :ok
-    assert JobRuns.claim("digests", 900)
+    assert_no_email_sent()
   end
 
   test "unsubscribing: one click, the page, and settings", %{conn: conn, reader: reader} do

@@ -1,6 +1,9 @@
 defmodule Firefly.InvitesTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   alias Firefly.{Accounts, Groups, Notifications, SiteSettings}
   alias Firefly.Accounts.{Auth, Invite, Invites, User}
@@ -33,7 +36,7 @@ defmodule Firefly.InvitesTest do
     {:ok, invite} = Invites.create(ctx.member, %{"email" => "New@Example.com"})
     assert invite.email == "new@example.com"
     assert invite.emailed_at
-    assert_delivered_email_matches(%{to: [{nil, "new@example.com"}], text_body: text})
+    assert_received {:email, %{to: [{"", "new@example.com"}], text_body: text}}
     assert text =~ "/invites/#{invite.key}"
 
     {:ok, user} = register(invite, "newbie", "other@example.com")

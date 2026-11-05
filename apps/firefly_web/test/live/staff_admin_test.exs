@@ -1,7 +1,21 @@
 defmodule FireflyWeb.StaffAdminTest do
   use FireflyWeb.ConnCase
   # Password resets and test emails are emailed; approvals notify.
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
+
+  defmodule RefusingMailer do
+    @moduledoc false
+    # An API adapter's answer to a bad key.
+    use Swoosh.Adapter
+
+    def deliver(_email, _config),
+      do:
+        {:error,
+         {401, %{"errors" => [%{"message" => "The provided authorization grant is invalid"}]}}}
+  end
 
   import Ecto.Query, only: [from: 2]
   import Phoenix.LiveViewTest, only: [live: 2]
@@ -150,7 +164,7 @@ defmodule FireflyWeb.StaffAdminTest do
       end)
       |> assert_has("#notifications li", text: "Please read the guidelines")
 
-      assert_email_delivered_with(to: [nil: "changed@example.com"])
+      assert_email_sent(to: "changed@example.com")
       assert ["user.edit", "user.password_reset", "notification.send"] = actions()
     end
 
@@ -207,7 +221,7 @@ defmodule FireflyWeb.StaffAdminTest do
       |> visit(~p"/staff/users/#{dupe.id}")
       |> within("#merge-form", fn session ->
         session
-        |> fill_in("Account to merge into", with: "@member")
+        |> fill_in("Account to merge into", with: "@MEMBER")
         |> click_button("Merge into")
       end)
       |> assert_path(~p"/staff/users/#{member.id}")
@@ -409,9 +423,10 @@ defmodule FireflyWeb.StaffAdminTest do
       conn
       |> log_in_as(admin)
       |> visit(~p"/staff/emails?tab=test")
+      |> assert_has("#mail-adapter", text: "Mailer: Test")
       |> fill_in("Send to", with: "ops@example.com")
       |> click_button("Send test email")
-      |> assert_has("#flash-info", text: "Test email sent to ops@example.com.")
+      |> assert_has("#flash-info", text: "Test email sent to ops@example.com with Test.")
       |> visit(~p"/staff/emails")
       |> assert_has("#email-log td", text: "ops@example.com")
       |> assert_has("#email-log td", text: "test_email")
@@ -421,7 +436,23 @@ defmodule FireflyWeb.StaffAdminTest do
       |> assert_has("#preview-subject", text: "Summary since")
       |> assert_has("#preview-html[sandbox]")
 
-      assert_email_delivered_with(to: [nil: "ops@example.com"])
+      assert_email_sent(to: "ops@example.com")
+    end
+
+    test "a failed test email shows the adapter's error", %{conn: conn, admin: admin} do
+      config = Application.get_env(:firefly, Firefly.Mailer)
+      Application.put_env(:firefly, Firefly.Mailer, adapter: RefusingMailer)
+      on_exit(fn -> Application.put_env(:firefly, Firefly.Mailer, config) end)
+
+      conn
+      |> log_in_as(admin)
+      |> visit(~p"/staff/emails?tab=test")
+      |> fill_in("Send to", with: "ops@example.com")
+      |> click_button("Send test email")
+      |> assert_has("#flash-error", text: "couldn't send it: HTTP 401")
+      |> assert_has("#flash-error", text: "The provided authorization grant is invalid")
+      |> visit(~p"/staff/emails?status=failed")
+      |> assert_has("#email-log td", text: "ops@example.com")
     end
   end
 

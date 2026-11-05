@@ -108,25 +108,22 @@ defmodule FireflyWeb.UpgradesTest do
     assert Upgrades.status().error == message
   end
 
-  test "the daily job checks once, and notifies admins once per release", %{admin: admin} do
-    Repo.delete_all("job_runs")
-    assert :ok = Upgrades.run_due()
-    assert :ok = Upgrades.run_due()
+  test "the daily job checks, and notifies admins once per release", %{admin: admin} do
+    assert {"23 4 * * *", Firefly.Jobs.Periodic.VersionCheck} in Firefly.Jobs.crontab()
+    assert :ok = perform_job(Firefly.Jobs.Periodic.VersionCheck, %{})
     assert_received {:github, _, _}
-    refute_received {:github, _, _}
 
     notifications = Repo.all(from(n in Notification, where: n.user_id == ^admin.id))
     assert [%{kind: "new_version", subject: "Firefly v99.0.0 is out"}] = notifications
 
     # The next day, the same release: no new notification.
-    Repo.delete_all("job_runs")
     Upgrades.run_due()
+    assert_received {:github, _, _}
     assert Repo.aggregate(from(n in Notification, where: n.kind == "new_version"), :count) == 1
   end
 
   test "the setting turns the check off", %{admin: admin} do
     {:ok, _} = SiteSettings.update(%{"version_check" => "false"}, admin)
-    Repo.delete_all("job_runs")
     Upgrades.run_due()
     refute_received {:github, _, _}
   end

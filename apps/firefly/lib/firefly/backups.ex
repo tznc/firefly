@@ -33,7 +33,7 @@ defmodule Firefly.Backups do
 
   use Boundary, top_level?: true, check: [out: false], exports: []
 
-  alias Firefly.{Accounts, JobRuns, Plugins, Repo, SiteSettings}
+  alias Firefly.{Accounts, Plugins, Repo, SiteSettings}
   alias Firefly.Accounts.User
   alias Firefly.Backups.{Archive, Runner, Store}
   alias Firefly.Moderation.StaffLog
@@ -165,14 +165,19 @@ defmodule Firefly.Backups do
   @doc """
   Makes a scheduled backup when one is due (every `backup_frequency_days`
   days; 0 is off). Run by the scheduler
-  (`Firefly.Moderation.TopicTimers.Scheduler`), once across nodes.
+  (`Firefly.Jobs.Periodic`, hourly, once across nodes): when the newest
+  backup, of any kind, is that old (less 10 minutes, so a backup that took a
+  while doesn't push the next one an hour later every time).
   """
-  def run_due do
+  def run_due(now \\ DateTime.utc_now()) do
     days = SiteSettings.get("backup_frequency_days")
 
-    # Claimed a little early, so a backup that took a while doesn't push
-    # the next one a whole scheduler interval later every time.
-    if days > 0 and JobRuns.claim("backups.scheduled", days * 86_400 - 600),
+    newest =
+      list()
+      |> Enum.map(& &1.modified_at)
+      |> Enum.max(DateTime, fn -> nil end)
+
+    if days > 0 and (is_nil(newest) or DateTime.diff(now, newest) >= days * 86_400 - 600),
       do: create(nil)
 
     :ok

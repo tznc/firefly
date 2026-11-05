@@ -4,7 +4,7 @@ defmodule Firefly.Discussion.Thread do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset, warn: false
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Category, Post, Tag}
@@ -62,6 +62,8 @@ defmodule Firefly.Discussion.Thread do
     thread
     |> cast(attrs, [:title, :category_id])
     |> validate_required([:title, :category_id])
+    # The column's limit (beyond it, the insert raised).
+    |> validate_length(:title, max: 255, count: :codepoints)
     |> ThreadTitleSlug.maybe_generate_slug()
     |> ThreadTitleSlug.unique_constraint()
   end

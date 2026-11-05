@@ -52,7 +52,7 @@ defmodule Firefly.SiteSettings do
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
-    {"Advanced", ["Plugins", "Backups", "Updates", "Embedding", "Database"]}
+    {"Advanced", ["Plugins", "Backups", "Jobs", "Updates", "Embedding", "Database"]}
   ]
 
   @doc "The categories, in order: `{name, sections}`."
@@ -1004,6 +1004,17 @@ defmodule Firefly.SiteSettings do
         help: "Automatic backups, every this many days. 0: off."
       },
       %{
+        key: "job_retention_days",
+        section: "Jobs",
+        type: :integer,
+        label: "Keep finished jobs (days)",
+        default: 14,
+        min: 1,
+        max: 365,
+        help:
+          "How long completed, cancelled and failed background jobs stay in the job history (Staff, Jobs) before they're pruned."
+      },
+      %{
         key: "backup_keep",
         section: "Backups",
         type: :integer,
@@ -1796,6 +1807,8 @@ defmodule Firefly.SiteSettings do
   and new values.
   """
   def update(params, admin) do
+    # Saved as raw structs below: Postgres can't store a NUL character.
+    params = Firefly.Text.strip_nul(params)
     current = all()
 
     {changes, errors} =
@@ -1925,24 +1938,11 @@ defmodule Firefly.SiteSettings do
     do: cast(definition, String.split(value, ~r/[,\n]/))
 
   def cast(%{type: :list} = definition, values) when is_list(values) do
-    values =
-      values
-      |> Enum.map(&(&1 |> to_string() |> String.trim()))
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.uniq()
-
-    allowed = definition[:options]
-
-    cond do
-      Enum.any?(values, &(String.length(&1) > 100)) ->
-        {:error, "has an item longer than 100 characters"}
-
-      allowed && Enum.any?(values, &(&1 not in allowed)) ->
-        {:error, "may only hold #{Enum.join(allowed, ", ")}"}
-
-      true ->
-        {:ok, values}
-    end
+    # Items split as typed ones do: stored joined with commas, an item
+    # holding one would come back as two.
+    if Enum.all?(values, &is_binary/1),
+      do: cast_list(definition, Enum.flat_map(values, &String.split(&1, ~r/[,\n]/))),
+      else: {:error, "is invalid"}
   end
 
   def cast(%{type: :color}, value) when is_binary(value) do
@@ -1970,4 +1970,25 @@ defmodule Firefly.SiteSettings do
   end
 
   def cast(_definition, _value), do: {:error, "is invalid"}
+
+  defp cast_list(definition, values) do
+    values =
+      values
+      |> Enum.map(&(&1 |> to_string() |> String.trim()))
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.uniq()
+
+    allowed = definition[:options]
+
+    cond do
+      Enum.any?(values, &(String.length(&1) > 100)) ->
+        {:error, "has an item longer than 100 characters"}
+
+      allowed && Enum.any?(values, &(&1 not in allowed)) ->
+        {:error, "may only hold #{Enum.join(allowed, ", ")}"}
+
+      true ->
+        {:ok, values}
+    end
+  end
 end

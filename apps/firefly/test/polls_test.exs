@@ -8,7 +8,7 @@ defmodule Firefly.PollsTest do
   alias Firefly.Accounts.{AccountDeletion, AccountExport}
   alias Firefly.Discussion.Polls
   alias Firefly.Moderation.Penalties
-  alias Firefly.Moderation.{TopicTimers, TopicTools}
+  alias Firefly.Moderation.TopicTools
   alias Firefly.Discussion.{Poll, PollVote, Post}
   alias Firefly.Moderation.StaffAction
 
@@ -96,6 +96,25 @@ defmodule Firefly.PollsTest do
   end
 
   describe "voting" do
+    # Found by Firefly.PollsPropertyTest: the API passes JSON through, and
+    # an id or rank that wasn't text or a number (a list, an object)
+    # raised in to_string/1.
+    test "ids and ranks that aren't numbers are no choice, not a crash", %{
+      author: author,
+      voter: voter,
+      thread: thread
+    } do
+      {_post, ranked} = poll_post(thread, author, %{"kind" => "ranked"})
+      assert {:error, :no_choice} = Polls.vote(ranked, voter, %{"ranks" => %{"x" => [nil]}})
+      id = option_id(ranked, "Red")
+      assert {:error, :no_choice} = Polls.vote(ranked, voter, %{"ranks" => %{%{} => 1}})
+      assert {:ok, _} = Polls.vote(ranked, voter, %{"ranks" => %{id => 1}})
+
+      {_post, single} = poll_post(thread, author, %{})
+      assert {:error, :no_choice} = Polls.vote(single, voter, %{"option" => %{"a" => 1}})
+      assert {:ok, _} = Polls.vote(single, voter, %{"option" => option_id(single, "Red")})
+    end
+
     test "single choice: vote and change it", %{author: author, voter: voter, thread: thread} do
       {_post, poll} = poll_post(thread, author, %{})
       {:ok, view} = Polls.vote(poll, voter, %{"option" => to_string(option_id(poll, "Red"))})
@@ -294,8 +313,7 @@ defmodule Firefly.PollsTest do
         set: [close_at: DateTime.add(DateTime.utc_now(:second), -60)]
       )
 
-      start_supervised!({TopicTimers.Scheduler, interval: 50})
-      :sys.get_state(TopicTimers.Scheduler)
+      assert :ok = perform_job(Firefly.Jobs.Periodic.PollClosing, %{})
       assert Repo.reload!(later).closed_at
     end
   end

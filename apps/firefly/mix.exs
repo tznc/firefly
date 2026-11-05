@@ -38,6 +38,10 @@ defmodule Firefly.MixProject do
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
       {:phoenix_pubsub, "~> 2.1"},
+      # Connects the nodes of a deployment into one Erlang cluster, finding
+      # them over Postgres LISTEN/NOTIFY (see Firefly.Cluster).
+      {:libcluster, "~> 3.5"},
+      {:libcluster_postgres, "~> 0.2.0"},
       {:plug_crypto, "~> 2.1"},
       # Safe HTML for rendered posts, search excerpts and emails.
       {:phoenix_html, "~> 4.4"},
@@ -49,6 +53,10 @@ defmodule Firefly.MixProject do
       # HTTP spans.
       {:opentelemetry_api, "~> 1.5"},
       {:opentelemetry_req, "~> 1.0"},
+      # Background and scheduled jobs in PostgreSQL (see Firefly.Jobs), and
+      # their trace context carried from the enqueuer into the job.
+      {:oban, "~> 2.24"},
+      {:opentelemetry_oban, "~> 1.2"},
       # ueberauth_google 0.12 pins `ueberauth ~> 0.10.0`; 0.11 only signs the
       # state cookie, inside Ueberauth's own helpers, which strategies just call.
       {:ueberauth, "~> 0.11", override: true},
@@ -65,7 +73,13 @@ defmodule Firefly.MixProject do
       {:wax_, "~> 0.7.0"},
       {:mdex, "~> 0.14"},
       {:scrivener_ecto, "~> 3.1"},
-      {:bamboo, "~> 2.5"},
+      # Email (see Firefly.Mailer): Swoosh, with gen_smtp for SMTP (and the
+      # MIME Amazon SES sends); its HTTP APIs (SendGrid, Mailgun, Postmark,
+      # SES) go through Req, below.
+      {:swoosh, "~> 1.29"},
+      {:gen_smtp, "~> 1.3"},
+      # The Mailgun adapter's form bodies.
+      {:multipart, "~> 0.6.1"},
       {:ecto_autoslug_field, "~> 3.1"},
       {:bcrypt_elixir, "~> 3.3"},
       {:exgravatar, "~> 2.0"},

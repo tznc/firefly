@@ -143,7 +143,19 @@ defmodule Firefly.Plugin.Settings do
     end
   end
 
-  def cast(%{type: "string"}, value) when is_binary(value) do
+  def cast(%{type: "enum", choices: choices}, value) when is_binary(value) do
+    if value in choices,
+      do: {:ok, value},
+      else: {:error, "must be one of #{Enum.join(choices, ", ")}"}
+  end
+
+  # Postgres can't store a NUL character, in text or in JSON.
+  def cast(%{type: type}, value) when type in ~w(string text) and is_binary(value),
+    do: cast_text(type, Firefly.Text.strip_nul(value))
+
+  def cast(_definition, _value), do: {:error, "is invalid"}
+
+  defp cast_text("string", value) do
     value = String.trim(value)
 
     if String.length(value) > 500 or String.contains?(value, "\n"),
@@ -151,17 +163,9 @@ defmodule Firefly.Plugin.Settings do
       else: {:ok, value}
   end
 
-  def cast(%{type: "text"}, value) when is_binary(value) do
+  defp cast_text("text", value) do
     if String.length(value) > 5_000,
       do: {:error, "must be at most 5000 characters"},
       else: {:ok, String.trim(value)}
   end
-
-  def cast(%{type: "enum", choices: choices}, value) when is_binary(value) do
-    if value in choices,
-      do: {:ok, value},
-      else: {:error, "must be one of #{Enum.join(choices, ", ")}"}
-  end
-
-  def cast(_definition, _value), do: {:error, "is invalid"}
 end

@@ -42,6 +42,12 @@ defmodule Firefly.Notifications do
   email notifications on and a confirmed address. To avoid floods, a thread
   (or conversation) emails a user once until they read its notifications.
 
+  The fan-out runs as a background job after the change is saved
+  (`Firefly.Notifications.FanOut`, retried when it fails), and each email
+  and browser push is a job of its own, unique per notification: a retry
+  never notifies, emails or pushes anyone twice. (Tests run the jobs
+  themselves, with the test support's `run_notifications()`.)
+
   Its public modules besides this one: `Firefly.Notifications.Notification`
   (the schema), `Subscriptions` (watching, tracking and muting threads,
   categories and tags), `Emails`, `Digests`, `WebPush`, `ReplyAddress`
@@ -71,37 +77,45 @@ defmodule Firefly.Notifications do
   alias Firefly.Repo
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Policy, Thread}
-  alias Firefly.Notifications.{Dispatcher, Notification, Subscriptions}
+  alias Firefly.Notifications.{FanOut, Notification, Subscriptions}
 
-  ## Fan-out (asynchronous, see `Firefly.Notifications.Dispatcher`)
-
-  @doc false
-  defdelegate child_spec(opts), to: Dispatcher
-
-  @doc "Starts the fan-out process (the app does; tests start their own)."
-  defdelegate start_link(opts \\ []), to: Dispatcher
+  ## Fan-out (background jobs, see `Firefly.Notifications.FanOut`)
 
   @doc "Notify subscribers about a new reply."
-  defdelegate post_created(post), to: Dispatcher
+  def post_created(%Firefly.Discussion.Post{id: id}), do: fan_out("post_created", %{post_id: id})
 
   @doc "Notify users newly mentioned by an edit."
-  defdelegate post_edited(post), to: Dispatcher
+  def post_edited(%Firefly.Discussion.Post{id: id}), do: fan_out("post_edited", %{post_id: id})
 
   @doc "Notify category subscribers about a new thread."
-  defdelegate thread_created(thread), to: Dispatcher
+  def thread_created(%Thread{id: id}), do: fan_out("thread_created", %{thread_id: id})
 
   @doc "Notify a conversation's other participants about a new message."
-  defdelegate message_created(message), to: Dispatcher
+  def message_created(%Firefly.Messaging.Message{id: id}),
+    do: fan_out("message_created", %{message_id: id})
 
   @doc "Notify `users` that `actor` added them to a conversation."
-  defdelegate participants_added(conversation, actor, users), to: Dispatcher
+  def participants_added(%Firefly.Messaging.Conversation{id: id}, %User{id: actor_id}, users) do
+    fan_out("participants_added", %{
+      conversation_id: id,
+      actor_id: actor_id,
+      user_ids: Enum.map(users, & &1.id)
+    })
+  end
 
   @doc """
   Notify about a chat message: the users with ids `mentioned_ids` it
   newly mentions, and those who hear about every message in its channel
   (see `Firefly.Chat.notify/2`).
   """
-  defdelegate chat_message_created(message, mentioned_ids), to: Dispatcher
+  def chat_message_created(%{id: id}, mentioned_ids),
+    do: fan_out("chat_message_created", %{message_id: id, mentioned_ids: mentioned_ids})
+
+  # In the caller's transaction, so nothing is lost if it commits.
+  defp fan_out(event, args) do
+    {:ok, _job} = Firefly.Jobs.insert(FanOut.job(event, args))
+    :ok
+  end
 
   ## In-app notifications
 
@@ -159,6 +173,33 @@ defmodule Firefly.Notifications do
     end
 
     result
+  end
+
+  @doc """
+  Emails `notification` in the background, once (see
+  `Firefly.Notifications.EmailWorker`): `args` names the `template` and what
+  it's built from.
+  """
+  defdelegate email_later(notification, args),
+    to: Firefly.Notifications.EmailWorker,
+    as: :send_later
+
+  @doc """
+  Notifies `user` like `notify/2`, unless they already have a notification
+  of the same kind about the same thing (its URL): then that one. The
+  fan-out uses it, so running it again (a retried job) notifies no one
+  twice.
+  """
+  def notify_once(%User{} = user, %{kind: kind, url: url} = attrs) do
+    existing =
+      Repo.one(
+        from(n in Notification,
+          where: n.user_id == ^user.id and n.kind == ^kind and n.url == ^url,
+          limit: 1
+        )
+      )
+
+    if existing, do: {:ok, existing}, else: notify(user, attrs)
   end
 
   def mark_notification_read(%Notification{read_at: nil} = notification) do

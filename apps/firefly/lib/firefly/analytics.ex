@@ -32,7 +32,7 @@ defmodule Firefly.Analytics do
 
   import Ecto.Query
 
-  alias Firefly.{JobRuns, Repo, SiteSettings}
+  alias Firefly.{Repo, SiteSettings}
   alias Firefly.Analytics.Buffer
   alias Firefly.Discussion.{Post, Thread}
 
@@ -251,16 +251,13 @@ defmodule Firefly.Analytics do
 
   @doc """
   Drops what's only needed for the day (viewers counted today, the day's
-  salt) once it's over. Run by the scheduler
-  (`Firefly.Moderation.TopicTimers.Scheduler`), once an hour across nodes.
+  salt) once it's over. Run once an hour across nodes (see
+  `Firefly.Jobs.Periodic`).
   """
   def run_due do
-    if JobRuns.claim("analytics.prune", 3600) do
-      today = today()
-      Repo.delete_all(from(v in "analytics_topic_viewers", where: v.date < ^today))
-      Repo.delete_all(from(s in "analytics_salts", where: s.date < ^today))
-    end
-
+    today = today()
+    Repo.delete_all(from(v in "analytics_topic_viewers", where: v.date < ^today))
+    Repo.delete_all(from(s in "analytics_salts", where: s.date < ^today))
     :ok
   end
 

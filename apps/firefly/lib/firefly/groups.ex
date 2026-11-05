@@ -102,7 +102,12 @@ defmodule Firefly.Groups do
   def by_names([]), do: %{}
 
   def by_names(names) do
-    lowered = Enum.map(names, &String.downcase/1)
+    # Postgres refuses NUL and invalid UTF-8, and no group name has them.
+    lowered =
+      for name <- names,
+          String.valid?(name),
+          not String.contains?(name, <<0>>),
+          do: String.downcase(name)
 
     groups = Repo.all(from(r in Role, where: fragment("lower(?)", r.name) in ^lowered))
     Map.new(groups, &{String.downcase(&1.name), &1})
@@ -636,7 +641,7 @@ defmodule Firefly.Groups do
 
       notified ++
         for user <- members, MapSet.member?(allowed, user.id) do
-          {:ok, _} = Notifications.notify(user, group_mention(thread, post, author, group))
+          {:ok, _} = Notifications.notify_once(user, group_mention(thread, post, author, group))
           user.id
         end
     end)

@@ -1,6 +1,9 @@
 defmodule FireflyWeb.PenaltiesTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
   import ExUnit.CaptureLog
@@ -10,10 +13,8 @@ defmodule FireflyWeb.PenaltiesTest do
 
   defmodule DownMailer do
     @moduledoc false
-    @behaviour Bamboo.Adapter
+    use Swoosh.Adapter
     def deliver(_email, _config), do: raise("SMTP is down")
-    def handle_config(config), do: config
-    def supports_attachments?, do: false
   end
 
   alias Firefly.{Accounts, Discussion, Repo}
@@ -95,10 +96,8 @@ defmodule FireflyWeb.PenaltiesTest do
              ] =
                Repo.all(from(n in Notification, where: n.user_id == ^member.id))
 
-      assert_delivered_email_matches(%{
-        to: [{nil, "member@example.com"}],
-        subject: "You've been silenced" <> _
-      })
+      assert_received {:email,
+                       %{to: [{"", "member@example.com"}], subject: "You've been silenced" <> _}}
 
       refute User.silenced?(%{member | silenced_until: DateTime.add(DateTime.utc_now(), -1)})
 

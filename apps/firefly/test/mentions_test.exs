@@ -1,6 +1,6 @@
 defmodule Firefly.MentionsTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
 
   alias Firefly.{Accounts, Discussion, Notifications}
   alias Firefly.Discussion.Mentions
@@ -45,8 +45,7 @@ defmodule Firefly.MentionsTest do
     end
   end
 
-  # Casts are async; a call to the server waits for them.
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp mentions(user),
     do: Enum.filter(Notifications.notifications_for(user), &(&1.kind == "mentioned"))
@@ -108,14 +107,13 @@ defmodule Firefly.MentionsTest do
       assert Mentions.usernames("@Bob and @Bob, @carol\n\n> @dave said") == ["Bob", "carol"]
     end
 
-    test "an exact-case match wins when usernames differ only in case" do
-      upper = user("Alice")
-      lower = user("alice")
+    test "any case names the one user" do
+      alice = user("Alice")
 
       assert Accounts.users_by_username(["alice", "Alice", "ALICE"]) == %{
-               "alice" => lower,
-               "Alice" => upper,
-               "ALICE" => upper
+               "alice" => alice,
+               "Alice" => alice,
+               "ALICE" => alice
              }
     end
 
@@ -147,7 +145,6 @@ defmodule Firefly.MentionsTest do
 
   describe "notifications" do
     setup do
-      {:ok, _} = Notifications.start_link()
       {:ok, category} = Discussion.create_category(%{title: "Elixir"})
       author = user("author")
       {:ok, thread} = Discussion.create_thread(category, author, %{title: "OTP", body: "Cool?"})
@@ -172,8 +169,8 @@ defmodule Firefly.MentionsTest do
       assert notification.subject == ~s(@author mentioned you in "OTP")
       assert notification.emailed_at
 
-      assert_email_delivered_with(
-        to: [nil: "bob@example.com"],
+      assert_email_sent(
+        to: "bob@example.com",
         subject: "@author mentioned you on Firefly"
       )
 

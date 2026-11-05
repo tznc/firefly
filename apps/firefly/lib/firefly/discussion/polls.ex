@@ -13,8 +13,9 @@ defmodule Firefly.Discussion.Polls do
 
   The post's author and staff close and reopen it (the `:manage_poll`
   policy; staff on someone else's poll go to the staff log). A poll with a
-  `close_at` closes then, run by `Firefly.Moderation.TopicTimers.Scheduler`
-  (`run_due/1`), including when the time passed while the app was down.
+  `close_at` closes then, within a minute (`run_due/1`, run every minute
+  by `Firefly.Jobs.Periodic`), including when the time passed while the
+  app was down.
 
   A poll moves with its post (merge, split). Votes are in the voter's
   account export; when an account is deleted they stay, cast by its
@@ -284,7 +285,7 @@ defmodule Firefly.Discussion.Polls do
 
   defp parse_choice(%Poll{kind: "ranked"} = poll, %{"ranks" => ranks}) when is_map(ranks) do
     ranked =
-      for {id, rank} <- ranks, {rank, ""} <- [Integer.parse(to_string(rank))], do: {id, rank}
+      for {id, rank} <- ranks, {:ok, rank} <- [integer(rank)], do: {id, rank}
 
     cond do
       ranked == [] ->
@@ -308,7 +309,7 @@ defmodule Firefly.Discussion.Polls do
     valid = MapSet.new(poll.options, & &1.id)
 
     parsed =
-      for id <- ids, {id, ""} <- [Integer.parse(to_string(id))], MapSet.member?(valid, id), do: id
+      for id <- ids, {:ok, id} <- [integer(id)], MapSet.member?(valid, id), do: id
 
     cond do
       parsed == [] -> {:error, :no_choice}
@@ -316,6 +317,19 @@ defmodule Firefly.Discussion.Polls do
       true -> {:ok, parsed}
     end
   end
+
+  # An id or rank from the form or the API's JSON: an integer, or a string
+  # of one. Anything else (a list, an object) isn't one.
+  defp integer(value) when is_integer(value), do: {:ok, value}
+
+  defp integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {n, ""} -> {:ok, n}
+      _ -> :error
+    end
+  end
+
+  defp integer(_value), do: :error
 
   @doc "Closes `poll` as `actor` (its post's author or staff)."
   def close(%Poll{} = poll, %User{} = actor), do: set_closed(poll, actor, true)

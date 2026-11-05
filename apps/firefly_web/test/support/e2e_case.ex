@@ -13,6 +13,7 @@ defmodule FireflyWeb.E2ECase do
       use FireflyWeb, :verified_routes
 
       import FireflyWeb.E2ECase
+      import Firefly.DataCase, only: [run_notifications: 0]
 
       @moduletag :e2e
     end

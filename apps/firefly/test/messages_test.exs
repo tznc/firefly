@@ -1,6 +1,6 @@
 defmodule Firefly.MessagesTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
 
   require Ecto.Query
 
@@ -10,7 +10,6 @@ defmodule Firefly.MessagesTest do
   alias Firefly.Discussion.Policy
 
   setup do
-    {:ok, _} = Notifications.start_link()
     %{alice: user("alice"), bob: user("bob"), carol: user("carol")}
   end
 
@@ -23,8 +22,7 @@ defmodule Firefly.MessagesTest do
     user
   end
 
-  # Casts are async; a call to the server waits for them.
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp start(sender, recipients, body \\ "Secret plans") do
     {:ok, conversation} =
@@ -71,8 +69,8 @@ defmodule Firefly.MessagesTest do
       assert [_] = Notifications.notifications_for(carol)
       assert Notifications.notifications_for(alice) == []
 
-      assert_email_delivered_with(
-        to: [nil: "bob@example.com"],
+      assert_email_sent(
+        to: "bob@example.com",
         subject: ~s(@alice sent you a message: "Hush" on Firefly)
       )
     end
@@ -174,8 +172,8 @@ defmodule Firefly.MessagesTest do
 
       assert [%{kind: "message", emailed_at: nil}] = Notifications.notifications_for(quiet)
       assert [%{kind: "message", emailed_at: nil}] = Notifications.notifications_for(unconfirmed)
-      refute_email_delivered_with(to: [nil: "quiet@example.com"])
-      refute_email_delivered_with(to: [nil: "unc@example.com"])
+      refute_email_sent(to: "quiet@example.com")
+      refute_email_sent(to: "unc@example.com")
     end
 
     test "only participants can reply", %{alice: alice, carol: carol} do
@@ -186,8 +184,8 @@ defmodule Firefly.MessagesTest do
     test "message emails have no reply-by-email address", %{alice: alice} do
       start(alice, "bob")
 
-      assert_delivered_email_matches(%{to: [nil: "bob@example.com"], headers: headers})
-      refute Map.has_key?(headers, "reply-to")
+      assert_received {:email, %{to: [{_, "bob@example.com"}], reply_to: nil, headers: headers}}
+      refute Map.has_key?(headers, "Reply-To")
     end
   end
 
@@ -276,6 +274,11 @@ defmodule Firefly.MessagesTest do
       Ecto.Query.where(Firefly.Notifications.Notification, user_id: ^bob.id)
     )
 
+    # And alice's notification of it, so fanning it out again makes a new one.
+    Firefly.Repo.delete_all(
+      Ecto.Query.where(Firefly.Notifications.Notification, user_id: ^alice.id)
+    )
+
     {:ok, _} = Accounts.delete_user(bob)
 
     assert [_, %{user: nil}] = Messaging.messages(conversation)
@@ -310,5 +313,51 @@ defmodule Firefly.MessagesTest do
     assert Discussion.user_posts(alice, nil, %{page: 1}).entries == []
     assert Notifications.notifications_for(carol) == []
     assert Discussion.participating_threads(bob) == []
+  end
+
+  # Found by Firefly.MessagingPropertyTest: a group member who had left a
+  # conversation sent to the group could still reply from its inbox, but
+  # joining back in inserted a second participant row and raised.
+  test "a group member who left a group conversation can reply and is back in", %{
+    alice: alice,
+    bob: bob
+  } do
+    admin = Firefly.Fixtures.admin_fixture()
+    {:ok, team} = Groups.create_group(%{name: "team"}, admin)
+
+    {:ok, team} =
+      Groups.update_settings(team, %{visibility: "public", messageable: "everyone"}, admin)
+
+    {:ok, _} = Groups.add_member(team, bob.username, admin)
+
+    {:ok, conversation} =
+      Messaging.start_conversation(alice, %{
+        "title" => "For the team",
+        "body" => "Hello team.",
+        "recipients" => "team, bob"
+      })
+
+    :ok = Messaging.leave(conversation, bob)
+    refute Messaging.participant?(conversation, bob)
+    assert {:ok, _} = Messaging.reply(conversation, bob, %{"body" => "Back again."})
+    assert Messaging.participant?(conversation, bob)
+  end
+
+  # Found by Firefly.MessagingPropertyTest: Postgres refused a recipient
+  # name holding NUL, and starting the conversation raised. Input is now
+  # stripped of NUL, so the name is bob's; a lookup given NUL directly
+  # still matches nobody.
+  test "a recipient name with NUL is stripped, not a crash", %{alice: alice, bob: bob} do
+    assert {:ok, conversation} =
+             Messaging.start_conversation(alice, %{
+               "title" => "A fine title",
+               "body" => "Hello there.",
+               "recipients" => <<"bob", 0>>
+             })
+
+    assert Messaging.unread_conversation_count(bob) == 1
+    assert conversation.title == "A fine title"
+    assert Accounts.users_by_username([<<"bob", 0>>, <<0xFF>>]) == %{}
+    assert Groups.by_names([<<"team", 0>>]) == %{}
   end
 end

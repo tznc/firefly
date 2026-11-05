@@ -8,8 +8,8 @@ defmodule Firefly.Directory do
 
   The stats aren't aggregated per page view: `refresh/0` recomputes them
   for everyone into `directory_items` (one row per user and period), and
-  the scheduler (`Firefly.Moderation.TopicTimers.Scheduler`) runs it through
-  `run_due/0` once the last refresh is over an hour old. Only published
+  an hourly job (`Firefly.Jobs.Periodic`) runs it through `run_due/0`
+  unless another refresh ran in the meantime. Only published
   posts count, and likes on them. Members who left the directory or hid
   their profile (privacy settings) or deleted their account aren't listed; new members
   are, with no stats until the next refresh.
@@ -37,7 +37,8 @@ defmodule Firefly.Directory do
     "topics_entered" => "Topics viewed"
   }
 
-  @refresh_seconds 3600
+  # Under the hourly job's interval, so each run refreshes unless one just did.
+  @refresh_seconds 3000
 
   # Held while refreshing, so several nodes don't all do it at once.
   @lock_key 4_216_301
@@ -89,9 +90,17 @@ defmodule Firefly.Directory do
       %DirectoryItem{period: "all", user_id: user_id}
   end
 
-  defp search(query, name) when is_binary(name) and name != "" do
-    pattern = "%" <> String.replace(String.trim(name), ~r/[\\%_]/, "\\\\\\0") <> "%"
-    where(query, [u], ilike(u.username, ^pattern) or ilike(u.name, ^pattern))
+  # Postgres refuses NUL and invalid UTF-8 (anyone can put them in the
+  # URL): they're dropped.
+  defp search(query, name) when is_binary(name) do
+    case name |> String.replace_invalid("") |> String.replace(<<0>>, "") |> String.trim() do
+      "" ->
+        query
+
+      name ->
+        pattern = "%" <> String.replace(name, ~r/[\\%_]/, "\\\\\\0") <> "%"
+        where(query, [u], ilike(u.username, ^pattern) or ilike(u.name, ^pattern))
+    end
   end
 
   defp search(query, _name), do: query

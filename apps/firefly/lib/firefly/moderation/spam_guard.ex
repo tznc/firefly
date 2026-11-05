@@ -13,7 +13,7 @@ defmodule Firefly.Moderation.SpamGuard do
   `Firefly.Moderation.WatchedWords.validate/3`; `opts` are passed on) and the
   screening lists (see `Firefly.Moderation.Screening`).
   """
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.{SiteSettings, TrustLevels}
   alias Firefly.Discussion.Mentions

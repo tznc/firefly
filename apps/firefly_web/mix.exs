@@ -45,6 +45,11 @@ defmodule FireflyWeb.MixProject do
       {:phoenix_test, "~> 0.14", only: :test, runtime: false},
       {:phoenix_test_playwright, "~> 0.19", only: :test, runtime: false},
       {:bandit, "~> 1.14"},
+      # The development mailbox at /dev/mailbox (Plug.Swoosh.MailboxPreview).
+      {:swoosh, "~> 1.29"},
+      # The jobs dashboard at /staff/jobs (see FireflyWeb.JobsResolver).
+      {:oban_web, "~> 2.13"},
+      {:opentelemetry_oban, "~> 1.2"},
       # Metrics (see FireflyWeb.Telemetry): the definitions, VM and queue
       # measurements, and Peep, which aggregates them for Prometheus in
       # fixed buckets (memory stays flat however rarely it's scraped).
@@ -58,10 +63,12 @@ defmodule FireflyWeb.MixProject do
       {:opentelemetry_bandit, "~> 0.3.0"},
       {:opentelemetry_phoenix, "~> 2.0"},
       {:opentelemetry_ecto, "~> 1.2"},
-      # Metrics and logs over OTLP are still experimental in the Erlang SDK:
-      # pinned, and only used with FIREFLY_OTEL_METRICS / FIREFLY_OTEL_LOGS.
+      # Metrics over OTLP, from the same Telemetry.Metrics definitions as
+      # Prometheus (with FIREFLY_OTEL_METRICS).
+      {:otel_metric_exporter, "~> 0.4.4"},
+      # Logs over OTLP are still experimental in the Erlang SDK: pinned, and
+      # only used with FIREFLY_OTEL_LOGS.
       {:opentelemetry_experimental, "== 0.6.0"},
-      {:opentelemetry_api_experimental, "== 0.6.0"},
       {:jason, "~> 1.4"},
       {:gettext, "~> 1.0"},
       # The optional raw-records admin at /staff/db (see FireflyWeb.Admin).

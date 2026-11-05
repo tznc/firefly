@@ -28,14 +28,11 @@ defmodule Firefly.TelemetryTest do
     thread = thread_fixture(category_fixture(), author)
     {:ok, post} = Firefly.Discussion.create_post(thread, author, %{body: "A reply"})
 
-    {:noreply, _} =
-      Firefly.Notifications.Dispatcher.handle_cast(
-        {{:post_edited, post}, Firefly.Telemetry.current_context()},
-        :nostate
-      )
+    :ok =
+      perform_job(Firefly.Notifications.FanOut, %{event: "post_edited", post_id: post.id})
 
     assert_received {[:firefly, :notifications, :dispatch, :stop], ^ref, %{duration: _},
-                     %{event: :post_edited}}
+                     %{event: "post_edited"}}
   end
 
   test "webhook deliveries are spans with their outcome; queues report their depth" do
@@ -54,7 +51,7 @@ defmodule Firefly.TelemetryTest do
     assert_received {[:firefly, :queue, :depth], ^ref, %{depth: 1}, %{queue: "webhooks"}}
     assert_received {[:firefly, :queue, :depth], ^ref, %{depth: 0}, %{queue: "plugin_events"}}
 
-    assert Webhooks.deliver_due() == 0
+    assert %{failure: 1} = Oban.drain_queue(queue: :webhooks)
 
     assert_received {[:firefly, :webhooks, :delivery, :stop], ^ref, %{duration: _},
                      %{type: "ping", result: "failure"}}

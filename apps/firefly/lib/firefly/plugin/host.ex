@@ -217,6 +217,10 @@ defmodule Firefly.Plugin.Host do
   end
 
   def call(%Plugin{} = plugin, name, args) do
+    # What a plugin writes back (posts, settings, storage) may be stored, and
+    # Postgres can't store a NUL character.
+    args = Firefly.Text.strip_nul(args)
+
     if Map.has_key?(@functions, name) do
       case permitted(plugin, name) do
         :ok -> run(name, plugin, args)

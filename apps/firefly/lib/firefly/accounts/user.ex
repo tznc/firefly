@@ -5,7 +5,7 @@ defmodule Firefly.Accounts.User do
 
   use Ecto.Schema
 
-  import Ecto.Changeset, warn: false
+  use Firefly.Changeset
   alias Firefly.Accounts.UserIdentity
   alias Firefly.Discussion.Post
   alias Firefly.Groups.{Role, RoleMembership}
@@ -89,8 +89,17 @@ defmodule Firefly.Accounts.User do
     |> validate_change(:username, fn :username, username ->
       if reserved_username?(username), do: [username: "is reserved"], else: []
     end)
-    |> unique_constraint(:username)
+    |> unique_username()
+    |> unique_constraint(:email, name: :forums_users_lower_email_index)
   end
+
+  @doc """
+  Usernames are unique in any case ("Alice" and "alice" are the same name;
+  each account keeps the case it chose): the unique index on
+  `lower(username)` refuses a taken one as "has already been taken".
+  """
+  def unique_username(changeset),
+    do: unique_constraint(changeset, :username, name: :forums_users_lower_username_index)
 
   @doc """
   Usernames nobody can pick: `deleted-user-<id>` is what account deletion
@@ -171,12 +180,15 @@ defmodule Firefly.Accounts.User do
 
   @doc "Sets a new password (password reset)."
   def password_changeset(%__MODULE__{} = user, attrs) do
+    {attrs, invalid} = take_invalid_text(attrs)
+
     user
     |> cast(attrs, [:password])
     |> validate_required([:password])
-    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"), max: 72)
+    |> validate_password_length()
     |> validate_confirmation(:password, message: "does not match password")
     |> put_password_hash()
+    |> invalid_text_errors(invalid, [:password, :password_confirmation])
   end
 
   @doc "Marks the user's email address as confirmed."
@@ -229,7 +241,7 @@ defmodule Firefly.Accounts.User do
   to the username.
   """
   def registration_changeset(%__MODULE__{} = user, attrs) do
-    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+    {attrs, invalid} = take_invalid_text(attrs)
     attrs = Map.put_new(attrs, "name", attrs["username"])
 
     user
@@ -245,10 +257,35 @@ defmodule Firefly.Accounts.User do
     )
     |> validate_format(:email, ~r/^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "must be a valid email")
     |> validate_length(:email, max: 160)
-    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"), max: 72)
-    |> unsafe_validate_unique(:username, Firefly.Repo)
+    |> validate_password_length()
+    |> validate_username_free()
     |> put_password_hash()
+    |> invalid_text_errors(invalid, [:username, :email, :name, :password])
   end
+
+  # Form fields that aren't UTF-8 (a form post can send any bytes): taken
+  # out before validation, which can't measure them, and errors after.
+  defp take_invalid_text(attrs) do
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+    invalid = for {k, v} <- attrs, is_binary(v), not String.valid?(v), do: k
+    {Map.drop(attrs, invalid), invalid}
+  end
+
+  defp invalid_text_errors(changeset, invalid, fields) do
+    for field <- fields, Atom.to_string(field) in invalid, reduce: changeset do
+      changeset -> add_error(changeset, field, "isn't valid text")
+    end
+  end
+
+  # The form says a name is taken before submitting (any case); the unique
+  # index has the last word.
+  defp validate_username_free(%Ecto.Changeset{valid?: true} = changeset) do
+    if Firefly.Accounts.get_user_by_username(get_field(changeset, :username)),
+      do: add_error(changeset, :username, "has already been taken"),
+      else: changeset
+  end
+
+  defp validate_username_free(changeset), do: changeset
 
   def add_roles(changeset, params) do
     import Ecto.Query
@@ -279,6 +316,19 @@ defmodule Firefly.Accounts.User do
   def avatar_url(%__MODULE__{email: email, username: username}, size) do
     (email || "#{username}@users.firestorm.invalid")
     |> Exgravatar.gravatar_url(d: "identicon", s: size)
+  end
+
+  # At least `min_password_length` characters, and at most 72 bytes: bcrypt
+  # only reads the first 72, so a longer password would also let in any
+  # other that starts the same.
+  defp validate_password_length(changeset) do
+    changeset
+    |> validate_length(:password, min: Firefly.SiteSettings.get("min_password_length"))
+    |> validate_length(:password,
+      max: 72,
+      count: :bytes,
+      message: "should be at most 72 bytes (fewer characters with accents or emoji)"
+    )
   end
 
   defp put_password_hash(changeset) do

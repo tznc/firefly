@@ -5,9 +5,8 @@ defmodule Firefly.Badges do
 
   System badges (`system_badges/0`) are defined here, each by a query of
   who earned it (and with which post, and when). `run_due/0` (run by
-  `Firefly.Moderation.TopicTimers.Scheduler`, every 15 minutes across nodes; see
-  `Firefly.JobRuns`) creates any missing system badge and grants each
-  enabled one to everyone its query finds; a trust level change grants
+  `Firefly.Jobs.Periodic`, every 15 minutes across nodes) creates any
+  missing system badge and grants each enabled one to everyone its query finds; a trust level change grants
   the trust level badges at once (`grant_earned/1` for that member). A
   badge is granted once, or with `multiple_grant` once per post (Nice
   Reply and the like). Each grant notifies the member (`"badge_granted"`).
@@ -27,13 +26,11 @@ defmodule Firefly.Badges do
 
   import Ecto.Query
 
-  alias Firefly.{JobRuns, Notifications, Repo}
+  alias Firefly.{Notifications, Repo}
   alias Firefly.Moderation.StaffLog
   alias Firefly.Accounts.User
   alias Firefly.Badges.{Badge, UserBadge}
   alias Firefly.Discussion.{Policy, Post}
-
-  @run_seconds 900
 
   # The published posts of a query's `p`.
   @published "p.deleted_at IS NULL AND p.queued_at IS NULL AND p.hidden_at IS NULL"
@@ -211,10 +208,8 @@ defmodule Firefly.Badges do
 
   ## Granting
 
-  @doc "Grants what's earned, if 15 minutes have passed since the last run."
-  def run_due do
-    if JobRuns.claim("badges", @run_seconds), do: grant_earned(nil), else: :ok
-  end
+  @doc "Grants what's earned (every 15 minutes across nodes, see `Firefly.Jobs.Periodic`)."
+  def run_due, do: grant_earned(nil)
 
   @doc """
   Creates any missing system badge, then grants each enabled one to whoever
@@ -299,7 +294,7 @@ defmodule Firefly.Badges do
   @doc """
   Grants `badge` to `user` as `admin`, with an optional `reason`
   (staff-logged). Errors: `:disabled`, `:already_granted` (a badge granted
-  once).
+  once, or a multiple one already granted by hand: those are once per post).
   """
   def grant(%Badge{} = badge, %User{} = user, %User{} = admin, reason \\ nil) do
     result =
@@ -310,7 +305,7 @@ defmodule Firefly.Badges do
           not badge.enabled ->
             {:error, :disabled}
 
-          not badge.multiple_grant and holds?(user, badge) ->
+          granted_by_hand?(badge, user) ->
             {:error, :already_granted}
 
           true ->
@@ -337,6 +332,19 @@ defmodule Firefly.Badges do
       {:ok, user_badge}
     end
   end
+
+  # A badge granted once: whether `user` holds it. A multiple one is
+  # granted once per post (the unique index), so by hand, with no post,
+  # only once too.
+  defp granted_by_hand?(%Badge{multiple_grant: false} = badge, user), do: holds?(user, badge)
+
+  defp granted_by_hand?(%Badge{id: badge_id}, %User{id: user_id}),
+    do:
+      Repo.exists?(
+        from(ub in UserBadge,
+          where: ub.user_id == ^user_id and ub.badge_id == ^badge_id and is_nil(ub.post_id)
+        )
+      )
 
   defp blank_to_nil(nil), do: nil
 

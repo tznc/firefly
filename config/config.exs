@@ -30,9 +30,6 @@ config :firefly, Firefly.Repo,
 # Firefly.Endpoint): the domain never references it at compile time.
 config :firefly, Firefly.Endpoint, impl: FireflyWeb.Endpoint
 
-# Start notification server in app start
-config :firefly, notifications_enabled: true
-
 # Configures the endpoint
 config :firefly_web, FireflyWeb.Endpoint,
   url: [host: "localhost"],
@@ -76,7 +73,31 @@ config :ueberauth, Ueberauth,
     identity: {Ueberauth.Strategy.Identity, [callback_methods: ["POST"]]}
   ]
 
-config :firefly, Firefly.Mailer, adapter: Bamboo.LocalAdapter
+# Background jobs (see Firefly.Jobs): PostgreSQL coordinates the nodes
+# (LISTEN/NOTIFY, database leadership), so they need no distributed Erlang.
+# Each queue's concurrency on this node; FIREFLY_JOBS_<QUEUE> overrides it in
+# config/runtime.exs. Finished jobs are pruned after the job_retention_days
+# setting; jobs a dead node left running are rescued after 30 minutes.
+config :firefly, Oban,
+  repo: Firefly.Repo,
+  notifier: Oban.Notifiers.Postgres,
+  peer: Oban.Peers.Database,
+  queues: [
+    default: 10,
+    mailers: 10,
+    notifications: 10,
+    webhooks: 5,
+    plugins: 5,
+    ai: 3,
+    maintenance: 2
+  ],
+  pruner: Firefly.Jobs.Pruner,
+  lifeline: [rescue_after: :timer.minutes(30)]
+
+# Email is kept in memory in development (see /dev/mailbox); production
+# picks an adapter in config/runtime.exs. Swoosh's HTTP APIs go through Req.
+config :firefly, Firefly.Mailer, adapter: Swoosh.Adapters.Local
+config :swoosh, :api_client, Swoosh.ApiClient.Req
 
 # Outbound email and reply-by-email. `inbound_token` is the shared secret the
 # SendGrid Inbound Parse webhook must send (reply-by-email is off without it).

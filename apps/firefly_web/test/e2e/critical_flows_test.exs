@@ -85,7 +85,6 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
   end
 
   test "watching a thread notifies the watcher live about new replies", %{conn: conn} = context do
-    start_supervised!(Firefly.Notifications)
     alice = member_fixture("alice")
     member_fixture("bob")
     {:ok, category} = Discussion.create_category(%{title: "Elixir"})
@@ -99,6 +98,7 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
       conn
       |> log_in("bob")
       |> visit(thread_path)
+      |> assert_has("[data-phx-main].phx-connected")
       |> click_button("#thread-level [role=button]", "Normal")
       |> click_button("#thread-level li button", "Watching")
       |> assert_has("#thread-level .level-label", text: "Watching")
@@ -112,6 +112,9 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
     |> fill_in("Body", with: "Herp Derp")
     |> click_button("Reply")
     |> assert_has("#flash-info", text: "Post created successfully.")
+
+    # The fan-out job runs (jobs only run when a test runs them).
+    run_notifications()
 
     # The badge updates without a reload
     watcher

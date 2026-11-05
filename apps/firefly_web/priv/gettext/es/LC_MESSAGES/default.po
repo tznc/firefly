@@ -264,7 +264,7 @@ msgid "Groups"
 msgstr "Grupos"
 
 #: lib/firefly_web/live/staff_live/settings.ex:417
-#: lib/firefly_web/staff_nav.ex:219
+#: lib/firefly_web/staff_nav.ex:228
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr "Importar"
@@ -442,7 +442,7 @@ msgstr "Buscar en el foro"
 
 #: lib/firefly_web/live/auth_live/forgot_password.ex:47
 #: lib/firefly_web/live/auth_live/magic_link.ex:57
-#: lib/firefly_web/live/staff_live/emails.ex:200
+#: lib/firefly_web/live/staff_live/emails.ex:217
 #: lib/firefly_web/live/staff_live/user.ex:580
 #, elixir-autogen, elixir-format
 msgid "Sending..."
@@ -510,7 +510,7 @@ msgstr "Tema"
 msgid "Toggle navigation"
 msgstr "Mostrar u ocultar la navegación"
 
-#: lib/firefly_web/staff_nav.ex:226
+#: lib/firefly_web/staff_nav.ex:235
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr "Actualización"
@@ -809,7 +809,7 @@ msgstr "Añadido a %{group}."
 msgid "Address"
 msgstr "Dirección"
 
-#: lib/firefly_web/live/staff_live/emails.ex:143
+#: lib/firefly_web/live/staff_live/emails.ex:157
 #, elixir-autogen, elixir-format
 msgid "Address or subject"
 msgstr "Dirección o asunto"
@@ -860,12 +860,12 @@ msgstr "¿Anonimizar esta cuenta? No se puede deshacer."
 msgid "Anonymizing keeps their posts under a placeholder. Deleting also deletes the threads they started and their posts. Merging moves everything they own to another account and removes this one."
 msgstr "Anonimizar conserva sus publicaciones bajo un marcador. Eliminar también borra los temas que inició y sus publicaciones. Fusionar mueve todo lo suyo a otra cuenta y elimina esta."
 
-#: lib/firefly_web/live/staff_live/emails.ex:146
+#: lib/firefly_web/live/staff_live/emails.ex:160
 #, elixir-autogen, elixir-format
 msgid "Any status"
 msgstr "Cualquier estado"
 
-#: lib/firefly_web/live/staff_live/emails.ex:152
+#: lib/firefly_web/live/staff_live/emails.ex:166
 #, elixir-autogen, elixir-format
 msgid "Any template"
 msgstr "Cualquier plantilla"
@@ -1012,7 +1012,7 @@ msgstr "Duración"
 msgid "Edit"
 msgstr "Editar"
 
-#: lib/firefly_web/live/staff_live/emails.ex:225
+#: lib/firefly_web/live/staff_live/emails.ex:242
 #, elixir-autogen, elixir-format
 msgid "Email preview"
 msgstr "Vista previa del correo"
@@ -1023,7 +1023,7 @@ msgid "Email this member a password reset link?"
 msgstr "¿Enviar a este miembro un enlace para restablecer la contraseña?"
 
 #: lib/firefly_web/live/staff_live/emails.ex:23
-#: lib/firefly_web/live/staff_live/emails.ex:117
+#: lib/firefly_web/live/staff_live/emails.ex:131
 #: lib/firefly_web/live/staff_live/screening.ex:73
 #: lib/firefly_web/staff_nav.ex:156
 #, elixir-autogen, elixir-format
@@ -1106,11 +1106,6 @@ msgstr "En la cola de revisión"
 #, elixir-autogen, elixir-format
 msgid "It couldn't be deleted: move its threads and subcategories out first."
 msgstr "No se pudo eliminar: primero saca de ella sus temas y subcategorías."
-
-#: lib/firefly_web/live/staff_live/emails.ex:98
-#, elixir-autogen, elixir-format
-msgid "It couldn't be sent: see the log for why."
-msgstr "No se pudo enviar: consulta el registro para ver por qué."
 
 #: lib/firefly_web/live/staff_live/groups.ex:147
 #, elixir-autogen, elixir-format
@@ -1258,7 +1253,7 @@ msgstr "Sin acceso"
 msgid "No categories yet."
 msgstr "Aún no hay categorías."
 
-#: lib/firefly_web/live/staff_live/emails.ex:172
+#: lib/firefly_web/live/staff_live/emails.ex:186
 #, elixir-autogen, elixir-format
 msgid "No emails yet."
 msgstr "Aún no hay correos."
@@ -1399,7 +1394,7 @@ msgstr "Elige un nivel de notificación."
 msgid "Pick a trust level."
 msgstr "Elige un nivel de confianza."
 
-#: lib/firefly_web/live/staff_live/emails.ex:232
+#: lib/firefly_web/live/staff_live/emails.ex:249
 #, elixir-autogen, elixir-format
 msgid "Plain text version"
 msgstr "Versión en texto plano"
@@ -1591,7 +1586,7 @@ msgstr "Filtrado"
 msgid "Search admin pages and settings"
 msgstr "Buscar páginas y ajustes de administración"
 
-#: lib/firefly_web/live/staff_live/emails.ex:143
+#: lib/firefly_web/live/staff_live/emails.ex:157
 #, elixir-autogen, elixir-format
 msgid "Search emails"
 msgstr "Buscar correos"
@@ -1627,22 +1622,22 @@ msgstr "Enviar aviso"
 msgid "Send password reset"
 msgstr "Enviar restablecimiento de contraseña"
 
-#: lib/firefly_web/live/staff_live/emails.ex:200
+#: lib/firefly_web/live/staff_live/emails.ex:217
 #, elixir-autogen, elixir-format
 msgid "Send test email"
 msgstr "Enviar correo de prueba"
 
-#: lib/firefly_web/live/staff_live/emails.ex:199
+#: lib/firefly_web/live/staff_live/emails.ex:216
 #, elixir-autogen, elixir-format
 msgid "Send to"
 msgstr "Enviar a"
 
-#: lib/firefly_web/live/staff_live/emails.ex:196
+#: lib/firefly_web/live/staff_live/emails.ex:210
 #, elixir-autogen, elixir-format
 msgid "Sends a short email through the configured mailer, to check delivery works. It shows in the log."
 msgstr "Envía un correo breve con el servicio de correo configurado para comprobar que la entrega funciona. Aparece en el registro."
 
-#: lib/firefly_web/live/staff_live/emails.ex:129
+#: lib/firefly_web/live/staff_live/emails.ex:143
 #, elixir-autogen, elixir-format
 msgid "Sent log"
 msgstr "Registro de envíos"
@@ -1693,8 +1688,8 @@ msgstr "Solo el equipo"
 msgid "Start threads and reply"
 msgstr "Iniciar temas y responder"
 
-#: lib/firefly_web/live/staff_live/emails.ex:145
-#: lib/firefly_web/live/staff_live/emails.ex:167
+#: lib/firefly_web/live/staff_live/emails.ex:159
+#: lib/firefly_web/live/staff_live/emails.ex:181
 #, elixir-autogen, elixir-format
 msgid "Status"
 msgstr "Estado"
@@ -1709,8 +1704,8 @@ msgstr "Dejar de suplantar"
 msgid "Stop screening %{value}?"
 msgstr "¿Dejar de filtrar %{value}?"
 
-#: lib/firefly_web/live/staff_live/emails.ex:166
-#: lib/firefly_web/live/staff_live/emails.ex:220
+#: lib/firefly_web/live/staff_live/emails.ex:180
+#: lib/firefly_web/live/staff_live/emails.ex:237
 #, elixir-autogen, elixir-format
 msgid "Subject"
 msgstr "Asunto"
@@ -1735,34 +1730,29 @@ msgstr "Suspendido %{until}"
 msgid "Take away their %{role} role?"
 msgstr "¿Quitarle el rol de %{role}?"
 
-#: lib/firefly_web/live/staff_live/emails.ex:151
 #: lib/firefly_web/live/staff_live/emails.ex:165
-#: lib/firefly_web/live/staff_live/emails.ex:210
+#: lib/firefly_web/live/staff_live/emails.ex:179
+#: lib/firefly_web/live/staff_live/emails.ex:227
 #, elixir-autogen, elixir-format
 msgid "Template"
 msgstr "Plantilla"
 
-#: lib/firefly_web/live/staff_live/emails.ex:135
+#: lib/firefly_web/live/staff_live/emails.ex:149
 #, elixir-autogen, elixir-format
 msgid "Templates"
 msgstr "Plantillas"
 
-#: lib/firefly_web/live/staff_live/emails.ex:132
+#: lib/firefly_web/live/staff_live/emails.ex:146
 #, elixir-autogen, elixir-format
 msgid "Test email"
 msgstr "Correo de prueba"
-
-#: lib/firefly_web/live/staff_live/emails.ex:90
-#, elixir-autogen, elixir-format
-msgid "Test email sent to %{to}."
-msgstr "Correo de prueba enviado a %{to}."
 
 #: lib/firefly_web/live/staff_live/user.ex:36
 #, elixir-autogen, elixir-format
 msgid "That account doesn't exist."
 msgstr "Esa cuenta no existe."
 
-#: lib/firefly_web/live/staff_live/emails.ex:94
+#: lib/firefly_web/live/staff_live/emails.ex:100
 #, elixir-autogen, elixir-format
 msgid "That isn't an email address."
 msgstr "Eso no es una dirección de correo."
@@ -1787,13 +1777,13 @@ msgstr "Lo más reciente, sin mensajes privados."
 msgid "This account waits for approval: it can read but not post."
 msgstr "Esta cuenta espera aprobación: puede leer pero no publicar."
 
-#: lib/firefly_web/live/staff_live/emails.ex:164
-#: lib/firefly_web/live/staff_live/emails.ex:218
+#: lib/firefly_web/live/staff_live/emails.ex:178
+#: lib/firefly_web/live/staff_live/emails.ex:235
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr "Para"
 
-#: lib/firefly_web/live/staff_live/emails.ex:119
+#: lib/firefly_web/live/staff_live/emails.ex:133
 #, elixir-autogen, elixir-format
 msgid "Today: %{sent} sent, %{skipped} skipped, %{failed} failed."
 msgstr "Hoy: %{sent} enviados, %{skipped} omitidos, %{failed} fallidos."
@@ -1860,7 +1850,7 @@ msgstr "Valor"
 msgid "Waiting for approval"
 msgstr "Esperando aprobación"
 
-#: lib/firefly_web/live/staff_live/emails.ex:163
+#: lib/firefly_web/live/staff_live/emails.ex:177
 #, elixir-autogen, elixir-format
 msgid "When"
 msgstr "Cuándo"
@@ -1911,7 +1901,7 @@ msgstr "confirmado"
 msgid "default: %{level}"
 msgstr "predeterminado: %{level}"
 
-#: lib/firefly_web/live/staff_live/emails.ex:111
+#: lib/firefly_web/live/staff_live/emails.ex:125
 #, elixir-autogen, elixir-format
 msgid "failed"
 msgstr "fallido"
@@ -1948,7 +1938,7 @@ msgstr "restringida"
 msgid "revoked"
 msgstr "revocada"
 
-#: lib/firefly_web/live/staff_live/emails.ex:109
+#: lib/firefly_web/live/staff_live/emails.ex:123
 #, elixir-autogen, elixir-format
 msgid "sent"
 msgstr "enviado"
@@ -1959,7 +1949,7 @@ msgstr "enviado"
 msgid "silenced"
 msgstr "silenciado"
 
-#: lib/firefly_web/live/staff_live/emails.ex:110
+#: lib/firefly_web/live/staff_live/emails.ex:124
 #, elixir-autogen, elixir-format
 msgid "skipped"
 msgstr "omitido"
@@ -2633,7 +2623,7 @@ msgstr "Movimiento cancelado. %{item} vuelve a la posición %{position} de %{cou
 msgid "That category can't go there."
 msgstr "Esa categoría no puede ir ahí."
 
-#: lib/firefly_web/staff_nav.ex:232
+#: lib/firefly_web/staff_nav.ex:241
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "Avanzado"
@@ -2643,7 +2633,7 @@ msgstr "Avanzado"
 msgid "Back to the staff admin"
 msgstr "Volver a la administración"
 
-#: lib/firefly_web/staff_nav.ex:237
+#: lib/firefly_web/staff_nav.ex:246
 #, elixir-autogen, elixir-format
 msgid "Database"
 msgstr "Base de datos"
@@ -2727,3 +2717,28 @@ msgstr "Ajustes del paquete"
 #, elixir-autogen, elixir-format
 msgid "Settings saved."
 msgstr "Ajustes guardados."
+
+#: lib/firefly_web/live/staff_live/emails.ex:107
+#, elixir-autogen, elixir-format
+msgid "%{adapter} couldn't send it: %{error}"
+msgstr "%{adapter} no pudo enviarlo: %{error}"
+
+#: lib/firefly_web/live/staff_live/emails.ex:213
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{adapter}"
+msgstr "Servicio de correo: %{adapter}"
+
+#: lib/firefly_web/live/staff_live/emails.ex:92
+#, elixir-autogen, elixir-format
+msgid "Test email sent to %{to} with %{adapter}."
+msgstr "Correo de prueba enviado a %{to} con %{adapter}."
+
+#: lib/firefly_web/staff_nav.ex:220
+#, elixir-autogen, elixir-format
+msgid "Jobs"
+msgstr "Tareas"
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "Parte del texto contiene caracteres que no se pueden guardar. Elimínalos e inténtalo de nuevo."

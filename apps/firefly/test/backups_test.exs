@@ -162,7 +162,6 @@ defmodule Firefly.BackupsTest do
     for day <- ~w(01 02 03),
         do: File.write!(Path.join(Store.dir(), "firefly-2020-01-#{day}-000000.tar.gz"), "x")
 
-    Repo.delete_all("job_runs")
     Backups.subscribe()
     # Scheduled backups are of the repo's database; this one is pointed at
     # the scratch one by making it by hand, as run_due would.

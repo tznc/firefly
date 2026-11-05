@@ -472,4 +472,52 @@ defmodule Firefly.ForumsTest do
     user = fixture(:user, @create_user_attrs)
     {:ok, user: user}
   end
+
+  # Found by Firefly.DiscussionPropertyTest: a title that slugifies to
+  # nothing (emoji, punctuation) raised (a nil slug was looked up), and
+  # Slugify kept control characters in slugs.
+  test "every title gets a URL-safe slug" do
+    user = Firefly.Fixtures.user_fixture()
+
+    for {title, slug} <- [{"🔥🔥", "untitled"}, {"!!!", "untitled-1"}, {"a\x1Ab", "ab"}] do
+      assert {:ok, %{slug: ^slug}} = Firefly.Discussion.create_category(%{title: title})
+    end
+
+    {:ok, category} = Firefly.Discussion.create_category(%{title: "Home"})
+
+    assert {:ok, %{slug: "untitled"}} =
+             Firefly.Discussion.create_thread(category, user, %{title: "🔥🔥🔥", body: "Hot."})
+  end
+
+  # Found by Firefly.DiscussionPropertyTest: a title longer than the column
+  # raised instead of failing validation, and a long slug left no room for
+  # its "-N" suffix.
+  test "category and thread titles are at most 255 characters, and slugs stay short" do
+    assert {:error, changeset} =
+             Firefly.Discussion.create_category(%{title: String.duplicate("9", 256)})
+
+    assert "should be at most 255 character(s)" in errors_on(changeset).title
+
+    for _ <- 1..2 do
+      assert {:ok, category} =
+               Firefly.Discussion.create_category(%{title: String.duplicate("9", 255)})
+
+      assert String.length(category.slug) <= 202
+    end
+
+    user = Firefly.Fixtures.user_fixture()
+    {:ok, home} = Firefly.Discussion.create_category(%{title: "Home"})
+    attrs = %{title: String.duplicate("9", 256), body: "Long."}
+    assert {:error, changeset} = Firefly.Discussion.create_thread(home, user, attrs)
+    assert "should be at most 255 character(s)" in errors_on(changeset).title
+
+    # Counted as Postgres does, by code point: 100 graphemes of a letter
+    # and two combining marks are 300 (found by NotificationsPropertyTest).
+    zalgo = String.duplicate("e\u0301\u0308", 100)
+    assert {:error, changeset} = Firefly.Discussion.create_category(%{title: zalgo})
+    assert errors_on(changeset).title != []
+    attrs = %{title: zalgo, body: "Long."}
+    assert {:error, changeset} = Firefly.Discussion.create_thread(home, user, attrs)
+    assert errors_on(changeset).title != []
+  end
 end

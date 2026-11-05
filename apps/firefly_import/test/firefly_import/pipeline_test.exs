@@ -48,4 +48,25 @@ defmodule FireflyImport.PipelineTest do
     assert Repo.aggregate(Post, :count) == 2
     assert Import.local_id("fake", "post", 11) == nil
   end
+
+  # Postgres can't store a NUL character; an upload's bytes may hold one.
+  test "NUL characters are stripped from the text, not from files" do
+    records = %{
+      users: [%{id: 5, username: <<"an", 0, "n">>, email: "ann@example.com"}],
+      topics: [%{id: 1, title: <<"Ke", 0, "pt">>, user_id: 5}],
+      posts: [%{id: 10, topic_id: 1, user_id: 5, body: <<"Fir", 0, "st">>}],
+      uploads: [%{id: 3, user_id: 5, filename: <<"a", 0, ".pdf">>, data: <<"%PDF-1.4", 0, 1>>}]
+    }
+
+    assert {:ok, run} = Pipeline.run(Fake, records: records, skip_after: true)
+    assert run.counts["posts"] == %{"imported" => 1}
+    assert run.counts["uploads"] == %{"imported" => 1}
+
+    thread = Repo.get_by!(Thread, title: "Kept") |> Repo.preload(posts: :user)
+    assert [%{body: "First", user: %{username: "ann"}}] = thread.posts
+
+    upload = Repo.get!(Firefly.Uploads.Upload, Import.local_id("fake", "upload", 3))
+    assert upload.filename == "a.pdf"
+    assert Firefly.Uploads.contents(upload) == {:ok, <<"%PDF-1.4", 0, 1>>}
+  end
 end

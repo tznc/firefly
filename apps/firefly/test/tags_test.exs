@@ -1,8 +1,5 @@
 defmodule Firefly.TagsTest do
   use Firefly.DataCase
-  # The notifications process delivers emails; route them to this test.
-  use Bamboo.Test, shared: true
-
   alias Firefly.{Accounts, Discussion, Groups, Notifications, Repo}
   alias Firefly.Discussion.Tag
   alias Firefly.Notifications.Subscriptions
@@ -120,12 +117,13 @@ defmodule Firefly.TagsTest do
 
     test "watching a tag notifies of its new threads and posts in any category", ctx do
       %{category: category, author: author, reader: reader, thread: thread} = ctx
-      {:ok, _} = Notifications.start_link()
+      # The setup's thread fans out before the reader watches.
+      run_notifications()
       {:ok, _} = Subscriptions.set_tag_level(reader, Discussion.get_tag!("otp"), "watching")
 
       thread(category, author, "otp", "Another")
       {:ok, _} = Discussion.create_post(thread, author, %{body: "more"})
-      :sys.get_state(Notifications)
+      run_notifications()
 
       assert [%{kind: "new_post"}, %{kind: "new_thread"}] =
                Notifications.notifications_for(reader)

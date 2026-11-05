@@ -60,7 +60,12 @@ defmodule FireflyWeb.AuthTest do
 
     test "never logs a different account into an existing user" do
       {:ok, first} = Auth.login(@github)
-      assert {:ok, other} = Auth.login(%{@github | uid: 2002})
+
+      # Emails are unique: one with the same address gets no account.
+      assert {:error, changeset} = Auth.login(%{@github | uid: 2002, email: "JOSH@example.com"})
+      assert {"has already been taken", _} = changeset.errors[:email]
+
+      assert {:ok, other} = Auth.login(%{@github | uid: 2002, email: "other@example.com"})
       refute other.id == first.id
     end
 

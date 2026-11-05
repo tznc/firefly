@@ -1,7 +1,10 @@
 defmodule Firefly.AdminPanelTest do
   use Firefly.DataCase
   # Approvals notify, password resets and test emails are emailed.
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (the notifications process, LiveViews).
+  setup :set_swoosh_global
 
   import Firefly.Fixtures
 
@@ -214,7 +217,7 @@ defmodule Firefly.AdminPanelTest do
     test "password reset links and notices", %{admin: admin} do
       member = user_fixture()
       assert :ok = UserAdmin.send_password_reset(member, admin)
-      assert_email_delivered_with(to: [nil: member.email], subject: "Reset your Firefly password")
+      assert_email_sent(to: member.email, subject: "Reset your Firefly password")
 
       assert {:error, :blank_subject} =
                UserAdmin.send_notification(member, %{"subject" => " "}, admin)

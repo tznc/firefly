@@ -14,9 +14,10 @@ config :firefly, Firefly.Repo,
   pool_size: System.schedulers_online() * 2,
   ownership_timeout: 30_000
 
-# The server runs during tests so Playwright end-to-end tests can drive it.
+# The server runs during tests so Playwright end-to-end tests can drive it,
+# on FIREFLY_TEST_PORT so several suites can run side by side.
 config :firefly_web, FireflyWeb.Endpoint,
-  http: [ip: {127, 0, 0, 1}, port: 4002],
+  http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("FIREFLY_TEST_PORT", "4002"))],
   secret_key_base: "+r1xPk7Kz3gV0h7uN6pXqM1y2dJw8dW1H5rB0oYzq6c2Wc5yR6eLx9oQp3sZt4uV",
   server: true
 
@@ -26,16 +27,6 @@ config :firefly_web, sql_sandbox: true
 # Spans are exported nowhere; FireflyWeb.OpenTelemetryTest collects them
 # itself, with the instrumentation attached for its own tests only.
 config :opentelemetry, traces_exporter: :none
-
-# A metric reader that exports only when flushed, to the process registered
-# as :firefly_otel_metrics_test (see FireflyWeb.OpenTelemetryTest).
-config :opentelemetry_experimental,
-  readers: [
-    %{
-      module: :otel_metric_reader,
-      config: %{exporter: {:otel_metric_exporter_pid, {:otel_metric, :firefly_otel_metrics_test}}}
-    }
-  ]
 
 config :phoenix_test,
   otp_app: :firefly_web,
@@ -64,11 +55,7 @@ config :logger, level: :warning
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# Start notification server in app start
-config :firefly, notifications_enabled: false
-
 # Tests run due thread timers and reminders themselves, inside their sandbox transaction.
-config :firefly, Firefly.Moderation.TopicTimers, enabled: false
 
 # Analytics are written when tests call Firefly.Analytics.flush/0.
 config :firefly, Firefly.Analytics, flush_interval: :manual
@@ -81,14 +68,17 @@ config :firefly, Firefly.Backups, dir: Path.join(System.tmp_dir!(), "firefly-tes
 # Each test reads its own (transactional) site settings: no shared cache.
 config :firefly, site_settings_cache: false
 
-config :firefly, Firefly.Mailer, adapter: Bamboo.TestAdapter
+config :firefly, Firefly.Mailer, adapter: Swoosh.Adapters.Test
+
+# Jobs are only inserted; tests run them with Oban.Testing (perform_job/3,
+# drain_queue/2).
+config :firefly, Oban, testing: :manual
+config :firefly_web, :jobs_dashboard_oban, FireflyWeb.JobsDashboardOban
 
 config :firefly, :email,
   from: {"Firefly", "noreply@firefly.tznc.dev"},
   reply_domain: "reply.firefly.tznc.dev",
   inbound_token: "test-inbound-token"
-
-config :bamboo, :refute_timeout, 10
 
 config :bcrypt_elixir, :log_rounds, 4
 
@@ -149,9 +139,6 @@ config :firefly, Firefly.Rendering.LinkPreviews, enabled: false
 # Pushes are sent in the test's process (VAPID keys are set by the tests
 # that need them).
 config :firefly, Firefly.Notifications.WebPush, async: false
-
-# Tests deliver plugin events and run plugin jobs themselves.
-config :firefly, Firefly.Plugins.Queue, enabled: false
 
 # Every social login is enabled, with made-up credentials (tests fake the
 # providers' callbacks).

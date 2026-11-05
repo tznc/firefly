@@ -1,9 +1,12 @@
 defmodule FireflyWeb.AccountTest do
   use FireflyWeb.ConnCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
+
+  # Mail is sent from other processes (LiveViews).
+  setup :set_swoosh_global
 
   import Ecto.Query, only: [from: 2]
-  import Firefly.DataCase, only: [errors_on: 1]
+  import Firefly.DataCase, only: [errors_on: 1, run_notifications: 0]
 
   alias Firefly.{Accounts, Discussion, Messaging, Notifications, RateLimit, Repo}
   alias Firefly.Accounts.{AccountDeletion, AccountExport, PasswordReset}
@@ -13,8 +16,6 @@ defmodule FireflyWeb.AccountTest do
   alias Firefly.Notifications.Subscriptions
 
   setup do
-    {:ok, _} = Notifications.start_link()
-
     {:ok, ada} =
       Accounts.register_user(%{
         username: "ada",
@@ -51,7 +52,7 @@ defmodule FireflyWeb.AccountTest do
       })
 
     {:ok, _} = Messaging.reply(conversation, ada, %{body: "Ada's private answer"})
-    :sys.get_state(Notifications)
+    run_notifications()
 
     %{
       ada: Accounts.get_user!(ada.id),

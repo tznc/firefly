@@ -1,13 +1,10 @@
 defmodule Firefly.IgnoresTest do
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
-
   alias Firefly.{Accounts, Discussion, Groups, Messaging, Notifications}
   alias Firefly.Accounts.{AccountDeletion, AccountExport, Ignores}
   alias Firefly.Accounts.UserIgnore
 
   setup do
-    {:ok, _} = Notifications.start_link()
     category = category()
     %{alice: user("alice"), bob: user("bob"), category: category}
   end
@@ -24,7 +21,7 @@ defmodule Firefly.IgnoresTest do
     category
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
 
   defp thread(category, user, title \\ "OTP") do
     {:ok, thread} = Discussion.create_thread(category, user, %{title: title, body: "Cool?"})
@@ -88,9 +85,8 @@ defmodule Firefly.IgnoresTest do
 
       assert kinds(alice) == []
 
-      refute_delivered_email(
-        Firefly.Notifications.Emails.mention_notification(alice, thread, post)
-      )
+      subject = Firefly.Notifications.Emails.mention_notification(alice, thread, post).subject
+      refute_received {:email, %{subject: ^subject}}
 
       # Others still notify.
       carol = user("carol")

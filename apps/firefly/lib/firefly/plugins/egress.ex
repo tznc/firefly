@@ -12,8 +12,8 @@ defmodule Firefly.Plugins.Egress do
   aren't plugin traffic and aren't logged here.
 
   Entries are kept for the `plugin_egress_days` site setting (14 days by
-  default); `Firefly.Moderation.TopicTimers.Scheduler` prunes older ones
-  (`run_due/0`).
+  default); an hourly job prunes older ones (`run_due/0`, see
+  `Firefly.Jobs.Periodic`).
   """
 
   import Ecto.Query

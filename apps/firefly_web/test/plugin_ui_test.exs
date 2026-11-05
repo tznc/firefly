@@ -11,7 +11,7 @@ defmodule FireflyWeb.PluginUITest do
   alias Firefly.{Discussion, Groups, Plugins, RateLimit, Repo}
   alias Firefly.Discussion.Post
   alias Firefly.Moderation.StaffAction
-  alias Firefly.Plugins.{Events, Fields, Jobs, Storage, UI}
+  alias Firefly.Plugins.{Fields, Jobs, Storage, UI}
 
   setup do
     admin = admin_fixture(%{username: "boss"})
@@ -38,7 +38,7 @@ defmodule FireflyWeb.PluginUITest do
       assert html =~ ~s(<span class="hello">Hello, World!</span>)
       assert html =~ "This post says hello."
 
-      assert Events.deliver_due() == 1
+      assert %{success: 1} = Oban.drain_queue(queue: :plugins)
       assert Storage.get("hello", "thread_created") == 1
       assert Fields.get("hello", "post", post.id) == %{"hellos" => 1}
 
@@ -280,6 +280,27 @@ defmodule FireflyWeb.PluginUITest do
                |> json_response(404)
 
       assert conn |> get("/api/plugins/missing/stats") |> json_response(404)
+    end
+
+    # The body is served, not stored: it may hold any bytes, NUL included.
+    test "serve a response body with NUL characters byte for byte", %{conn: conn, admin: admin} do
+      install_plugin!(
+        admin,
+        %{"id" => "zipper", "name" => "Zipper", "hooks" => ["handle_request"]},
+        %{
+          "index.js" =>
+            "exports.handle_request = () => ({status: 200, body: 'PK\\u0003\\u0004\\u0000\\u0000'});"
+        },
+        enable: true
+      )
+
+      conn =
+        conn
+        |> put_req_header("x-plugin-secret", Plugins.secret("zipper"))
+        |> get("/api/plugins/zipper/archive")
+
+      assert response(conn, 200) == ~S("PK\u0003\u0004\u0000\u0000")
+      assert json_response(conn, 200) == <<"PK", 3, 4, 0, 0>>
     end
   end
 

@@ -20,14 +20,39 @@ defmodule FireflyWeb.ConnCase do
       import Phoenix.ConnTest
       import PhoenixTest
       import FireflyWeb.ConnCase
+      import Firefly.DataCase, only: [run_notifications: 0]
       import Firefly.Fixtures
       import FireflyWeb.ApiHelpers
+
+      # Jobs are only enqueued in tests: assert_enqueued/1, perform_job/2.
+      use Oban.Testing, repo: Firefly.Repo
     end
   end
 
   setup tags do
     Firefly.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}
+  end
+
+  @doc """
+  Starts the Oban instance the jobs dashboard watches in tests (the app's
+  runs in testing mode, without the notifier and stats the dashboard
+  needs): no queues or plugins, so it runs nothing. Call from a test that
+  isn't async.
+  """
+  def start_jobs_dashboard do
+    ExUnit.Callbacks.start_supervised!(
+      {Oban,
+       name: FireflyWeb.JobsDashboardOban,
+       repo: Firefly.Repo,
+       notifier: Oban.Notifiers.Postgres,
+       peer: false,
+       queues: [],
+       plugins: false,
+       stager: false}
+    )
+
+    :ok
   end
 
   @doc "Logs `user` in by storing their id in the session."

@@ -1,7 +1,7 @@
 defmodule Firefly.PrivateCategoriesTest do
   @moduledoc "Categories restricted to groups: no path may leak their threads."
   use Firefly.DataCase
-  use Bamboo.Test, shared: true
+  import Swoosh.TestAssertions
 
   alias Firefly.{Accounts, Discussion, Groups, Messaging, Notifications, Repo}
   alias Firefly.Accounts.AccountExport
@@ -14,8 +14,6 @@ defmodule Firefly.PrivateCategoriesTest do
   alias Firefly.Notifications.Subscriptions
 
   setup do
-    {:ok, _} = Notifications.start_link()
-
     admin = user("admin")
     {:ok, admin_role} = Groups.create_role("admin")
     {:ok, _} = Groups.add_role(admin, admin_role)
@@ -62,7 +60,7 @@ defmodule Firefly.PrivateCategoriesTest do
     thread
   end
 
-  defp flush, do: :sys.get_state(Notifications)
+  defp flush, do: run_notifications()
   defp titles(threads), do: threads |> Enum.map(& &1.title) |> Enum.sort()
   defp can?(user, action, resource), do: Bodyguard.permit?(Discussion, action, user, resource)
 
@@ -217,7 +215,7 @@ defmodule Firefly.PrivateCategoriesTest do
       assert [%{kind: "new_post"}, %{kind: "new_thread"}] =
                Notifications.notifications_for(reader)
 
-      refute_email_delivered_with(to: [nil: "outsider@example.com"])
+      refute_email_sent(to: "outsider@example.com")
     end
 
     test "a mention doesn't notify someone who can't read it", ctx do

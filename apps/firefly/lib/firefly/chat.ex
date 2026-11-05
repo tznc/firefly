@@ -93,7 +93,6 @@ defmodule Firefly.Chat do
   alias Firefly.{
     Accounts,
     Groups,
-    JobRuns,
     Notifications,
     RateLimit,
     Repo,
@@ -1358,15 +1357,12 @@ defmodule Firefly.Chat do
 
   @doc """
   Deletes messages older than the retention settings (once an hour across
-  nodes; run by `Firefly.Moderation.TopicTimers.Scheduler`). Their uploads
-  are left unattached, for the orphan cleanup.
+  nodes; see `Firefly.Jobs.Periodic`). Their uploads are left unattached,
+  for the orphan cleanup.
   """
   def run_due(now \\ NaiveDateTime.utc_now()) do
-    if JobRuns.claim("chat.retention", 3600) do
-      prune("category", SiteSettings.get("chat_channel_retention_days"), now)
-      prune("direct", SiteSettings.get("chat_dm_retention_days"), now)
-    end
-
+    prune("category", SiteSettings.get("chat_channel_retention_days"), now)
+    prune("direct", SiteSettings.get("chat_dm_retention_days"), now)
     :ok
   end
 

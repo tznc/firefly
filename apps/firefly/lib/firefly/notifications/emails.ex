@@ -4,7 +4,7 @@ defmodule Firefly.Notifications.Emails do
   site setting.
   """
 
-  import Bamboo.Email
+  import Swoosh.Email
   alias Firefly.Rendering.Markdown
   alias Firefly.SiteSettings
   alias Firefly.Accounts.User
@@ -48,9 +48,9 @@ defmodule Firefly.Notifications.Emails do
     author = if post.user, do: "@" <> post.user.username, else: "Someone"
     url = post_url(thread, post)
 
-    new_email()
+    new()
     |> put_private(:template, "mailing_list_post")
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject("[#{site()}] #{thread.title}")
     |> html_body("""
@@ -69,8 +69,8 @@ defmodule Firefly.Notifications.Emails do
     You're getting every post because mailing list mode is on. Reply to this email to answer in the thread.
     Change your notification settings: #{settings_url()}
     """)
-    |> put_header("reply-to", Firefly.Notifications.ReplyAddress.address(thread, user))
-    |> put_header("List-Id", "#{site()} <list.#{URI.parse(Firefly.Endpoint.url()).host}>")
+    |> reply_to(Firefly.Notifications.ReplyAddress.address(thread, user))
+    |> header("List-Id", "#{site()} <list.#{URI.parse(Firefly.Endpoint.url()).host}>")
   end
 
   @doc "`post` in `thread` mentions `user` (`post.user` must be loaded)."
@@ -90,9 +90,9 @@ defmodule Firefly.Notifications.Emails do
   end
 
   defp post_notification(user, thread, post, parts) do
-    new_email()
+    new()
     |> put_private(:template, parts[:template])
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject(parts[:subject])
     |> html_body("""
@@ -110,7 +110,7 @@ defmodule Firefly.Notifications.Emails do
     #{parts[:reason]} We won't email you about this thread again until you've read it.
     Change your notification settings: #{settings_url()}
     """)
-    |> put_header("reply-to", Firefly.Notifications.ReplyAddress.address(thread, user))
+    |> reply_to(Firefly.Notifications.ReplyAddress.address(thread, user))
   end
 
   @doc """
@@ -126,9 +126,9 @@ defmodule Firefly.Notifications.Emails do
       ) do
     url = "#{Firefly.URLs.conversation_url(conversation)}#message-#{message.id}"
 
-    new_email()
+    new()
     |> put_private(:template, "message_notification")
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject("#{subject} on #{site()}")
     |> html_body("""
@@ -154,9 +154,9 @@ defmodule Firefly.Notifications.Emails do
   (`subject` says which). `url` opens it in chat.
   """
   def chat_notification(%User{} = user, subject, body, url) do
-    new_email()
+    new()
     |> put_private(:template, "chat_notification")
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject("#{subject} on #{site()}")
     |> html_body("""
@@ -179,9 +179,9 @@ defmodule Firefly.Notifications.Emails do
 
   @doc "Tells `user` they were silenced or suspended (`subject` says which and until when)."
   def penalty(%User{} = user, subject, reason) do
-    new_email()
+    new()
     |> put_private(:template, "penalty")
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject("#{subject} on #{site()}")
     |> html_body("""
@@ -200,9 +200,9 @@ defmodule Firefly.Notifications.Emails do
 
   @doc "An invitation to join, for `invite.email` (with its inviter loaded)."
   def invite(%{email: email, invited_by: %User{} = inviter}, url) do
-    new_email()
+    new()
     |> put_private(:template, "invite")
-    |> to(email)
+    |> recipient(email)
     |> from(sender())
     |> subject("#{inviter.username} invited you to join #{site()}")
     |> html_body("""
@@ -220,9 +220,9 @@ defmodule Firefly.Notifications.Emails do
   end
 
   def confirmation(%User{} = user, url) do
-    new_email()
+    new()
     |> put_private(:template, "confirmation")
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject("Confirm your email address for #{site()}")
     |> html_body("""
@@ -242,9 +242,9 @@ defmodule Firefly.Notifications.Emails do
   end
 
   def password_reset(%User{} = user, url) do
-    new_email()
+    new()
     |> put_private(:template, "password_reset")
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject("Reset your #{site()} password")
     |> html_body("""
@@ -271,9 +271,9 @@ defmodule Firefly.Notifications.Emails do
         email -> {email, "Hi,", "create your account on"}
       end
 
-    new_email()
+    new()
     |> put_private(:template, "magic_link")
-    |> to(address)
+    |> recipient(address)
     |> from(sender())
     |> subject("Your #{site()} login link")
     |> html_body("""
@@ -301,13 +301,13 @@ defmodule Firefly.Notifications.Emails do
     {unread, notifications} = digest.notifications
     since = Calendar.strftime(digest.since, "%b %-d")
 
-    new_email()
+    new()
     |> put_private(:template, "digest")
-    |> to(user.email)
+    |> recipient(user.email)
     |> from(sender())
     |> subject("[#{site()}] Summary since #{since}")
-    |> put_header("List-Unsubscribe", "<#{unsubscribe}>")
-    |> put_header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
+    |> header("List-Unsubscribe", "<#{unsubscribe}>")
+    |> header("List-Unsubscribe-Post", "List-Unsubscribe=One-Click")
     |> html_body("""
     <p>Hi #{escape(user.username)}, here's what you missed on #{link(site(), Firefly.Endpoint.url())} since #{since}.</p>
     #{digest_counts_html(new_posts, unread)}
@@ -346,9 +346,9 @@ defmodule Firefly.Notifications.Emails do
 
   @doc "A test email to `address`, which staff send from `/staff/emails` to check delivery."
   def test_email(address) do
-    new_email()
+    new()
     |> put_private(:template, "test_email")
-    |> to(address)
+    |> recipient(address)
     |> from(sender())
     |> subject("Test email from #{site()}")
     |> html_body("""
@@ -427,6 +427,11 @@ defmodule Firefly.Notifications.Emails do
 
   defp hours(1), do: "an hour"
   defp hours(n), do: "#{n} hours"
+
+  # An address that's missing (an account without one) leaves the email
+  # without a recipient: the mailer logs it as skipped.
+  defp recipient(email, address) when address in [nil, ""], do: email
+  defp recipient(email, address), do: to(email, address)
 
   # The deployment's sender address, named as the `email_from_name` setting says.
   defp sender do

@@ -98,9 +98,12 @@ defmodule Firefly.Accounts do
   def get_user(id), do: Repo.get(User, id)
 
   @doc """
-  Gets a single user by username. Maybe.
+  The user named `username`, in any case ("Alice" and "alice" are the same
+  name; see `User.unique_username/1`), deleted or not; nil if none.
   """
-  def get_user_by_username(username), do: Repo.get_by(User, %{username: username})
+  def get_user_by_username(username) when is_binary(username) do
+    Repo.one(where(User, [u], fragment("lower(?)", u.username) == ^String.downcase(username)))
+  end
 
   @doc """
   The users with the given usernames (any case), as a map from each given
@@ -109,23 +112,31 @@ defmodule Firefly.Accounts do
   def users_by_username([]), do: %{}
 
   def users_by_username(names) do
+    # Postgres refuses NUL and invalid UTF-8, and no username has them.
+    names = Enum.filter(names, &(String.valid?(&1) and not String.contains?(&1, <<0>>)))
+    if names == [], do: %{}, else: find_by_username(names)
+  end
+
+  defp find_by_username(names) do
     by_lower =
       User
       |> where([u], fragment("lower(?)", u.username) in ^Enum.map(names, &String.downcase/1))
       |> where([u], is_nil(u.deleted_at))
-      |> order_by(asc: :id)
       |> Repo.all()
-      |> Enum.group_by(&String.downcase(&1.username))
+      |> Map.new(&{String.downcase(&1.username), &1})
 
-    # Usernames are only unique case-sensitively, so `@alice` could fit both
-    # "Alice" and "alice": the exact match wins, else the oldest account.
-    for name <- names, users = by_lower[String.downcase(name)], into: %{} do
-      {name, Enum.find(users, hd(users), &(&1.username == name))}
-    end
+    for name <- names, user = by_lower[String.downcase(name)], into: %{}, do: {name, user}
   end
 
   @doc "Up to `limit` users whose username starts with `prefix` (any case), shortest first."
   def search_usernames(prefix, limit \\ 6) do
+    # Postgres can't take NUL or invalid UTF-8, and no username has them.
+    if String.valid?(prefix) and not String.contains?(prefix, <<0>>),
+      do: do_search_usernames(prefix, limit),
+      else: []
+  end
+
+  defp do_search_usernames(prefix, limit) do
     pattern = String.replace(String.downcase(prefix), ~r/[\\%_]/, "\\\\\\0") <> "%"
 
     # `lower(username) LIKE` rather than ILIKE, so it can use the index.
@@ -136,10 +147,10 @@ defmodule Firefly.Accounts do
     |> Repo.all()
   end
 
-  @doc """
-  Gets a single user by email address. Maybe.
-  """
-  def get_user_by_email(email), do: Repo.get_by(User, %{email: email})
+  @doc "The user with the email address `email` (any case, also unique; see `User`), or nil."
+  def get_user_by_email(email) when is_binary(email) do
+    Repo.one(where(User, [u], fragment("lower(?)", u.email) == ^String.downcase(email)))
+  end
 
   @doc """
   Creates a user.

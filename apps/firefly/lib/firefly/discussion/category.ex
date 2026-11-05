@@ -12,7 +12,7 @@ defmodule Firefly.Discussion.Category do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset, warn: false
+  use Firefly.Changeset
 
   alias Firefly.Discussion.Thread
   alias Firefly.Groups.Role
@@ -57,6 +57,8 @@ defmodule Firefly.Discussion.Category do
       empty_values: [""]
     )
     |> validate_required([:title])
+    # The column's limit (beyond it, the insert raised).
+    |> validate_length(:title, max: 255, count: :codepoints)
     |> validate_length(:description, max: 1000)
     |> validate_format(:color, ~r/^#[0-9a-fA-F]{6}$/, message: "must be a hex color like #3b82f6")
     |> validate_number(:position, greater_than_or_equal_to: 0)
