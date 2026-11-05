@@ -4,10 +4,10 @@ defmodule Firefly.Uploads do
   avatars and custom emoji.
 
   A file goes through the server (the composer's LiveView upload, or
-  `POST /api/v1/uploads`): its type is checked from its content and images
-  are cleaned and resized (see `Firefly.Uploads.Processor`), then it's
-  stored by the configured backend (see `Firefly.Uploads.Storage`)
-  under its sha256. The same content uploaded again is stored once: a
+  `POST /api/v1/uploads`): its type is checked from its content (and must
+  agree with its name and claimed type), images are cleaned and resized and
+  SVGs made PNGs (see `Firefly.Uploads.Processor`), then it's stored by the
+  configured backend (see `Firefly.Uploads.Storage`) under its sha256. The same content uploaded again is stored once: a
   member re-uploading a file they haven't used yet gets the same upload
   back, and quotas count each distinct file once.
 
@@ -21,6 +21,11 @@ defmodule Firefly.Uploads do
   `readable?/2`). Uploads still unattached after the `orphan_upload_hours`
   setting are removed by `run_due/0`, unless a draft of their uploader's
   links them.
+
+  With ClamAV configured (see `Firefly.Uploads.Scanner`), a new file is
+  `pending` and served to no one until it's scanned: clean, it's served as
+  usual; infected, every upload of it is `quarantined` (never served, in the
+  staff log) and the same file is refused from then on.
   """
 
   use Boundary,
@@ -31,12 +36,12 @@ defmodule Firefly.Uploads do
   import Ecto.Query
   require Logger
 
-  alias Firefly.{Accounts, Chat, Discussion, Messaging, RateLimit, Repo, SiteSettings}
+  alias Firefly.{Accounts, Chat, Discussion, Jobs, Messaging, RateLimit, Repo, SiteSettings}
   alias Firefly.Moderation.StaffLog
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Draft, Post}
   alias Firefly.Messaging.Message
-  alias Firefly.Uploads.{Processor, Storage, Upload}
+  alias Firefly.Uploads.{Processor, ScanWorker, Scanner, Storage, Upload}
 
   # Uploads stored processed their own way, attached as soon as they're made
   # (`site`: an image a site setting uses, such as the logo; `theme`: an
@@ -59,6 +64,8 @@ defmodule Firefly.Uploads do
   Stores the file at `path` (named `filename` by its uploader) as `user`'s.
   `variant: "avatar"` makes it the square avatar variant, attached to the
   user; `variant: "emoji"` a custom emoji (see `Firefly.Rendering.Emoji`).
+  `claimed_type:` is the type the browser or client sent, which must agree
+  with the content.
   Returns `{:ok, upload}`, `{:error, :rate_limited}` or `{:error, message}`.
   """
   def create(%User{} = user, path, filename, opts \\ []) do
@@ -84,9 +91,10 @@ defmodule Firefly.Uploads do
   defp create_from_data(user, data, filename, opts) do
     filename = safe_filename(filename)
 
-    with {:ok, content_type} <- Processor.detect(data, filename),
-         :ok <- authorized(content_type, opts) do
-      sha256 = Base.encode16(:crypto.hash(:sha256, data), case: :lower)
+    with {:ok, content_type} <- Processor.detect(data, filename, opts[:claimed_type]),
+         :ok <- authorized(content_type, opts),
+         sha256 = Base.encode16(:crypto.hash(:sha256, data), case: :lower),
+         {:ok, data, content_type, filename} <- rasterize(data, content_type, filename) do
       variant = opts[:variant]
 
       if variant != nil and not String.starts_with?(content_type, "image/") and
@@ -107,6 +115,15 @@ defmodule Firefly.Uploads do
        do: :ok,
        else: {:error, "That file type isn't allowed here."}
   end
+
+  # An SVG becomes a PNG (see Processor.rasterize_svg/1), named so; the
+  # upload keeps the SVG's sha256, so the same SVG is processed once.
+  defp rasterize(data, "image/svg+xml", filename) do
+    with {:ok, png} <- Processor.rasterize_svg(data),
+         do: {:ok, png, "image/png", Path.rootname(filename) <> ".png"}
+  end
+
+  defp rasterize(data, content_type, filename), do: {:ok, data, content_type, filename}
 
   # Sobelow: the temporary file of an upload in progress (Plug or LiveView).
   # sobelow_skip ["Traversal.FileModule"]
@@ -129,25 +146,98 @@ defmodule Firefly.Uploads do
       lock(sha256)
 
       with nil <- reusable(user, sha256, variant),
+           {:ok, scan_status} <- scan_status(sha256),
            {:ok, stored} <- stored(data, content_type, sha256, variant),
-           :ok <- check_quota(user, sha256, stored.size, opts) do
-        %Upload{
-          token: token(),
-          user_id: user && user.id,
-          filename: filename,
-          content_type: content_type,
-          sha256: sha256,
-          attached_to: variant,
-          attached_at: if(variant, do: DateTime.utc_now(:second))
-        }
-        |> Map.merge(stored)
-        |> Repo.insert()
+           :ok <- check_quota(user, sha256, stored.size, opts),
+           {:ok, upload} <-
+             %Upload{
+               token: token(),
+               user_id: user && user.id,
+               filename: filename,
+               content_type: content_type,
+               sha256: sha256,
+               attached_to: variant,
+               attached_at: if(variant, do: DateTime.utc_now(:second)),
+               scan_status: scan_status
+             }
+             |> Map.merge(stored)
+             |> Repo.insert() do
+        if scan_status == "pending",
+          do: {:ok, _job} = Jobs.insert(ScanWorker.new(%{upload_id: upload.id, sha256: sha256}))
+
+        {:ok, upload}
       else
         %Upload{} = upload -> {:ok, upload}
         {:error, message} -> {:error, message}
       end
     end)
   end
+
+  # What a new upload of this content starts as: as decided for an earlier
+  # upload of it, else pending while scanning is on. Quarantined content is
+  # refused.
+  defp scan_status(sha256) do
+    decided =
+      Upload
+      |> where([u], u.sha256 == ^sha256 and u.scan_status != "pending")
+      |> select([u], u.scan_status)
+      |> order_by([u], desc: u.scan_status == "quarantined")
+      |> limit(1)
+      |> Repo.one()
+
+    cond do
+      decided == "quarantined" -> {:error, "That file was refused by the virus scanner."}
+      decided == "clean" or not Scanner.enabled?() -> {:ok, "clean"}
+      true -> {:ok, "pending"}
+    end
+  end
+
+  @doc """
+  Records the virus scan's verdict on `upload`'s file (see
+  `Firefly.Uploads.ScanWorker`): `:clean` serves every pending upload of
+  it; `{:infected, signature}` quarantines every upload of it, each
+  recorded in the staff log.
+  """
+  def scanned(%Upload{sha256: sha256}, :clean) do
+    Upload
+    |> where([u], u.sha256 == ^sha256 and u.scan_status == "pending")
+    |> Repo.update_all(set: [scan_status: "clean", updated_at: NaiveDateTime.utc_now()])
+
+    :ok
+  end
+
+  def scanned(%Upload{sha256: sha256}, {:infected, signature}) do
+    {:ok, quarantined} =
+      Repo.transact(fn ->
+        lock(sha256)
+
+        quarantined =
+          Upload
+          |> where([u], u.sha256 == ^sha256 and u.scan_status != "quarantined")
+          |> preload(:user)
+          |> Repo.all()
+
+        Upload
+        |> where([u], u.sha256 == ^sha256)
+        |> Repo.update_all(set: [scan_status: "quarantined", updated_at: NaiveDateTime.utc_now()])
+
+        for upload <- quarantined do
+          StaffLog.record_system("upload.quarantine", {"upload", upload.id}, %{
+            filename: upload.filename,
+            uploader: upload.user && upload.user.username,
+            signature: signature
+          })
+        end
+
+        {:ok, quarantined}
+      end)
+
+    for upload <- quarantined, do: Logger.warning("Upload #{upload.id} quarantined: #{signature}")
+    :ok
+  end
+
+  @doc "Whether the upload may be served: scanned clean, or scanning is off."
+  def servable?(%Upload{scan_status: status}), do: status == "clean"
 
   defp lock(sha256), do: Repo.query!("SELECT pg_advisory_xact_lock(hashtext($1))", [sha256])
 
@@ -324,10 +414,12 @@ defmodule Firefly.Uploads do
 
   @doc """
   Whether `viewer` (nil: a visitor) may fetch the upload: what it's
-  attached to decides (see the module doc). Staff may fetch any.
+  attached to decides (see the module doc). Staff may fetch any, but
+  nobody gets one that's waiting for its virus scan or failed it.
   """
   def readable?(%Upload{} = upload, viewer) do
     cond do
+      not servable?(upload) -> false
       upload.attached_to in @variants -> true
       viewer && Accounts.admin?(viewer) -> true
       true -> attachment_readable?(upload, viewer)

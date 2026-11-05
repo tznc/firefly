@@ -16,6 +16,10 @@ defmodule Firefly.Uploads.Upload do
   preview's image (see `Firefly.Rendering.LinkPreviews`), anyone. Nil: nothing
   yet (just uploaded in a composer), the uploader and admins only, and
   removed after a grace period.
+
+  `scan_status` is the virus scan's verdict (see `Firefly.Uploads.Scanner`):
+  `"clean"` (also when scanning is off), `"pending"` or `"quarantined"`.
+  Only clean uploads are served.
   """
 
   use Ecto.Schema
@@ -36,6 +40,7 @@ defmodule Firefly.Uploads.Upload do
     field(:width, :integer)
     field(:height, :integer)
     field(:thumbnail, :boolean, default: false)
+    field(:scan_status, :string, default: "clean")
     field(:attached_to, :string)
     field(:attached_at, :utc_datetime)
     belongs_to(:user, User)

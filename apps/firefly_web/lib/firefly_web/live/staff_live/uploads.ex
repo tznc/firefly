@@ -1,9 +1,9 @@
 defmodule FireflyWeb.StaffLive.Uploads do
   @moduledoc """
   Every upload (admins only), newest first: who uploaded it, its size and
-  type, and what it's attached to. Admins can delete one (e.g. a file that
-  mustn't be hosted); that's recorded in the staff log. See
-  `Firefly.Uploads`.
+  type, its virus scan status and what it's attached to. Admins can delete
+  one (e.g. a file that mustn't be hosted); that's recorded in the staff
+  log. See `Firefly.Uploads`.
   """
   use FireflyWeb, :live_view
 
@@ -85,6 +85,12 @@ defmodule FireflyWeb.StaffLive.Uploads do
                   {upload.filename}
                 </a>
                 <span class="text-xs text-base-content/60">{upload.content_type}</span>
+                <span :if={upload.scan_status == "pending"} class="badge badge-ghost badge-sm">
+                  {gettext("Waiting for virus scan")}
+                </span>
+                <span :if={upload.scan_status == "quarantined"} class="badge badge-error badge-sm">
+                  {gettext("Quarantined: infected")}
+                </span>
               </td>
               <td>
                 <.link :if={upload.user} navigate={~p"/users/#{upload.user}"} class="link">
