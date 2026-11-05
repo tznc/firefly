@@ -6,7 +6,7 @@ defmodule Firefly.Accounts.TwoFactor.Totp do
   use Ecto.Schema
 
   schema "user_totps" do
-    field(:secret, :binary, redact: true)
+    field(:secret, Firefly.Encrypted.Binary, redact: true)
     field(:last_used_at, :utc_datetime)
     belongs_to(:user, Firefly.Accounts.User)
 

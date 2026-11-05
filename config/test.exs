@@ -21,6 +21,15 @@ config :firefly_web, FireflyWeb.Endpoint,
   secret_key_base: "+r1xPk7Kz3gV0h7uN6pXqM1y2dJw8dW1H5rB0oYzq6c2Wc5yR6eLx9oQp3sZt4uV",
   server: true
 
+# A fixed vault key (see Firefly.Vault), and the secret AI keys were
+# encrypted with before the vault (the secret key base).
+config :firefly, Firefly.Vault,
+  keys: [Base.decode64!("5rDLCVAzTB1mo9lR8umkEKqthnWNPrQtZFkJRuQa6eI=")]
+
+config :firefly,
+       :legacy_ai_secret,
+       "+r1xPk7Kz3gV0h7uN6pXqM1y2dJw8dW1H5rB0oYzq6c2Wc5yR6eLx9oQp3sZt4uV"
+
 # Let browser tests share the test's database transaction
 config :firefly_web, sql_sandbox: true
 

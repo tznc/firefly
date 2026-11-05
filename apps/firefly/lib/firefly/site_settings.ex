@@ -1707,7 +1707,10 @@ defmodule Firefly.SiteSettings do
   end
 
   defp load do
-    stored = Map.new(Repo.all(from(s in SiteSetting, select: {s.key, s.value})))
+    stored =
+      Map.new(Repo.all(SiteSetting), fn setting ->
+        {setting.key, if(secret?(setting.key), do: setting.secret_value, else: setting.value)}
+      end)
 
     values =
       Map.new(definitions(), fn definition ->
@@ -1838,8 +1841,16 @@ defmodule Firefly.SiteSettings do
     {:ok, _} =
       Repo.transact(fn ->
         for {key, value} <- changes do
-          Repo.insert!(%SiteSetting{key: key, value: encode(value)},
-            on_conflict: [set: [value: encode(value), updated_at: NaiveDateTime.utc_now()]],
+          row = stored_row(key, encode(value))
+
+          Repo.insert!(row,
+            on_conflict: [
+              set: [
+                value: row.value,
+                secret_value: row.secret_value,
+                updated_at: NaiveDateTime.utc_now()
+              ]
+            ],
             conflict_target: :key
           )
 
@@ -1856,12 +1867,21 @@ defmodule Firefly.SiteSettings do
     {:ok, changes}
   end
 
+  # A secret's value is stored encrypted, in `secret_value`.
+  defp stored_row(key, text) do
+    if secret?(key),
+      do: %SiteSetting{key: key, value: "", secret_value: text},
+      else: %SiteSetting{key: key, value: text}
+  end
+
   # Secrets (an API key) aren't written to the log, only that they changed.
   defp logged_value(key, before, value) do
-    if Enum.any?(definitions(), &(&1.key == key and &1[:secret])),
+    if secret?(key),
       do: %{before: "[secret]", after: "[secret]"},
       else: %{before: before, after: value}
   end
+
+  defp secret?(key), do: Enum.any?(definitions(), &(&1.key == key and &1[:secret]))
 
   defp invalidate do
     clear_cache()

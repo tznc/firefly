@@ -110,7 +110,8 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones); pins the "Only admins create tags" site setting |
 | `FIREFLY_SETTING_<KEY>` | Pins any site setting (e.g. `FIREFLY_SETTING_TITLE`, `FIREFLY_SETTING_ALLOW_REGISTRATIONS=false`): the value wins over the admin's, shown read-only at `/staff/settings` |
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
-| `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
+| `FIREFLY_VAULT_KEY`, `FIREFLY_VAULT_RETIRED_KEYS` | The key secrets in the database are encrypted with at rest (base64 of 32 bytes: `openssl rand -base64 32`), and older keys still readable during a rotation (comma-separated). Required once the database holds any secret (see "Encryption at rest") |
+| `FIREFLY_AI_ENCRYPTION_KEY` | Read only when upgrading to the release with the vault: AI providers' API keys were encrypted with it (default: derived from `FIREFLY_SECRET_KEY_BASE`), and the migration re-encrypts them with `FIREFLY_VAULT_KEY`. Remove it afterwards |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
 | `FIREFLY_METRICS_PORT`, `FIREFLY_METRICS_IP`, `FIREFLY_METRICS_TOKEN` | Prometheus metrics, off by default: a port of their own for `/metrics` (bound to `FIREFLY_METRICS_IP`, default `0.0.0.0`), and/or a bearer token that serves `/metrics` on the main port too (see "Metrics") |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` and the other standard `OTEL_*` variables | OpenTelemetry traces over OTLP, off without an endpoint; `FIREFLY_OTEL_METRICS=true` and `FIREFLY_OTEL_LOGS=true` add metrics and logs (experimental; see "Observability") |
@@ -154,6 +155,39 @@ for `GET /health` over bash's `/dev/tcp`: the image has no curl, and
 `bin/firefly rpc` would start a second VM on every check. Give it a path to
 check readiness instead (`/app/bin/healthcheck /ready`), e.g. as a compose
 `healthcheck` that `depends_on: condition: service_healthy` waits for.
+
+### Encryption at rest
+
+Secrets stored in the database are encrypted with AES-256-GCM by `Firefly.Vault`
+([Cloak](https://hexdocs.pm/cloak)): AI providers' API keys, members'
+authenticator (TOTP) secrets, secret site settings (the Akismet key), plugins'
+endpoint secrets, webhooks' signing secrets, DiscourseConnect clients' secrets
+and browser push subscriptions' auth secrets. The rest of the database isn't
+encrypted by Firefly; use the database's or disk's own encryption for that.
+
+The key is `FIREFLY_VAULT_KEY`: 32 random bytes, base64 (`openssl rand -base64
+32`). Keep it with your backups' secrets: a database restored without it has
+unreadable secrets. Production refuses to start without it once the database
+holds a secret, and saving a secret without it fails. Development and tests use
+fixed keys from `config/dev.exs` and `config/test.exs`.
+
+**Rotating the key**: generate a new key; set it as `FIREFLY_VAULT_KEY` and put
+the old one in `FIREFLY_VAULT_RETIRED_KEYS` (comma-separated, for several);
+restart every node; then re-encrypt what's stored with
+`bin/firefly eval Firefly.Release.rotate_vault` (`mix firefly.vault.rotate` in
+development), which can run while the forum runs and again safely. Once it's
+done, remove the retired key. Each value records which key encrypted it (a
+fingerprint, not the key), so the order of the keys doesn't matter.
+
+**Upgrading from a release before the vault**: set `FIREFLY_VAULT_KEY` before
+running `bin/migrate`. The migration `20261219100000` encrypts the secrets that
+were stored in plaintext, and re-encrypts AI providers' API keys, which were
+encrypted with `FIREFLY_AI_ENCRYPTION_KEY` (or a key derived from
+`FIREFLY_SECRET_KEY_BASE`): keep that variable set for the migration and remove
+it afterwards. An AI key the old secret can't read is cleared (it was already
+unreadable); enter it again at `/staff/ai`. Without `FIREFLY_VAULT_KEY` the
+migration stops with an error when there is anything to encrypt. Rolling the
+migration back decrypts everything to the old format, and needs the same keys.
 
 ### Running several nodes
 

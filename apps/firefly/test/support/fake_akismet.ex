@@ -48,11 +48,18 @@ defmodule Firefly.FakeAkismet do
 
     %{"akismet_enabled" => "true", "akismet_api_key" => "good-key"}
     |> Map.merge(settings)
-    |> Enum.each(fn {key, value} ->
-      Repo.insert!(%SiteSetting{key: key, value: value},
-        on_conflict: [set: [value: value]],
-        conflict_target: :key
-      )
+    |> Enum.each(fn
+      {"akismet_api_key", key} ->
+        Repo.insert!(%SiteSetting{key: "akismet_api_key", value: "", secret_value: key},
+          on_conflict: [set: [secret_value: key]],
+          conflict_target: :key
+        )
+
+      {key, value} ->
+        Repo.insert!(%SiteSetting{key: key, value: value},
+          on_conflict: [set: [value: value]],
+          conflict_target: :key
+        )
     end)
 
     Firefly.SiteSettings.clear_cache()

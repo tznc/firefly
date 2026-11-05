@@ -14,7 +14,7 @@ defmodule Firefly.Webhooks.Webhook do
 
   schema "webhooks" do
     field(:payload_url, :string)
-    field(:secret, :string, redact: true)
+    field(:secret, Firefly.Encrypted.Binary, redact: true)
     field(:content_type, :string, default: "application/json")
     field(:wildcard, :boolean, default: false)
     field(:event_types, {:array, :string}, default: [])

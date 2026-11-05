@@ -14,6 +14,11 @@ defmodule Firefly.Umbrella.MixProject do
       deps: deps(),
       aliases: aliases(),
       releases: releases(),
+      # Advisories against parts of Cloak that Firefly doesn't use: its
+      # AES-CTR cipher (Firefly.Vault encrypts with AES-GCM only) and
+      # cloak_ecto's PBKDF2 type (no field uses it). Firefly.VaultTest
+      # checks both stay true.
+      hex: [ignore_advisories: ["CVE-2026-95105", "CVE-2026-94206"]],
       dialyzer: [
         plt_add_apps: [:mix, :ex_unit],
         plt_local_path: "priv/plts",
