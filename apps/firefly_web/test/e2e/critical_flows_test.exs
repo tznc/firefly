@@ -98,6 +98,7 @@ defmodule FireflyWeb.E2E.CriticalFlowsTest do
       conn
       |> log_in("bob")
       |> visit(thread_path)
+      |> assert_has("[data-phx-main].phx-connected")
       |> click_button("#thread-level [role=button]", "Normal")
       |> click_button("#thread-level li button", "Watching")
       |> assert_has("#thread-level .level-label", text: "Watching")
