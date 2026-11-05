@@ -83,7 +83,10 @@ defmodule Firefly.HTMLSafety do
     normalized =
       url
       |> decode_entities()
-      |> String.replace(~r/[\x00-\x20\x7F\x{200B}-\x{200D}\x{FEFF}]/u, "")
+      # What browsers drop before reading the scheme (C0 controls and
+      # spaces; zero-width characters aren't dropped, so "\u200Bjavascript:"
+      # is a harmless relative URL).
+      |> String.replace(~r/[\x00-\x20\x7F]/u, "")
       |> String.downcase()
 
     String.starts_with?(normalized, [
