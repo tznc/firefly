@@ -50,18 +50,15 @@ defmodule Firefly.Moderation.WatchedWord do
 
   # Text that isn't UTF-8 is refused before the length checks, which
   # raise on it.
-  defp refuse_invalid_text(changeset, fields) do
-    Enum.reduce(fields, changeset, fn field, changeset ->
-      case get_change(changeset, field) do
-        text when is_binary(text) ->
-          if String.valid?(text),
-            do: changeset,
-            else: changeset |> delete_change(field) |> add_error(field, "is not valid text")
+  defp refuse_invalid_text(changeset, fields),
+    do: Enum.reduce(fields, changeset, &refuse_invalid_field/2)
 
-        _none ->
-          changeset
-      end
-    end)
+  defp refuse_invalid_field(field, changeset) do
+    text = get_change(changeset, field)
+
+    if is_binary(text) and not String.valid?(text),
+      do: changeset |> delete_change(field) |> add_error(field, "is not valid text"),
+      else: changeset
   end
 
   defp validate_pattern(changeset) do
