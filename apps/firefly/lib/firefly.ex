@@ -26,6 +26,7 @@ defmodule Firefly do
   | `Firefly.Backups` | backups and restores, read-only mode |
   | `Firefly.Upgrades` | the running version, the daily check for new releases, pending migrations |
   | `Firefly.Health` | the readiness checks (database, migrations) behind the readiness probe |
+  | `Firefly.Control` | the server's tenants (forums) and their hostnames, in the host database's `control` schema (`Firefly.Control.Repo`); tenant 1 is the host itself |
   | `Firefly.Jobs` | background and scheduled jobs (Oban, in PostgreSQL): queues, the job history and its pruning |
   | `Firefly.Embedding` | topics as comments on other sites' pages (embeddable hosts, the embed feed) |
   | `Firefly.Chat` | real-time chat: channels, direct messages, threads, unread tracking |

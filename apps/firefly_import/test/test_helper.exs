@@ -13,3 +13,4 @@ end
 ExUnit.start()
 
 Ecto.Adapters.SQL.Sandbox.mode(Firefly.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Firefly.Control.Repo, :manual)

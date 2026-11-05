@@ -5,8 +5,17 @@ defmodule Firefly.Release do
   """
   @app :firefly
 
+  @doc """
+  Runs the control migrations on the host database's `control` schema
+  first (see `Firefly.Control.Migrator`), then the forum migrations.
+  """
   def migrate do
     load_app()
+
+    {:ok, _, _} =
+      Ecto.Migrator.with_repo(Firefly.Control.Repo, fn _repo ->
+        Firefly.Control.migrate()
+      end)
 
     for repo <- repos() do
       {:ok, _, _} = Ecto.Migrator.with_repo(repo, &Ecto.Migrator.run(&1, :up, all: true))

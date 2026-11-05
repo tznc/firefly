@@ -114,6 +114,8 @@ defmodule Firefly.MixProject do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
+      # The host database's `control` schema first (see Firefly.Control.Migrator).
+      "ecto.migrate": ["firefly.control.migrate", "ecto.migrate"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
     ]
   end

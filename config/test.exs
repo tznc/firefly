@@ -25,6 +25,10 @@ config :firefly_web, FireflyWeb.Endpoint,
 config :firefly, Firefly.Vault,
   keys: [Base.decode64!("5rDLCVAzTB1mo9lR8umkEKqthnWNPrQtZFkJRuQa6eI=")]
 
+# The control schema's repo, on the same test database (it takes
+# Firefly.Repo's settings), with a connection per concurrent test.
+config :firefly, Firefly.Control.Repo, pool_size: System.schedulers_online() * 2
+
 # Let browser tests share the test's database transaction
 config :firefly_web, sql_sandbox: true
 

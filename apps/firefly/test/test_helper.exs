@@ -15,3 +15,4 @@ File.rm_rf!(Application.fetch_env!(:firefly, Firefly.Uploads)[:local_dir])
 ExUnit.start()
 
 Ecto.Adapters.SQL.Sandbox.mode(Firefly.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Firefly.Control.Repo, :manual)

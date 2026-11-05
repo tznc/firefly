@@ -26,6 +26,10 @@ config :firefly, Firefly.Repo,
   # Ecto's types and pgvector's (see Firefly.PostgrexTypes).
   types: Firefly.PostgrexTypes
 
+# The host database's `control` schema (see Firefly.Control.Repo): the same
+# database as Firefly.Repo's (its settings are merged in), a small pool.
+config :firefly, Firefly.Control.Repo, pool_size: 2, priv: "priv/control_repo"
+
 # The web interface the domain links to and broadcasts through (see
 # Firefly.Endpoint): the domain never references it at compile time.
 config :firefly, Firefly.Endpoint, impl: FireflyWeb.Endpoint

@@ -10,6 +10,7 @@ defmodule Firefly.VaultTest do
 
   @schemas_with_secrets [
     Firefly.AI.ProviderConfig,
+    Firefly.Control.Tenant,
     Firefly.Accounts.Auth.DiscourseConnectClient,
     Firefly.SiteSettings.SiteSetting,
     Firefly.Plugins.InstalledPlugin,
@@ -161,6 +162,10 @@ defmodule Firefly.VaultTest do
     assert sources_mentioning("PBKDF2") == []
   end
 
+  # `control.tenants` for a schema in the control schema.
+  defp qualified_source(schema),
+    do: Enum.join(List.wrap(schema.__schema__(:prefix)) ++ [schema.__schema__(:source)], ".")
+
   # Every app's source is read, whichever app's tests run.
   defp sources_mentioning(text) do
     assert Enum.any?(@sources, &String.contains?(&1, "firefly_web/lib/"))
@@ -177,12 +182,12 @@ defmodule Firefly.VaultTest do
           field <- module.__schema__(:fields),
           module.__schema__(:type, field) == Firefly.Encrypted.Binary do
         assert field in module.__schema__(:redact_fields), "#{inspect(module)}.#{field}"
-        {module.__schema__(:source), to_string(field)}
+        {qualified_source(module), to_string(field)}
       end
 
     assert Enum.sort(fields) == Enum.sort(Vault.columns())
 
-    assert Enum.sort(for m <- @schemas_with_secrets, do: m.__schema__(:source)) ==
+    assert Enum.sort(for m <- @schemas_with_secrets, do: qualified_source(m)) ==
              Enum.sort(for {table, _column} <- Vault.columns(), do: table)
   end
 

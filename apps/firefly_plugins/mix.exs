@@ -42,6 +42,7 @@ defmodule FireflyPlugins.MixProject do
     [
       test: [
         "ecto.create --quiet -r Firefly.Repo",
+        "firefly.control.migrate --quiet",
         "ecto.migrate --quiet -r Firefly.Repo",
         "test"
       ]
