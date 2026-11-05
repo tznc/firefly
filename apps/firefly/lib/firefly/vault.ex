@@ -61,6 +61,9 @@ defmodule Firefly.Vault do
 
   @doc "The Cloak ciphers for `keys`, the first one encrypting."
   @spec ciphers([binary]) :: keyword
+  # Sobelow: one label per configured key (FIREFLY_VAULT_RETIRED_KEYS), a
+  # handful set by the operator, not by requests.
+  # sobelow_skip ["DOS.BinToAtom"]
   def ciphers(keys) do
     keys
     |> Enum.with_index()
@@ -101,12 +104,12 @@ defmodule Firefly.Vault do
   """
   @spec rotate() :: %{{String.t(), String.t()} => non_neg_integer}
   def rotate do
-    {:ok, config} = Cloak.Vault.read_config(:"#{__MODULE__}.Config")
+    {:ok, config} = Cloak.Vault.read_config(__MODULE__.Config)
     [{:current, {_cipher, opts}} | _retired] = config[:ciphers]
     prefix = tag_prefix(opts[:tag])
 
     Map.new(@columns, fn {table, column} = key ->
-      count = rotate_column(table, String.to_atom(column), prefix, 0, 0)
+      count = rotate_column(table, String.to_existing_atom(column), prefix, 0, 0)
       if count > 0, do: Logger.info("Re-encrypted #{count} values in #{table}.#{column}")
       {key, count}
     end)
