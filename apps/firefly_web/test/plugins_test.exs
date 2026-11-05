@@ -265,7 +265,9 @@ defmodule FireflyWeb.PluginsTest do
         install_plugin!(
           admin,
           plugin("nul", %{}, %{"exports" => ["go"]}),
-          %{"index.js" => source}, enable: true)
+          %{"index.js" => source},
+          enable: true
+        )
 
       assert {:ok, %{"text" => "cd", "stored" => %{"text" => "ab"}}} =
                Runner.invoke(Plugins.get_active(id), "call_export", ["go", %{}])
