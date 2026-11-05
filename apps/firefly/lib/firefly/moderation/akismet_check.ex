@@ -1,10 +1,13 @@
 defmodule Firefly.Moderation.AkismetCheck do
   @moduledoc """
-  Akismet's verdict on a piece of content (see `Firefly.Moderation.Akismet`):
+  An Akismet check of a piece of content (see `Firefly.Moderation.Akismet`):
   its `kind` (`"post"`, `"message"`, `"chat"`, `"profile"`) and id, its
-  author, whether Akismet called it spam, the review `status` (`"clean"`,
-  `"pending"` while spam waits for staff, `"confirmed"`, `"not_spam"`),
-  the `params` sent (to report it back) and the `feedback` reported.
+  author, the request's `params` (taken when it was posted; the job only
+  carries this row's id), whether Akismet called it spam (nil until it
+  answers), the `status` (`"queued"` until then, `"failed"` if it never
+  does (the job ran out of attempts; the content stands), `"clean"`,
+  `"pending"` while spam waits for staff, `"confirmed"`, `"not_spam"`) and
+  the `feedback` reported back.
   """
   use Ecto.Schema
 
