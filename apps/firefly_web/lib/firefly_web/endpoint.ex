@@ -77,6 +77,9 @@ defmodule FireflyWeb.Endpoint do
     json_decoder: Phoenix.json_library()
   )
 
+  # Postgres can't store a NUL character: none gets past here.
+  plug(FireflyWeb.Plugs.StripNul)
+
   plug(Plug.MethodOverride)
   plug(Plug.Head)
 

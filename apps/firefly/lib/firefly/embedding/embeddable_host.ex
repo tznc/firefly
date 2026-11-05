@@ -6,7 +6,7 @@ defmodule Firefly.Embedding.EmbeddableHost do
   in, a CSS class for the embed page's body and a tag for its topics.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Discussion.Category
 

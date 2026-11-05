@@ -10,7 +10,7 @@ defmodule Firefly.Chat.Message do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Chat.{Channel, Flag, Reaction, Thread}

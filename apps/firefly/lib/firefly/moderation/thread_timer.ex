@@ -6,7 +6,7 @@ defmodule Firefly.Moderation.ThreadTimer do
   """
 
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.Accounts.User
   alias Firefly.Discussion.Thread

@@ -245,7 +245,8 @@ defmodule Firefly.Accounts.Auth do
     Repo.one(
       from(u in User,
         as: :user,
-        where: u.username == ^nickname and is_nil(u.password_hash) and is_nil(u.deleted_at),
+        where: fragment("lower(?)", u.username) == ^String.downcase(nickname),
+        where: is_nil(u.password_hash) and is_nil(u.deleted_at),
         where: fragment("lower(?)", u.email) == ^String.downcase(email),
         where: not exists(from(i in UserIdentity, where: i.user_id == parent_as(:user).id))
       )

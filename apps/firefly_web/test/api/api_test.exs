@@ -572,6 +572,15 @@ defmodule FireflyWeb.Api.ApiTest do
                |> Map.fetch!("data")
 
       assert conn |> get(~p"/api/v1/users/nobody") |> json_response(404)
+
+      # Any case names the member; the profile says their own.
+      assert %{"username" => username} =
+               conn
+               |> get(~p"/api/v1/users/#{String.upcase(member.username)}")
+               |> json_response(200)
+               |> Map.fetch!("data")
+
+      assert username == member.username
     end
 
     test "a hidden profile is 404", %{conn: conn, member: member} do
