@@ -21,6 +21,7 @@ defmodule Firefly.ClusterTest do
   @prod %{
     "FIREFLY_DATABASE_URL" => "ecto://u:p@db/firefly",
     "FIREFLY_SECRET_KEY_BASE" => String.duplicate("k", 64),
+    "FIREFLY_VAULT_KEY" => Base.encode64(String.duplicate("v", 32)),
     # Production won't boot without outbound email (see Firefly.MailConfigTest).
     "FIREFLY_MAIL_ADAPTER" => "local"
   }

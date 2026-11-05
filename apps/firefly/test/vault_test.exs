@@ -77,40 +77,94 @@ defmodule Firefly.VaultTest do
     assert Repo.get!(Totp, totp.id).secret == "totp secret"
   end
 
-  test "keys come from base64 of 32 bytes" do
-    key = :crypto.strong_rand_bytes(32)
-    assert Vault.decode_key!(" " <> Base.encode64(key) <> "\n") == key
-    assert_raise ArgumentError, fn -> Vault.decode_key!(Base.encode64("short")) end
+  test "keys are 32 bytes, and the vault doesn't start without one" do
     assert_raise ArgumentError, fn -> Vault.ciphers(["short"]) end
+    assert_raise ArgumentError, ~r/FIREFLY_VAULT_KEY/, fn -> Vault.init(keys: []) end
   end
 
-  test "without a key, writing a secret raises, and a database holding secrets is refused" do
-    totp = insert_totp()
-    assert_raise Vault.KeyMissing, &Vault.require_key!/0
+  test "production requires FIREFLY_VAULT_KEY, base64 of 32 bytes" do
+    vars = %{
+      "FIREFLY_DATABASE_URL" => "ecto://u:p@db/firefly",
+      "FIREFLY_SECRET_KEY_BASE" => String.duplicate("k", 64),
+      "FIREFLY_MAIL_ADAPTER" => "local",
+      "FIREFLY_VAULT_KEY" => nil,
+      "FIREFLY_VAULT_RETIRED_KEYS" => nil
+    }
 
-    {:ok, _} = restart_vault(keys: [], check_data: false)
-    assert_raise Vault.KeyMissing, fn -> Vault.encrypt("anything") end
-    Repo.delete!(totp)
+    saved = Map.new(vars, fn {name, _} -> {name, System.get_env(name)} end)
+    on_exit(fn -> put_env(saved) end)
+    put_env(vars)
+    runtime = Path.expand("../../../config/runtime.exs", __DIR__)
+
+    assert_raise RuntimeError, ~r/FIREFLY_VAULT_KEY is missing/, fn ->
+      Config.Reader.read!(runtime, env: :prod)
+    end
+
+    System.put_env("FIREFLY_VAULT_KEY", Base.encode64("short"))
+    assert_raise RuntimeError, ~r/32 bytes/, fn -> Config.Reader.read!(runtime, env: :prod) end
+
+    [new, old] = for _ <- 1..2, do: :crypto.strong_rand_bytes(32)
+    System.put_env("FIREFLY_VAULT_KEY", Base.encode64(new))
+    System.put_env("FIREFLY_VAULT_RETIRED_KEYS", Base.encode64(old))
+    assert Config.Reader.read!(runtime, env: :prod)[:firefly][Vault][:keys] == [new, old]
   end
 
-  test "a database without secrets needs no key" do
-    assert Vault.require_key!() == :ok
+  defp put_env(vars) do
+    Enum.each(vars, fn
+      {name, nil} -> System.delete_env(name)
+      {name, value} -> System.put_env(name, value)
+    end)
   end
 
-  test "encrypts with AES-GCM only, and no field uses Cloak's PBKDF2 type" do
-    # The audit ignores advisories against Cloak's AES-CTR cipher and
-    # cloak_ecto's PBKDF2 type (see mix.exs): neither may be used.
+  # mix.exs acknowledges two advisories, for parts of Cloak Firefly must
+  # never use: CVE-2026-95105 (the AES-CTR cipher, Cloak.Ciphers.AES.CTR)
+  # and CVE-2026-94206 (cloak_ecto's PBKDF2 type, Cloak.Ecto.PBKDF2). These
+  # tests fail as soon as either comes into use: in the code of every app
+  # loaded (the domain, here) and in every app's source and the config.
+  @apps [:firefly, :firefly_web, :firefly_plugins, :firefly_import]
+  @sources Path.wildcard(Path.expand("../../*/lib/**/*.ex", __DIR__)) ++
+             Path.wildcard(Path.expand("../../../config/*.exs", __DIR__))
+
+  test "the vault only ever encrypts with AES-GCM, never AES-CTR (CVE-2026-95105)" do
     {:ok, config} = Cloak.Vault.read_config(:"Elixir.Firefly.Vault.Config")
+    assert [_ | _] = config[:ciphers]
     assert Enum.all?(config[:ciphers], &match?({_label, {Cloak.Ciphers.AES.GCM, _opts}}, &1))
 
-    {:ok, modules} = :application.get_key(:firefly, :modules)
+    # Whatever the keys: rotation sets are GCM too, and configured ciphers
+    # are replaced by ones built from the keys.
+    keys = for _ <- 1..3, do: :crypto.strong_rand_bytes(32)
+    assert Enum.all?(Vault.ciphers(keys), &match?({_, {Cloak.Ciphers.AES.GCM, _}}, &1))
 
-    for module <- modules,
-        Code.ensure_loaded?(module),
-        function_exported?(module, :__schema__, 1),
-        field <- module.__schema__(:fields) do
-      refute module.__schema__(:type, field) == Cloak.Ecto.PBKDF2
+    ctr = [ciphers: [default: {Cloak.Ciphers.AES.CTR, tag: "CTR", key: hd(keys)}]]
+    {:ok, built} = Vault.init(ctr ++ [keys: keys])
+    refute inspect(built[:ciphers]) =~ "CTR"
+
+    assert sources_mentioning("AES.CTR") == []
+  end
+
+  test "no schema uses cloak_ecto's PBKDF2 type (CVE-2026-94206)" do
+    for app <- @apps,
+        {:ok, modules} <- [:application.get_key(app, :modules)],
+        module <- modules,
+        Code.ensure_loaded?(module) do
+      behaviours = Keyword.get_values(module.module_info(:attributes), :behaviour)
+      refute Cloak.Ecto.PBKDF2 in List.flatten(behaviours), "#{inspect(module)} is a PBKDF2 type"
+
+      if function_exported?(module, :__schema__, 1) do
+        for field <- module.__schema__(:fields) do
+          refute module.__schema__(:type, field) == Cloak.Ecto.PBKDF2,
+                 "#{inspect(module)}.#{field}"
+        end
+      end
     end
+
+    assert sources_mentioning("PBKDF2") == []
+  end
+
+  # Every app's source is read, whichever app's tests run.
+  defp sources_mentioning(text) do
+    assert Enum.any?(@sources, &String.contains?(&1, "firefly_web/lib/"))
+    for path <- @sources, File.read!(path) =~ text, do: Path.relative_to_cwd(path)
   end
 
   test "every encrypted field is listed in the vault's columns, and redacted" do

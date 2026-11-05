@@ -25,11 +25,8 @@ defmodule Firefly.Vault do
   `bin/firefly eval Firefly.Release.rotate_vault` in a release), then drop
   the retired key.
 
-  Development and tests use fixed keys (`config/dev.exs`,
-  `config/test.exs`). Production may run without a key only while there is
-  nothing encrypted: the vault refuses to start when any encrypted column
-  holds a value and no key is set, and writing a secret without a key
-  raises.
+  Production requires `FIREFLY_VAULT_KEY`; development and tests use fixed
+  keys (`config/dev.exs`, `config/test.exs`).
   """
 
   use Cloak.Vault, otp_app: :firefly
@@ -54,19 +51,12 @@ defmodule Firefly.Vault do
 
   @rotate_batch 500
 
-  defmodule KeyMissing do
-    @moduledoc "Raised when a secret is written, or found, with no vault key set."
-    defexception message:
-                   "no vault key: set FIREFLY_VAULT_KEY to a base64-encoded 32-byte key " <>
-                     "(openssl rand -base64 32); see Firefly.Vault"
-  end
-
   @impl GenServer
   def init(config) do
-    keys = Keyword.get(config, :keys, [])
-    if keys == [] and Keyword.get(config, :check_data, true), do: require_key!()
-
-    {:ok, Keyword.put(config, :ciphers, ciphers(keys))}
+    case Keyword.get(config, :keys, []) do
+      [] -> raise ArgumentError, "no vault key: set FIREFLY_VAULT_KEY (see Firefly.Vault)"
+      keys -> {:ok, Keyword.put(config, :ciphers, ciphers(keys))}
+    end
   end
 
   @doc "The Cloak ciphers for `keys`, the first one encrypting."
@@ -90,26 +80,9 @@ defmodule Firefly.Vault do
   def tag(key),
     do: "FFV1." <> binary_part(Base.encode16(:crypto.hash(:sha256, key), case: :lower), 0, 8)
 
-  @doc "Parses a base64 key from the environment: 32 bytes, or raises."
-  @spec decode_key!(String.t()) :: binary
-  def decode_key!(base64) do
-    case Base.decode64(String.trim(base64)) do
-      {:ok, <<_::binary-32>> = key} -> key
-      _ -> raise ArgumentError, "vault keys must be base64 of 32 bytes (openssl rand -base64 32)"
-    end
-  end
-
   @doc "The encrypted columns, `{table, column}`."
   @spec columns() :: [{String.t(), String.t()}]
   def columns, do: @columns
-
-  @impl Cloak.Vault
-  def encrypt(plaintext) do
-    case super(plaintext) do
-      {:error, %Cloak.InvalidConfig{}} -> raise KeyMissing
-      result -> result
-    end
-  end
 
   # Cloak's AES-GCM returns `{:ok, :error}` when the tag doesn't verify (a
   # tampered or corrupt value): that's an error, never a plaintext.
@@ -120,28 +93,6 @@ defmodule Firefly.Vault do
       {:ok, _not_plaintext} -> {:error, %ArgumentError{message: "the value doesn't verify"}}
       error -> error
     end
-  end
-
-  @doc """
-  Raises `KeyMissing` if any encrypted column holds a value: run when the
-  vault starts without a key. A database without the tables yet (before
-  its first migration) holds nothing.
-  """
-  @spec require_key!() :: :ok
-  def require_key! do
-    if encrypted_data?(), do: raise(KeyMissing)
-    :ok
-  end
-
-  defp encrypted_data? do
-    Enum.any?(@columns, fn {table, column} ->
-      Repo.exists?(from(r in table, where: not is_nil(field(r, ^String.to_atom(column)))))
-    end)
-  rescue
-    error in Postgrex.Error ->
-      if error.postgres[:code] == :undefined_table,
-        do: false,
-        else: reraise(error, __STACKTRACE__)
   end
 
   @doc """

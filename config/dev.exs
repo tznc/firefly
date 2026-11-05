@@ -12,14 +12,9 @@ config :firefly, Firefly.Repo,
   pool_size: 10
 
 # A fixed vault key for development (see Firefly.Vault; FIREFLY_VAULT_KEY
-# overrides it), and the secret AI keys were encrypted with before the
-# vault (the secret key base below).
+# overrides it).
 config :firefly, Firefly.Vault,
   keys: [Base.decode64!("xCOnNJiNX/tx5vR8/3QUZLERoe8J4J40UVQDdH/pPSw=")]
-
-config :firefly,
-       :legacy_ai_secret,
-       "Q1bBtoEs8F2+MsssVU8zHXvhJBVFDI/4EFEINldDXBlVsBkNr30gi4WIGNwds+YO"
 
 # For development, we disable any cache and enable
 # debugging and code reloading.

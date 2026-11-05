@@ -8,7 +8,7 @@ defmodule Firefly.Repo.Migrations.CreatePushSubscriptions do
       add :user_id, references(:forums_users, on_delete: :delete_all), null: false
       add :endpoint, :text, null: false
       add :p256dh, :string, null: false
-      add :auth, :string, null: false
+      add :auth, :binary, null: false
       add :user_agent, :string
       add :last_used_at, :utc_datetime
 

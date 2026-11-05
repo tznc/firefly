@@ -14,7 +14,7 @@ defmodule Firefly.MailConfigTest do
            AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN FIREFLY_SES_CONFIGURATION_SET
            FIREFLY_MAILGUN_API_KEY FIREFLY_MAILGUN_DOMAIN FIREFLY_MAILGUN_BASE_URL
            FIREFLY_POSTMARK_API_KEY FIREFLY_POSTMARK_MESSAGE_STREAM
-           FIREFLY_DATABASE_URL FIREFLY_SECRET_KEY_BASE)
+           FIREFLY_DATABASE_URL FIREFLY_SECRET_KEY_BASE FIREFLY_VAULT_KEY)
 
   setup do
     saved = Map.new(@vars, &{&1, System.get_env(&1)})
@@ -28,6 +28,7 @@ defmodule Firefly.MailConfigTest do
     # What production needs besides mail.
     System.put_env("FIREFLY_DATABASE_URL", "ecto://u:p@localhost/firefly")
     System.put_env("FIREFLY_SECRET_KEY_BASE", String.duplicate("k", 64))
+    System.put_env("FIREFLY_VAULT_KEY", Base.encode64(String.duplicate("v", 32)))
   end
 
   defp mailer(env \\ :prod, vars) do

@@ -7,6 +7,8 @@ defmodule Firefly.Repo.Migrations.CreateForumsSiteSettings do
     create table(:forums_site_settings) do
       add :key, :string, null: false
       add :value, :text, null: false
+      # A secret setting's value, encrypted (see Firefly.Vault); `value` is then empty.
+      add :secret_value, :binary
 
       timestamps(type: :naive_datetime_usec)
     end

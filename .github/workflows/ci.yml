@@ -204,6 +204,7 @@ jobs:
           docker run --rm \
             -e FIREFLY_DATABASE_URL=ecto://user:pass@localhost/firefly \
             -e FIREFLY_SECRET_KEY_BASE="$(openssl rand -base64 48)" \
+            -e FIREFLY_VAULT_KEY="$(openssl rand -base64 32)" \
             -e FIREFLY_MAIL_ADAPTER=smtp -e FIREFLY_SMTP_RELAY=smtp.example.com \
             firefly:ci /app/bin/firefly eval 'IO.puts(Application.spec(:firefly_web, :vsn))'
           # Backups need PostgreSQL client tools at least as new as the server (17).

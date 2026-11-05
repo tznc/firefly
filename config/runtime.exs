@@ -35,22 +35,18 @@ end
 retired_vault_keys =
   String.split(System.get_env("FIREFLY_VAULT_RETIRED_KEYS", ""), ",", trim: true)
 
-case System.get_env("FIREFLY_VAULT_KEY") do
-  nil when retired_vault_keys != [] ->
+case {System.get_env("FIREFLY_VAULT_KEY"), config_env()} do
+  {nil, :prod} ->
+    raise "environment variable FIREFLY_VAULT_KEY is missing (openssl rand -base64 32)"
+
+  {nil, _env} when retired_vault_keys != [] ->
     raise "FIREFLY_VAULT_RETIRED_KEYS is set without FIREFLY_VAULT_KEY"
 
-  nil ->
+  {nil, _env} ->
     :ok
 
-  key ->
+  {key, _env} ->
     config :firefly, Firefly.Vault, keys: Enum.map([key | retired_vault_keys], vault_key)
-end
-
-# Before the vault, AI providers' API keys were encrypted with
-# FIREFLY_AI_ENCRYPTION_KEY, else the secret key base. Only the migration
-# that moves them into the vault reads it.
-if ai_key = System.get_env("FIREFLY_AI_ENCRYPTION_KEY") do
-  config :firefly, :legacy_ai_secret, ai_key
 end
 
 # Where uploads are stored: `local` (a directory, FIREFLY_UPLOAD_DIR) or
@@ -433,9 +429,6 @@ if config_env() == :prod do
       environment variable FIREFLY_SECRET_KEY_BASE is missing.
       You can generate one by calling: mix phx.gen.secret
       """
-
-  if !System.get_env("FIREFLY_AI_ENCRYPTION_KEY"),
-    do: config(:firefly, :legacy_ai_secret, secret_key_base)
 
   # Public domain the app is served on (also the default email domain)
   host = System.get_env("FIREFLY_DOMAIN", "firefly.tznc.dev")
