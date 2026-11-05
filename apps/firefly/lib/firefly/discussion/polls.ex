@@ -284,7 +284,7 @@ defmodule Firefly.Discussion.Polls do
 
   defp parse_choice(%Poll{kind: "ranked"} = poll, %{"ranks" => ranks}) when is_map(ranks) do
     ranked =
-      for {id, rank} <- ranks, {rank, ""} <- [Integer.parse(to_string(rank))], do: {id, rank}
+      for {id, rank} <- ranks, {:ok, rank} <- [integer(rank)], do: {id, rank}
 
     cond do
       ranked == [] ->
@@ -308,7 +308,7 @@ defmodule Firefly.Discussion.Polls do
     valid = MapSet.new(poll.options, & &1.id)
 
     parsed =
-      for id <- ids, {id, ""} <- [Integer.parse(to_string(id))], MapSet.member?(valid, id), do: id
+      for id <- ids, {:ok, id} <- [integer(id)], MapSet.member?(valid, id), do: id
 
     cond do
       parsed == [] -> {:error, :no_choice}
@@ -316,6 +316,19 @@ defmodule Firefly.Discussion.Polls do
       true -> {:ok, parsed}
     end
   end
+
+  # An id or rank from the form or the API's JSON: an integer, or a string
+  # of one. Anything else (a list, an object) isn't one.
+  defp integer(value) when is_integer(value), do: {:ok, value}
+
+  defp integer(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {n, ""} -> {:ok, n}
+      _ -> :error
+    end
+  end
+
+  defp integer(_value), do: :error
 
   @doc "Closes `poll` as `actor` (its post's author or staff)."
   def close(%Poll{} = poll, %User{} = actor), do: set_closed(poll, actor, true)
