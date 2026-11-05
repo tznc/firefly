@@ -97,7 +97,12 @@ defmodule Firefly.PollsPropertyTest do
                   map(json_value(), &%{"options" => &1}),
                   map(json_value(), &%{"ranks" => &1}),
                   map(list_of(json_value(), max_length: 3), &%{"options" => &1}),
-                  map(map_of(adversarial_text(2), json_value(), max_length: 3), &%{"ranks" => &1})
+                  # From pairs: map_of/3 needs distinct keys, and short odd
+                  # strings are mostly "".
+                  map(
+                    list_of(tuple({adversarial_text(2), json_value()}), max_length: 3),
+                    &%{"ranks" => Map.new(&1)}
+                  )
                 ]),
               max_runs: runs(300)
             ) do
