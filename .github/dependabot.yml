@@ -1,0 +1,29 @@
+# Weekly version-update PRs for the three ecosystems Firefly depends on.
+# Security updates (from Dependabot alerts) don't wait for this schedule.
+version: 2
+updates:
+  # The umbrella: the root mix.lock covers every app's dependencies.
+  - package-ecosystem: mix
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Phoenix, LiveView and their companions move together.
+      phoenix:
+        patterns: ["phoenix", "phoenix_*"]
+      opentelemetry:
+        patterns: ["opentelemetry*"]
+
+  - package-ecosystem: npm
+    directory: /apps/firefly_web/assets
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

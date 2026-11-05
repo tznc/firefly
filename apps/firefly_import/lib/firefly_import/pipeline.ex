@@ -554,6 +554,8 @@ defmodule FireflyImport.Pipeline do
   @doc "A file's contents (see `FireflyImport.Source`): `{:ok, data}` or `{:error, message}`."
   def file_data(%{data: data}) when is_binary(data), do: {:ok, data}
 
+  # Sobelow: a file inside the export the operator is importing.
+  # sobelow_skip ["Traversal.FileModule"]
   def file_data(%{path: path}) when is_binary(path) do
     case File.read(path) do
       {:ok, data} -> {:ok, data}

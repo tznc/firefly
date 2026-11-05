@@ -8,6 +8,9 @@ defmodule FireflyWeb.BackupController do
 
   alias Firefly.Backups
 
+  # Sobelow: the path comes from a signed, admin-bound token whose name Backups checks against
+  # Store.valid_name?/1.
+  # sobelow_skip ["Traversal.SendDownload"]
   def download(conn, %{"token" => token}) do
     case Backups.download(token, conn.assigns.current_user) do
       {:ok, name, {:file, path}} ->

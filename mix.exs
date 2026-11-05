@@ -34,7 +34,11 @@ defmodule Firefly.Umbrella.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      # Security checks CI runs from the root: Sobelow (static analysis,
+      # configured in .sobelow-conf) and `mix deps.audit` (advisories).
+      {:sobelow, "~> 0.18.1", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
 

@@ -9,6 +9,8 @@ defmodule FireflyWeb.SitemapController do
 
   alias Firefly.SEO
 
+  # Sobelow: text/plain.
+  # sobelow_skip ["XSS.SendResp"]
   def robots(conn, _params) do
     conn
     |> put_resp_content_type("text/plain")
@@ -59,6 +61,8 @@ defmodule FireflyWeb.SitemapController do
     """
   end
 
+  # Sobelow: application/xml, every value passed through escape/1.
+  # sobelow_skip ["XSS.SendResp"]
   defp xml(conn, body) do
     conn
     |> put_resp_content_type("application/xml")

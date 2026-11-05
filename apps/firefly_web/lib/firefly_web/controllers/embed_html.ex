@@ -4,6 +4,8 @@ defmodule FireflyWeb.EmbedHTML do
 
   alias Firefly.Rendering.Markdown
 
+  # Sobelow: Markdown.render/1 returns sanitized HTML.
+  # sobelow_skip ["XSS.Raw"]
   def comments(assigns) do
     ~H"""
     <!DOCTYPE html>

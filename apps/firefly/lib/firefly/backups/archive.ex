@@ -21,6 +21,8 @@ defmodule Firefly.Backups.Archive do
   Writes a backup to `path`. `meta` is added to `meta.json`; with
   `uploads_dir`, that directory goes in too. `log` gets progress lines.
   """
+  # Sobelow: removes the work directory this function created.
+  # sobelow_skip ["Traversal.FileModule"]
   def build(path, meta, opts) do
     log = opts[:log] || fn _line -> :ok end
     work = tmp_dir("backup")
@@ -76,6 +78,8 @@ defmodule Firefly.Backups.Archive do
   Unpacks the backup at `path` into a new directory: `{:ok, dir, meta}`.
   The caller removes `dir`.
   """
+  # Sobelow: removes the directory this function created.
+  # sobelow_skip ["Traversal.FileModule"]
   def extract(path) do
     dir = tmp_dir("restore")
 
@@ -119,6 +123,8 @@ defmodule Firefly.Backups.Archive do
     )
   end
 
+  # Sobelow: runs pg_dump/pg_restore by path with an argument list, no shell.
+  # sobelow_skip ["CI.System"]
   defp pg(tool, args, opts) do
     {output, status} =
       System.cmd(executable(tool), args, env: env(opts), stderr_to_stdout: true)
@@ -204,8 +210,12 @@ defmodule Firefly.Backups.Archive do
     end
   end
 
+  # Sobelow: callers pass fixed SQL; values are parameters.
+  # sobelow_skip ["SQL.Query"]
   defp query(opts, sql, params), do: with_repo(opts, fn _ -> Repo.query!(sql, params) end)
 
+  # Sobelow: a new directory under the system temporary directory.
+  # sobelow_skip ["Traversal.FileModule"]
   defp tmp_dir(kind) do
     dir = Path.join(System.tmp_dir!(), "firefly-#{kind}-#{System.unique_integer([:positive])}")
     File.mkdir_p!(dir)

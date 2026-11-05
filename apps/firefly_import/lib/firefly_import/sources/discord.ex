@@ -71,6 +71,8 @@ defmodule FireflyImport.Sources.Discord do
     end
   end
 
+  # Sobelow: the export files the operator named on the command line.
+  # sobelow_skip ["Traversal.FileModule"]
   defp read(files, download?) do
     exports = Enum.map(files, &{Path.dirname(&1), &1 |> File.read!() |> Jason.decode!()})
 

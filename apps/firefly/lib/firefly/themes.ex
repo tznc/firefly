@@ -533,6 +533,8 @@ defmodule Firefly.Themes do
     Repo.rollback("Its theme isn't valid: #{details}.")
   end
 
+  # Sobelow: a new temporary directory; file names are reduced with Path.basename/1.
+  # sobelow_skip ["Traversal.FileModule"]
   defp replace_assets!(theme, assets, files, admin) do
     Repo.delete_all(from(a in ThemeAsset, where: a.theme_id == ^theme.id))
     dir = Path.join(System.tmp_dir!(), "firefly-package-#{System.unique_integer([:positive])}")

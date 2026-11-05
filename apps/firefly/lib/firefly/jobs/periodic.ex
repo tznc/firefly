@@ -71,6 +71,8 @@ defmodule Firefly.Jobs.Periodic do
   def crontab, do: for({name, cron, _queue, _work} <- @tasks, do: {cron, worker(name)})
 
   @doc "The worker of the task `name` (`TopicTimers`...)."
+  # Sobelow: names come from the fixed @tasks table.
+  # sobelow_skip ["DOS.ModuleConcat"]
   def worker(name), do: Module.concat(__MODULE__, name)
 
   @doc false

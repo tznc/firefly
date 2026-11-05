@@ -85,6 +85,9 @@ defmodule FireflyWeb.PluginComponents do
   attr :context, :map, default: %{}
   attr :user, :any, default: nil
 
+  # Sobelow: a plugin's HTML goes through Plugins.Content.sanitize/1 (the post allow-list) in
+  # Plugins.UI.
+  # sobelow_skip ["XSS.Raw"]
   def plugin_view(assigns) do
     ~H"""
     <div :if={@view[:html]} id={@id} class="plugin-view prose max-w-none">

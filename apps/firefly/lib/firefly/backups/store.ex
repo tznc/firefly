@@ -78,6 +78,8 @@ defmodule Firefly.Backups.Store do
   end
 
   @doc "Stores the file at `path` as `name` (moving it, when local)."
+  # Sobelow: removes the archive the caller built.
+  # sobelow_skip ["Traversal.FileModule"]
   def put(path, name) do
     case storage() do
       :local ->
@@ -102,6 +104,8 @@ defmodule Firefly.Backups.Store do
   A local path to the backup `name`, and whether it's a temporary copy the
   caller deletes: `{:ok, path, temporary?}`.
   """
+  # Sobelow: a fresh temporary file; callers check name with valid_name?/1.
+  # sobelow_skip ["Traversal.FileModule"]
   def fetch(name) do
     case storage() do
       :local ->
@@ -140,6 +144,8 @@ defmodule Firefly.Backups.Store do
   end
 
   @doc "Deletes the backup `name`."
+  # Sobelow: callers check name with valid_name?/1 (no slashes).
+  # sobelow_skip ["Traversal.FileModule"]
   def delete(name) do
     case storage() do
       :local ->
@@ -164,6 +170,8 @@ defmodule Firefly.Backups.Store do
     end
   end
 
+  # Sobelow: the configured backup directory.
+  # sobelow_skip ["Traversal.FileModule"]
   defp ensure_dir do
     File.mkdir_p!(dir())
     dir()

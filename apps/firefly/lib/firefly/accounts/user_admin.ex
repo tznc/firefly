@@ -324,6 +324,9 @@ defmodule Firefly.Accounts.UserAdmin do
 
   # Drops `from`'s rows that would collide with `to`'s under a unique index
   # on `column`, then moves the rest.
+  # Sobelow: table and column names come from the catalog (user_columns/0) and are quoted with
+  # quote_name/1; ids are parameters.
+  # sobelow_skip ["SQL.Query"]
   defp move_rows({table, column}, from, to) do
     for other_columns <- unique_index_columns(table, column) do
       same =
