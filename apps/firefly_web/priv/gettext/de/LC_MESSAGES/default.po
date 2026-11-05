@@ -159,7 +159,7 @@ msgstr "Kontakt"
 msgid "Create account"
 msgstr "Konto erstellen"
 
-#: lib/firefly_web/live/auth_live/identity.ex:82
+#: lib/firefly_web/live/auth_live/identity.ex:84
 #: lib/firefly_web/live/auth_live/registration.ex:34
 #: lib/firefly_web/live/auth_live/registration.ex:88
 #, elixir-autogen, elixir-format
@@ -203,7 +203,7 @@ msgstr "E-Mail"
 msgid "Email login links are off."
 msgstr "Anmeldelinks per E-Mail sind ausgeschaltet."
 
-#: lib/firefly_web/live/auth_live/identity.ex:117
+#: lib/firefly_web/live/auth_live/identity.ex:119
 #: lib/firefly_web/live/auth_live/login.ex:83
 #, elixir-autogen, elixir-format
 msgid "Email me a login link"
@@ -244,7 +244,7 @@ msgstr "Browser folgen"
 msgid "Follow my system"
 msgstr "System folgen"
 
-#: lib/firefly_web/live/auth_live/identity.ex:115
+#: lib/firefly_web/live/auth_live/identity.ex:117
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
 msgstr "Passwort vergessen?"
@@ -292,8 +292,8 @@ msgstr "Hell"
 
 #: lib/firefly_web/components/layouts.ex:228
 #: lib/firefly_web/live/auth_live/identity.ex:27
-#: lib/firefly_web/live/auth_live/identity.ex:79
-#: lib/firefly_web/live/auth_live/identity.ex:113
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:115
 #: lib/firefly_web/live/auth_live/login.ex:14
 #: lib/firefly_web/live/auth_live/registration.ex:91
 #, elixir-autogen, elixir-format
@@ -337,7 +337,7 @@ msgstr "Von tznc.dev"
 msgid "Messages"
 msgstr "Nachrichten"
 
-#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:83
 #, elixir-autogen, elixir-format
 msgid "New here?"
 msgstr "Neu hier?"
@@ -373,7 +373,7 @@ msgstr "Menü öffnen"
 msgid "Participating in"
 msgstr "Beteiligt an"
 
-#: lib/firefly_web/live/auth_live/identity.ex:104
+#: lib/firefly_web/live/auth_live/identity.ex:106
 #: lib/firefly_web/live/auth_live/registration.ex:109
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -525,7 +525,7 @@ msgstr "Uploads"
 msgid "Use a passkey"
 msgstr "Passkey verwenden"
 
-#: lib/firefly_web/live/auth_live/identity.ex:98
+#: lib/firefly_web/live/auth_live/identity.ex:100
 #: lib/firefly_web/live/auth_live/registration.ex:104
 #: lib/firefly_web/live/staff_live/user.ex:371
 #, elixir-autogen, elixir-format
@@ -603,7 +603,7 @@ msgstr "Dein Profil"
 msgid "new"
 msgstr "neu"
 
-#: lib/firefly_web/live/auth_live/identity.ex:121
+#: lib/firefly_web/live/auth_live/identity.ex:123
 #: lib/firefly_web/live/auth_live/login.ex:70
 #, elixir-autogen, elixir-format
 msgid "or"
@@ -3062,7 +3062,7 @@ msgstr "Warum"
 msgid "Devices"
 msgstr "Geräte"
 
-#: lib/firefly_web/live/auth_live/identity.ex:110
+#: lib/firefly_web/live/auth_live/identity.ex:112
 #, elixir-autogen, elixir-format
 msgid "Keep me logged in"
 msgstr "Angemeldet bleiben"
@@ -3178,32 +3178,37 @@ msgstr "sehr schwach"
 msgid "weak"
 msgstr "schwach"
 
-#: lib/firefly_web/bot_challenge.ex:112
+#: lib/firefly_web/bot_challenge.ex:117
 #, elixir-autogen, elixir-format
 msgid "Checked: you can go on."
 msgstr "Geprüft: Du kannst weitermachen."
 
-#: lib/firefly_web/bot_challenge.ex:118
+#: lib/firefly_web/bot_challenge.ex:123
 #, elixir-autogen, elixir-format
 msgid "Checking that you're not a bot…"
 msgstr "Wir prüfen, dass du kein Bot bist …"
 
-#: lib/firefly_web/bot_challenge.ex:113
+#: lib/firefly_web/bot_challenge.ex:118
 #, elixir-autogen, elixir-format
 msgid "The check didn't work. Reload the page to try again."
 msgstr "Die Prüfung hat nicht funktioniert. Lade die Seite neu, um es noch einmal zu versuchen."
 
-#: lib/firefly_web/bot_challenge.ex:64
+#: lib/firefly_web/bot_challenge.ex:66
 #, elixir-autogen, elixir-format
 msgid "The check that you're not a bot didn't pass. Please try again."
 msgstr "Die Prüfung, dass du kein Bot bist, ist fehlgeschlagen. Bitte versuch es noch einmal."
 
-#: lib/firefly_web/bot_challenge.ex:121
+#: lib/firefly_web/bot_challenge.ex:126
 #, elixir-autogen, elixir-format
 msgid "This check needs JavaScript."
 msgstr "Diese Prüfung braucht JavaScript."
 
-#: lib/firefly_web/bot_challenge.ex:61
+#: lib/firefly_web/bot_challenge.ex:62
 #, elixir-autogen, elixir-format
 msgid "Wait a moment for the check that you're not a bot, then try again."
 msgstr "Warte einen Moment auf die Prüfung, dass du kein Bot bist, und versuch es dann noch einmal."
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "Ein Teil des Textes enthält Zeichen, die nicht gespeichert werden können. Entferne sie und versuche es erneut."

@@ -171,7 +171,7 @@ msgstr "اتصل بنا"
 msgid "Create account"
 msgstr "إنشاء حساب"
 
-#: lib/firefly_web/live/auth_live/identity.ex:82
+#: lib/firefly_web/live/auth_live/identity.ex:84
 #: lib/firefly_web/live/auth_live/registration.ex:34
 #: lib/firefly_web/live/auth_live/registration.ex:88
 #, elixir-autogen, elixir-format
@@ -215,7 +215,7 @@ msgstr "البريد الإلكتروني"
 msgid "Email login links are off."
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:117
+#: lib/firefly_web/live/auth_live/identity.ex:119
 #: lib/firefly_web/live/auth_live/login.ex:83
 #, elixir-autogen, elixir-format
 msgid "Email me a login link"
@@ -256,7 +256,7 @@ msgstr "اتبع المتصفح"
 msgid "Follow my system"
 msgstr "اتبع النظام"
 
-#: lib/firefly_web/live/auth_live/identity.ex:115
+#: lib/firefly_web/live/auth_live/identity.ex:117
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
 msgstr "نسيت كلمة المرور؟"
@@ -304,8 +304,8 @@ msgstr "فاتح"
 
 #: lib/firefly_web/components/layouts.ex:228
 #: lib/firefly_web/live/auth_live/identity.ex:27
-#: lib/firefly_web/live/auth_live/identity.ex:79
-#: lib/firefly_web/live/auth_live/identity.ex:113
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:115
 #: lib/firefly_web/live/auth_live/login.ex:14
 #: lib/firefly_web/live/auth_live/registration.ex:91
 #, elixir-autogen, elixir-format
@@ -349,7 +349,7 @@ msgstr "من إنتاج tznc.dev"
 msgid "Messages"
 msgstr "الرسائل"
 
-#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:83
 #, elixir-autogen, elixir-format
 msgid "New here?"
 msgstr "جديد هنا؟"
@@ -385,7 +385,7 @@ msgstr "فتح القائمة"
 msgid "Participating in"
 msgstr "أشارك فيها"
 
-#: lib/firefly_web/live/auth_live/identity.ex:104
+#: lib/firefly_web/live/auth_live/identity.ex:106
 #: lib/firefly_web/live/auth_live/registration.ex:109
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -537,7 +537,7 @@ msgstr "الملفات المرفوعة"
 msgid "Use a passkey"
 msgstr "استخدام مفتاح مرور"
 
-#: lib/firefly_web/live/auth_live/identity.ex:98
+#: lib/firefly_web/live/auth_live/identity.ex:100
 #: lib/firefly_web/live/auth_live/registration.ex:104
 #: lib/firefly_web/live/staff_live/user.ex:371
 #, elixir-autogen, elixir-format
@@ -615,7 +615,7 @@ msgstr "ملفك الشخصي"
 msgid "new"
 msgstr "جديد"
 
-#: lib/firefly_web/live/auth_live/identity.ex:121
+#: lib/firefly_web/live/auth_live/identity.ex:123
 #: lib/firefly_web/live/auth_live/login.ex:70
 #, elixir-autogen, elixir-format
 msgid "or"
@@ -3082,7 +3082,7 @@ msgstr "السبب"
 msgid "Devices"
 msgstr "الأجهزة"
 
-#: lib/firefly_web/live/auth_live/identity.ex:110
+#: lib/firefly_web/live/auth_live/identity.ex:112
 #, elixir-autogen, elixir-format
 msgid "Keep me logged in"
 msgstr "أبقني مسجلًا للدخول"
@@ -3198,32 +3198,37 @@ msgstr "ضعيفة جدًا"
 msgid "weak"
 msgstr "ضعيفة"
 
-#: lib/firefly_web/bot_challenge.ex:112
+#: lib/firefly_web/bot_challenge.ex:117
 #, elixir-autogen, elixir-format
 msgid "Checked: you can go on."
 msgstr "تم التحقق: يمكنك المتابعة."
 
-#: lib/firefly_web/bot_challenge.ex:118
+#: lib/firefly_web/bot_challenge.ex:123
 #, elixir-autogen, elixir-format
 msgid "Checking that you're not a bot…"
 msgstr "جارٍ التحقق من أنك لست روبوتًا…"
 
-#: lib/firefly_web/bot_challenge.ex:113
+#: lib/firefly_web/bot_challenge.ex:118
 #, elixir-autogen, elixir-format
 msgid "The check didn't work. Reload the page to try again."
 msgstr "لم ينجح التحقق. أعد تحميل الصفحة للمحاولة مرة أخرى."
 
-#: lib/firefly_web/bot_challenge.ex:64
+#: lib/firefly_web/bot_challenge.ex:66
 #, elixir-autogen, elixir-format
 msgid "The check that you're not a bot didn't pass. Please try again."
 msgstr "لم يُجتز التحقق من أنك لست روبوتًا. يُرجى المحاولة مرة أخرى."
 
-#: lib/firefly_web/bot_challenge.ex:121
+#: lib/firefly_web/bot_challenge.ex:126
 #, elixir-autogen, elixir-format
 msgid "This check needs JavaScript."
 msgstr "يحتاج هذا التحقق إلى JavaScript."
 
-#: lib/firefly_web/bot_challenge.ex:61
+#: lib/firefly_web/bot_challenge.ex:62
 #, elixir-autogen, elixir-format
 msgid "Wait a moment for the check that you're not a bot, then try again."
 msgstr "انتظر لحظة حتى ينتهي التحقق من أنك لست روبوتًا، ثم حاول مرة أخرى."
+
+#: lib/firefly_web/unstorable_text.ex:21
+#, elixir-autogen, elixir-format
+msgid "Some of that text contains characters that can't be saved. Remove them and try again."
+msgstr "يحتوي جزء من النص على أحرف لا يمكن حفظها. احذفها وحاول مرة أخرى."

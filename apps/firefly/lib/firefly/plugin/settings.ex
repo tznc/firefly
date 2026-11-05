@@ -150,11 +150,8 @@ defmodule Firefly.Plugin.Settings do
   end
 
   # Postgres can't store a NUL character, in text or in JSON.
-  def cast(%{type: type}, value) when type in ~w(string text) and is_binary(value) do
-    if String.contains?(value, <<0>>),
-      do: {:error, "can't contain a null character"},
-      else: cast_text(type, value)
-  end
+  def cast(%{type: type}, value) when type in ~w(string text) and is_binary(value),
+    do: cast_text(type, Firefly.Text.strip_nul(value))
 
   def cast(_definition, _value), do: {:error, "is invalid"}
 

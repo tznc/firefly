@@ -134,7 +134,7 @@ defmodule Firefly.Accounts.AccountDeletion do
           hide_from_directory: true,
           deleted_at: DateTime.utc_now(:second)
         )
-        |> Ecto.Changeset.unique_constraint(:username)
+        |> User.unique_username()
         |> Repo.update()
       end)
 

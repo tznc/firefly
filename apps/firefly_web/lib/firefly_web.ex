@@ -86,6 +86,7 @@ defmodule FireflyWeb do
   def live_view do
     quote do
       use Phoenix.LiveView
+      use FireflyWeb.LiveStripNul
 
       if Application.compile_env(:firefly_web, :sql_sandbox) do
         on_mount(FireflyWeb.LiveAcceptance)
@@ -98,6 +99,7 @@ defmodule FireflyWeb do
   def live_component do
     quote do
       use Phoenix.LiveComponent
+      use FireflyWeb.LiveStripNul
 
       unquote(html_helpers())
     end

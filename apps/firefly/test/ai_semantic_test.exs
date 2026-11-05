@@ -206,7 +206,7 @@ defmodule Firefly.AISemanticTest do
       refute hidden.id in Enum.map(topics, & &1.topic_id)
 
       assert %{structuredContent: %{username: "alice", stats: _}} =
-               call(ctx.alice, "get_user_profile", %{"username" => "alice"})
+               call(ctx.alice, "get_user_profile", %{"username" => "ALICE"})
 
       Repo.update!(Ecto.Changeset.change(ctx.admin, hide_profile: true))
 

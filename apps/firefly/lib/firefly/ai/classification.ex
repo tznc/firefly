@@ -5,7 +5,7 @@ defmodule Firefly.AI.Classification do
   `negative`) and the model's `reason`, for moderators.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   @sentiments ~w(positive neutral negative)
 

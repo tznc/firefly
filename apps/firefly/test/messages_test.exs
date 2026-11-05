@@ -348,16 +348,19 @@ defmodule Firefly.MessagesTest do
   end
 
   # Found by Firefly.MessagingPropertyTest: Postgres refused a recipient
-  # name holding NUL, and starting the conversation raised.
-  test "a recipient name with NUL is an unknown user, not a crash", %{alice: alice} do
-    assert {:error, changeset} =
+  # name holding NUL, and starting the conversation raised. Input is now
+  # stripped of NUL, so the name is bob's; a lookup given NUL directly
+  # still matches nobody.
+  test "a recipient name with NUL is stripped, not a crash", %{alice: alice, bob: bob} do
+    assert {:ok, conversation} =
              Messaging.start_conversation(alice, %{
                "title" => "A fine title",
                "body" => "Hello there.",
                "recipients" => <<"bob", 0>>
              })
 
-    assert changeset.errors[:recipients]
+    assert Messaging.unread_conversation_count(bob) == 1
+    assert conversation.title == "A fine title"
     assert Accounts.users_by_username([<<"bob", 0>>, <<0xFF>>]) == %{}
     assert Groups.by_names([<<"team", 0>>]) == %{}
   end

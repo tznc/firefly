@@ -5,7 +5,7 @@ defmodule Firefly.AI.FeatureSetting do
   feature without a row is off.
   """
   use Ecto.Schema
-  import Ecto.Changeset
+  use Firefly.Changeset
 
   alias Firefly.AI.ProviderConfig
 

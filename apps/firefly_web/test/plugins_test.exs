@@ -251,6 +251,29 @@ defmodule FireflyWeb.PluginsTest do
     end
   end
 
+  describe "NUL characters" do
+    # Postgres can't store them, in text or in JSON (the plugin's storage).
+    test "are stripped from what a plugin stores and hands back", %{admin: admin} do
+      source = """
+      exports.go = () => {
+        firefly.call('kv.set', {key: 'k', value: {text: 'a\\u0000b'}});
+        return {text: 'c\\u0000d', stored: firefly.call('kv.get', {key: 'k'})};
+      };
+      """
+
+      id =
+        install_plugin!(
+          admin,
+          plugin("nul", %{}, %{"exports" => ["go"]}),
+          %{"index.js" => source},
+          enable: true
+        )
+
+      assert {:ok, %{"text" => "cd", "stored" => %{"text" => "ab"}}} =
+               Runner.invoke(Plugins.get_active(id), "call_export", ["go", %{}])
+    end
+  end
+
   describe "circuit breaker" do
     test "turns a failing plugin off, suspends its dependents and tells staff", %{admin: admin} do
       install_plugin!(admin, plugin("flaky", %{}, %{"exports" => ["go"]}), %{
