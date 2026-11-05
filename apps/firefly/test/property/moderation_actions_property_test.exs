@@ -9,21 +9,15 @@ defmodule Firefly.ModerationActionsPropertyTest do
   """
   # Sync: it makes admins (the shared admin role) and sends mail.
   use Firefly.DataCase, async: false
-  use Bamboo.Test, shared: true
   use ExUnitProperties
 
   import Firefly.Generators
   import Firefly.Fixtures
 
-  alias Firefly.{Accounts, Notifications, SiteSettings}
+  alias Firefly.{Accounts, SiteSettings}
   alias Firefly.Accounts.User
   alias Firefly.Discussion.{Post, Thread}
   alias Firefly.Moderation.{Flags, Penalties, TopicTimers}
-
-  setup do
-    {:ok, _} = Notifications.start_link()
-    :ok
-  end
 
   defp member(trust_level \\ 1) do
     {:ok, user} = Accounts.confirm_user(user_fixture())
