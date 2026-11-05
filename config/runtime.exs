@@ -157,12 +157,9 @@ if config_env() != :test do
 end
 
 # Outbound email (see Firefly.Mailer): FIREFLY_MAIL_ADAPTER picks the adapter,
-# each with its own variables; FIREFLY_SENDGRID_API_KEY alone still means
-# SendGrid. Production refuses to start without one; development keeps mail
-# in memory, the tests in the test adapter.
-mail_adapter =
-  System.get_env("FIREFLY_MAIL_ADAPTER") ||
-    if System.get_env("FIREFLY_SENDGRID_API_KEY"), do: "sendgrid"
+# each with its own variables. Production refuses to start without one;
+# development keeps mail in memory, the tests in the test adapter.
+mail_adapter = System.get_env("FIREFLY_MAIL_ADAPTER")
 
 if config_env() != :test and mail_adapter do
   required = fn name ->
