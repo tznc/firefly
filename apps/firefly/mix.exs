@@ -34,7 +34,7 @@ defmodule Firefly.MixProject do
   defp deps do
     [
       # Enforces the contexts' public APIs at compile time (see the Firefly module).
-      {:boundary, "~> 0.10.4", runtime: false},
+      {:boundary, "~> 0.12.0", runtime: false},
       {:ecto_sql, "~> 3.14"},
       {:postgrex, "~> 0.22"},
       {:phoenix_pubsub, "~> 2.1"},
@@ -98,7 +98,7 @@ defmodule Firefly.MixProject do
       {:req, "~> 0.7.5"},
       # SAML responses and metadata (see Firefly.Accounts.Auth.SAML): a parser
       # that makes no atoms and expands no external entities.
-      {:saxy, "~> 1.6.1"},
+      {:saxy, "~> 1.7.0"},
       # Embeddings for semantic search, in a pgvector column.
       {:pgvector, "~> 0.4.2"},
       # Tests fake AI providers with a local HTTP server (see Firefly.AI.FakeProvider).
