@@ -53,7 +53,9 @@ defmodule Firefly.Text do
   `changeset` with NUL characters stripped from its changes to text, map
   and array-of-text fields (by their database type, so binary fields, which
   may hold NUL bytes, are left alone), and from those of the changesets
-  nested in it (associations, embeds). Anything else is returned as it is.
+  nested in it (associations, embeds). A schema struct inserted as it is
+  (`Repo.insert(%Schema{...})`) has its text fields stripped the same way.
+  Anything else is returned as it is.
   """
   @spec strip_nul_changes(term) :: term
   def strip_nul_changes(%Ecto.Changeset{changes: changes, types: types} = changeset) do
@@ -61,6 +63,12 @@ defmodule Firefly.Text do
       Map.new(changes, fn {field, value} -> {field, strip_change(types[field], value)} end)
 
     %{changeset | changes: changes}
+  end
+
+  def strip_nul_changes(%schema{__meta__: %Ecto.Schema.Metadata{}} = struct) do
+    Enum.reduce(schema.__schema__(:fields), struct, fn field, struct ->
+      Map.update!(struct, field, &strip_change(schema.__schema__(:type, field), &1))
+    end)
   end
 
   def strip_nul_changes(other), do: other
