@@ -186,7 +186,11 @@ defmodule Firefly.Plugin.Manifest do
        "the moderate_post hook needs the read permission"},
       {"flag_created" in hooks and "flag" not in permissions,
        "the flag_created hook needs the flag permission"},
-      {events != [] and "read" not in permissions, "\"events\" needs the read permission"},
+      {events -- Firefly.Plugins.Events.security_names() != [] and "read" not in permissions,
+       "\"events\" needs the read permission"},
+      {Enum.any?(events, &(&1 in Firefly.Plugins.Events.security_names())) and
+         "security" not in permissions,
+       "the ip_banned and ip_unbanned events need the security permission"},
       {"flag_raised" in events and "flag" not in permissions,
        "the flag_raised event needs the flag permission"},
       {Map.get(attrs, "jobs", []) != [] and "run_job" not in hooks,
@@ -291,7 +295,13 @@ defmodule Firefly.Plugin.Manifest do
   end
 
   defp check("events", value, _source),
-    do: known_list("events", value, Firefly.Plugins.Events.names(), "event")
+    do:
+      known_list(
+        "events",
+        value,
+        Firefly.Plugins.Events.names() ++ Firefly.Plugins.Events.security_names(),
+        "event"
+      )
 
   defp check("jobs", value, _source) do
     if is_list(value) and length(value) <= 20 do

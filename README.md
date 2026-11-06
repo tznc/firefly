@@ -698,12 +698,47 @@ on every page says so). Every create, update and delete there is recorded
 in the staff log. It follows the site's light/dark choice and its active
 theme's colors.
 
+### Banning (fail2ban)
+
+Addresses that keep failing are banned for a while: every page answers them
+with a short 403 (`Retry-After` set), before the session or anything else
+runs. Health checks and metrics are answered before that check.
+
+What counts, by *jail* (each with its own points threshold, find-time window
+and first ban length, in Settings > Security > Banning):
+
+| Jail | Signals |
+| --- | --- |
+| `auth` | failed password, two-factor and passkey logins, invalid magic links, bad API keys |
+| `rate_limit` | any request refused by a rate limit |
+| `probe` | 404s (1 point), exploit scanners' paths like `/wp-login.php`, `/.env`, `/.git/` or `*.php` (10 points, answered 404 at once) |
+| `csrf` | CSRF failures, invalid or expired confirmation, reset and unsubscribe links |
+| `spam` | Akismet spam verdicts, watched-word blocks, screening hits |
+| `signature` | inbound-email webhook token and plugin endpoint secret failures |
+| `bot` | failed bot challenges |
+| `plugin` | what plugins report (`jail.signal`, see PLUGINS.md) |
+
+Each further ban of the same address lasts `jail_bantime_factor` times
+longer (2 by default), up to `jail_max_ban_hours` (a week). IPv6 addresses
+are banned by their /64 unless `jail_ipv6_prefix` says single addresses.
+The `jail_allowlist` setting's addresses and ranges and the trusted proxies
+(`FIREFLY_TRUSTED_PROXIES`) are never banned: set the latter behind a
+proxy, or the jail sees only the proxy. Admins see the bans in force and the
+addresses closest to one at `/staff/security`, and ban or unban addresses
+and ranges there (staff-logged). Every ban is in the security log.
+
+Points are counted in memory on each node; bans are stored in the database
+(they survive restarts) and shared by every node in a cluster. Ended bans
+are forgotten after `ip_retention_days`. Prometheus has
+`firefly_security_signal_count` (by jail and kind) and
+`firefly_security_ban_count` (by jail and source), never with addresses.
+
 ### Security log and IP retention
 
 The security log (`Firefly.Security`) records logins and failed attempts
 (password, two-factor, passkey, API), two-factor, passkey and password
 changes, API keys (created, first used from each address, revoked),
-suspensions and silences, and quarantined uploads, with the client's IP
+suspensions and silences, IP bans and quarantined uploads, with the client's IP
 address and browser. Members see their own under Settings > Security; admins
 see everyone's at `/staff/security`, filtered by event, username or address.
 

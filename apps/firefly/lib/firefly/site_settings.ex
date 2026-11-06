@@ -48,7 +48,7 @@ defmodule Firefly.SiteSettings do
     {"Posting",
      ["Content", "Spam and new users", "Akismet", "Uploads", "Link previews", "Search"]},
     {"Email", ["Email"]},
-    {"Security", ["Rate limits", "API", "Security log"]},
+    {"Security", ["Rate limits", "API", "Security log", "Banning"]},
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
@@ -1394,7 +1394,9 @@ defmodule Firefly.SiteSettings do
     appearance_definitions() ++
       account_definitions() ++
       member_default_definitions() ++
-      limit_definitions() ++ rate_limit_definitions()
+      limit_definitions() ++
+      rate_limit_definitions() ++
+      Firefly.Security.Jail.setting_definitions()
   end
 
   defp appearance_definitions do
@@ -1665,7 +1667,8 @@ defmodule Firefly.SiteSettings do
     {"plugin_notify", "Notifications per plugin", "per hour"},
     {"plugin_call", "Plugin widget calls per member", "per minute"},
     {"plugin_api", "Plugin endpoint requests per IP address", "per minute"},
-    {"plugin_storage", "Plugin storage writes per member", "per minute"}
+    {"plugin_storage", "Plugin storage writes per member", "per minute"},
+    {"plugin_jail", "Plugin reports to the ban list", "per minute"}
   ]
 
   defp rate_limit_definitions do

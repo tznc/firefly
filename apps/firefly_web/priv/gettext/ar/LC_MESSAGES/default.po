@@ -139,7 +139,7 @@ msgid "Chat"
 msgstr "المحادثة"
 
 #: lib/firefly_web/live/auth_live/reset_password.ex:16
-#: lib/firefly_web/live/auth_live/reset_password.ex:52
+#: lib/firefly_web/live/auth_live/reset_password.ex:55
 #, elixir-autogen, elixir-format
 msgid "Choose a new password"
 msgstr "اختر كلمة مرور جديدة"
@@ -150,7 +150,7 @@ msgstr "اختر كلمة مرور جديدة"
 msgid "Close menu"
 msgstr "إغلاق القائمة"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:71
+#: lib/firefly_web/live/auth_live/reset_password.ex:74
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr "تأكيد كلمة المرور الجديدة"
@@ -354,7 +354,7 @@ msgstr "الرسائل"
 msgid "New here?"
 msgstr "جديد هنا؟"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:65
+#: lib/firefly_web/live/auth_live/reset_password.ex:68
 #, elixir-autogen, elixir-format
 msgid "New password"
 msgstr "كلمة مرور جديدة"
@@ -391,7 +391,7 @@ msgstr "أشارك فيها"
 msgid "Password"
 msgstr "كلمة المرور"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:39
+#: lib/firefly_web/live/auth_live/reset_password.ex:42
 #, elixir-autogen, elixir-format
 msgid "Password reset. Log in with your new password."
 msgstr ""
@@ -430,7 +430,7 @@ msgstr "المراجعة"
 msgid "Save"
 msgstr "حفظ"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/auth_live/reset_password.ex:77
 #: lib/firefly_web/live/settings_live/index.ex:697
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
@@ -502,7 +502,7 @@ msgstr "مجموعات الوسوم"
 msgid "Tags"
 msgstr "الوسوم"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:23
+#: lib/firefly_web/live/auth_live/reset_password.ex:26
 #, elixir-autogen, elixir-format
 msgid "That reset link is invalid or has expired."
 msgstr ""
@@ -631,7 +631,7 @@ msgstr "أرسل لي رابطًا"
 msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:75
+#: lib/firefly_web/live/auth_live/reset_password.ex:78
 #, elixir-autogen, elixir-format
 msgid "Reset password"
 msgstr "إعادة تعيين كلمة المرور"
@@ -770,6 +770,7 @@ msgid "Account to merge into"
 msgstr "الحساب المراد الدمج فيه"
 
 #: lib/firefly_web/live/staff_live/screening.ex:129
+#: lib/firefly_web/live/staff_live/security.ex:166
 #: lib/firefly_web/live/staff_live/users.ex:134
 #, elixir-autogen, elixir-format
 msgid "Actions"
@@ -820,6 +821,8 @@ msgstr "أضافه"
 msgid "Added to %{group}."
 msgstr "أُضيف إلى %{group}."
 
+#: lib/firefly_web/live/staff_live/security.ex:162
+#: lib/firefly_web/live/staff_live/security.ex:211
 #: lib/firefly_web/live/staff_live/user.ex:510
 #, elixir-autogen, elixir-format
 msgid "Address"
@@ -1309,6 +1312,7 @@ msgstr "لا شيء ساري المفعول."
 msgid "None recorded yet."
 msgstr "لم يُسجَّل شيء بعد."
 
+#: lib/firefly_web/live/staff_live/security.ex:206
 #: lib/firefly_web/live/staff_live/user.ex:432
 #: lib/firefly_web/live/staff_live/user.ex:535
 #, elixir-autogen, elixir-format
@@ -2794,7 +2798,7 @@ msgstr "تم كتم الحساب"
 msgid "Account suspended"
 msgstr "تم تعليق الحساب"
 
-#: lib/firefly_web/live/staff_live/security.ex:76
+#: lib/firefly_web/live/staff_live/security.ex:240
 #, elixir-autogen, elixir-format
 msgid "Any event"
 msgstr "أي حدث"
@@ -2810,7 +2814,7 @@ msgid "Browser"
 msgstr "المتصفح"
 
 #: lib/firefly_web/components/security_components.ex:51
-#: lib/firefly_web/live/staff_live/security.ex:75
+#: lib/firefly_web/live/staff_live/security.ex:239
 #, elixir-autogen, elixir-format
 msgid "Event"
 msgstr "الحدث"
@@ -2840,7 +2844,7 @@ msgstr "أُلغي حظر عنوان IP"
 msgid "Logged in"
 msgstr "تسجيل الدخول"
 
-#: lib/firefly_web/live/staff_live/security.ex:59
+#: lib/firefly_web/live/staff_live/security.ex:125
 #, elixir-autogen, elixir-format
 msgid "Logins, failed attempts and account security changes, newest first."
 msgstr "عمليات تسجيل الدخول والمحاولات الفاشلة وتغييرات أمان الحسابات، الأحدث أولًا."
@@ -2860,7 +2864,7 @@ msgstr "العضو"
 msgid "New backup codes"
 msgstr "رموز احتياطية جديدة"
 
-#: lib/firefly_web/live/staff_live/security.ex:88
+#: lib/firefly_web/live/staff_live/security.ex:252
 #, elixir-autogen, elixir-format
 msgid "No security events."
 msgstr "لا توجد أحداث أمنية."
@@ -2895,8 +2899,8 @@ msgstr "تم تغيير كلمة المرور"
 msgid "Recent security activity"
 msgstr "نشاط الأمان الأخير"
 
-#: lib/firefly_web/live/staff_live/security.ex:21
-#: lib/firefly_web/live/staff_live/security.ex:57
+#: lib/firefly_web/live/staff_live/security.ex:29
+#: lib/firefly_web/live/staff_live/security.ex:123
 #: lib/firefly_web/staff_nav.ex:146
 #, elixir-autogen, elixir-format
 msgid "Security"
@@ -2912,7 +2916,7 @@ msgstr "تمت إضافة مفتاح أمان"
 msgid "Security key removed"
 msgstr "تمت إزالة مفتاح أمان"
 
-#: lib/firefly_web/live/staff_live/security.ex:64
+#: lib/firefly_web/live/staff_live/security.ex:228
 #, elixir-autogen, elixir-format
 msgid "Security log"
 msgstr "سجل الأمان"
@@ -2947,7 +2951,7 @@ msgstr "تم تفعيل التحقق بخطوتين"
 msgid "Upload quarantined by the virus scanner"
 msgstr "عزل فاحص الفيروسات الملف المرفوع"
 
-#: lib/firefly_web/live/staff_live/security.ex:82
+#: lib/firefly_web/live/staff_live/security.ex:246
 #, elixir-autogen, elixir-format
 msgid "Username or IP address"
 msgstr "اسم المستخدم أو عنوان IP"
@@ -2956,6 +2960,122 @@ msgstr "اسم المستخدم أو عنوان IP"
 #, elixir-autogen, elixir-format
 msgid "Wrong two-factor code"
 msgstr "رمز التحقق بخطوتين خاطئ"
+
+#: lib/firefly_web/live/staff_live/security.ex:71
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr "يوم واحد"
+
+#: lib/firefly_web/live/staff_live/security.ex:70
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr "ساعة واحدة"
+
+#: lib/firefly_web/live/staff_live/security.ex:72
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr "أسبوع واحد"
+
+#: lib/firefly_web/live/staff_live/security.ex:73
+#, elixir-autogen, elixir-format
+msgid "30 days"
+msgstr "30 يومًا"
+
+#: lib/firefly_web/live/staff_live/security.ex:204
+#, elixir-autogen, elixir-format
+msgid "Addresses with points towards a ban on this server now, closest first."
+msgstr "العناوين التي لديها نقاط نحو الحظر على هذا الخادم الآن، الأقرب أولًا."
+
+#: lib/firefly_web/live/staff_live/security.ex:150
+#, elixir-autogen, elixir-format
+msgid "Ban"
+msgstr "حظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:90
+#, elixir-autogen, elixir-format
+msgid "Banned %{ip}."
+msgstr "تم حظر %{ip}."
+
+#: lib/firefly_web/live/staff_live/security.ex:130
+#, elixir-autogen, elixir-format
+msgid "Banned addresses"
+msgstr "العناوين المحظورة"
+
+#: lib/firefly_web/live/staff_live/security.ex:132
+#, elixir-autogen, elixir-format
+msgid "Banning is off (Settings > Security > Banning): these bans aren't enforced."
+msgstr "الحظر متوقف (الإعدادات > الأمان > الحظر): لا تُطبَّق هذه الحظورات."
+
+#: lib/firefly_web/live/staff_live/security.ex:164
+#, elixir-autogen, elixir-format
+msgid "Bans"
+msgstr "مرات الحظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:145
+#, elixir-autogen, elixir-format
+msgid "For"
+msgstr "لمدة"
+
+#: lib/firefly_web/live/staff_live/security.ex:141
+#, elixir-autogen, elixir-format
+msgid "IP address or range"
+msgstr "عنوان IP أو نطاق"
+
+#: lib/firefly_web/live/staff_live/security.ex:212
+#, elixir-autogen, elixir-format
+msgid "Jail"
+msgstr "المجموعة"
+
+#: lib/firefly_web/live/staff_live/security.ex:155
+#, elixir-autogen, elixir-format
+msgid "No address is banned."
+msgstr "لا يوجد عنوان محظور."
+
+#: lib/firefly_web/live/staff_live/security.ex:213
+#, elixir-autogen, elixir-format
+msgid "Points"
+msgstr "النقاط"
+
+#: lib/firefly_web/live/staff_live/security.ex:148
+#, elixir-autogen, elixir-format
+msgid "Reason"
+msgstr "السبب"
+
+#: lib/firefly_web/live/staff_live/security.ex:202
+#, elixir-autogen, elixir-format
+msgid "Recent offenders"
+msgstr "المخالفون مؤخرًا"
+
+#: lib/firefly_web/live/staff_live/security.ex:194
+#, elixir-autogen, elixir-format
+msgid "Unban"
+msgstr "إلغاء الحظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:192
+#, elixir-autogen, elixir-format
+msgid "Unban %{ip}"
+msgstr "إلغاء حظر %{ip}"
+
+#: lib/firefly_web/live/staff_live/security.ex:108
+#, elixir-autogen, elixir-format
+msgid "Unbanned %{ip}."
+msgstr "أُلغي حظر %{ip}."
+
+#: lib/firefly_web/live/staff_live/security.ex:165
+#, elixir-autogen, elixir-format
+msgid "Until"
+msgstr "حتى"
+
+#: lib/firefly_web/live/staff_live/security.ex:68
+#: lib/firefly_web/live/staff_live/security.ex:183
+#, elixir-autogen, elixir-format
+msgid "Until unbanned"
+msgstr "حتى إلغاء الحظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:163
+#, elixir-autogen, elixir-format
+msgid "Why"
+msgstr "السبب"
 
 #: lib/firefly_web/unstorable_text.ex:21
 #, elixir-autogen, elixir-format

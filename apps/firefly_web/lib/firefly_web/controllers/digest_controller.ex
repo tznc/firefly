@@ -10,8 +10,12 @@ defmodule FireflyWeb.DigestController do
 
   def unsubscribe(conn, %{"token" => token}) do
     case Digests.unsubscribe(token) do
-      {:ok, _user} -> text(conn, "Unsubscribed from digest emails.")
-      {:error, _reason} -> conn |> put_status(:not_found) |> text("This link has expired.")
+      {:ok, _user} ->
+        text(conn, "Unsubscribed from digest emails.")
+
+      {:error, _reason} ->
+        Firefly.Security.Jail.signal(conn.remote_ip, "invalid_token")
+        conn |> put_status(:not_found) |> text("This link has expired.")
     end
   end
 end

@@ -36,6 +36,11 @@ defmodule Firefly.RateLimit do
     * `:plugin_api` - requests to a plugin's endpoints, per plugin and client IP
     * `:plugin_storage` - widget writes to a member's plugin storage, per
       plugin and member
+    * `:plugin_jail` - addresses a plugin reports to the jail (`jail.signal`),
+      per plugin
+
+  Every request refused for a limit is also a signal for the jail (see
+  `Firefly.Security.Jail`), from the client being served.
   """
   use Hammer, backend: :ets
 
@@ -61,7 +66,8 @@ defmodule Firefly.RateLimit do
     plugin_notify: {100, :timer.hours(1)},
     plugin_call: {60, :timer.minutes(1)},
     plugin_api: {300, :timer.minutes(1)},
-    plugin_storage: {30, :timer.minutes(1)}
+    plugin_storage: {30, :timer.minutes(1)},
+    plugin_jail: {60, :timer.minutes(1)}
   ]
 
   @doc "Checks the `bucket` limit for `key`: `:ok` or `{:error, :rate_limited}`."
@@ -69,8 +75,12 @@ defmodule Firefly.RateLimit do
     {limit, scale} = limit(bucket)
 
     case hit("#{bucket}:#{key}", scale, limit) do
-      {:allow, _count} -> :ok
-      {:deny, _retry_after} -> {:error, :rate_limited}
+      {:allow, _count} ->
+        :ok
+
+      {:deny, _retry_after} ->
+        Firefly.Security.Jail.signal_client("rate_limited", %{bucket: bucket})
+        {:error, :rate_limited}
     end
   end
 
