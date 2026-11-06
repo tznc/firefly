@@ -33,7 +33,7 @@ defmodule FireflyImport.MixProject do
   defp deps do
     [
       # Enforces the contexts' public APIs at compile time (see the Firefly module).
-      {:boundary, "~> 0.10.4", runtime: false},
+      {:boundary, "~> 0.12.0", runtime: false},
       {:firefly, in_umbrella: true},
       {:jason, "~> 1.4"},
       # Discourse's database.
