@@ -698,6 +698,23 @@ on every page says so). Every create, update and delete there is recorded
 in the staff log. It follows the site's light/dark choice and its active
 theme's colors.
 
+### Security log and IP retention
+
+The security log (`Firefly.Security`) records logins and failed attempts
+(password, two-factor, passkey, API), two-factor, passkey and password
+changes, API keys (created, first used from each address, revoked),
+suspensions and silences, and quarantined uploads, with the client's IP
+address and browser. Members see their own under Settings > Security; admins
+see everyone's at `/staff/security`, filtered by event, username or address.
+
+Full IP addresses are kept for the `ip_retention_days` setting (Security >
+Security log, default 90). An hourly job then cuts them to their network
+(/24 for IPv4, /48 for IPv6) in the security log, API keys' last use and
+Akismet checks, and deletes members' address records (`user_ips`), which are
+only useful whole. Analytics never store addresses (visitors are a salted
+hash); the Akismet check jobs carry the address until the job history is
+pruned (`job_retention_days`).
+
 ### Plugins
 
 Core plugins are written in Elixir; third-party JavaScript plugins run

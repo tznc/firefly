@@ -70,6 +70,8 @@ defmodule FireflyWeb.TwoFactorController do
   defp finish(conn, user, {:ok, notice}), do: Login.log_in(conn, user, notice)
 
   defp finish(conn, user, {:error, message}) do
+    Login.failed("two_factor.failure", user)
+
     conn
     |> Login.put_key_challenge(user)
     |> put_flash(:error, message)

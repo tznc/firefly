@@ -224,6 +224,7 @@ defmodule FireflyWeb.Router do
       live("/staff/embedding", StaffLive.Embedding, :index)
       live("/staff/ai", StaffLive.AI, :index)
       live("/staff/log", StaffLive.Log, :index)
+      live("/staff/security", StaffLive.Security, :index)
       live("/staff/settings", StaffLive.Settings, :index)
       live("/staff/groups", StaffLive.Groups, :index)
       live("/staff/review", StaffLive.Review, :index)

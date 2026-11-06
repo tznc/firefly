@@ -142,6 +142,13 @@ defmodule FireflyWeb.StaffNav do
            ~w(screened blocked emails ips urls domains spam)
          ),
          page(
+           "/staff/security",
+           gettext("Security"),
+           "hero-shield-check",
+           :manage_security,
+           ~w(security log logins failed attempts ip addresses)
+         ),
+         page(
            "/staff/log",
            gettext("Staff log"),
            "hero-clipboard-document-list",

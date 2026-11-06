@@ -7,7 +7,7 @@ defmodule FireflyWeb.Api.V1.AuthController do
   see `Firefly.Accounts.TwoFactor`). Errors are problem details.
   """
   use FireflyWeb, :controller
-  alias Firefly.{Accounts, RateLimit}
+  alias Firefly.{Accounts, RateLimit, Security}
   alias Firefly.Accounts.{ApiKeys, TwoFactor, User}
   alias Firefly.Moderation.Penalties
   alias FireflyWeb.Api.Problem
@@ -20,6 +20,7 @@ defmodule FireflyWeb.Api.V1.AuthController do
          true <- not User.suspended?(user) || {:suspended, user},
          :ok <- second_factor(user, user_params["otp"]),
          {:ok, _key, token} <- ApiKeys.create_login_key(user) do
+      Security.record("login.success", user, %{method: "api"})
       json(conn, %{"data" => %{"api_token" => token}})
     else
       {:suspended, user} ->
@@ -35,6 +36,7 @@ defmodule FireflyWeb.Api.V1.AuthController do
         Problem.send(conn, 429, RateLimit.message())
 
       {:error, _reason} ->
+        Security.login_failed("login.failure", user_params["username"], %{method: "api"})
         Problem.send(conn, 401, "Login failed.")
     end
   end
