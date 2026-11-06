@@ -56,7 +56,7 @@
         });
       })();
     </script>
-    {if assigns[:site_theme], do: raw(Firefly.Themes.html(@site_theme, :head, assigns[:csp_nonce]))}
+    <.theme_html theme={assigns[:site_theme]} place={:head} nonce={assigns[:csp_nonce]} />
   </head>
   <body class="bg-base-200 min-h-screen">
     <noscript>
@@ -70,8 +70,8 @@
         {gettext("Stop previewing")}
       </.link>
     </div>
-    {if assigns[:site_theme], do: raw(Firefly.Themes.html(@site_theme, :header, assigns[:csp_nonce]))}
+    <.theme_html theme={assigns[:site_theme]} place={:header} nonce={assigns[:csp_nonce]} />
     {@inner_content}
-    {if assigns[:site_theme], do: raw(Firefly.Themes.html(@site_theme, :footer, assigns[:csp_nonce]))}
+    <.theme_html theme={assigns[:site_theme]} place={:footer} nonce={assigns[:csp_nonce]} />
   </body>
 </html>

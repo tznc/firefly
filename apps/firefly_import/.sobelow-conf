@@ -1,0 +1,12 @@
+# Sobelow (static security analysis) for the importers, which have no
+# router. CI runs `mix sobelow --root apps/firefly_import` from the umbrella root
+# and fails on any finding (`exit: :low`). Findings reviewed as false
+# positives are skipped in place with a `# sobelow_skip [...]` comment and
+# its reason (`skip: true`); nothing is ignored wholesale.
+[
+  router: ":none",
+  exit: :low,
+  skip: true,
+  private: true,
+  format: "compact"
+]

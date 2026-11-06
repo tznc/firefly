@@ -13,6 +13,8 @@ defmodule FireflyWeb.Api.V1.DocsController do
 
   def spec(conn, _params), do: json(conn, OpenAPI.spec())
 
+  # Sobelow: a fixed page; the one interpolated value, the site title, is HTML-escaped.
+  # sobelow_skip ["XSS.SendResp"]
   def show(conn, _params) do
     title =
       Phoenix.HTML.safe_to_string(

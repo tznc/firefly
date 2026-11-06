@@ -105,6 +105,9 @@ defmodule FireflyWeb.SAMLController do
     end
   end
 
+  # Sobelow: XML the SAML library builds from the site's own settings, served as
+  # application/samlmetadata+xml.
+  # sobelow_skip ["XSS.SendResp"]
   def metadata(conn, _params) do
     conn
     |> put_resp_content_type("application/samlmetadata+xml")

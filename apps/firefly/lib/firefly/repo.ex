@@ -1,14 +1,16 @@
 defmodule Firefly.Repo do
   @moduledoc """
-  The repository. Every changeset it inserts or updates loses its NUL
-  characters first (see `Firefly.Text.strip_nul_changes/1`): PostgreSQL
-  can't store them. Casting strips them already (`Firefly.Changeset`);
-  this catches what was put into a changeset without casting, on every
-  write path (contexts, `Ecto.Multi`, jobs, the database admin, plugins).
+  The repository. Every changeset or schema struct it inserts or updates
+  loses its NUL characters first (see `Firefly.Text.strip_nul_changes/1`):
+  PostgreSQL can't store them. Casting strips them already
+  (`Firefly.Changeset`); this catches what was put into a changeset without
+  casting, or inserted as a struct, on every write path (contexts,
+  `Ecto.Multi`, jobs, the database admin, plugins).
 
-  A write PostgreSQL still refuses for its text (a NUL in a raw struct's
-  fields, say) returns `{:error, changeset}` with a `:base` error, like a
-  failed validation; the bang versions raise as usual.
+  A write PostgreSQL still refuses for its text (bytes that aren't UTF-8,
+  or a NUL through `insert_all` or a query) returns `{:error, changeset}`
+  with a `:base` error, like a failed validation; the bang versions raise
+  as usual.
   """
 
   use Ecto.Repo, otp_app: :firefly, adapter: Ecto.Adapters.Postgres

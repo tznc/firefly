@@ -39,3 +39,6 @@ screenshots
 # ExUnit @tag :tmp_dir scratch files.
 /tmp/
 /apps/*/tmp/
+
+# Sobelow's link to config/ (see "Security checks" in README.md).
+/apps/firefly_web/config

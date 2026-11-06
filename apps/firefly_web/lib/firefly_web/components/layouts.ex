@@ -306,6 +306,20 @@ defmodule FireflyWeb.Layouts do
     """
   end
 
+  attr :theme, :any, required: true, doc: "the site theme, or nil"
+  attr :place, :atom, required: true, values: [:head, :header, :footer]
+  attr :nonce, :string, default: nil, doc: "the CSP nonce for a theme's scripts"
+
+  @doc "The HTML the site theme adds to the page at `place` (see `Firefly.Themes.html/3`)."
+  # Sobelow: theme HTML is written by admins; Themes.html/3 scrubs it unless
+  # the theme is allowed scripts, which then run only with the CSP nonce.
+  # sobelow_skip ["XSS.Raw"]
+  def theme_html(assigns) do
+    ~H"""
+    {if @theme, do: raw(Firefly.Themes.html(@theme, @place, @nonce))}
+    """
+  end
+
   attr :current_user, :any, required: true
 
   @doc "Asks a user with an unconfirmed email address to confirm it."

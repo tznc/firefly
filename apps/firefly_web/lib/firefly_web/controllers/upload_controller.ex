@@ -60,6 +60,10 @@ defmodule FireflyWeb.UploadController do
 
   defp key(upload, :thumbnail), do: {:ok, Uploads.key(upload)}
 
+  # Sobelow: the type is the one Uploads.Processor detected from the content (an allow-list
+  # without HTML or SVG), sent with nosniff and a sandbox CSP; the path is the storage key, made
+  # from the file's SHA-256.
+  # sobelow_skip ["XSS.ContentType", "Traversal.SendFile"]
   defp send_upload(conn, upload, key) do
     disposition = disposition(upload)
 

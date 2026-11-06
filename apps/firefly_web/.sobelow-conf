@@ -1,0 +1,26 @@
+# Sobelow (static security analysis) for the web app. CI runs, from the
+# umbrella root, `mix sobelow --root apps/firefly_web` with this file, and
+# fails on any finding at any confidence (`exit: :low`).
+#
+# Each finding reviewed as a false positive is skipped where it is, with a
+# `# sobelow_skip [...]` comment and its reason above the function or
+# pipeline (`skip: true`). Whole checks are ignored here only when they can't
+# be skipped in place, each with its reason.
+[
+  router: "lib/firefly_web/router.ex",
+  exit: :low,
+  skip: true,
+  private: true,
+  format: "compact",
+  ignore: [
+    # Config.CSRFRoute flags actions shared by a GET and a state-changing
+    # route, and has no in-place skip (its fingerprints include the line
+    # number). The two such actions are reviewed: AuthController.callback
+    # (GET for OAuth providers, POST for the password form and Sign in with
+    # Apple's form_post; Ueberauth runs a strategy's callback only for its
+    # configured methods and checks the OAuth state) and
+    # MCPController.unsupported (GET and DELETE, both answered 405).
+    # Review any new shared action the same way.
+    "Config.CSRFRoute"
+  ]
+]
