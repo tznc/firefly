@@ -96,7 +96,7 @@ defmodule Firefly.MixProject do
       {:req, "~> 0.7.5"},
       # SAML responses and metadata (see Firefly.Accounts.Auth.SAML): a parser
       # that makes no atoms and expands no external entities.
-      {:saxy, "~> 1.6.1"},
+      {:saxy, "~> 1.7.0"},
       # Embeddings for semantic search, in a pgvector column.
       {:pgvector, "~> 0.4.2"},
       # Tests fake AI providers with a local HTTP server (see Firefly.AI.FakeProvider).
