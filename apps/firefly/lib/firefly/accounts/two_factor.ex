@@ -24,7 +24,7 @@ defmodule Firefly.Accounts.TwoFactor do
 
   import Ecto.Query
 
-  alias Firefly.{Accounts, Repo, SiteSettings}
+  alias Firefly.{Accounts, Repo, Security, SiteSettings}
   alias Firefly.Moderation.StaffLog
   alias Firefly.Accounts.User
   alias Firefly.Accounts.TwoFactor.{BackupCode, Credential, Totp}
@@ -95,6 +95,7 @@ defmodule Firefly.Accounts.TwoFactor do
         Repo.delete_all(from(t in Totp, where: t.user_id == ^user.id))
 
         Repo.insert!(%Totp{user_id: user.id, secret: secret})
+        Security.record("two_factor.enable", user, %{method: "totp"})
 
         {:ok, if(backup_codes_left(user) == 0, do: insert_backup_codes(user), else: [])}
       end)
@@ -111,7 +112,7 @@ defmodule Firefly.Accounts.TwoFactor do
     with :ok <- confirm(user, confirmation) do
       Repo.delete_all(from(t in Totp, where: t.user_id == ^user.id))
       unless enabled?(user), do: delete_backup_codes(user)
-      :ok
+      Security.record("two_factor.disable", user, %{method: "totp"})
     end
   end
 
@@ -180,6 +181,7 @@ defmodule Firefly.Accounts.TwoFactor do
     if enabled?(user) do
       Repo.transact(fn ->
         delete_backup_codes(user)
+        Security.record("two_factor.backup_codes", user)
         {:ok, insert_backup_codes(user)}
       end)
     else
@@ -245,6 +247,8 @@ defmodule Firefly.Accounts.TwoFactor do
       |> Repo.insert()
 
     with {:ok, credential} <- result do
+      Security.record("two_factor.key_add", user, %{name: credential.name})
+
       if backup_codes_left(user) == 0,
         do: {:ok, credential, insert_backup_codes(user)},
         else: {:ok, credential, []}
@@ -267,7 +271,7 @@ defmodule Firefly.Accounts.TwoFactor do
       )
 
       unless enabled?(user), do: delete_backup_codes(user)
-      :ok
+      Security.record("two_factor.key_remove", user)
     end
   end
 
@@ -283,6 +287,7 @@ defmodule Firefly.Accounts.TwoFactor do
       Repo.delete_all(from(c in Credential, where: c.user_id == ^user.id and not c.passkey))
 
       StaffLog.record(admin, "user.reset_two_factor", user, %{username: user.username})
+      Security.record("two_factor.reset", user, %{by: admin.username}, ip: nil, user_agent: nil)
       {:ok, user}
     end)
   end

@@ -57,6 +57,7 @@ defmodule Firefly.BoundariesTest do
           Firefly.Packages,
           Firefly.Plugins,
           Firefly.Plugin,
+          Firefly.Security,
           Firefly.Themes
         ] do
       assert Map.has_key?(boundaries, context), "#{inspect(context)} isn't a boundary"

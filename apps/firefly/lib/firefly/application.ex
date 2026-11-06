@@ -22,6 +22,8 @@ defmodule Firefly.Application do
         {Phoenix.PubSub, name: Firefly.PubSub},
         # Clears cached site settings when another node changes them
         Firefly.SiteSettings.Cache,
+        # The jail's counters and ban cache, kept in step across nodes
+        Firefly.Security.Jail.Tables,
         # Rate limit buckets
         {Firefly.RateLimit, clean_period: :timer.minutes(10)},
         # Add an LRU Cache for storing OEmbed results for a given URL, storing at

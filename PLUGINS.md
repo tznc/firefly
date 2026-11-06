@@ -237,6 +237,7 @@ text. They're data, not code: nothing runs in the browser.
 | `threads.close` / `threads.pin` | `moderate` | `{thread_id, closed}` / `{thread_id, pinned}` | `null` |
 | `http.fetch` | `http` | `{url, method, headers, body}` | `{status, headers, body}` |
 | `fields.get` / `fields.set` | `fields` | `{type, id}` / `{type, id, key, value}` | fields / `null` |
+| `jail.signal` | `security` | `{ip, reason}` | `{banned}` |
 
 Reads see only what an anonymous visitor may: private categories, deleted
 and hidden posts stay out of reach. Writes act as the plugin's **bot user**
@@ -248,6 +249,14 @@ allowed to a bot by explicit policy rules (`:moderate_thread`,
 `:tag_thread`) for plugins holding the permission; staff actions by bots are
 staff-logged as the bot. Plugin notifications (`kind: "plugin"`) link only
 to paths on this site, at most 100 an hour per plugin.
+
+`jail.signal` reports abuse from an address to Firefly's ban list (the
+`plugin` jail, see "Banning" in the README): like a failed login, each
+report is a point, and enough of them within the jail's find time ban the
+address (its threshold and times are site settings; the allowlist and
+trusted proxies are never banned). `banned` says whether this report did
+it. At most 60 reports a minute per plugin (the `plugin_jail` rate limit);
+an `ip` that isn't an address is an error.
 
 `http.fetch` reaches only the manifest's `http_hosts` (`*.example.com`
 for subdomains). The host is resolved by Firefly and every address must be
@@ -353,7 +362,8 @@ new.
 ## Events
 
 Subscribe with `events` (needs the `read` permission and the
-`handle_event` hook; `flag_raised` also needs `flag`):
+`handle_event` hook; `flag_raised` also needs `flag`; `ip_banned` and
+`ip_unbanned` need `security` instead of `read`):
 
 | Event | Data |
 |---|---|
@@ -365,6 +375,8 @@ Subscribe with `events` (needs the `read` permission and the
 | `post_liked` | `{post_id, thread_id, user_id}` |
 | `solved` | `{thread_id, post_id}` |
 | `poll_closed` | `{poll_id, post_id, thread_id}` |
+| `ip_banned` | `{ip, jail, reason, until}` (`ip` an address or range; `until` ISO 8601, `null`: until unbanned) |
+| `ip_unbanned` | `{ip}` (staff lifted the ban; bans that run out aren't announced) |
 
 A post is `{id, thread_id, user_id, author, body, url}`, a thread
 `{id, title, category_id, url}`. Each event is a background job (Oban's
@@ -372,6 +384,8 @@ A post is `{id, thread_id, user_id, author, body, url}`, a thread
 transaction as the change and delivered within moments: a failure is
 retried after 30 s, 2, 8 and 32 minutes, then dropped and logged. Only content anonymous visitors can read
 produces events, and a plugin never hears about its own bot's actions.
+The ban events are about addresses, not content: they go only to plugins
+with the `security` permission, never to webhooks.
 
 ## Scheduled jobs
 

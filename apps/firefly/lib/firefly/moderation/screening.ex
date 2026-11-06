@@ -145,6 +145,7 @@ defmodule Firefly.Moderation.Screening do
     })
 
     Logger.info("Screened #{item.kind} #{inspect(item.value)} blocked a #{where}: #{what}")
+    Firefly.Security.Jail.signal_client("screening", %{kind: item.kind})
     {:error, String.to_existing_atom("screened_" <> item.kind)}
   end
 

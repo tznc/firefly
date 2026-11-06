@@ -15,8 +15,9 @@ defmodule FireflyWeb.Api.V1.UploadController do
 
   plug(:require_scope, "uploads:write")
 
-  def create(conn, %{"file" => %Plug.Upload{path: path, filename: filename}}) do
-    with {:ok, upload} <- Uploads.create(current_user(conn), path, filename) do
+  def create(conn, %{"file" => %Plug.Upload{path: path, filename: filename} = file}) do
+    with {:ok, upload} <-
+           Uploads.create(current_user(conn), path, filename, claimed_type: file.content_type) do
       ok(
         conn,
         %{

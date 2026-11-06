@@ -21,6 +21,10 @@ config :firefly, Firefly.Upgrades,
 config :firefly_web, FireflyWeb.ClientIP,
   trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
 
+# The jail never bans the trusted proxies (see Firefly.Security.Jail).
+config :firefly, Firefly.Security.Jail,
+  trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
+
 # Secrets in the database are encrypted at rest (see Firefly.Vault) with
 # FIREFLY_VAULT_KEY (base64 of 32 bytes: openssl rand -base64 32). Values
 # written under the keys in FIREFLY_VAULT_RETIRED_KEYS (comma-separated)
@@ -55,6 +59,12 @@ if config_env() != :test do
   config :firefly, Firefly.Uploads,
     storage: if(System.get_env("FIREFLY_UPLOAD_STORAGE") == "s3", do: :s3, else: :local),
     local_dir: System.get_env("FIREFLY_UPLOAD_DIR", "uploads")
+
+  # Virus scanning of uploads with a clamd daemon, when FIREFLY_CLAMAV_HOST
+  # is set (see Firefly.Uploads.Scanner).
+  config :firefly, Firefly.Uploads.Scanner,
+    host: System.get_env("FIREFLY_CLAMAV_HOST"),
+    port: String.to_integer(System.get_env("FIREFLY_CLAMAV_PORT", "3310"))
 
   # Backups (see Firefly.Backups): kept in FIREFLY_BACKUP_DIR, or in the
   # uploads' S3 bucket under a prefix. pg_dump/pg_restore come from

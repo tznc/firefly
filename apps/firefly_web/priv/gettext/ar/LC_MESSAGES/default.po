@@ -12,7 +12,7 @@ msgstr ""
 "Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
 
 #: lib/firefly_web/components/layouts.ex:211
-#: lib/firefly_web/components/layouts.ex:433
+#: lib/firefly_web/components/layouts.ex:447
 #, elixir-autogen, elixir-format
 msgid "%{count} to review"
 msgstr "%{count} للمراجعة"
@@ -33,7 +33,7 @@ msgstr[3] "%{count} ردود"
 msgstr[4] "%{count} ردود"
 msgstr[5] "%{count} ردود"
 
-#: lib/firefly_web/live/search_live/index.ex:165
+#: lib/firefly_web/live/search_live/index.ex:167
 #, elixir-autogen, elixir-format
 msgid "1 result"
 msgid_plural "%{count} results"
@@ -85,18 +85,18 @@ msgstr "الإدارة"
 msgid "Already have one?"
 msgstr "لديك حساب بالفعل؟"
 
-#: lib/firefly_web/live/settings_live/index.ex:674
+#: lib/firefly_web/live/settings_live/index.ex:680
 #, elixir-autogen, elixir-format
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:527
-#: lib/firefly_web/components/layouts.ex:542
+#: lib/firefly_web/components/layouts.ex:541
+#: lib/firefly_web/components/layouts.ex:556
 #, elixir-autogen, elixir-format
 msgid "Attempting to reconnect"
 msgstr "جارٍ إعادة الاتصال"
 
-#: lib/firefly_web/staff_nav.ex:212
+#: lib/firefly_web/staff_nav.ex:219
 #, elixir-autogen, elixir-format
 msgid "Backups"
 msgstr "النسخ الاحتياطية"
@@ -139,23 +139,23 @@ msgid "Chat"
 msgstr "المحادثة"
 
 #: lib/firefly_web/live/auth_live/reset_password.ex:16
-#: lib/firefly_web/live/auth_live/reset_password.ex:52
+#: lib/firefly_web/live/auth_live/reset_password.ex:55
 #, elixir-autogen, elixir-format
 msgid "Choose a new password"
 msgstr "اختر كلمة مرور جديدة"
 
 #: lib/firefly_web/components/layouts.ex:123
-#: lib/firefly_web/components/layouts.ex:406
+#: lib/firefly_web/components/layouts.ex:420
 #, elixir-autogen, elixir-format
 msgid "Close menu"
 msgstr "إغلاق القائمة"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:71
+#: lib/firefly_web/live/auth_live/reset_password.ex:74
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr "تأكيد كلمة المرور الجديدة"
 
-#: lib/firefly_web/components/layouts.ex:322
+#: lib/firefly_web/components/layouts.ex:336
 #, elixir-autogen, elixir-format
 msgid "Confirm your email address to start posting. We sent a link to %{email}."
 msgstr ""
@@ -183,7 +183,7 @@ msgstr "إنشاء حساب جديد"
 msgid "Creating..."
 msgstr "جارٍ الإنشاء..."
 
-#: lib/firefly_web/live/settings_live/index.ex:670
+#: lib/firefly_web/live/settings_live/index.ex:676
 #: lib/firefly_web/live/staff_live/theme.ex:240
 #, elixir-autogen, elixir-format
 msgid "Dark"
@@ -221,7 +221,7 @@ msgstr ""
 msgid "Email me a login link"
 msgstr "أرسل لي رابط تسجيل الدخول"
 
-#: lib/firefly_web/staff_nav.ex:195
+#: lib/firefly_web/staff_nav.ex:202
 #, elixir-autogen, elixir-format
 msgid "Embedding"
 msgstr "التضمين"
@@ -246,12 +246,12 @@ msgstr "Firefly على GitHub"
 msgid "Firestorm patrons"
 msgstr "رعاة Firestorm"
 
-#: lib/firefly_web/live/settings_live/index.ex:680
+#: lib/firefly_web/live/settings_live/index.ex:686
 #, elixir-autogen, elixir-format
 msgid "Follow my browser"
 msgstr "اتبع المتصفح"
 
-#: lib/firefly_web/live/settings_live/index.ex:668
+#: lib/firefly_web/live/settings_live/index.ex:674
 #, elixir-autogen, elixir-format
 msgid "Follow my system"
 msgstr "اتبع النظام"
@@ -275,8 +275,8 @@ msgstr "المنتدى"
 msgid "Groups"
 msgstr "المجموعات"
 
-#: lib/firefly_web/live/staff_live/settings.ex:417
-#: lib/firefly_web/staff_nav.ex:228
+#: lib/firefly_web/live/staff_live/settings.ex:421
+#: lib/firefly_web/staff_nav.ex:235
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr "الاستيراد"
@@ -286,7 +286,7 @@ msgstr "الاستيراد"
 msgid "Invites"
 msgstr "الدعوات"
 
-#: lib/firefly_web/live/settings_live/index.ex:679
+#: lib/firefly_web/live/settings_live/index.ex:685
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "اللغة"
@@ -296,7 +296,7 @@ msgstr "اللغة"
 msgid "Latest"
 msgstr "الأحدث"
 
-#: lib/firefly_web/live/settings_live/index.ex:669
+#: lib/firefly_web/live/settings_live/index.ex:675
 #: lib/firefly_web/live/staff_live/theme.ex:239
 #, elixir-autogen, elixir-format
 msgid "Light"
@@ -333,7 +333,7 @@ msgstr ""
 msgid "Log out"
 msgstr "تسجيل الخروج"
 
-#: lib/firefly_web/live/settings_live/index.ex:684
+#: lib/firefly_web/live/settings_live/index.ex:690
 #, elixir-autogen, elixir-format
 msgid "Machine translations, pending a native speaker's review: please report anything that reads wrong."
 msgstr ""
@@ -354,7 +354,7 @@ msgstr "الرسائل"
 msgid "New here?"
 msgstr "جديد هنا؟"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:65
+#: lib/firefly_web/live/auth_live/reset_password.ex:68
 #, elixir-autogen, elixir-format
 msgid "New password"
 msgstr "كلمة مرور جديدة"
@@ -391,12 +391,12 @@ msgstr "أشارك فيها"
 msgid "Password"
 msgstr "كلمة المرور"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:39
+#: lib/firefly_web/live/auth_live/reset_password.ex:42
 #, elixir-autogen, elixir-format
 msgid "Password reset. Log in with your new password."
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:345
+#: lib/firefly_web/components/layouts.ex:359
 #: lib/firefly_web/live/staff_live/user.ex:468
 #: lib/firefly_web/live/staff_live/user.ex:475
 #, elixir-autogen, elixir-format
@@ -408,7 +408,7 @@ msgstr "السبب: %{reason}"
 msgid "Registration failed. Please try again."
 msgstr ""
 
-#: lib/firefly_web/components/layouts.ex:325
+#: lib/firefly_web/components/layouts.ex:339
 #, elixir-autogen, elixir-format
 msgid "Resend link"
 msgstr "إعادة إرسال الرابط"
@@ -425,14 +425,14 @@ msgstr "إعادة تعيين كلمة المرور"
 msgid "Review"
 msgstr "المراجعة"
 
-#: lib/firefly_web/live/settings_live/index.ex:691
+#: lib/firefly_web/live/settings_live/index.ex:697
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "حفظ"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:74
-#: lib/firefly_web/live/settings_live/index.ex:691
-#: lib/firefly_web/live/staff_live/settings.ex:398
+#: lib/firefly_web/live/auth_live/reset_password.ex:77
+#: lib/firefly_web/live/settings_live/index.ex:697
+#: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
 #: lib/firefly_web/live/staff_live/user.ex:369
 #: lib/firefly_web/live/staff_live/user.ex:400
@@ -476,18 +476,18 @@ msgid "Sign in"
 msgstr "الدخول بكلمة المرور"
 
 #: lib/firefly_web/live/staff_live/settings.ex:28
-#: lib/firefly_web/live/staff_live/settings.ex:255
-#: lib/firefly_web/staff_nav.ex:173
+#: lib/firefly_web/live/staff_live/settings.ex:259
+#: lib/firefly_web/staff_nav.ex:180
 #, elixir-autogen, elixir-format
 msgid "Site settings"
 msgstr "إعدادات الموقع"
 
-#: lib/firefly_web/components/layouts.ex:534
+#: lib/firefly_web/components/layouts.ex:548
 #, elixir-autogen, elixir-format
 msgid "Something went wrong!"
 msgstr "حدث خطأ ما!"
 
-#: lib/firefly_web/staff_nav.ex:146
+#: lib/firefly_web/staff_nav.ex:153
 #, elixir-autogen, elixir-format
 msgid "Staff log"
 msgstr "سجل الفريق"
@@ -502,7 +502,7 @@ msgstr "مجموعات الوسوم"
 msgid "Tags"
 msgstr "الوسوم"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:23
+#: lib/firefly_web/live/auth_live/reset_password.ex:26
 #, elixir-autogen, elixir-format
 msgid "That reset link is invalid or has expired."
 msgstr ""
@@ -512,7 +512,7 @@ msgstr ""
 msgid "The forum is read-only for maintenance (%{reason}). You can read, but not post or change anything for now."
 msgstr ""
 
-#: lib/firefly_web/live/settings_live/index.ex:666
+#: lib/firefly_web/live/settings_live/index.ex:672
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "المظهر"
@@ -522,7 +522,7 @@ msgstr "المظهر"
 msgid "Toggle navigation"
 msgstr "تبديل التنقل"
 
-#: lib/firefly_web/staff_nav.ex:235
+#: lib/firefly_web/staff_nav.ex:242
 #, elixir-autogen, elixir-format
 msgid "Upgrade"
 msgstr "الترقية"
@@ -563,7 +563,7 @@ msgstr "الكلمات المراقبة"
 msgid "Watching"
 msgstr "أتابعها"
 
-#: lib/firefly_web/components/layouts.ex:519
+#: lib/firefly_web/components/layouts.ex:533
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
 msgstr "لا يمكن الوصول إلى الإنترنت"
@@ -578,7 +578,7 @@ msgstr ""
 msgid "We'll email you a link to choose a new one."
 msgstr ""
 
-#: lib/firefly_web/staff_nav.ex:163
+#: lib/firefly_web/staff_nav.ex:170
 #, elixir-autogen, elixir-format
 msgid "Webhooks"
 msgstr "Webhooks"
@@ -610,7 +610,7 @@ msgid "Your profile"
 msgstr "ملفك الشخصي"
 
 #: lib/firefly_web/components/layouts.ex:202
-#: lib/firefly_web/components/layouts.ex:442
+#: lib/firefly_web/components/layouts.ex:456
 #, elixir-autogen, elixir-format
 msgid "new"
 msgstr "جديد"
@@ -631,7 +631,7 @@ msgstr "أرسل لي رابطًا"
 msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:75
+#: lib/firefly_web/live/auth_live/reset_password.ex:78
 #, elixir-autogen, elixir-format
 msgid "Reset password"
 msgstr "إعادة تعيين كلمة المرور"
@@ -641,17 +641,17 @@ msgstr "إعادة تعيين كلمة المرور"
 msgid "Send reset link"
 msgstr "إرسال رابط إعادة التعيين"
 
-#: lib/firefly_web/components/layouts.ex:585
+#: lib/firefly_web/components/layouts.ex:599
 #, elixir-autogen, elixir-format
 msgid "Use dark theme"
 msgstr "استخدام المظهر الداكن"
 
-#: lib/firefly_web/components/layouts.ex:577
+#: lib/firefly_web/components/layouts.ex:591
 #, elixir-autogen, elixir-format
 msgid "Use light theme"
 msgstr "استخدام المظهر الفاتح"
 
-#: lib/firefly_web/components/layouts.ex:569
+#: lib/firefly_web/components/layouts.ex:583
 #, elixir-autogen, elixir-format
 msgid "Use system theme"
 msgstr "استخدام مظهر النظام"
@@ -681,7 +681,7 @@ msgstr "الرئيسية"
 msgid "Keyboard shortcuts"
 msgstr "اختصارات لوحة المفاتيح"
 
-#: lib/firefly_web/live/settings_live/index.ex:689
+#: lib/firefly_web/live/settings_live/index.ex:695
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts (press ? for the list)"
 msgstr ""
@@ -770,6 +770,7 @@ msgid "Account to merge into"
 msgstr "الحساب المراد الدمج فيه"
 
 #: lib/firefly_web/live/staff_live/screening.ex:129
+#: lib/firefly_web/live/staff_live/security.ex:166
 #: lib/firefly_web/live/staff_live/users.ex:134
 #, elixir-autogen, elixir-format
 msgid "Actions"
@@ -820,6 +821,8 @@ msgstr "أضافه"
 msgid "Added to %{group}."
 msgstr "أُضيف إلى %{group}."
 
+#: lib/firefly_web/live/staff_live/security.ex:162
+#: lib/firefly_web/live/staff_live/security.ex:211
 #: lib/firefly_web/live/staff_live/user.ex:510
 #, elixir-autogen, elixir-format
 msgid "Address"
@@ -845,12 +848,12 @@ msgstr "عناوين لا يمكنها التسجيل. استخدم * لأي س�
 msgid "Admin home"
 msgstr "الصفحة الرئيسية للإدارة"
 
-#: lib/firefly_web/components/layouts.ex:404
+#: lib/firefly_web/components/layouts.ex:418
 #, elixir-autogen, elixir-format
 msgid "Admin navigation"
 msgstr "تنقل الإدارة"
 
-#: lib/firefly_web/live/staff_live/settings.ex:268
+#: lib/firefly_web/live/staff_live/settings.ex:272
 #: lib/firefly_web/live/staff_live/users.ex:79
 #, elixir-autogen, elixir-format
 msgid "All"
@@ -927,7 +930,7 @@ msgstr "تمت الموافقة على @%{username}."
 msgid "Approved. They can post now."
 msgstr "تمت الموافقة. يمكنه النشر الآن."
 
-#: lib/firefly_web/components/layouts.ex:409
+#: lib/firefly_web/components/layouts.ex:423
 #, elixir-autogen, elixir-format
 msgid "Back to the forum"
 msgstr "العودة إلى المنتدى"
@@ -952,12 +955,12 @@ msgstr "يمكنه القراءة"
 msgid "Category deleted."
 msgstr "حُذفت الفئة."
 
-#: lib/firefly_web/staff_nav.ex:152
+#: lib/firefly_web/staff_nav.ex:159
 #, elixir-autogen, elixir-format
 msgid "Communication"
 msgstr "التواصل"
 
-#: lib/firefly_web/staff_nav.ex:169
+#: lib/firefly_web/staff_nav.ex:176
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr "التهيئة"
@@ -1041,7 +1044,7 @@ msgstr "إرسال رابط إعادة تعيين كلمة المرور إلى �
 #: lib/firefly_web/live/staff_live/emails.ex:23
 #: lib/firefly_web/live/staff_live/emails.ex:131
 #: lib/firefly_web/live/staff_live/screening.ex:73
-#: lib/firefly_web/staff_nav.ex:156
+#: lib/firefly_web/staff_nav.ex:163
 #, elixir-autogen, elixir-format
 msgid "Emails"
 msgstr "رسائل البريد"
@@ -1186,7 +1189,7 @@ msgstr "قفله (لا تغيّره المراجعة التلقائية)"
 msgid "Logins"
 msgstr "طرق تسجيل الدخول"
 
-#: lib/firefly_web/staff_nav.ex:208
+#: lib/firefly_web/staff_nav.ex:215
 #, elixir-autogen, elixir-format
 msgid "Maintenance"
 msgstr "الصيانة"
@@ -1309,6 +1312,7 @@ msgstr "لا شيء ساري المفعول."
 msgid "None recorded yet."
 msgstr "لم يُسجَّل شيء بعد."
 
+#: lib/firefly_web/live/staff_live/security.ex:206
 #: lib/firefly_web/live/staff_live/user.ex:432
 #: lib/firefly_web/live/staff_live/user.ex:535
 #, elixir-autogen, elixir-format
@@ -1558,7 +1562,7 @@ msgid "Save permissions"
 msgstr "حفظ الصلاحيات"
 
 #: lib/firefly_web/live/staff_live/groups.ex:224
-#: lib/firefly_web/live/staff_live/settings.ex:398
+#: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:378
 #, elixir-autogen, elixir-format
 msgid "Save settings"
@@ -1607,8 +1611,8 @@ msgstr "البحث في صفحات الإدارة وإعداداتها"
 msgid "Search emails"
 msgstr "البحث في رسائل البريد"
 
-#: lib/firefly_web/components/layouts.ex:414
-#: lib/firefly_web/components/layouts.ex:414
+#: lib/firefly_web/components/layouts.ex:428
+#: lib/firefly_web/components/layouts.ex:428
 #, elixir-autogen, elixir-format
 msgid "Search the admin"
 msgstr "البحث في الإدارة"
@@ -1710,7 +1714,7 @@ msgstr "بدء المواضيع والرد"
 msgid "Status"
 msgstr "الحالة"
 
-#: lib/firefly_web/components/layouts.ex:384
+#: lib/firefly_web/components/layouts.ex:398
 #, elixir-autogen, elixir-format
 msgid "Stop impersonating"
 msgstr "إيقاف انتحال الهوية"
@@ -1866,6 +1870,7 @@ msgstr "القيمة"
 msgid "Waiting for approval"
 msgstr "بانتظار الموافقة"
 
+#: lib/firefly_web/components/security_components.ex:49
 #: lib/firefly_web/live/staff_live/emails.ex:177
 #, elixir-autogen, elixir-format
 msgid "When"
@@ -1896,7 +1901,7 @@ msgstr "من يراها"
 msgid "You can't impersonate that account."
 msgstr "لا يمكنك انتحال هوية هذا الحساب."
 
-#: lib/firefly_web/components/layouts.ex:382
+#: lib/firefly_web/components/layouts.ex:396
 #: lib/firefly_web/controllers/staff_controller.ex:35
 #, elixir-autogen, elixir-format
 msgid "You're seeing the site as @%{username}."
@@ -2032,62 +2037,62 @@ msgstr "المشاركات المراد منحها لكاتب آخر"
 msgid "%{key} is back to its default."
 msgstr "عاد %{key} إلى قيمته الافتراضية."
 
-#: lib/firefly_web/live/staff_live/settings.ex:414
+#: lib/firefly_web/live/staff_live/settings.ex:418
 #, elixir-autogen, elixir-format
 msgid "A JSON or YAML export (of this site or another). Every value is checked first, and each change is logged. Secrets and settings pinned by the environment are skipped."
 msgstr "ملف تصدير JSON أو YAML (من هذا الموقع أو غيره). تُفحص كل قيمة أولًا ويُسجَّل كل تغيير. تُتخطّى الأسرار والإعدادات المثبتة من البيئة."
 
-#: lib/firefly_web/live/staff_live/settings.ex:296
+#: lib/firefly_web/live/staff_live/settings.ex:300
 #, elixir-autogen, elixir-format
 msgid "Changed only"
 msgstr "المعدّلة فقط"
 
-#: lib/firefly_web/live/staff_live/settings.ex:256
+#: lib/firefly_web/live/staff_live/settings.ex:260
 #, elixir-autogen, elixir-format
 msgid "Changes apply at once and are recorded in the staff log."
 msgstr "تُطبَّق التغييرات فورًا وتُسجَّل في سجل الفريق."
 
-#: lib/firefly_web/live/staff_live/settings.ex:391
+#: lib/firefly_web/live/staff_live/settings.ex:395
 #, elixir-autogen, elixir-format
 msgid "Current %{label}"
 msgstr "%{label} الحالي"
 
-#: lib/firefly_web/live/staff_live/settings.ex:349
+#: lib/firefly_web/live/staff_live/settings.ex:353
 #, elixir-autogen, elixir-format
 msgid "Default: %{value}"
 msgstr "الافتراضي: %{value}"
 
-#: lib/firefly_web/live/staff_live/settings.ex:258
+#: lib/firefly_web/live/staff_live/settings.ex:262
 #, elixir-autogen, elixir-format
 msgid "Export JSON"
 msgstr "تصدير JSON"
 
-#: lib/firefly_web/live/staff_live/settings.ex:259
+#: lib/firefly_web/live/staff_live/settings.ex:263
 #, elixir-autogen, elixir-format
 msgid "Export YAML"
 msgstr "تصدير YAML"
 
-#: lib/firefly_web/live/staff_live/settings.ex:372
+#: lib/firefly_web/live/staff_live/settings.ex:376
 #, elixir-autogen, elixir-format
 msgid "History"
 msgstr "السجل"
 
-#: lib/firefly_web/live/staff_live/settings.ex:412
+#: lib/firefly_web/live/staff_live/settings.ex:416
 #, elixir-autogen, elixir-format
 msgid "Import settings"
 msgstr "استيراد الإعدادات"
 
-#: lib/firefly_web/live/staff_live/settings.ex:183
+#: lib/firefly_web/live/staff_live/settings.ex:185
 #, elixir-autogen, elixir-format
 msgid "Imported %{changed} changed settings."
 msgstr "استُورد %{changed} من الإعدادات المعدّلة."
 
-#: lib/firefly_web/live/staff_live/settings.ex:314
+#: lib/firefly_web/live/staff_live/settings.ex:318
 #, elixir-autogen, elixir-format
 msgid "Login providers are configured in the server's environment (FIREFLY_* variables)."
 msgstr "يُهيَّأ مزودو تسجيل الدخول في بيئة الخادم (متغيرات FIREFLY_*)."
 
-#: lib/firefly_web/live/staff_live/settings.ex:405
+#: lib/firefly_web/live/staff_live/settings.ex:409
 #, elixir-autogen, elixir-format
 msgid "Logo image"
 msgstr "صورة الشعار"
@@ -2097,12 +2102,12 @@ msgstr "صورة الشعار"
 msgid "Logo saved."
 msgstr "حُفظ الشعار."
 
-#: lib/firefly_web/live/staff_live/settings.ex:380
+#: lib/firefly_web/live/staff_live/settings.ex:384
 #, elixir-autogen, elixir-format
 msgid "Never changed."
 msgstr "لم يتغير قط."
 
-#: lib/firefly_web/live/staff_live/settings.ex:301
+#: lib/firefly_web/live/staff_live/settings.ex:305
 #, elixir-autogen, elixir-format
 msgid "No settings match."
 msgstr "لا توجد إعدادات مطابقة."
@@ -2112,12 +2117,12 @@ msgstr "لا توجد إعدادات مطابقة."
 msgid "Nothing changed."
 msgstr "لم يتغير شيء."
 
-#: lib/firefly_web/live/staff_live/settings.ex:201
+#: lib/firefly_web/live/staff_live/settings.ex:203
 #, elixir-autogen, elixir-format
 msgid "Nothing was imported: %{details}"
 msgstr "لم يُستورد شيء: %{details}"
 
-#: lib/firefly_web/live/staff_live/settings.ex:192
+#: lib/firefly_web/live/staff_live/settings.ex:194
 #, elixir-autogen, elixir-format
 msgid "Pick a JSON or YAML file."
 msgstr "اختر ملف JSON أو YAML."
@@ -2127,33 +2132,33 @@ msgstr "اختر ملف JSON أو YAML."
 msgid "Pick an image."
 msgstr "اختر صورة."
 
-#: lib/firefly_web/live/staff_live/settings.ex:360
+#: lib/firefly_web/live/staff_live/settings.ex:364
 #, elixir-autogen, elixir-format
 msgid "Reset %{label} to its default?"
 msgstr "إعادة %{label} إلى قيمته الافتراضية؟"
 
-#: lib/firefly_web/live/staff_live/settings.ex:363
+#: lib/firefly_web/live/staff_live/settings.ex:367
 #, elixir-autogen, elixir-format
 msgid "Reset to default"
 msgstr "إعادة إلى الافتراضي"
 
-#: lib/firefly_web/live/staff_live/settings.ex:289
-#: lib/firefly_web/live/staff_live/settings.ex:290
+#: lib/firefly_web/live/staff_live/settings.ex:293
+#: lib/firefly_web/live/staff_live/settings.ex:294
 #, elixir-autogen, elixir-format
 msgid "Search settings"
 msgstr "البحث في الإعدادات"
 
-#: lib/firefly_web/live/staff_live/settings.ex:353
+#: lib/firefly_web/live/staff_live/settings.ex:357
 #, elixir-autogen, elixir-format
 msgid "Set by %{env}"
 msgstr "مُعيَّن بواسطة %{env}"
 
-#: lib/firefly_web/live/staff_live/settings.ex:344
+#: lib/firefly_web/live/staff_live/settings.ex:348
 #, elixir-autogen, elixir-format
 msgid "Set: leave blank to keep it"
 msgstr "مُعيَّن: اتركه فارغًا للإبقاء عليه"
 
-#: lib/firefly_web/live/staff_live/settings.ex:416
+#: lib/firefly_web/live/staff_live/settings.ex:420
 #, elixir-autogen, elixir-format
 msgid "Settings file"
 msgstr "ملف الإعدادات"
@@ -2163,12 +2168,12 @@ msgstr "ملف الإعدادات"
 msgid "Settings saved: %{keys}."
 msgstr "حُفظت الإعدادات: %{keys}."
 
-#: lib/firefly_web/live/staff_live/settings.ex:315
+#: lib/firefly_web/live/staff_live/settings.ex:319
 #, elixir-autogen, elixir-format
 msgid "Single sign-on is the only way to log in."
 msgstr "تسجيل الدخول الموحّد هو الطريقة الوحيدة للدخول."
 
-#: lib/firefly_web/live/staff_live/settings.ex:186
+#: lib/firefly_web/live/staff_live/settings.ex:188
 #, elixir-autogen, elixir-format
 msgid "Skipped: %{keys}."
 msgstr "تُخطّيت: %{keys}."
@@ -2184,50 +2189,50 @@ msgstr "بعض الإعدادات غير صالحة؛ لم يُحفظ شيء."
 msgid "The logo couldn't be saved."
 msgstr "تعذر حفظ الشعار."
 
-#: lib/firefly_web/live/staff_live/settings.ex:404
+#: lib/firefly_web/live/staff_live/settings.ex:408
 #, elixir-autogen, elixir-format
 msgid "Upload a logo"
 msgstr "رفع شعار"
 
-#: lib/firefly_web/live/staff_live/settings.ex:406
+#: lib/firefly_web/live/staff_live/settings.ex:410
 #, elixir-autogen, elixir-format
 msgid "Use as logo"
 msgstr "استخدامه شعارًا"
 
-#: lib/firefly_web/live/staff_live/settings.ex:240
-#: lib/firefly_web/live/staff_live/settings.ex:245
+#: lib/firefly_web/live/staff_live/settings.ex:244
+#: lib/firefly_web/live/staff_live/settings.ex:249
 #, elixir-autogen, elixir-format
 msgid "blank"
 msgstr "فارغ"
 
-#: lib/firefly_web/live/staff_live/settings.ex:351
+#: lib/firefly_web/live/staff_live/settings.ex:355
 #, elixir-autogen, elixir-format
 msgid "changed"
 msgstr "معدّل"
 
-#: lib/firefly_web/live/staff_live/settings.ex:242
-#: lib/firefly_web/live/staff_live/settings.ex:324
+#: lib/firefly_web/live/staff_live/settings.ex:246
+#: lib/firefly_web/live/staff_live/settings.ex:328
 #, elixir-autogen, elixir-format
 msgid "off"
 msgstr "معطّل"
 
-#: lib/firefly_web/live/staff_live/settings.ex:241
-#: lib/firefly_web/live/staff_live/settings.ex:323
+#: lib/firefly_web/live/staff_live/settings.ex:245
+#: lib/firefly_web/live/staff_live/settings.ex:327
 #, elixir-autogen, elixir-format
 msgid "on"
 msgstr "مفعّل"
 
-#: lib/firefly_web/live/staff_live/settings.ex:385
+#: lib/firefly_web/live/staff_live/settings.ex:389
 #, elixir-autogen, elixir-format
 msgid "reset"
 msgstr "أُعيد تعيينه"
 
-#: lib/firefly_web/live/staff_live/settings.ex:383
+#: lib/firefly_web/live/staff_live/settings.ex:387
 #, elixir-autogen, elixir-format
 msgid "the system"
 msgstr "النظام"
 
-#: lib/firefly_web/live/staff_live/settings.ex:265
+#: lib/firefly_web/live/staff_live/settings.ex:269
 #, elixir-autogen, elixir-format
 msgid "Category"
 msgstr "الفئة"
@@ -2483,7 +2488,7 @@ msgstr "تعمل السكربتات في HTML المظهر في كل صفحة، 
 msgid "Scripts, event handlers and inline styles are removed."
 msgstr "تُزال السكربتات ومعالجات الأحداث والأنماط المضمّنة."
 
-#: lib/firefly_web/live/settings_live/index.ex:699
+#: lib/firefly_web/live/settings_live/index.ex:705
 #, elixir-autogen, elixir-format
 msgid "Site theme"
 msgstr "مظهر الموقع"
@@ -2513,7 +2518,7 @@ msgstr "عاد الموقع إلى المظهر المدمج."
 msgid "The site uses the built-in look: no theme is the default."
 msgstr "يستخدم الموقع المظهر المدمج: لا يوجد مظهر افتراضي."
 
-#: lib/firefly_web/live/settings_live/index.ex:701
+#: lib/firefly_web/live/settings_live/index.ex:707
 #, elixir-autogen, elixir-format
 msgid "The site's default"
 msgstr "افتراضي الموقع"
@@ -2528,7 +2533,7 @@ msgstr "مكوّنات المظهر"
 msgid "Theme deleted."
 msgstr "حُذف المظهر."
 
-#: lib/firefly_web/live/settings_live/index.ex:285
+#: lib/firefly_web/live/settings_live/index.ex:289
 #: lib/firefly_web/live/staff_live/theme.ex:98
 #, elixir-autogen, elixir-format
 msgid "Theme saved."
@@ -2537,7 +2542,7 @@ msgstr "حُفظ المظهر."
 #: lib/firefly_web/live/staff_live/themes.ex:20
 #: lib/firefly_web/live/staff_live/themes.ex:80
 #: lib/firefly_web/live/staff_live/themes.ex:89
-#: lib/firefly_web/staff_nav.ex:180
+#: lib/firefly_web/staff_nav.ex:187
 #, elixir-autogen, elixir-format
 msgid "Themes"
 msgstr "المظاهر"
@@ -2562,7 +2567,7 @@ msgstr "حتى 100 KB. سمِّ الملف بالشكل theme-asset(الاسم)�
 msgid "Use the built-in look"
 msgstr "استخدام المظهر المدمج"
 
-#: lib/firefly_web/live/settings_live/index.ex:703
+#: lib/firefly_web/live/settings_live/index.ex:709
 #, elixir-autogen, elixir-format
 msgid "Use this theme"
 msgstr "استخدام هذا المظهر"
@@ -2643,7 +2648,7 @@ msgstr "أُلغي النقل. عادت %{item} إلى الموضع %{position} 
 msgid "That category can't go there."
 msgstr "لا يمكن نقل هذه الفئة إلى هناك."
 
-#: lib/firefly_web/staff_nav.ex:241
+#: lib/firefly_web/staff_nav.ex:248
 #, elixir-autogen, elixir-format
 msgid "Advanced"
 msgstr "متقدم"
@@ -2653,7 +2658,7 @@ msgstr "متقدم"
 msgid "Back to the staff admin"
 msgstr "العودة إلى الإدارة"
 
-#: lib/firefly_web/staff_nav.ex:246
+#: lib/firefly_web/staff_nav.ex:253
 #, elixir-autogen, elixir-format
 msgid "Database"
 msgstr "قاعدة البيانات"
@@ -2698,7 +2703,7 @@ msgstr "من الحزمة %{name} %{version}."
 msgid "Install a theme"
 msgstr "تثبيت مظهر"
 
-#: lib/firefly_web/staff_nav.ex:187
+#: lib/firefly_web/staff_nav.ex:194
 #, elixir-autogen, elixir-format
 msgid "Packages"
 msgstr "الحزم"
@@ -2753,10 +2758,324 @@ msgstr "خدمة البريد: %{adapter}"
 msgid "Test email sent to %{to} with %{adapter}."
 msgstr "أُرسلت رسالة تجريبية إلى %{to} عبر %{adapter}."
 
-#: lib/firefly_web/staff_nav.ex:220
+#: lib/firefly_web/staff_nav.ex:227
 #, elixir-autogen, elixir-format
 msgid "Jobs"
 msgstr "المهام"
+
+#: lib/firefly_web/live/staff_live/uploads.ex:92
+#, elixir-autogen, elixir-format
+msgid "Quarantined: infected"
+msgstr "معزول: مصاب"
+
+#: lib/firefly_web/live/staff_live/uploads.ex:89
+#, elixir-autogen, elixir-format
+msgid "Waiting for virus scan"
+msgstr "في انتظار فحص الفيروسات"
+
+#: lib/firefly_web/components/security_components.ex:25
+#, elixir-autogen, elixir-format
+msgid "API key created"
+msgstr "تم إنشاء مفتاح API"
+
+#: lib/firefly_web/components/security_components.ex:27
+#, elixir-autogen, elixir-format
+msgid "API key revoked"
+msgstr "تم إلغاء مفتاح API"
+
+#: lib/firefly_web/components/security_components.ex:26
+#, elixir-autogen, elixir-format
+msgid "API key used from a new address"
+msgstr "استُخدم مفتاح API من عنوان جديد"
+
+#: lib/firefly_web/components/security_components.ex:31
+#, elixir-autogen, elixir-format
+msgid "Account silenced"
+msgstr "تم كتم الحساب"
+
+#: lib/firefly_web/components/security_components.ex:29
+#, elixir-autogen, elixir-format
+msgid "Account suspended"
+msgstr "تم تعليق الحساب"
+
+#: lib/firefly_web/live/staff_live/security.ex:240
+#, elixir-autogen, elixir-format
+msgid "Any event"
+msgstr "أي حدث"
+
+#: lib/firefly_web/components/security_components.ex:17
+#, elixir-autogen, elixir-format
+msgid "Authenticator app turned off"
+msgstr "تم إيقاف تطبيق المصادقة"
+
+#: lib/firefly_web/components/security_components.ex:53
+#, elixir-autogen, elixir-format
+msgid "Browser"
+msgstr "المتصفح"
+
+#: lib/firefly_web/components/security_components.ex:51
+#: lib/firefly_web/live/staff_live/security.ex:239
+#, elixir-autogen, elixir-format
+msgid "Event"
+msgstr "الحدث"
+
+#: lib/firefly_web/components/security_components.ex:13
+#, elixir-autogen, elixir-format
+msgid "Failed login"
+msgstr "فشل تسجيل الدخول"
+
+#: lib/firefly_web/components/security_components.ex:52
+#, elixir-autogen, elixir-format
+msgid "IP address"
+msgstr "عنوان IP"
+
+#: lib/firefly_web/components/security_components.ex:33
+#, elixir-autogen, elixir-format
+msgid "IP address banned"
+msgstr "تم حظر عنوان IP"
+
+#: lib/firefly_web/components/security_components.ex:34
+#, elixir-autogen, elixir-format
+msgid "IP address unbanned"
+msgstr "أُلغي حظر عنوان IP"
+
+#: lib/firefly_web/components/security_components.ex:12
+#, elixir-autogen, elixir-format
+msgid "Logged in"
+msgstr "تسجيل الدخول"
+
+#: lib/firefly_web/live/staff_live/security.ex:125
+#, elixir-autogen, elixir-format
+msgid "Logins, failed attempts and account security changes, newest first."
+msgstr "عمليات تسجيل الدخول والمحاولات الفاشلة وتغييرات أمان الحسابات، الأحدث أولًا."
+
+#: lib/firefly_web/live/settings_live/index.ex:1137
+#, elixir-autogen, elixir-format
+msgid "Logins, failed attempts and changes to how you log in. Don't recognize one? Change your password and check your passkeys and keys."
+msgstr "عمليات تسجيل الدخول والمحاولات الفاشلة والتغييرات على طريقة دخولك. لا تتعرف على أحدها؟ غيّر كلمة المرور وتحقق من مفاتيح المرور والمفاتيح."
+
+#: lib/firefly_web/components/security_components.ex:50
+#, elixir-autogen, elixir-format
+msgid "Member"
+msgstr "العضو"
+
+#: lib/firefly_web/components/security_components.ex:18
+#, elixir-autogen, elixir-format
+msgid "New backup codes"
+msgstr "رموز احتياطية جديدة"
+
+#: lib/firefly_web/live/staff_live/security.ex:252
+#, elixir-autogen, elixir-format
+msgid "No security events."
+msgstr "لا توجد أحداث أمنية."
+
+#: lib/firefly_web/live/settings_live/index.ex:1140
+#, elixir-autogen, elixir-format
+msgid "Nothing yet."
+msgstr "لا شيء بعد."
+
+#: lib/firefly_web/components/security_components.ex:22
+#, elixir-autogen, elixir-format
+msgid "Passkey added"
+msgstr "تمت إضافة مفتاح مرور"
+
+#: lib/firefly_web/components/security_components.ex:15
+#, elixir-autogen, elixir-format
+msgid "Passkey refused"
+msgstr "رُفض مفتاح المرور"
+
+#: lib/firefly_web/components/security_components.ex:23
+#, elixir-autogen, elixir-format
+msgid "Passkey removed"
+msgstr "تمت إزالة مفتاح مرور"
+
+#: lib/firefly_web/components/security_components.ex:24
+#, elixir-autogen, elixir-format
+msgid "Password changed"
+msgstr "تم تغيير كلمة المرور"
+
+#: lib/firefly_web/live/settings_live/index.ex:1135
+#, elixir-autogen, elixir-format
+msgid "Recent security activity"
+msgstr "نشاط الأمان الأخير"
+
+#: lib/firefly_web/live/staff_live/security.ex:29
+#: lib/firefly_web/live/staff_live/security.ex:123
+#: lib/firefly_web/staff_nav.ex:146
+#, elixir-autogen, elixir-format
+msgid "Security"
+msgstr "الأمان"
+
+#: lib/firefly_web/components/security_components.ex:19
+#, elixir-autogen, elixir-format
+msgid "Security key added"
+msgstr "تمت إضافة مفتاح أمان"
+
+#: lib/firefly_web/components/security_components.ex:20
+#, elixir-autogen, elixir-format
+msgid "Security key removed"
+msgstr "تمت إزالة مفتاح أمان"
+
+#: lib/firefly_web/live/staff_live/security.ex:228
+#, elixir-autogen, elixir-format
+msgid "Security log"
+msgstr "سجل الأمان"
+
+#: lib/firefly_web/components/security_components.ex:28
+#, elixir-autogen, elixir-format
+msgid "Signed out a device"
+msgstr "تم تسجيل الخروج من جهاز"
+
+#: lib/firefly_web/components/security_components.ex:32
+#, elixir-autogen, elixir-format
+msgid "Silence lifted"
+msgstr "رُفع الكتم"
+
+#: lib/firefly_web/components/security_components.ex:30
+#, elixir-autogen, elixir-format
+msgid "Suspension lifted"
+msgstr "رُفع التعليق"
+
+#: lib/firefly_web/components/security_components.ex:21
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication reset by staff"
+msgstr "أعاد الطاقم تعيين التحقق بخطوتين"
+
+#: lib/firefly_web/components/security_components.ex:16
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication turned on"
+msgstr "تم تفعيل التحقق بخطوتين"
+
+#: lib/firefly_web/components/security_components.ex:35
+#, elixir-autogen, elixir-format
+msgid "Upload quarantined by the virus scanner"
+msgstr "عزل فاحص الفيروسات الملف المرفوع"
+
+#: lib/firefly_web/live/staff_live/security.ex:246
+#, elixir-autogen, elixir-format
+msgid "Username or IP address"
+msgstr "اسم المستخدم أو عنوان IP"
+
+#: lib/firefly_web/components/security_components.ex:14
+#, elixir-autogen, elixir-format
+msgid "Wrong two-factor code"
+msgstr "رمز التحقق بخطوتين خاطئ"
+
+#: lib/firefly_web/live/staff_live/security.ex:71
+#, elixir-autogen, elixir-format
+msgid "1 day"
+msgstr "يوم واحد"
+
+#: lib/firefly_web/live/staff_live/security.ex:70
+#, elixir-autogen, elixir-format
+msgid "1 hour"
+msgstr "ساعة واحدة"
+
+#: lib/firefly_web/live/staff_live/security.ex:72
+#, elixir-autogen, elixir-format
+msgid "1 week"
+msgstr "أسبوع واحد"
+
+#: lib/firefly_web/live/staff_live/security.ex:73
+#, elixir-autogen, elixir-format
+msgid "30 days"
+msgstr "30 يومًا"
+
+#: lib/firefly_web/live/staff_live/security.ex:204
+#, elixir-autogen, elixir-format
+msgid "Addresses with points towards a ban on this server now, closest first."
+msgstr "العناوين التي لديها نقاط نحو الحظر على هذا الخادم الآن، الأقرب أولًا."
+
+#: lib/firefly_web/live/staff_live/security.ex:150
+#, elixir-autogen, elixir-format
+msgid "Ban"
+msgstr "حظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:90
+#, elixir-autogen, elixir-format
+msgid "Banned %{ip}."
+msgstr "تم حظر %{ip}."
+
+#: lib/firefly_web/live/staff_live/security.ex:130
+#, elixir-autogen, elixir-format
+msgid "Banned addresses"
+msgstr "العناوين المحظورة"
+
+#: lib/firefly_web/live/staff_live/security.ex:132
+#, elixir-autogen, elixir-format
+msgid "Banning is off (Settings > Security > Banning): these bans aren't enforced."
+msgstr "الحظر متوقف (الإعدادات > الأمان > الحظر): لا تُطبَّق هذه الحظورات."
+
+#: lib/firefly_web/live/staff_live/security.ex:164
+#, elixir-autogen, elixir-format
+msgid "Bans"
+msgstr "مرات الحظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:145
+#, elixir-autogen, elixir-format
+msgid "For"
+msgstr "لمدة"
+
+#: lib/firefly_web/live/staff_live/security.ex:141
+#, elixir-autogen, elixir-format
+msgid "IP address or range"
+msgstr "عنوان IP أو نطاق"
+
+#: lib/firefly_web/live/staff_live/security.ex:212
+#, elixir-autogen, elixir-format
+msgid "Jail"
+msgstr "المجموعة"
+
+#: lib/firefly_web/live/staff_live/security.ex:155
+#, elixir-autogen, elixir-format
+msgid "No address is banned."
+msgstr "لا يوجد عنوان محظور."
+
+#: lib/firefly_web/live/staff_live/security.ex:213
+#, elixir-autogen, elixir-format
+msgid "Points"
+msgstr "النقاط"
+
+#: lib/firefly_web/live/staff_live/security.ex:148
+#, elixir-autogen, elixir-format
+msgid "Reason"
+msgstr "السبب"
+
+#: lib/firefly_web/live/staff_live/security.ex:202
+#, elixir-autogen, elixir-format
+msgid "Recent offenders"
+msgstr "المخالفون مؤخرًا"
+
+#: lib/firefly_web/live/staff_live/security.ex:194
+#, elixir-autogen, elixir-format
+msgid "Unban"
+msgstr "إلغاء الحظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:192
+#, elixir-autogen, elixir-format
+msgid "Unban %{ip}"
+msgstr "إلغاء حظر %{ip}"
+
+#: lib/firefly_web/live/staff_live/security.ex:108
+#, elixir-autogen, elixir-format
+msgid "Unbanned %{ip}."
+msgstr "أُلغي حظر %{ip}."
+
+#: lib/firefly_web/live/staff_live/security.ex:165
+#, elixir-autogen, elixir-format
+msgid "Until"
+msgstr "حتى"
+
+#: lib/firefly_web/live/staff_live/security.ex:68
+#: lib/firefly_web/live/staff_live/security.ex:183
+#, elixir-autogen, elixir-format
+msgid "Until unbanned"
+msgstr "حتى إلغاء الحظر"
+
+#: lib/firefly_web/live/staff_live/security.ex:163
+#, elixir-autogen, elixir-format
+msgid "Why"
+msgstr "السبب"
 
 #: lib/firefly_web/unstorable_text.ex:21
 #, elixir-autogen, elixir-format

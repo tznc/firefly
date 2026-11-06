@@ -3,9 +3,11 @@ defmodule Firefly.Uploads.Processor do
   Checks what an uploaded file really is and prepares it for storing.
 
   The type comes from the file's content, never from its name or the
-  browser's claim: PNG, JPEG, GIF and WebP images, PDFs, plain text
-  (valid UTF-8 named `.txt`) and, for themes, WOFF and WOFF2 fonts.
-  Anything else (HTML, SVG, scripts, executables) is refused.
+  browser's claim, and a name or claim that disagrees with the content is
+  refused: PNG, JPEG, GIF and WebP images, SVG images (made PNGs, see
+  `rasterize_svg/1`), PDFs, plain text (valid UTF-8 named `.txt`) and, for
+  themes, WOFF and WOFF2 fonts. Anything else (HTML, scripts,
+  executables) is refused.
 
   Images are decoded with libvips (through `Image`/`Vix`) and written
   again: turned upright from their EXIF orientation, with all metadata
@@ -48,31 +50,124 @@ defmodule Firefly.Uploads.Processor do
   def extension("image/jpeg"), do: ".jpg"
   def extension("image/gif"), do: ".gif"
   def extension("image/webp"), do: ".webp"
+  def extension("image/svg+xml"), do: ".svg"
   def extension("application/pdf"), do: ".pdf"
   def extension("text/plain"), do: ".txt"
   def extension("font/woff2"), do: ".woff2"
   def extension("font/woff"), do: ".woff"
 
   @doc """
-  The content type of `data` named `filename`, if it's one that's
-  accepted: `{:ok, type}` or `{:error, message}`.
+  The content type of `data` named `filename` (and, if given, claimed to
+  be `claimed_type` by the browser or client), if it's one that's accepted:
+  `{:ok, type}` or `{:error, message}`. The type comes from the content; a
+  name or claimed type that says otherwise is refused, so a PDF can't pass
+  as `photo.png` nor a PNG as `application/pdf`. A name without an
+  extension, and a generic claim (`application/octet-stream`), say nothing.
+  SVG images are `image/svg+xml` here; `rasterize_svg/1` makes them PNGs.
   """
-  def detect(<<0x89, "PNG", 0x0D, 0x0A, 0x1A, 0x0A, _::binary>>, _filename),
+  def detect(data, filename, claimed_type \\ nil) do
+    with {:ok, type} <- sniff(data, filename),
+         :ok <- check_extension(type, filename),
+         :ok <- check_claim(type, claimed_type),
+         do: {:ok, type}
+  end
+
+  defp sniff(<<0x89, "PNG", 0x0D, 0x0A, 0x1A, 0x0A, _::binary>>, _filename),
     do: {:ok, "image/png"}
 
-  def detect(<<0xFF, 0xD8, 0xFF, _::binary>>, _filename), do: {:ok, "image/jpeg"}
-  def detect(<<"GIF8", v, "a", _::binary>>, _filename) when v in [?7, ?9], do: {:ok, "image/gif"}
-  def detect(<<"RIFF", _::32, "WEBP", _::binary>>, _filename), do: {:ok, "image/webp"}
-  def detect(<<"%PDF-", _::binary>>, _filename), do: {:ok, "application/pdf"}
+  defp sniff(<<0xFF, 0xD8, 0xFF, _::binary>>, _filename), do: {:ok, "image/jpeg"}
+  defp sniff(<<"GIF8", v, "a", _::binary>>, _filename) when v in [?7, ?9], do: {:ok, "image/gif"}
+  defp sniff(<<"RIFF", _::32, "WEBP", _::binary>>, _filename), do: {:ok, "image/webp"}
+  defp sniff(<<"%PDF-", _::binary>>, _filename), do: {:ok, "application/pdf"}
   # Web fonts, which only themes may upload (see Firefly.Uploads).
-  def detect(<<"wOF2", _::binary>>, _filename), do: {:ok, "font/woff2"}
-  def detect(<<"wOFF", _::binary>>, _filename), do: {:ok, "font/woff"}
+  defp sniff(<<"wOF2", _::binary>>, _filename), do: {:ok, "font/woff2"}
+  defp sniff(<<"wOFF", _::binary>>, _filename), do: {:ok, "font/woff"}
 
-  def detect(data, filename) do
-    if String.downcase(Path.extname(filename)) == ".txt" and String.valid?(data) and
-         not String.contains?(data, <<0>>),
-       do: {:ok, "text/plain"},
-       else: {:error, "That file type isn't allowed."}
+  defp sniff(data, filename) do
+    cond do
+      svg?(data) -> {:ok, "image/svg+xml"}
+      text?(data, filename) -> {:ok, "text/plain"}
+      true -> {:error, "That file type isn't allowed."}
+    end
+  end
+
+  # Plain text only when named so: text is what HTML and scripts are too.
+  defp text?(data, filename),
+    do:
+      extension_of(filename) == ".txt" and String.valid?(data) and
+        not String.contains?(data, <<0>>)
+
+  # An SVG document: an <svg> root, after at most an XML declaration,
+  # comments and a DOCTYPE without an internal subset. Entity declarations
+  # (billion laughs, external entities) are refused outright.
+  @svg_root ~r/\A(?:\x{FEFF})?\s*(?:<\?xml[^>]*\?>\s*)?(?:<!--.*?-->\s*)*(?:<!DOCTYPE\s+svg[^>\[]*>\s*)?(?:<!--.*?-->\s*)*<svg[\s>]/su
+
+  defp svg?(data),
+    do: String.valid?(data) and Regex.match?(@svg_root, data) and not (data =~ ~r/<!ENTITY/i)
+
+  # The extensions a file of each type may be named with.
+  @extensions %{
+    "image/png" => ~w(.png),
+    "image/jpeg" => ~w(.jpg .jpeg .jpe .jfif),
+    "image/gif" => ~w(.gif),
+    "image/webp" => ~w(.webp),
+    "image/svg+xml" => ~w(.svg),
+    "application/pdf" => ~w(.pdf),
+    "text/plain" => ~w(.txt),
+    "font/woff2" => ~w(.woff2),
+    "font/woff" => ~w(.woff)
+  }
+
+  # Other names clients use for the same types.
+  @aliases %{
+    "image/jpg" => "image/jpeg",
+    "image/pjpeg" => "image/jpeg",
+    "image/x-png" => "image/png",
+    "application/x-pdf" => "application/pdf",
+    "application/font-woff" => "font/woff",
+    "application/x-font-woff" => "font/woff",
+    "application/font-woff2" => "font/woff2"
+  }
+
+  # Claims that say nothing about the type.
+  @generic ["", "application/octet-stream", "binary/octet-stream", "application/unknown"]
+
+  defp extension_of(filename), do: filename |> to_string() |> Path.extname() |> String.downcase()
+
+  defp check_extension(type, filename) do
+    case extension_of(filename) do
+      "" -> :ok
+      extension -> if extension in @extensions[type], do: :ok, else: mismatch()
+    end
+  end
+
+  defp check_claim(_type, nil), do: :ok
+
+  defp check_claim(type, claimed) do
+    claimed = claimed |> String.split(";") |> hd() |> String.trim() |> String.downcase()
+    claimed = Map.get(@aliases, claimed, claimed)
+    if claimed in @generic or claimed == type, do: :ok, else: mismatch()
+  end
+
+  defp mismatch, do: {:error, "That file's content doesn't match its type."}
+
+  @doc """
+  Renders an SVG image to a PNG, at its own size (`{:ok, png}` or
+  `{:error, message}`). Rasterizing rather than sanitizing: no script,
+  `foreignObject`, event handler, external reference or styling trick
+  survives as pixels, there's no SVG allow-list to keep ahead of browser
+  quirks, and every image then goes through the same libvips path. librsvg
+  renders it from memory, with no base location, so it loads nothing
+  external. Vector scaling is what's lost.
+  """
+  def rasterize_svg(data) do
+    with {:ok, image} <- open(data),
+         :ok <- check_pixels(image) do
+      case Image.write(image, :memory, suffix: ".png") do
+        {:ok, png} -> {:ok, png}
+        {:error, _reason} -> {:error, "That image couldn't be processed."}
+      end
+    end
   end
 
   @doc """

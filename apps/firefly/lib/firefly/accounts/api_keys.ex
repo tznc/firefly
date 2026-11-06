@@ -22,7 +22,7 @@ defmodule Firefly.Accounts.ApiKeys do
 
   import Ecto.Query
 
-  alias Firefly.{Accounts, RateLimit, Repo, SiteSettings}
+  alias Firefly.{Accounts, RateLimit, Repo, Security, SiteSettings}
   alias Firefly.Accounts.{ApiKey, User}
   alias Firefly.Moderation.StaffLog
 
@@ -101,8 +101,12 @@ defmodule Firefly.Accounts.ApiKeys do
     |> Ecto.Changeset.change(token_hash: hash(token), prefix: String.slice(token, 0, 8))
     |> Repo.insert()
     |> case do
-      {:ok, key} -> {:ok, key, token}
-      {:error, changeset} -> {:error, changeset}
+      {:ok, key} ->
+        Security.record("api_key.create", key.user_id, %{name: key.name, prefix: key.prefix})
+        {:ok, key, token}
+
+      {:error, changeset} ->
+        {:error, changeset}
     end
   end
 
@@ -145,8 +149,10 @@ defmodule Firefly.Accounts.ApiKeys do
     end
   end
 
-  defp do_revoke(%ApiKey{revoked_at: nil} = key),
-    do: key |> Ecto.Changeset.change(revoked_at: DateTime.utc_now(:second)) |> Repo.update()
+  defp do_revoke(%ApiKey{revoked_at: nil} = key) do
+    Security.record("api_key.revoke", key.user_id, %{name: key.name, prefix: key.prefix})
+    key |> Ecto.Changeset.change(revoked_at: DateTime.utc_now(:second)) |> Repo.update()
+  end
 
   defp do_revoke(key), do: {:ok, key}
 
@@ -210,6 +216,11 @@ defmodule Firefly.Accounts.ApiKeys do
   defp touch(key, ip) do
     now = DateTime.utc_now(:second)
     ip = format_ip(ip)
+
+    # The first use from each address goes in the security log.
+    if key.last_used_ip != ip,
+      do:
+        Security.record("api_key.use", key.user_id, %{name: key.name, prefix: key.prefix}, ip: ip)
 
     if key.last_used_at == nil or key.last_used_ip != ip or
          DateTime.diff(now, key.last_used_at) >= @touch_every do

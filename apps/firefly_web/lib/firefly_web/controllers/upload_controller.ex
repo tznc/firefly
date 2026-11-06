@@ -7,7 +7,8 @@ defmodule FireflyWeb.UploadController do
 
   Images are shown inline; other files (PDFs, text) download as
   attachments. Either way the browser is told not to guess the type and
-  not to run anything in it.
+  not to run anything in it. An upload waiting for its virus scan, or
+  quarantined by it, is a 404 for everyone (see `Firefly.Uploads.servable?/1`).
   """
   use FireflyWeb, :controller
 
@@ -60,11 +61,15 @@ defmodule FireflyWeb.UploadController do
 
   defp key(upload, :thumbnail), do: {:ok, Uploads.key(upload)}
 
-  # Sobelow: the type is the one Uploads.Processor detected from the content (an allow-list
-  # without HTML or SVG), sent with nosniff and a sandbox CSP; the path is the storage key, made
-  # from the file's SHA-256.
-  # sobelow_skip ["XSS.ContentType", "Traversal.SendFile"]
   defp send_upload(conn, upload, key) do
+    if Uploads.servable?(upload), do: serve_file(conn, upload, key), else: not_found(conn)
+  end
+
+  # Sobelow: the type is the one Uploads.Processor detected from the content
+  # (an allow-list without HTML or SVG), sent with nosniff and a sandbox CSP;
+  # the path is the storage key, made from the file's SHA-256.
+  # sobelow_skip ["XSS.ContentType", "Traversal.SendFile"]
+  defp serve_file(conn, upload, key) do
     disposition = disposition(upload)
 
     conn =

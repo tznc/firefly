@@ -47,21 +47,91 @@ defmodule FireflyWeb.UploadsTest do
 
   describe "processing" do
     test "detects the type from the content, refusing active content" do
-      assert Processor.detect(File.read!(image_file(System.tmp_dir!(), "a.png")), "x.jpg") ==
-               {:ok, "image/png"}
-
-      assert Processor.detect("%PDF-1.7 ...", "doc.txt") == {:ok, "application/pdf"}
+      png = File.read!(image_file(System.tmp_dir!(), "a.png"))
+      assert Processor.detect(png, "x.png") == {:ok, "image/png"}
+      assert Processor.detect(png, "pasted") == {:ok, "image/png"}
+      assert Processor.detect("%PDF-1.7 ...", "doc.pdf") == {:ok, "application/pdf"}
       assert Processor.detect("just text", "notes.txt") == {:ok, "text/plain"}
+      assert Processor.detect(~s(<svg xmlns="x"></svg>), "a.svg") == {:ok, "image/svg+xml"}
 
       for {data, name} <- [
             {"<html><script>alert(1)</script>", "page.html"},
-            {"<svg onload=alert(1)>", "image.svg"},
             {"<script>alert(1)</script>", "fake.png"},
             {"just text", "notes.html"},
-            {<<0, 1, 2>>, "binary.txt"}
+            {<<0, 1, 2>>, "binary.txt"},
+            # Entities (billion laughs, external entities) and other roots.
+            {~s(<!DOCTYPE svg [<!ENTITY a "aa">]><svg>&a;</svg>), "a.svg"},
+            {~s(<?xml version="1.0"?><!ENTITY x SYSTEM "file:///etc/passwd"><svg/>), "a.svg"},
+            {~s(<html><svg></svg></html>), "a.svg"}
           ] do
         assert {:error, _} = Processor.detect(data, name)
       end
+    end
+
+    test "refuses a name or claimed type that disagrees with the content" do
+      png = File.read!(image_file(System.tmp_dir!(), "a.png"))
+      mismatch = {:error, "That file's content doesn't match its type."}
+
+      assert Processor.detect(png, "x.jpg") == mismatch
+      assert Processor.detect("%PDF-1.7 ...", "doc.txt") == mismatch
+      assert Processor.detect(png, "a.png", "application/pdf") == mismatch
+      assert Processor.detect("%PDF-1.7 ...", "doc.pdf", "image/png") == mismatch
+
+      assert Processor.detect(png, "a.png", "image/png") == {:ok, "image/png"}
+      assert Processor.detect(png, "a.PNG", "IMAGE/PNG") == {:ok, "image/png"}
+      assert Processor.detect(png, "a.png", "application/octet-stream") == {:ok, "image/png"}
+
+      assert Processor.detect("just text", "a.txt", "text/plain; charset=utf-8") ==
+               {:ok, "text/plain"}
+
+      jpeg = File.read!(image_file(System.tmp_dir!(), "a.jpg"))
+      assert Processor.detect(jpeg, "a.jpeg", "image/jpg") == {:ok, "image/jpeg"}
+    end
+
+    test "makes SVG images PNGs, so nothing active in them survives", %{
+      user: user,
+      tmp_dir: dir
+    } do
+      svg = """
+      <?xml version="1.0"?>
+      <!-- a drawing -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="20" onload="alert(1)">
+        <script>alert(2)</script>
+        <foreignObject><div xmlns="http://www.w3.org/1999/xhtml">x</div></foreignObject>
+        <image href="https://example.com/track.png" width="10" height="10"/>
+        <rect width="40" height="20" fill="red"/>
+      </svg>
+      """
+
+      {:ok, upload} =
+        Uploads.create(user, file(dir, "drawing.svg", svg), "drawing.svg",
+          claimed_type: "image/svg+xml"
+        )
+
+      assert upload.content_type == "image/png"
+      assert upload.filename == "drawing.png"
+      assert {upload.width, upload.height} == {40, 20}
+
+      stored = File.read!(Path.join(Storage.Local.root(), Uploads.key(upload)))
+      assert <<0x89, "PNG", _::binary>> = stored
+      refute stored =~ "alert"
+      assert upload.sha256 == Base.encode16(:crypto.hash(:sha256, svg), case: :lower)
+    end
+
+    test "SVG attachments follow the allowed file types", %{
+      user: user,
+      admin: admin,
+      tmp_dir: dir
+    } do
+      set(%{"authorized_extensions" => "png,jpg"}, admin)
+
+      path =
+        file(dir, "a.svg", ~s(<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>))
+
+      assert {:error, "That file type isn't allowed here."} = Uploads.create(user, path, "a.svg")
+
+      assert {:ok, %{content_type: "image/png"}} =
+               Uploads.create(user, path, "a.svg", variant: "avatar")
     end
 
     test "turns photos upright and strips EXIF, including GPS", %{user: user, tmp_dir: dir} do

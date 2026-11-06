@@ -14,8 +14,9 @@ defmodule FireflyWeb.Router do
     plug(:accepts, ["json"])
   end
 
-  # Sobelow: FireflyWeb.Plugs.ContentSecurityPolicy sets the CSP, with a per-request nonce.
-  # sobelow_skip ["Config.CSP"]
+  # Sobelow: FireflyWeb.Plugs.ContentSecurityPolicy sets the CSP, with a per-request nonce;
+  # FireflyWeb.Plugs.CSRF is protect_from_forgery (Plug.CSRFProtection) reporting to the jail.
+  # sobelow_skip ["Config.CSP", "Config.CSRF"]
   pipeline :browser do
     plug(:accepts, ["html"])
     plug(:fetch_session)
@@ -23,7 +24,8 @@ defmodule FireflyWeb.Router do
     plug(FireflyWeb.Plugs.LoginProviders)
     plug(Ueberauth)
     plug(:put_root_layout, html: {FireflyWeb.Layouts, :root})
-    plug(:protect_from_forgery)
+    # protect_from_forgery, reporting rejected requests to the jail
+    plug(FireflyWeb.Plugs.CSRF)
     plug(:put_secure_browser_headers)
     plug(FireflyWeb.Plugs.ContentSecurityPolicy)
     plug(FireflyWeb.Plugs.CurrentUser)
@@ -52,13 +54,15 @@ defmodule FireflyWeb.Router do
   # The jobs dashboard (Oban Web, see FireflyWeb.JobsDashboard): admins,
   # checked on every request; its own layout, under the forum's CSP (its
   # scripts carry the nonce).
-  # Sobelow: FireflyWeb.Plugs.ContentSecurityPolicy sets the CSP, with a per-request nonce.
-  # sobelow_skip ["Config.CSP"]
+  # Sobelow: FireflyWeb.Plugs.ContentSecurityPolicy sets the CSP, with a per-request nonce;
+  # FireflyWeb.Plugs.CSRF is protect_from_forgery (Plug.CSRFProtection) reporting to the jail.
+  # sobelow_skip ["Config.CSP", "Config.CSRF"]
   pipeline :jobs_admin do
     plug(:accepts, ["html"])
     plug(:fetch_session)
     plug(:fetch_live_flash)
-    plug(:protect_from_forgery)
+    # protect_from_forgery, reporting rejected requests to the jail
+    plug(FireflyWeb.Plugs.CSRF)
     plug(:put_secure_browser_headers)
     plug(FireflyWeb.Plugs.ContentSecurityPolicy)
     plug(FireflyWeb.Plugs.CurrentUser)
@@ -224,6 +228,7 @@ defmodule FireflyWeb.Router do
       live("/staff/embedding", StaffLive.Embedding, :index)
       live("/staff/ai", StaffLive.AI, :index)
       live("/staff/log", StaffLive.Log, :index)
+      live("/staff/security", StaffLive.Security, :index)
       live("/staff/settings", StaffLive.Settings, :index)
       live("/staff/groups", StaffLive.Groups, :index)
       live("/staff/review", StaffLive.Review, :index)

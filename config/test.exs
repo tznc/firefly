@@ -81,6 +81,10 @@ config :firefly, Firefly.Mailer, adapter: Swoosh.Adapters.Test
 # Jobs are only inserted; tests run them with Oban.Testing (perform_job/3,
 # drain_queue/2).
 config :firefly, Oban, testing: :manual
+
+# The jail's counters and ban cache are per node, so shared by every test:
+# off, except in the jail's own tests (not async), which turn it on.
+config :firefly, Firefly.Security.Jail, enabled: false
 config :firefly_web, :jobs_dashboard_oban, FireflyWeb.JobsDashboardOban
 
 config :firefly, :email,

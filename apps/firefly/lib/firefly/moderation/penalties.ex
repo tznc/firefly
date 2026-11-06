@@ -78,6 +78,12 @@ defmodule Firefly.Moderation.Penalties do
             ends: ends_text(until)
           })
 
+          # The staff member's address isn't the member's.
+          Firefly.Security.record("account.#{kind}", user, %{ends: ends_text(until)},
+            ip: nil,
+            user_agent: nil
+          )
+
           {:ok, user}
         end)
 
@@ -103,6 +109,7 @@ defmodule Firefly.Moderation.Penalties do
           |> Repo.update()
 
         StaffLog.record(admin, action, user, %{username: user.username})
+        Firefly.Security.record("account.un#{kind}", user, %{}, ip: nil, user_agent: nil)
         {:ok, user}
       end)
 

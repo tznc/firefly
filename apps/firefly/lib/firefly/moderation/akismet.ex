@@ -228,6 +228,7 @@ defmodule Firefly.Moderation.Akismet do
       |> Ecto.Changeset.change(spam: spam?, status: if(spam?, do: "pending", else: "clean"))
       |> Repo.update!()
 
+    if spam?, do: Firefly.Security.Jail.signal(check.params["user_ip"], "akismet_spam")
     if spam?, do: caught(check, user)
     :ok
   end

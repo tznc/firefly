@@ -10,7 +10,7 @@ defmodule Firefly.PeriodicJobsTest do
 
   test "every periodic task is a worker on a valid cron schedule" do
     crontab = Jobs.crontab()
-    assert length(crontab) == 18
+    assert length(crontab) == 20
 
     for {expression, worker} <- crontab do
       assert {:ok, _} = Oban.Cron.Expression.parse(expression), expression
