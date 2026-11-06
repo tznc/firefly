@@ -48,7 +48,10 @@ defmodule FireflyWeb.Editor do
     if entry.done? do
       result =
         consume_uploaded_entry(socket, entry, fn %{path: path} ->
-          {:ok, Uploads.create(socket.assigns.current_user, path, entry.client_name)}
+          {:ok,
+           Uploads.create(socket.assigns.current_user, path, entry.client_name,
+             claimed_type: entry.client_type
+           )}
         end)
 
       case result do

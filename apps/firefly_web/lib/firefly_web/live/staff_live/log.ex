@@ -94,6 +94,7 @@ defmodule FireflyWeb.StaffLive.Log do
     "plugin.resume" => "Resumed plugin",
     "plugin.secret" => "Changed plugin endpoint secret",
     "upload.delete" => "Deleted upload",
+    "upload.quarantine" => "Quarantined infected upload",
     "emoji.create" => "Added emoji",
     "emoji.delete" => "Removed emoji",
     "badge.create" => "Created badge",

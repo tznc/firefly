@@ -1606,10 +1606,10 @@ defmodule Firefly.SiteSettings do
         section: "Uploads",
         type: :list,
         label: "Allowed file types",
-        default: ~w(png jpg gif webp pdf txt),
-        options: ~w(png jpg gif webp pdf txt),
+        default: ~w(png jpg gif webp svg pdf txt),
+        options: ~w(png jpg gif webp svg pdf txt),
         help:
-          "Which kinds of file members may attach (by extension; the content is checked too). Firefly accepts at most these: png, jpg, gif, webp, pdf, txt."
+          "Which kinds of file members may attach (by extension; the content must match). Firefly accepts at most these: png, jpg, gif, webp, svg (made a PNG image), pdf, txt."
       },
       %{
         key: "email_from_name",

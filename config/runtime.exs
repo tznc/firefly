@@ -34,6 +34,12 @@ if config_env() != :test do
     storage: if(System.get_env("FIREFLY_UPLOAD_STORAGE") == "s3", do: :s3, else: :local),
     local_dir: System.get_env("FIREFLY_UPLOAD_DIR", "uploads")
 
+  # Virus scanning of uploads with a clamd daemon, when FIREFLY_CLAMAV_HOST
+  # is set (see Firefly.Uploads.Scanner).
+  config :firefly, Firefly.Uploads.Scanner,
+    host: System.get_env("FIREFLY_CLAMAV_HOST"),
+    port: String.to_integer(System.get_env("FIREFLY_CLAMAV_PORT", "3310"))
+
   # Backups (see Firefly.Backups): kept in FIREFLY_BACKUP_DIR, or in the
   # uploads' S3 bucket under a prefix. pg_dump/pg_restore come from
   # FIREFLY_PG_BIN_DIR, else the newest /usr/lib/postgresql/*/bin.

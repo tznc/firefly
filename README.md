@@ -102,6 +102,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_UPLOAD_STORAGE` | Where uploads are kept: `local` (default, a directory on disk) or `s3` |
 | `FIREFLY_UPLOAD_DIR` | The local upload directory, default `uploads` under the working directory (`/app/uploads` in the Docker image: mount a volume there) |
 | `FIREFLY_AWS_ACCESS_KEY_ID`, `FIREFLY_AWS_SECRET_ACCESS_KEY`, `FIREFLY_AWS_S3_BUCKET`, `FIREFLY_AWS_S3_REGION` | The S3 bucket for uploads, with `FIREFLY_UPLOAD_STORAGE=s3` (kept private: files are served through Firefly's access checks) |
+| `FIREFLY_CLAMAV_HOST`, `FIREFLY_CLAMAV_PORT` | Virus scanning of uploads with a [clamd](https://docs.clamav.net) daemon over TCP (port default 3310), off unless the host is set (see "Uploads" below) |
 | `FIREFLY_BACKUP_STORAGE` | Where backups (`/staff/backups`) are kept: `local` (default) or `s3` (the uploads' bucket, under `FIREFLY_BACKUP_S3_PREFIX`, default `backups/`) |
 | `FIREFLY_BACKUP_DIR` | The local backup directory, default `backups` under the working directory (`/app/backups` in the Docker image: mount a volume there) |
 | `FIREFLY_PG_BIN_DIR` | Where `pg_dump` and `pg_restore` are, for backups; they must be the database's major version or newer (the Docker image has PostgreSQL 18's, for servers up to 18). Default: the newest `/usr/lib/postgresql/*/bin`, else the `PATH` |
@@ -127,6 +128,15 @@ Image uploads are processed with [libvips](https://www.libvips.org) (through
 install it (`apt-get install libvips-dev`, `brew install vips`) and set
 `VIX_COMPILATION_MODE=PLATFORM_PROVIDED_LIBVIPS` before `mix deps.compile`. The
 Docker images include it.
+
+Uploads: the type comes from the file's content, and a file whose name or
+claimed type says otherwise is refused. SVG images are rendered to PNGs (so no
+script, `foreignObject`, event handler or external reference survives); other
+files than images are served as downloads (`Content-Disposition: attachment`),
+everything with `X-Content-Type-Options: nosniff` and a sandboxing CSP. With
+`FIREFLY_CLAMAV_HOST` set, a new upload is served to no one until clamd has
+scanned it (a background job, retried while clamd is unreachable); an infected
+file is quarantined, recorded in the staff log and refused from then on.
 
 ### Docker image
 
