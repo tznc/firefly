@@ -48,6 +48,10 @@ defmodule Firefly.Plugin.Host do
       `Firefly.Plugins.Egress`).
     * `fields.get`, `fields.set` (`fields`) - `{type, id}`, `{type, id, key,
       value}`: see `Firefly.Plugins.Fields`.
+    * `jail.signal` (`security`) - `{ip, reason}`: reports abuse from an
+      address to the jail's `plugin` group (see `Firefly.Security.Jail`); at
+      most 60 a minute per plugin. The result is `{banned}`: whether this
+      report banned it.
 
   Writes act as the plugin's bot user (see `Firefly.Plugins.Bots`)
   through the same contexts, policies and checks as a member's
@@ -103,7 +107,9 @@ defmodule Firefly.Plugin.Host do
     "notify" => "Can send members notifications (at most 100 an hour)",
     "moderate" => "Can close, reopen, pin and unpin public threads, as its bot account",
     "http" => "Can send forum content to:",
-    "fields" => "Can keep its own data on posts, threads and member profiles"
+    "fields" => "Can keep its own data on posts, threads and member profiles",
+    "security" =>
+      "Can report abusive IP addresses to the ban list (at most 60 a minute), and is told which addresses are banned and unbanned"
   }
 
   # Where `http.fetch` may run (see "Network access").
@@ -132,7 +138,8 @@ defmodule Firefly.Plugin.Host do
     "threads.pin" => "moderate",
     "http.fetch" => "http",
     "fields.get" => "fields",
-    "fields.set" => "fields"
+    "fields.set" => "fields",
+    "jail.signal" => "security"
   }
 
   @doc "Every permission a manifest may request."
@@ -389,6 +396,21 @@ defmodule Firefly.Plugin.Host do
         {:error, %Ecto.Changeset{} = changeset} -> {:error, changeset_message(changeset)}
         {:error, reason} -> {:error, Flags.message(reason)}
       end
+    end
+  end
+
+  defp run("jail.signal", plugin, %{"ip" => ip} = args) when is_binary(ip) do
+    reason = String.slice(to_string(args["reason"] || ""), 0, 100)
+
+    with {:ip, address} when not is_nil(address) <- {:ip, Firefly.IPRange.address(ip)},
+         :ok <- RateLimit.check(:plugin_jail, plugin.id) do
+      case Firefly.Security.Jail.signal(address, "plugin", %{plugin: plugin.id, reason: reason}) do
+        {:banned, _ban} -> {:ok, %{banned: true}}
+        :ok -> {:ok, %{banned: false}}
+      end
+    else
+      {:ip, nil} -> {:error, "ip must be an IP address"}
+      {:error, :rate_limited} -> {:error, "too many reports: try again later"}
     end
   end
 

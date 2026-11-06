@@ -34,13 +34,20 @@ defmodule FireflyWeb.Plugs.ApiCurrentUser do
             |> Problem.send(429, Firefly.RateLimit.message())
 
           {:error, reason} when strict? ->
+            failed(conn, reason)
             refuse(conn, reason)
 
-          {:error, _reason} ->
+          {:error, reason} ->
+            failed(conn, reason)
             conn
         end
     end
   end
+
+  # A key that doesn't work counts towards a ban (see Firefly.Security.Jail);
+  # one used from an address it doesn't allow is the key's rule, not abuse.
+  defp failed(_conn, :ip_not_allowed), do: :ok
+  defp failed(conn, _reason), do: Firefly.Security.Jail.signal(conn.remote_ip, "api_key_failure")
 
   defp token(conn) do
     case get_req_header(conn, "authorization") do

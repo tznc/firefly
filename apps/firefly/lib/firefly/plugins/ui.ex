@@ -203,10 +203,19 @@ defmodule Firefly.Plugins.UI do
           {502, %{error: "the plugin failed"}}
       end
     else
-      nil -> {404, %{error: "not found"}}
-      :not_found -> {404, %{error: "not found"}}
-      :unauthorized -> {401, %{error: "authentication required"}}
-      {:error, :rate_limited} -> {429, %{error: RateLimit.message()}}
+      nil ->
+        {404, %{error: "not found"}}
+
+      :not_found ->
+        {404, %{error: "not found"}}
+
+      :unauthorized ->
+        # A wrong secret (not a missing one) is a signature failure.
+        if is_binary(secret), do: Firefly.Security.Jail.signal(caller, "signature", %{plugin: id})
+        {401, %{error: "authentication required"}}
+
+      {:error, :rate_limited} ->
+        {429, %{error: RateLimit.message()}}
     end
   end
 

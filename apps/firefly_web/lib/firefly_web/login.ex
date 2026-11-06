@@ -7,6 +7,10 @@ defmodule FireflyWeb.Login do
   on to give their second factor (`FireflyWeb.TwoFactorController`),
   with the login waiting in the session for 10 minutes; anyone else gets a
   fresh session.
+
+  Logins and failed attempts go in the security log (see `Firefly.Security`):
+  `log_in/4` records the login with how the user proved who they are, and
+  controllers report failed attempts through `failed/3`.
   """
 
   use FireflyWeb, :verified_routes
@@ -14,7 +18,7 @@ defmodule FireflyWeb.Login do
   import Phoenix.Controller
   import Plug.Conn
 
-  alias Firefly.Repo
+  alias Firefly.{Repo, Security}
   alias Firefly.Accounts.{TwoFactor, WebAuthn}
   alias Firefly.Moderation.Penalties
   alias Firefly.Accounts.User
@@ -29,11 +33,27 @@ defmodule FireflyWeb.Login do
   """
   def complete(conn, %User{} = user, failure_path, method, to \\ "/") do
     cond do
-      User.suspended?(user) -> fail(conn, failure_path, Penalties.suspended_message(user))
-      TwoFactor.required?(user, method) -> ask_second_factor(conn, user)
-      true -> log_in(conn, user, "Successfully authenticated.", to)
+      User.suspended?(user) ->
+        failed("login.failure", user, %{method: method, reason: "suspended"})
+        fail(conn, failure_path, Penalties.suspended_message(user))
+
+      TwoFactor.required?(user, method) ->
+        ask_second_factor(conn, user, method)
+
+      true ->
+        conn
+        |> put_private(:login_method, method)
+        |> log_in(user, "Successfully authenticated.", to)
     end
   end
+
+  @doc """
+  Reports a failed login attempt (`kind`: `"login.failure"`,
+  `"two_factor.failure"` or `"passkey.failure"`) for `user`, or the account
+  named so (a username, or nil when unknown), with `details`.
+  """
+  def failed(kind, user_or_username, details \\ %{}),
+    do: Security.login_failed(kind, user_or_username, details)
 
   @doc "Remembers `path` (on this site) as where to go once logged in."
   def put_return_to(conn, path), do: put_session(conn, :return_to, local_path(path))
@@ -45,11 +65,13 @@ defmodule FireflyWeb.Login do
 
   def local_path(_path), do: "/"
 
-  defp ask_second_factor(conn, user) do
+  defp ask_second_factor(conn, user, method) do
+    pending = %{"user_id" => user.id, "at" => System.system_time(:second), "method" => method}
+
     conn
     |> configure_session(renew: true)
     |> delete_session(:current_user)
-    |> put_session(:two_factor, %{"user_id" => user.id, "at" => System.system_time(:second)})
+    |> put_session(:two_factor, pending)
     |> put_key_challenge(user)
     |> redirect(to: ~p"/login/two-factor")
   end
@@ -83,6 +105,7 @@ defmodule FireflyWeb.Login do
   """
   def log_in(conn, user, notice \\ "Successfully authenticated.", to \\ "/") do
     to = if to == "/", do: get_session(conn, :return_to) || to, else: to
+    Security.record("login.success", user, %{method: login_method(conn)})
 
     conn
     |> configure_session(renew: true)
@@ -93,6 +116,17 @@ defmodule FireflyWeb.Login do
     |> put_session(:live_socket_id, FireflyWeb.Session.live_socket_id(user))
     |> put_flash(:info, notice)
     |> redirect(to: local_path(to))
+  end
+
+  # How the user proved who they are: given by complete/5, or the first
+  # step of a login that went on to a second factor.
+  defp login_method(%{private: %{login_method: method}}), do: to_string(method)
+
+  defp login_method(conn) do
+    case get_session(conn, :two_factor) do
+      %{"method" => method} -> "#{method}+two_factor"
+      _other -> "two_factor"
+    end
   end
 
   @doc "Sends the browser back to `path` with `reason` (a message or a changeset)."

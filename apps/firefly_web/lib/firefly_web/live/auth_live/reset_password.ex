@@ -18,6 +18,9 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
          |> assign(:form, to_form(User.password_changeset(user, %{}), as: :user))}
 
       {:error, _} ->
+        # Once per visit: the first, static render runs in the request.
+        if not connected?(socket), do: Firefly.Security.Jail.signal_client("invalid_token")
+
         {:ok,
          socket
          |> put_flash(:error, gettext("That reset link is invalid or has expired."))

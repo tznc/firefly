@@ -15,6 +15,7 @@ defmodule FireflyWeb.MagicLinkController do
         Login.complete(conn, user, ~p"/login", :magic_link)
 
       {:error, :invalid} ->
+        Firefly.Security.Jail.signal(conn.remote_ip, "magic_link_abuse")
         Login.fail(conn, ~p"/login/email", "That link expired or was used already.")
 
       {:error, reason} ->

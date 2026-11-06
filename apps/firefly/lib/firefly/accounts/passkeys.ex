@@ -17,7 +17,7 @@ defmodule Firefly.Accounts.Passkeys do
 
   import Ecto.Query
 
-  alias Firefly.{Repo, SiteSettings}
+  alias Firefly.{Repo, Security, SiteSettings}
   alias Firefly.Accounts.{Auth, WebAuthn}
   alias Firefly.Accounts.User
   alias Firefly.Accounts.TwoFactor.Credential
@@ -50,11 +50,17 @@ defmodule Firefly.Accounts.Passkeys do
 
   @doc "Saves a registered passkey (attrs from `Firefly.Accounts.WebAuthn.register/2`) as `name`."
   def add(%User{} = user, attrs, name) do
-    %Credential{user_id: user.id, passkey: true}
-    |> Ecto.Changeset.change(attrs)
-    |> Credential.name_changeset(%{name: name})
-    |> Ecto.Changeset.unique_constraint(:credential_id, message: "is registered already")
-    |> Repo.insert()
+    result =
+      %Credential{user_id: user.id, passkey: true}
+      |> Ecto.Changeset.change(attrs)
+      |> Credential.name_changeset(%{name: name})
+      |> Ecto.Changeset.unique_constraint(:credential_id, message: "is registered already")
+      |> Repo.insert()
+
+    with {:ok, passkey} <- result do
+      Security.record("passkey.add", user, %{name: passkey.name})
+      {:ok, passkey}
+    end
   end
 
   @doc "Renames one of `user`'s passkeys."
@@ -72,7 +78,7 @@ defmodule Firefly.Accounts.Passkeys do
              {:error, :not_found},
          true <- Auth.other_way_in?(user, {:passkey, passkey.id}) || {:error, :last_way_in},
          {:ok, _} <- Repo.delete(passkey) do
-      :ok
+      Security.record("passkey.remove", user, %{name: passkey.name})
     end
   end
 

@@ -60,6 +60,7 @@ defmodule FireflyWeb.InboundController do
         conn
 
       true ->
+        Firefly.Security.Jail.signal(conn.remote_ip, "signature", %{endpoint: "inbound"})
         conn |> send_resp(403, "Forbidden") |> halt()
     end
   end

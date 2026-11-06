@@ -48,7 +48,7 @@ defmodule Firefly.SiteSettings do
     {"Posting",
      ["Content", "Spam and new users", "Akismet", "Uploads", "Link previews", "Search"]},
     {"Email", ["Email"]},
-    {"Security", ["Rate limits", "API"]},
+    {"Security", ["Rate limits", "API", "Security log", "Banning"]},
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
@@ -1004,6 +1004,17 @@ defmodule Firefly.SiteSettings do
         help: "Automatic backups, every this many days. 0: off."
       },
       %{
+        key: "ip_retention_days",
+        section: "Security log",
+        type: :integer,
+        label: "Keep full IP addresses (days)",
+        default: 90,
+        min: 1,
+        max: 3650,
+        help:
+          "After this many days, stored IP addresses (the security log, members' addresses, API keys' last use, spam checks) are cut to their network (/24 for IPv4, /48 for IPv6), or deleted where a partial address is no use."
+      },
+      %{
         key: "job_retention_days",
         section: "Jobs",
         type: :integer,
@@ -1383,7 +1394,9 @@ defmodule Firefly.SiteSettings do
     appearance_definitions() ++
       account_definitions() ++
       member_default_definitions() ++
-      limit_definitions() ++ rate_limit_definitions()
+      limit_definitions() ++
+      rate_limit_definitions() ++
+      Firefly.Security.Jail.setting_definitions()
   end
 
   defp appearance_definitions do
@@ -1606,10 +1619,10 @@ defmodule Firefly.SiteSettings do
         section: "Uploads",
         type: :list,
         label: "Allowed file types",
-        default: ~w(png jpg gif webp pdf txt),
-        options: ~w(png jpg gif webp pdf txt),
+        default: ~w(png jpg gif webp svg pdf txt),
+        options: ~w(png jpg gif webp svg pdf txt),
         help:
-          "Which kinds of file members may attach (by extension; the content is checked too). Firefly accepts at most these: png, jpg, gif, webp, pdf, txt."
+          "Which kinds of file members may attach (by extension; the content must match). Firefly accepts at most these: png, jpg, gif, webp, svg (made a PNG image), pdf, txt."
       },
       %{
         key: "email_from_name",
@@ -1654,7 +1667,8 @@ defmodule Firefly.SiteSettings do
     {"plugin_notify", "Notifications per plugin", "per hour"},
     {"plugin_call", "Plugin widget calls per member", "per minute"},
     {"plugin_api", "Plugin endpoint requests per IP address", "per minute"},
-    {"plugin_storage", "Plugin storage writes per member", "per minute"}
+    {"plugin_storage", "Plugin storage writes per member", "per minute"},
+    {"plugin_jail", "Plugin reports to the ban list", "per minute"}
   ]
 
   defp rate_limit_definitions do

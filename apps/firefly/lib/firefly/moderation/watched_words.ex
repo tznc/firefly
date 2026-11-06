@@ -264,6 +264,8 @@ defmodule Firefly.Moderation.WatchedWords do
         changeset
 
       words ->
+        Firefly.Security.Jail.signal_client("watched_word")
+
         add_error(changeset, field, "contains a word that's not allowed: %{words}",
           words: Enum.join(words, ", "),
           validation: :watched_word

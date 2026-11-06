@@ -23,7 +23,8 @@ defmodule FireflyWeb.SettingsLive.Index do
     * Security (`/settings/security`): passkeys (see `Firefly.Accounts.Passkeys`),
       and two-factor authentication (see
       `Firefly.Accounts.TwoFactor`): an authenticator app, security keys
-      (registered through the `SecurityKeyRegister` hook) and backup codes
+      (registered through the `SecurityKeyRegister` hook) and backup codes;
+      and their recent security activity (see `Firefly.Security`)
     * API keys (`/settings/api-keys`): keys for the API, with scopes,
       expiry and allowed addresses (`FireflyWeb.ApiKeysComponent`)
     * Account: downloading your data and deleting your account (both handled
@@ -32,6 +33,8 @@ defmodule FireflyWeb.SettingsLive.Index do
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :require_user})
+
+  import FireflyWeb.SecurityComponents, only: [events_table: 1]
 
   alias Firefly.{Accounts, Badges, RateLimit, SiteSettings, Uploads}
   alias Firefly.Accounts.{Auth, EmailConfirmation, Ignores, Passkeys, TwoFactor, WebAuthn}
@@ -156,7 +159,8 @@ defmodule FireflyWeb.SettingsLive.Index do
       totp?: TwoFactor.totp?(user),
       credentials: TwoFactor.credentials(user),
       backup_codes_left: TwoFactor.backup_codes_left(user),
-      passkeys: Passkeys.list(user)
+      passkeys: Passkeys.list(user),
+      security_events: Firefly.Security.for_user(user, 30)
     )
   end
 
@@ -1123,6 +1127,23 @@ defmodule FireflyWeb.SettingsLive.Index do
                 Generate new backup codes
               </button>
             </div>
+          </div>
+        </section>
+
+        <section class="card border border-base-300 bg-base-100" id="security-activity">
+          <div class="card-body gap-3">
+            <h2 class="card-title text-base">{gettext("Recent security activity")}</h2>
+            <p class="text-sm text-base-content/70">
+              {gettext("Logins, failed attempts and changes to how you log in. Don't recognize one? Change your password and check your passkeys and keys.")}
+            </p>
+            <p :if={@security_events == []} class="text-sm" id="security-activity-empty">
+              {gettext("Nothing yet.")}
+            </p>
+            <.events_table
+              :if={@security_events != []}
+              id="my-security-events"
+              events={@security_events}
+            />
           </div>
         </section>
       </div>

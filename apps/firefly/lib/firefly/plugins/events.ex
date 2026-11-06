@@ -20,6 +20,9 @@ defmodule Firefly.Plugins.Events do
       `chat_message_deleted` - `%{message_id, channel_id}`;
       `chat_channel_created` - `%{channel}` (see `Firefly.Chat`). Plugins
       only hear of channels anyone may read (never direct messages)
+    * `ip_banned` - `%{ip, jail, reason, until}` (`until` ISO 8601, nil:
+      never); `ip_unbanned` - `%{ip}` (see `Firefly.Security.Jail`). Only for
+      plugins with the `security` permission, and never sent to webhooks
 
   where a post is `%{id, thread_id, user_id, author, body, url}` and a
   thread `%{id, title, category_id, url}`.
@@ -52,8 +55,14 @@ defmodule Firefly.Plugins.Events do
             post_approved post_rejected chat_message_created chat_message_edited
             chat_message_deleted chat_channel_created)
 
-  @doc "Every event name."
+  # About addresses, not content: for plugins allowed to see them only.
+  @security_names ~w(ip_banned ip_unbanned)
+
+  @doc "Every event about content (`security_names/0` are the others)."
   def names, do: @names
+
+  @doc "The events only plugins with the `security` permission may subscribe to."
+  def security_names, do: @security_names
 
   @doc """
   Queues `event` for the plugins subscribed to it. `data` is the payload or
@@ -63,7 +72,22 @@ defmodule Firefly.Plugins.Events do
   `:category` (likewise, for category events), `:private` (true: webhooks
   only, never plugins), `:actor` (the user who did it).
   """
-  def emit(event, data, opts \\ []) when event in @names do
+  def emit(event, data, opts \\ [])
+
+  def emit(event, data, _opts) when event in @security_names do
+    for plugin <- Plugins.implementing("handle_event"),
+        event in plugin.manifest.events,
+        "security" in plugin.manifest.permissions do
+      {:ok, _job} =
+        %{plugin_id: plugin.id, event: event, payload: data}
+        |> EventWorker.new()
+        |> Firefly.Jobs.insert()
+    end
+
+    :ok
+  end
+
+  def emit(event, data, opts) when event in @names do
     :ok = Firefly.Webhooks.enqueue(event, data, opts)
     actor = opts[:actor]
 
