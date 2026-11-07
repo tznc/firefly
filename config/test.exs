@@ -85,6 +85,18 @@ config :firefly, Oban, testing: :manual
 # The jail's counters and ban cache are per node, so shared by every test:
 # off, except in the jail's own tests (not async), which turn it on.
 config :firefly, Firefly.Security.Jail, enabled: false
+
+# No bot challenge on the forms (see Firefly.Security.Challenge); its tests
+# turn it on.
+config :firefly, Firefly.Security.Challenge, enabled: false
+
+# No requests to Have I Been Pwned from tests: the breach check's own tests
+# point it at a local stub (see Firefly.Accounts.Passwords).
+config :firefly, Firefly.Accounts.Passwords, pwned_passwords_url: nil
+
+# Failed logins aren't slowed down in tests (Firefly.Security.login_delay/2
+# is tested on its own).
+config :firefly, Firefly.Security, max_login_delay_ms: 0
 config :firefly_web, :jobs_dashboard_oban, FireflyWeb.JobsDashboardOban
 
 config :firefly, :email,

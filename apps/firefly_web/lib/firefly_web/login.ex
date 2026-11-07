@@ -66,7 +66,12 @@ defmodule FireflyWeb.Login do
   def local_path(_path), do: "/"
 
   defp ask_second_factor(conn, user, method) do
-    pending = %{"user_id" => user.id, "at" => System.system_time(:second), "method" => method}
+    pending = %{
+      "user_id" => user.id,
+      "at" => System.system_time(:second),
+      "method" => method,
+      "remember" => remember?(conn)
+    }
 
     conn
     |> configure_session(renew: true)
@@ -99,23 +104,37 @@ defmodule FireflyWeb.Login do
   def pending_user(_session), do: nil
 
   @doc """
-  Logs `user` in: a fresh session, any pending second-factor step gone,
-  and `notice` (or a welcome) to show at `to`, or (when `to` is the home
-  page) at the page that sent them to log in (see `put_return_to/2`).
+  Logs `user` in: a new server-side session (see `FireflyWeb.Session.start/3`)
+  in a fresh cookie, any pending second-factor step gone, and `notice` (or a
+  welcome) to show at `to`, or (when `to` is the home page) at the page that
+  sent them to log in (see `put_return_to/2`).
   """
   def log_in(conn, user, notice \\ "Successfully authenticated.", to \\ "/") do
     to = if to == "/", do: get_session(conn, :return_to) || to, else: to
-    Security.record("login.success", user, %{method: login_method(conn)})
+    method = login_method(conn)
+    # The session first: whether it's a new device is judged against
+    # earlier logins only.
+    conn = FireflyWeb.Session.start(conn, user, remember?(conn))
+    Security.record("login.success", user, %{method: method})
 
     conn
-    |> configure_session(renew: true)
-    |> delete_session(:return_to)
-    |> delete_session(:two_factor)
-    |> delete_session(:two_factor_challenge)
-    |> put_session(:current_user, user.id)
-    |> put_session(:live_socket_id, FireflyWeb.Session.live_socket_id(user))
     |> put_flash(:info, notice)
     |> redirect(to: local_path(to))
+  end
+
+  @doc """
+  Marks the login as "keep me logged in" or not (the password form's
+  checkbox); logins that don't ask are remembered.
+  """
+  def put_remember(conn, remember), do: put_private(conn, :remember, remember)
+
+  defp remember?(%{private: %{remember: remember}}), do: remember
+
+  defp remember?(conn) do
+    case get_session(conn, :two_factor) do
+      %{"remember" => remember} -> remember
+      _other -> true
+    end
   end
 
   # How the user proved who they are: given by complete/5, or the first

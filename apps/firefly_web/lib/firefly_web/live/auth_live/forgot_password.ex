@@ -1,11 +1,15 @@
 defmodule FireflyWeb.AuthLive.ForgotPassword do
-  @moduledoc "Requests a password reset link by email."
+  @moduledoc """
+  Requests a password reset link by email, with the bot challenge (see
+  `FireflyWeb.BotChallenge`).
+  """
   use FireflyWeb, :live_view
 
   on_mount({FireflyWeb.UserAuth, :password_login})
 
   alias Firefly.RateLimit
   alias Firefly.Accounts.PasswordReset
+  alias FireflyWeb.BotChallenge
 
   @sent "If an account with a password uses that email, we've sent it a link to reset the password."
 
@@ -15,22 +19,23 @@ defmodule FireflyWeb.AuthLive.ForgotPassword do
      socket
      |> assign(:page_title, gettext("Reset your password"))
      |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
+     |> BotChallenge.assign_challenge()
      |> assign(:form, to_form(%{"email" => ""}, as: :user))}
   end
 
   @impl true
-  def handle_event("send", %{"user" => %{"email" => email}}, socket) do
-    case RateLimit.check_password_reset(socket.assigns.remote_ip) do
-      :ok ->
-        if String.contains?(email, "@"), do: PasswordReset.deliver_instructions(email)
+  def handle_event("send", %{"user" => %{"email" => email}} = form, socket) do
+    with :ok <- RateLimit.check_password_reset(socket.assigns.remote_ip),
+         {:ok, socket} <- BotChallenge.check(socket, form) do
+      if String.contains?(email, "@"), do: PasswordReset.deliver_instructions(email)
 
-        {:noreply,
-         socket
-         |> put_flash(:info, @sent)
-         |> push_navigate(to: ~p"/auth/identity")}
-
-      {:error, :rate_limited} ->
-        {:noreply, put_flash(socket, :error, RateLimit.message())}
+      {:noreply,
+       socket
+       |> put_flash(:info, @sent)
+       |> push_navigate(to: ~p"/auth/identity")}
+    else
+      {:error, :rate_limited} -> {:noreply, put_flash(socket, :error, RateLimit.message())}
+      {:error, socket} -> {:noreply, socket}
     end
   end
 
@@ -44,6 +49,7 @@ defmodule FireflyWeb.AuthLive.ForgotPassword do
         </.page_header>
         <.form for={@form} id="forgot-password-form" phx-submit="send" class="space-y-2">
           <.input field={@form[:email]} type="email" label={gettext("Email")} autocomplete="email" required />
+          <BotChallenge.bot_challenge id={@bot_challenge_id} widget={@bot_challenge} />
           <.button variant="primary" class="btn btn-primary w-full" phx-disable-with={gettext("Sending...")}>
             {gettext("Send reset link")}
           </.button>

@@ -1,12 +1,14 @@
 defmodule FireflyWeb.AuthLive.MagicLink do
   @moduledoc """
   Asks for a login link by email (see `Firefly.Accounts.MagicLinks`). The
-  answer is the same whether or not an account has the address.
+  answer is the same whether or not an account has the address. The form
+  asks for the bot challenge (see `FireflyWeb.BotChallenge`).
   """
   use FireflyWeb, :live_view
 
   alias Firefly.RateLimit
   alias Firefly.Accounts.MagicLinks
+  alias FireflyWeb.BotChallenge
 
   @impl true
   def mount(_params, _session, socket) do
@@ -15,6 +17,7 @@ defmodule FireflyWeb.AuthLive.MagicLink do
        socket
        |> assign(:page_title, gettext("Log in by email"))
        |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
+       |> BotChallenge.assign_challenge()
        |> assign(:form, to_form(%{"email" => ""}, as: :login))}
     else
       {:ok,
@@ -25,7 +28,14 @@ defmodule FireflyWeb.AuthLive.MagicLink do
   end
 
   @impl true
-  def handle_event("send", %{"login" => %{"email" => email}}, socket) do
+  def handle_event("send", %{"login" => %{"email" => email}} = form, socket) do
+    case BotChallenge.check(socket, form) do
+      {:ok, socket} -> deliver(socket, email)
+      {:error, socket} -> {:noreply, socket}
+    end
+  end
+
+  defp deliver(socket, email) do
     case MagicLinks.deliver(email, socket.assigns.remote_ip) do
       :ok ->
         {:noreply,
@@ -54,6 +64,7 @@ defmodule FireflyWeb.AuthLive.MagicLink do
         </.page_header>
         <.form for={@form} id="magic-link-form" phx-submit="send" class="space-y-2">
           <.input field={@form[:email]} type="email" label={gettext("Email")} autocomplete="email" />
+          <BotChallenge.bot_challenge id={@bot_challenge_id} widget={@bot_challenge} />
           <.button variant="primary" class="btn btn-primary w-full" phx-disable-with={gettext("Sending...")}>
             {gettext("Email me a link")}
           </.button>

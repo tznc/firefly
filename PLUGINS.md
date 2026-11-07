@@ -251,7 +251,7 @@ staff-logged as the bot. Plugin notifications (`kind: "plugin"`) link only
 to paths on this site, at most 100 an hour per plugin.
 
 `jail.signal` reports abuse from an address to Firefly's ban list (the
-`plugin` jail, see "Banning" in the README): like a failed login, each
+`plugin` jail, see "Banning" in docs/security.md): like a failed login, each
 report is a point, and enough of them within the jail's find time ban the
 address (its threshold and times are site settings; the allowlist and
 trusted proxies are never banned). `banned` says whether this report did

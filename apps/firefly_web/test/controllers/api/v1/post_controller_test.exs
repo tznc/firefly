@@ -8,7 +8,11 @@ defmodule FireflyWeb.Api.V1.PostControllerTest do
     {:ok, elixir} = Discussion.create_category(%{title: "Elixir"})
 
     {:ok, bob} =
-      Accounts.register_user(%{username: "bob", email: "bob@example.com", password: "password1"})
+      Accounts.register_user(%{
+        username: "bob",
+        email: "bob@example.com",
+        password: "tangerine-otter-galaxy"
+      })
 
     {:ok, bob} = Accounts.confirm_user(bob)
 

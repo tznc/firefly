@@ -25,7 +25,7 @@ defmodule Firefly.Security do
   useless (see `ip_tables/0`).
   """
 
-  use Boundary, top_level?: true, check: [out: false], exports: [Event, Ban, Jail]
+  use Boundary, top_level?: true, check: [out: false], exports: [Event, Ban, Jail, Challenge]
 
   import Ecto.Query
 
@@ -133,6 +133,49 @@ defmodule Firefly.Security do
     )
   end
 
+  ## Login delays
+
+  @delay_window_minutes 15
+
+  @doc """
+  How long (milliseconds) to hold a password login for `username` from
+  `ip` before checking it: nothing for the first 3 recent failures, then
+  250 ms doubling with each further one, up to
+  `config :firefly, Firefly.Security, max_login_delay_ms:` (5 seconds).
+  Counted per account (its failed logins in the security log in the last
+  15 minutes) and per address (its points in the jail's `auth` group), the
+  longer winning, so neither guessing one account from many addresses nor
+  many accounts from one address goes at full speed.
+  """
+  def login_delay(username, ip) do
+    account =
+      case is_binary(username) and username != "" and Accounts.get_user_by_username(username) do
+        %User{} = user -> recent_login_failures(user)
+        _nobody -> 0
+      end
+
+    max(delay(account), delay(Jail.points(ip, "auth")))
+  end
+
+  @doc "How many failed logins `user` had in the last 15 minutes."
+  def recent_login_failures(%User{id: user_id}) do
+    since = DateTime.add(DateTime.utc_now(), -@delay_window_minutes, :minute)
+
+    Repo.aggregate(
+      from(e in Event,
+        where: e.user_id == ^user_id and e.kind == "login.failure" and e.inserted_at > ^since
+      ),
+      :count
+    )
+  end
+
+  defp delay(failures) when failures < 3, do: 0
+
+  defp delay(failures) do
+    max_ms = Application.get_env(:firefly, __MODULE__, [])[:max_login_delay_ms] || 5_000
+    min(max_ms, 250 * Integer.pow(2, min(failures - 3, 10)))
+  end
+
   ## IP retention
 
   @doc """
@@ -155,6 +198,7 @@ defmodule Firefly.Security do
     [
       {"security_events", "ip", "inserted_at", :truncate},
       {"api_keys", "last_used_ip", "last_used_at", :truncate},
+      {"user_sessions", "ip", "last_seen_at", :truncate},
       # The addresses staff look members up by: a truncated one would match
       # strangers (and collide with the per-member unique index).
       {"user_ips", "ip", "last_seen_at", :delete},

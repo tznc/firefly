@@ -40,7 +40,7 @@ msgid "1 view"
 msgid_plural "%{count} views"
 msgstr[0] "%{count} 次浏览"
 
-#: lib/firefly_web/live/staff_live/user.ex:534
+#: lib/firefly_web/live/staff_live/user.ex:548
 #: lib/firefly_web/staff_nav.ex:90
 #, elixir-autogen, elixir-format
 msgid "API keys"
@@ -53,7 +53,7 @@ msgid "About"
 msgstr "关于"
 
 #: lib/firefly_web/components/layouts.ex:178
-#: lib/firefly_web/live/staff_live/user.ex:326
+#: lib/firefly_web/live/staff_live/user.ex:332
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr "账户"
@@ -65,12 +65,12 @@ msgstr "账户"
 msgid "Admin"
 msgstr "管理"
 
-#: lib/firefly_web/live/auth_live/registration.ex:81
+#: lib/firefly_web/live/auth_live/registration.ex:90
 #, elixir-autogen, elixir-format
 msgid "Already have one?"
 msgstr "已经有账户了？"
 
-#: lib/firefly_web/live/settings_live/index.ex:680
+#: lib/firefly_web/live/settings_live/index.ex:720
 #, elixir-autogen, elixir-format
 msgid "Applies wherever you're logged in. The toggle in the top bar changes it too."
 msgstr "在你登录的所有地方生效。顶部栏的切换按钮也能更改。"
@@ -135,7 +135,7 @@ msgstr "设置新密码"
 msgid "Close menu"
 msgstr "关闭菜单"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:74
+#: lib/firefly_web/live/auth_live/reset_password.ex:79
 #, elixir-autogen, elixir-format
 msgid "Confirm new password"
 msgstr "确认新密码"
@@ -151,24 +151,24 @@ msgid "Contact us"
 msgstr "联系我们"
 
 #: lib/firefly_web/live/auth_live/login.ex:76
-#: lib/firefly_web/live/auth_live/registration.ex:109
+#: lib/firefly_web/live/auth_live/registration.ex:125
 #, elixir-autogen, elixir-format
 msgid "Create account"
 msgstr "创建账户"
 
-#: lib/firefly_web/live/auth_live/identity.ex:52
-#: lib/firefly_web/live/auth_live/registration.ex:32
-#: lib/firefly_web/live/auth_live/registration.ex:79
+#: lib/firefly_web/live/auth_live/identity.ex:84
+#: lib/firefly_web/live/auth_live/registration.ex:34
+#: lib/firefly_web/live/auth_live/registration.ex:88
 #, elixir-autogen, elixir-format
 msgid "Create an account"
 msgstr "注册账户"
 
-#: lib/firefly_web/live/auth_live/registration.ex:108
+#: lib/firefly_web/live/auth_live/registration.ex:124
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr "正在创建..."
 
-#: lib/firefly_web/live/settings_live/index.ex:676
+#: lib/firefly_web/live/settings_live/index.ex:716
 #: lib/firefly_web/live/staff_live/theme.ex:240
 #, elixir-autogen, elixir-format
 msgid "Dark"
@@ -184,23 +184,23 @@ msgstr "仪表盘"
 msgid "Drafts"
 msgstr "草稿"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:46
-#: lib/firefly_web/live/auth_live/magic_link.ex:56
-#: lib/firefly_web/live/auth_live/registration.ex:96
-#: lib/firefly_web/live/staff_live/user.ex:328
-#: lib/firefly_web/live/staff_live/user.ex:367
+#: lib/firefly_web/live/auth_live/forgot_password.ex:51
+#: lib/firefly_web/live/auth_live/magic_link.ex:66
+#: lib/firefly_web/live/auth_live/registration.ex:105
+#: lib/firefly_web/live/staff_live/user.ex:334
+#: lib/firefly_web/live/staff_live/user.ex:373
 #: lib/firefly_web/live/staff_live/users.ex:130
 #, elixir-autogen, elixir-format
 msgid "Email"
 msgstr "邮箱"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:22
-#: lib/firefly_web/live/auth_live/magic_link.ex:43
+#: lib/firefly_web/live/auth_live/magic_link.ex:25
+#: lib/firefly_web/live/auth_live/magic_link.ex:53
 #, elixir-autogen, elixir-format
 msgid "Email login links are off."
 msgstr "邮件登录链接已关闭。"
 
-#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:119
 #: lib/firefly_web/live/auth_live/login.ex:83
 #, elixir-autogen, elixir-format
 msgid "Email me a login link"
@@ -231,17 +231,17 @@ msgstr "GitHub 上的 Firefly"
 msgid "Firestorm patrons"
 msgstr "Firestorm 赞助者"
 
-#: lib/firefly_web/live/settings_live/index.ex:686
+#: lib/firefly_web/live/settings_live/index.ex:726
 #, elixir-autogen, elixir-format
 msgid "Follow my browser"
 msgstr "跟随浏览器"
 
-#: lib/firefly_web/live/settings_live/index.ex:674
+#: lib/firefly_web/live/settings_live/index.ex:714
 #, elixir-autogen, elixir-format
 msgid "Follow my system"
 msgstr "跟随系统"
 
-#: lib/firefly_web/live/auth_live/identity.ex:79
+#: lib/firefly_web/live/auth_live/identity.ex:117
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
 msgstr "忘记密码？"
@@ -254,7 +254,7 @@ msgstr "论坛"
 #: lib/firefly_web/components/layouts.ex:173
 #: lib/firefly_web/live/staff_live/groups.ex:20
 #: lib/firefly_web/live/staff_live/groups.ex:165
-#: lib/firefly_web/live/staff_live/user.ex:430
+#: lib/firefly_web/live/staff_live/user.ex:444
 #: lib/firefly_web/staff_nav.ex:76
 #, elixir-autogen, elixir-format
 msgid "Groups"
@@ -271,7 +271,7 @@ msgstr "导入"
 msgid "Invites"
 msgstr "邀请"
 
-#: lib/firefly_web/live/settings_live/index.ex:685
+#: lib/firefly_web/live/settings_live/index.ex:725
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr "语言"
@@ -281,24 +281,24 @@ msgstr "语言"
 msgid "Latest"
 msgstr "最新"
 
-#: lib/firefly_web/live/settings_live/index.ex:675
+#: lib/firefly_web/live/settings_live/index.ex:715
 #: lib/firefly_web/live/staff_live/theme.ex:239
 #, elixir-autogen, elixir-format
 msgid "Light"
 msgstr "浅色"
 
 #: lib/firefly_web/components/layouts.ex:228
-#: lib/firefly_web/live/auth_live/identity.ex:16
-#: lib/firefly_web/live/auth_live/identity.ex:49
-#: lib/firefly_web/live/auth_live/identity.ex:77
+#: lib/firefly_web/live/auth_live/identity.ex:27
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:115
 #: lib/firefly_web/live/auth_live/login.ex:14
-#: lib/firefly_web/live/auth_live/registration.ex:82
+#: lib/firefly_web/live/auth_live/registration.ex:91
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr "登录"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:16
-#: lib/firefly_web/live/auth_live/magic_link.ex:52
+#: lib/firefly_web/live/auth_live/magic_link.ex:18
+#: lib/firefly_web/live/auth_live/magic_link.ex:62
 #, elixir-autogen, elixir-format
 msgid "Log in by email"
 msgstr "通过邮件登录"
@@ -308,7 +308,7 @@ msgstr "通过邮件登录"
 msgid "Log in with %{provider}"
 msgstr "使用 %{provider} 登录"
 
-#: lib/firefly_web/live/user_auth.ex:83
+#: lib/firefly_web/live/user_auth.ex:85
 #, elixir-autogen, elixir-format
 msgid "Log in with single sign-on."
 msgstr "请使用单点登录。"
@@ -318,7 +318,7 @@ msgstr "请使用单点登录。"
 msgid "Log out"
 msgstr "退出登录"
 
-#: lib/firefly_web/live/settings_live/index.ex:690
+#: lib/firefly_web/live/settings_live/index.ex:730
 #, elixir-autogen, elixir-format
 msgid "Machine translations, pending a native speaker's review: please report anything that reads wrong."
 msgstr "机器翻译，尚待母语者校对：发现表述不当请告诉我们。"
@@ -334,7 +334,7 @@ msgstr "由 tznc.dev 制作"
 msgid "Messages"
 msgstr "消息"
 
-#: lib/firefly_web/live/auth_live/identity.ex:51
+#: lib/firefly_web/live/auth_live/identity.ex:83
 #, elixir-autogen, elixir-format
 msgid "New here?"
 msgstr "第一次来？"
@@ -344,13 +344,13 @@ msgstr "第一次来？"
 msgid "New password"
 msgstr "新密码"
 
-#: lib/firefly_web/live/auth_live/registration.ex:25
+#: lib/firefly_web/live/auth_live/registration.ex:27
 #, elixir-autogen, elixir-format
 msgid "New registrations are closed."
 msgstr "暂不开放注册。"
 
 #: lib/firefly_web/components/layouts.ex:145
-#: lib/firefly_web/live/staff_live/user.ex:558
+#: lib/firefly_web/live/staff_live/user.ex:572
 #, elixir-autogen, elixir-format
 msgid "Notifications"
 msgstr "通知"
@@ -370,8 +370,8 @@ msgstr "打开菜单"
 msgid "Participating in"
 msgstr "参与中"
 
-#: lib/firefly_web/live/auth_live/identity.ex:74
-#: lib/firefly_web/live/auth_live/registration.ex:100
+#: lib/firefly_web/live/auth_live/identity.ex:106
+#: lib/firefly_web/live/auth_live/registration.ex:109
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "密码"
@@ -382,13 +382,13 @@ msgid "Password reset. Log in with your new password."
 msgstr "密码已重置，请用新密码登录。"
 
 #: lib/firefly_web/components/layouts.ex:359
-#: lib/firefly_web/live/staff_live/user.ex:468
-#: lib/firefly_web/live/staff_live/user.ex:475
+#: lib/firefly_web/live/staff_live/user.ex:482
+#: lib/firefly_web/live/staff_live/user.ex:489
 #, elixir-autogen, elixir-format
 msgid "Reason: %{reason}"
 msgstr "原因：%{reason}"
 
-#: lib/firefly_web/live/auth_live/registration.ex:47
+#: lib/firefly_web/live/auth_live/registration.ex:51
 #, elixir-autogen, elixir-format
 msgid "Registration failed. Please try again."
 msgstr "注册失败，请重试。"
@@ -398,8 +398,8 @@ msgstr "注册失败，请重试。"
 msgid "Resend link"
 msgstr "重新发送链接"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:16
-#: lib/firefly_web/live/auth_live/forgot_password.ex:42
+#: lib/firefly_web/live/auth_live/forgot_password.ex:20
+#: lib/firefly_web/live/auth_live/forgot_password.ex:47
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
 msgstr "重置密码"
@@ -410,17 +410,17 @@ msgstr "重置密码"
 msgid "Review"
 msgstr "审核"
 
-#: lib/firefly_web/live/settings_live/index.ex:697
+#: lib/firefly_web/live/settings_live/index.ex:737
 #, elixir-autogen, elixir-format
 msgid "Save"
 msgstr "保存"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:77
-#: lib/firefly_web/live/settings_live/index.ex:697
+#: lib/firefly_web/live/auth_live/reset_password.ex:82
+#: lib/firefly_web/live/settings_live/index.ex:737
 #: lib/firefly_web/live/staff_live/settings.ex:402
 #: lib/firefly_web/live/staff_live/theme.ex:365
-#: lib/firefly_web/live/staff_live/user.ex:369
-#: lib/firefly_web/live/staff_live/user.ex:400
+#: lib/firefly_web/live/staff_live/user.ex:375
+#: lib/firefly_web/live/staff_live/user.ex:414
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "正在保存..."
@@ -437,15 +437,15 @@ msgstr "搜索"
 msgid "Search the forum"
 msgstr "搜索论坛"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:47
-#: lib/firefly_web/live/auth_live/magic_link.ex:57
+#: lib/firefly_web/live/auth_live/forgot_password.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:68
 #: lib/firefly_web/live/staff_live/emails.ex:217
-#: lib/firefly_web/live/staff_live/user.ex:580
+#: lib/firefly_web/live/staff_live/user.ex:594
 #, elixir-autogen, elixir-format
 msgid "Sending..."
 msgstr "正在发送..."
 
-#: lib/firefly_web/live/user_auth.ex:52
+#: lib/firefly_web/live/user_auth.ex:54
 #, elixir-autogen, elixir-format
 msgid "Set up two-factor authentication to go on."
 msgstr "请先设置两步验证再继续。"
@@ -497,7 +497,7 @@ msgstr "该重置链接无效或已过期。"
 msgid "The forum is read-only for maintenance (%{reason}). You can read, but not post or change anything for now."
 msgstr "论坛因维护处于只读状态（%{reason}）。你可以浏览，但暂时无法发帖或修改。"
 
-#: lib/firefly_web/live/settings_live/index.ex:672
+#: lib/firefly_web/live/settings_live/index.ex:712
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr "主题"
@@ -522,9 +522,9 @@ msgstr "上传文件"
 msgid "Use a passkey"
 msgstr "使用通行密钥"
 
-#: lib/firefly_web/live/auth_live/identity.ex:68
-#: lib/firefly_web/live/auth_live/registration.ex:95
-#: lib/firefly_web/live/staff_live/user.ex:365
+#: lib/firefly_web/live/auth_live/identity.ex:100
+#: lib/firefly_web/live/auth_live/registration.ex:104
+#: lib/firefly_web/live/staff_live/user.ex:371
 #, elixir-autogen, elixir-format
 msgid "Username"
 msgstr "用户名"
@@ -553,12 +553,12 @@ msgstr "关注中"
 msgid "We can't find the internet"
 msgstr "找不到网络连接"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:63
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link that logs you in."
 msgstr "我们会通过邮件发送一个登录链接。"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:43
+#: lib/firefly_web/live/auth_live/forgot_password.ex:48
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link to choose a new one."
 msgstr "我们会通过邮件发送设置新密码的链接。"
@@ -568,7 +568,7 @@ msgstr "我们会通过邮件发送设置新密码的链接。"
 msgid "Webhooks"
 msgstr "Webhook"
 
-#: lib/firefly_web/live/auth_live/registration.ex:105
+#: lib/firefly_web/live/auth_live/registration.ex:121
 #, elixir-autogen, elixir-format
 msgid "Website"
 msgstr "网站"
@@ -584,7 +584,7 @@ msgid "You are not allowed to do that."
 msgstr "你没有权限执行此操作。"
 
 #: lib/firefly_web/authorization.ex:15
-#: lib/firefly_web/live/user_auth.ex:70
+#: lib/firefly_web/live/user_auth.ex:72
 #, elixir-autogen, elixir-format
 msgid "You must be logged in to access this page."
 msgstr "需要登录后才能访问此页面。"
@@ -600,13 +600,13 @@ msgstr "我的资料"
 msgid "new"
 msgstr "新"
 
-#: lib/firefly_web/live/auth_live/identity.ex:85
+#: lib/firefly_web/live/auth_live/identity.ex:123
 #: lib/firefly_web/live/auth_live/login.ex:70
 #, elixir-autogen, elixir-format
 msgid "or"
 msgstr "或"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:58
+#: lib/firefly_web/live/auth_live/magic_link.ex:69
 #, elixir-autogen, elixir-format
 msgid "Email me a link"
 msgstr "给我发送链接"
@@ -616,12 +616,12 @@ msgstr "给我发送链接"
 msgid "Firefly works without JavaScript: pages, topics and search are rendered on the server, and links work. Posting, chat and live updates need it."
 msgstr "Firefly 在没有 JavaScript 时也能使用：页面、主题和搜索由服务器渲染，链接可正常跳转。发帖、聊天和实时更新需要 JavaScript。"
 
-#: lib/firefly_web/live/auth_live/reset_password.ex:78
+#: lib/firefly_web/live/auth_live/reset_password.ex:83
 #, elixir-autogen, elixir-format
 msgid "Reset password"
 msgstr "重置密码"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:48
+#: lib/firefly_web/live/auth_live/forgot_password.ex:54
 #, elixir-autogen, elixir-format
 msgid "Send reset link"
 msgstr "发送重置链接"
@@ -666,7 +666,7 @@ msgstr "首页"
 msgid "Keyboard shortcuts"
 msgstr "键盘快捷键"
 
-#: lib/firefly_web/live/settings_live/index.ex:695
+#: lib/firefly_web/live/settings_live/index.ex:735
 #, elixir-autogen, elixir-format
 msgid "Keyboard shortcuts (press ? for the list)"
 msgstr "键盘快捷键（按 ? 查看列表）"
@@ -723,7 +723,7 @@ msgstr "未读主题"
 msgid "Got it"
 msgstr "知道了"
 
-#: lib/firefly_web/live/staff_live/user.ex:342
+#: lib/firefly_web/live/staff_live/user.ex:348
 #, elixir-autogen, elixir-format
 msgid "%{posts} posts in %{threads} threads they started"
 msgstr "在其发起的 %{threads} 个主题中有 %{posts} 个帖子"
@@ -734,17 +734,17 @@ msgid "1 member got the default."
 msgid_plural "%{count} members got the default."
 msgstr[0] "已为 %{count} 位成员设置默认值。"
 
-#: lib/firefly_web/live/staff_live/user.ex:206
+#: lib/firefly_web/live/staff_live/user.ex:212
 #, elixir-autogen, elixir-format
 msgid "A password reset link was emailed to them."
 msgstr "已通过邮件向其发送密码重置链接。"
 
-#: lib/firefly_web/live/staff_live/user.ex:112
+#: lib/firefly_web/live/staff_live/user.ex:113
 #, elixir-autogen, elixir-format
 msgid "Account saved."
 msgstr "账户已保存。"
 
-#: lib/firefly_web/live/staff_live/user.ex:613
+#: lib/firefly_web/live/staff_live/user.ex:627
 #, elixir-autogen, elixir-format
 msgid "Account to merge into"
 msgstr "要合并到的账户"
@@ -776,12 +776,12 @@ msgstr "向 %{name} 添加成员"
 msgid "Add member"
 msgstr "添加成员"
 
-#: lib/firefly_web/live/staff_live/user.ex:452
+#: lib/firefly_web/live/staff_live/user.ex:466
 #, elixir-autogen, elixir-format
 msgid "Add to a group"
 msgstr "加入群组"
 
-#: lib/firefly_web/live/staff_live/user.ex:454
+#: lib/firefly_web/live/staff_live/user.ex:468
 #, elixir-autogen, elixir-format
 msgid "Add to group"
 msgstr "加入群组"
@@ -796,14 +796,14 @@ msgstr "已将 @%{username} 加入 %{name}。"
 msgid "Added by"
 msgstr "添加者"
 
-#: lib/firefly_web/live/staff_live/user.ex:190
+#: lib/firefly_web/live/staff_live/user.ex:191
 #, elixir-autogen, elixir-format
 msgid "Added to %{group}."
 msgstr "已加入 %{group}。"
 
 #: lib/firefly_web/live/staff_live/security.ex:162
 #: lib/firefly_web/live/staff_live/security.ex:211
-#: lib/firefly_web/live/staff_live/user.ex:510
+#: lib/firefly_web/live/staff_live/user.ex:524
 #, elixir-autogen, elixir-format
 msgid "Address"
 msgstr "地址"
@@ -839,22 +839,22 @@ msgstr "管理导航"
 msgid "All"
 msgstr "全部"
 
-#: lib/firefly_web/live/staff_live/user.ex:526
+#: lib/firefly_web/live/staff_live/user.ex:540
 #, elixir-autogen, elixir-format
 msgid "Also seen at these addresses:"
 msgstr "也曾出现在这些地址："
 
-#: lib/firefly_web/live/staff_live/user.ex:597
+#: lib/firefly_web/live/staff_live/user.ex:611
 #, elixir-autogen, elixir-format
 msgid "Anonymize"
 msgstr "匿名化"
 
-#: lib/firefly_web/live/staff_live/user.ex:594
+#: lib/firefly_web/live/staff_live/user.ex:608
 #, elixir-autogen, elixir-format
 msgid "Anonymize this account? This can't be undone."
 msgstr "要匿名化此账户吗？此操作无法撤销。"
 
-#: lib/firefly_web/live/staff_live/user.ex:589
+#: lib/firefly_web/live/staff_live/user.ex:603
 #, elixir-autogen, elixir-format
 msgid "Anonymizing keeps their posts under a placeholder. Deleting also deletes the threads they started and their posts. Merging moves everything they own to another account and removes this one."
 msgstr "匿名化会保留其帖子，并以占位名显示。删除会同时删除其发起的主题和帖子。合并会把其所有内容移到另一个账户，并删除此账户。"
@@ -879,7 +879,7 @@ msgstr "任何人可申请，由所有者批准"
 msgid "Anyone can join"
 msgstr "任何人可加入"
 
-#: lib/firefly_web/live/staff_live/user.ex:498
+#: lib/firefly_web/live/staff_live/user.ex:512
 #, elixir-autogen, elixir-format
 msgid "Apply penalty"
 msgstr "施加处罚"
@@ -889,12 +889,12 @@ msgstr "施加处罚"
 msgid "Apply to existing members"
 msgstr "应用到现有成员"
 
-#: lib/firefly_web/live/staff_live/user.ex:498
+#: lib/firefly_web/live/staff_live/user.ex:512
 #, elixir-autogen, elixir-format
 msgid "Applying..."
 msgstr "正在应用..."
 
-#: lib/firefly_web/live/staff_live/user.ex:317
+#: lib/firefly_web/live/staff_live/user.ex:323
 #: lib/firefly_web/live/staff_live/users.ex:166
 #, elixir-autogen, elixir-format
 msgid "Approve"
@@ -905,7 +905,7 @@ msgstr "批准"
 msgid "Approved @%{username}."
 msgstr "已批准 @%{username}。"
 
-#: lib/firefly_web/live/staff_live/user.ex:122
+#: lib/firefly_web/live/staff_live/user.ex:123
 #, elixir-autogen, elixir-format
 msgid "Approved. They can post now."
 msgstr "已批准。现在可以发帖了。"
@@ -976,17 +976,17 @@ msgstr "要删除 %{name} 吗？其成员将离开该群组。"
 msgid "Delete %{title}?"
 msgstr "要删除 %{title} 吗？"
 
-#: lib/firefly_web/live/staff_live/user.ex:567
+#: lib/firefly_web/live/staff_live/user.ex:581
 #, elixir-autogen, elixir-format
 msgid "Delete notification"
 msgstr "删除通知"
 
-#: lib/firefly_web/live/staff_live/user.ex:601
+#: lib/firefly_web/live/staff_live/user.ex:615
 #, elixir-autogen, elixir-format
 msgid "Delete this account with its threads and posts? This can't be undone."
 msgstr "要删除此账户及其主题和帖子吗？此操作无法撤销。"
 
-#: lib/firefly_web/live/staff_live/user.ex:604
+#: lib/firefly_web/live/staff_live/user.ex:618
 #, elixir-autogen, elixir-format
 msgid "Delete with posts"
 msgstr "连同帖子删除"
@@ -1001,7 +1001,7 @@ msgstr "已删除 %{name}。"
 msgid "Domains that can't be linked in posts and messages (their subdomains too)."
 msgstr "帖子和消息中不能链接的域名（包括其子域名）。"
 
-#: lib/firefly_web/live/staff_live/user.ex:494
+#: lib/firefly_web/live/staff_live/user.ex:508
 #, elixir-autogen, elixir-format
 msgid "Duration"
 msgstr "时长"
@@ -1016,7 +1016,7 @@ msgstr "编辑"
 msgid "Email preview"
 msgstr "邮件预览"
 
-#: lib/firefly_web/live/staff_live/user.ex:373
+#: lib/firefly_web/live/staff_live/user.ex:379
 #, elixir-autogen, elixir-format
 msgid "Email this member a password reset link?"
 msgstr "要向该成员发送密码重置链接吗？"
@@ -1050,7 +1050,7 @@ msgstr "管理人员运营论坛所需的一切，尽在一处。"
 msgid "Find an account to manage it. Every change is recorded in the staff log."
 msgstr "查找账户以进行管理。每项更改都会记入管理日志。"
 
-#: lib/firefly_web/live/staff_live/user.ex:511
+#: lib/firefly_web/live/staff_live/user.ex:525
 #, elixir-autogen, elixir-format
 msgid "First seen"
 msgstr "首次出现"
@@ -1060,12 +1060,12 @@ msgstr "首次出现"
 msgid "Give this level to every member who hasn't chosen one for this category?"
 msgstr "要为所有未在此分类中选择级别的成员设置此级别吗？"
 
-#: lib/firefly_web/live/staff_live/user.ex:415
+#: lib/firefly_web/live/staff_live/user.ex:429
 #, elixir-autogen, elixir-format
 msgid "Grant admin"
 msgstr "设为管理员"
 
-#: lib/firefly_web/live/staff_live/user.ex:415
+#: lib/firefly_web/live/staff_live/user.ex:429
 #, elixir-autogen, elixir-format
 msgid "Grant moderator"
 msgstr "设为版主"
@@ -1075,7 +1075,7 @@ msgstr "设为版主"
 msgid "Group %{name} created."
 msgstr "已创建群组 %{name}。"
 
-#: lib/firefly_web/live/staff_live/user.ex:451
+#: lib/firefly_web/live/staff_live/user.ex:465
 #, elixir-autogen, elixir-format
 msgid "Group name"
 msgstr "群组名称"
@@ -1086,12 +1086,12 @@ msgid "Group page"
 msgstr "群组页面"
 
 #: lib/firefly_web/live/staff_live/screening.ex:74
-#: lib/firefly_web/live/staff_live/user.ex:505
+#: lib/firefly_web/live/staff_live/user.ex:519
 #, elixir-autogen, elixir-format
 msgid "IP addresses"
 msgstr "IP 地址"
 
-#: lib/firefly_web/live/staff_live/user.ex:308
+#: lib/firefly_web/live/staff_live/user.ex:314
 #, elixir-autogen, elixir-format
 msgid "Impersonate"
 msgstr "模拟登录"
@@ -1111,7 +1111,7 @@ msgstr "无法删除：请先移走其中的主题和子分类。"
 msgid "Its members"
 msgstr "其成员"
 
-#: lib/firefly_web/live/staff_live/user.ex:334
+#: lib/firefly_web/live/staff_live/user.ex:340
 #: lib/firefly_web/live/staff_live/users.ex:133
 #, elixir-autogen, elixir-format
 msgid "Joined"
@@ -1122,7 +1122,7 @@ msgstr "加入时间"
 msgid "Joining"
 msgstr "加入方式"
 
-#: lib/firefly_web/live/staff_live/user.ex:229
+#: lib/firefly_web/live/staff_live/user.ex:235
 #, elixir-autogen, elixir-format
 msgid "Key revoked."
 msgstr "密钥已吊销。"
@@ -1132,39 +1132,39 @@ msgstr "密钥已吊销。"
 msgid "Last blocked"
 msgstr "最近拦截"
 
-#: lib/firefly_web/live/staff_live/user.ex:336
-#: lib/firefly_web/live/staff_live/user.ex:512
+#: lib/firefly_web/live/staff_live/user.ex:342
+#: lib/firefly_web/live/staff_live/user.ex:526
 #: lib/firefly_web/live/staff_live/users.ex:132
 #, elixir-autogen, elixir-format
 msgid "Last seen"
 msgstr "最后在线"
 
-#: lib/firefly_web/live/staff_live/user.ex:470
+#: lib/firefly_web/live/staff_live/user.ex:484
 #, elixir-autogen, elixir-format
 msgid "Lift silence"
 msgstr "解除禁言"
 
-#: lib/firefly_web/live/staff_live/user.ex:477
+#: lib/firefly_web/live/staff_live/user.ex:491
 #, elixir-autogen, elixir-format
 msgid "Lift suspension"
 msgstr "解除封禁"
 
-#: lib/firefly_web/live/staff_live/user.ex:163
+#: lib/firefly_web/live/staff_live/user.ex:164
 #, elixir-autogen, elixir-format
 msgid "Lifted."
 msgstr "已解除。"
 
-#: lib/firefly_web/live/staff_live/user.ex:576
+#: lib/firefly_web/live/staff_live/user.ex:590
 #, elixir-autogen, elixir-format
 msgid "Link (optional)"
 msgstr "链接（可选）"
 
-#: lib/firefly_web/live/staff_live/user.ex:399
+#: lib/firefly_web/live/staff_live/user.ex:413
 #, elixir-autogen, elixir-format
 msgid "Lock it (the automatic review leaves it alone)"
 msgstr "锁定（自动评估不会更改）"
 
-#: lib/firefly_web/live/staff_live/user.ex:343
+#: lib/firefly_web/live/staff_live/user.ex:349
 #, elixir-autogen, elixir-format
 msgid "Logins"
 msgstr "登录方式"
@@ -1174,27 +1174,27 @@ msgstr "登录方式"
 msgid "Maintenance"
 msgstr "维护"
 
-#: lib/firefly_web/live/staff_live/user.ex:412
+#: lib/firefly_web/live/staff_live/user.ex:426
 #, elixir-autogen, elixir-format
 msgid "Make them %{role}?"
 msgstr "要设为%{role}吗？"
 
-#: lib/firefly_web/live/staff_live/user.ex:619
+#: lib/firefly_web/live/staff_live/user.ex:633
 #, elixir-autogen, elixir-format
 msgid "Merge into"
 msgstr "合并到"
 
-#: lib/firefly_web/live/staff_live/user.ex:617
+#: lib/firefly_web/live/staff_live/user.ex:631
 #, elixir-autogen, elixir-format
 msgid "Merge this account into that one? This can't be undone."
 msgstr "要把此账户合并到那个账户吗？此操作无法撤销。"
 
-#: lib/firefly_web/live/staff_live/user.ex:260
+#: lib/firefly_web/live/staff_live/user.ex:266
 #, elixir-autogen, elixir-format
 msgid "Merged into @%{username}."
 msgstr "已合并到 @%{username}。"
 
-#: lib/firefly_web/live/staff_live/user.ex:578
+#: lib/firefly_web/live/staff_live/user.ex:592
 #, elixir-autogen, elixir-format
 msgid "Message (optional)"
 msgstr "消息（可选）"
@@ -1212,7 +1212,7 @@ msgstr "已静音"
 #: lib/firefly_web/live/staff_live/groups.ex:172
 #: lib/firefly_web/live/staff_live/theme.ex:286
 #: lib/firefly_web/live/staff_live/themes.ex:109
-#: lib/firefly_web/live/staff_live/user.ex:366
+#: lib/firefly_web/live/staff_live/user.ex:372
 #, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "名称"
@@ -1257,7 +1257,7 @@ msgstr "还没有分类。"
 msgid "No emails yet."
 msgstr "还没有邮件。"
 
-#: lib/firefly_web/live/staff_live/user.ex:185
+#: lib/firefly_web/live/staff_live/user.ex:186
 #, elixir-autogen, elixir-format
 msgid "No group with that name."
 msgstr "没有该名称的群组。"
@@ -1282,19 +1282,19 @@ msgstr "没有匹配的用户。"
 msgid "None (they choose)"
 msgstr "无（由成员自选）"
 
-#: lib/firefly_web/live/staff_live/user.ex:464
+#: lib/firefly_web/live/staff_live/user.ex:478
 #, elixir-autogen, elixir-format
 msgid "None in force."
 msgstr "当前没有生效的处罚。"
 
-#: lib/firefly_web/live/staff_live/user.ex:506
+#: lib/firefly_web/live/staff_live/user.ex:520
 #, elixir-autogen, elixir-format
 msgid "None recorded yet."
 msgstr "还没有记录。"
 
 #: lib/firefly_web/live/staff_live/security.ex:206
-#: lib/firefly_web/live/staff_live/user.ex:432
-#: lib/firefly_web/live/staff_live/user.ex:535
+#: lib/firefly_web/live/staff_live/user.ex:446
+#: lib/firefly_web/live/staff_live/user.ex:549
 #, elixir-autogen, elixir-format
 msgid "None."
 msgstr "无。"
@@ -1324,12 +1324,12 @@ msgstr "没有匹配项。换个词试试。"
 msgid "Nothing screened yet."
 msgstr "还没有筛查任何内容。"
 
-#: lib/firefly_web/live/staff_live/user.ex:216
+#: lib/firefly_web/live/staff_live/user.ex:222
 #, elixir-autogen, elixir-format
 msgid "Notice sent."
 msgstr "通知已发送。"
 
-#: lib/firefly_web/live/staff_live/user.ex:222
+#: lib/firefly_web/live/staff_live/user.ex:228
 #, elixir-autogen, elixir-format
 msgid "Notification deleted."
 msgstr "通知已删除。"
@@ -1359,17 +1359,17 @@ msgstr "由所有者和管理人员添加成员"
 msgid "Owners invite"
 msgstr "由所有者邀请"
 
-#: lib/firefly_web/live/staff_live/user.ex:462
+#: lib/firefly_web/live/staff_live/user.ex:476
 #, elixir-autogen, elixir-format
 msgid "Penalties"
 msgstr "处罚"
 
-#: lib/firefly_web/live/staff_live/user.ex:491
+#: lib/firefly_web/live/staff_live/user.ex:505
 #, elixir-autogen, elixir-format
 msgid "Penalty"
 msgstr "处罚"
 
-#: lib/firefly_web/live/staff_live/user.ex:150
+#: lib/firefly_web/live/staff_live/user.ex:151
 #, elixir-autogen, elixir-format
 msgid "Penalty applied."
 msgstr "已施加处罚。"
@@ -1389,7 +1389,7 @@ msgstr "权限和默认设置"
 msgid "Pick a notification level."
 msgstr "请选择通知级别。"
 
-#: lib/firefly_web/live/staff_live/user.ex:141
+#: lib/firefly_web/live/staff_live/user.ex:142
 #, elixir-autogen, elixir-format
 msgid "Pick a trust level."
 msgstr "请选择信任级别。"
@@ -1399,12 +1399,12 @@ msgstr "请选择信任级别。"
 msgid "Plain text version"
 msgstr "纯文本版本"
 
-#: lib/firefly_web/live/staff_live/user.ex:341
+#: lib/firefly_web/live/staff_live/user.ex:347
 #, elixir-autogen, elixir-format
 msgid "Posts"
 msgstr "帖子"
 
-#: lib/firefly_web/live/staff_live/user.ex:299
+#: lib/firefly_web/live/staff_live/user.ex:305
 #, elixir-autogen, elixir-format
 msgid "Public profile"
 msgstr "公开资料"
@@ -1414,18 +1414,18 @@ msgstr "公开资料"
 msgid "Read only"
 msgstr "只读"
 
-#: lib/firefly_web/live/staff_live/user.ex:497
+#: lib/firefly_web/live/staff_live/user.ex:511
 #, elixir-autogen, elixir-format
 msgid "Reason (they see it)"
 msgstr "原因（对方可见）"
 
-#: lib/firefly_web/live/staff_live/user.ex:319
+#: lib/firefly_web/live/staff_live/user.ex:325
 #: lib/firefly_web/live/staff_live/users.ex:174
 #, elixir-autogen, elixir-format
 msgid "Reject"
 msgstr "拒绝"
 
-#: lib/firefly_web/live/staff_live/user.ex:318
+#: lib/firefly_web/live/staff_live/user.ex:324
 #: lib/firefly_web/live/staff_live/users.ex:171
 #, elixir-autogen, elixir-format
 msgid "Reject and delete this account?"
@@ -1436,7 +1436,7 @@ msgstr "要拒绝并删除此账户吗？"
 msgid "Rejected and deleted the account."
 msgstr "已拒绝并删除该账户。"
 
-#: lib/firefly_web/live/staff_live/user.ex:127
+#: lib/firefly_web/live/staff_live/user.ex:128
 #, elixir-autogen, elixir-format
 msgid "Rejected: the account was deleted."
 msgstr "已拒绝：账户已删除。"
@@ -1451,12 +1451,12 @@ msgstr "移除"
 msgid "Remove %{username}"
 msgstr "移除 %{username}"
 
-#: lib/firefly_web/live/staff_live/user.ex:439
+#: lib/firefly_web/live/staff_live/user.ex:453
 #, elixir-autogen, elixir-format
 msgid "Remove from %{group}"
 msgstr "从 %{group} 移除"
 
-#: lib/firefly_web/live/staff_live/user.ex:587
+#: lib/firefly_web/live/staff_live/user.ex:601
 #, elixir-autogen, elixir-format
 msgid "Remove or merge"
 msgstr "移除或合并"
@@ -1471,7 +1471,7 @@ msgstr "已移除 %{value}。"
 msgid "Removed @%{username} from %{name}."
 msgstr "已将 @%{username} 从 %{name} 移除。"
 
-#: lib/firefly_web/live/staff_live/user.ex:199
+#: lib/firefly_web/live/staff_live/user.ex:200
 #, elixir-autogen, elixir-format
 msgid "Removed from %{group}."
 msgstr "已从 %{group} 移除。"
@@ -1491,7 +1491,7 @@ msgstr "已将 %{old} 重命名为 %{new}。"
 msgid "Reports"
 msgstr "报告"
 
-#: lib/firefly_web/live/staff_live/user.ex:354
+#: lib/firefly_web/live/staff_live/user.ex:360
 #, elixir-autogen, elixir-format
 msgid "Reset two-factor"
 msgstr "重置双重验证"
@@ -1501,32 +1501,32 @@ msgstr "重置双重验证"
 msgid "Results for “%{q}”"
 msgstr "“%{q}”的结果"
 
-#: lib/firefly_web/live/staff_live/user.ex:549
+#: lib/firefly_web/live/staff_live/user.ex:563
 #, elixir-autogen, elixir-format
 msgid "Revoke"
 msgstr "吊销"
 
-#: lib/firefly_web/live/staff_live/user.ex:425
+#: lib/firefly_web/live/staff_live/user.ex:439
 #, elixir-autogen, elixir-format
 msgid "Revoke admin"
 msgstr "撤销管理员"
 
-#: lib/firefly_web/live/staff_live/user.ex:425
+#: lib/firefly_web/live/staff_live/user.ex:439
 #, elixir-autogen, elixir-format
 msgid "Revoke moderator"
 msgstr "撤销版主"
 
-#: lib/firefly_web/live/staff_live/user.ex:546
+#: lib/firefly_web/live/staff_live/user.ex:560
 #, elixir-autogen, elixir-format
 msgid "Revoke this key?"
 msgstr "要吊销此密钥吗？"
 
-#: lib/firefly_web/live/staff_live/user.ex:177
+#: lib/firefly_web/live/staff_live/user.ex:178
 #, elixir-autogen, elixir-format
 msgid "Roles saved."
 msgstr "角色已保存。"
 
-#: lib/firefly_web/live/staff_live/user.ex:369
+#: lib/firefly_web/live/staff_live/user.ex:375
 #, elixir-autogen, elixir-format
 msgid "Save account"
 msgstr "保存账户"
@@ -1602,22 +1602,22 @@ msgstr "搜索管理后台"
 msgid "Search users"
 msgstr "搜索用户"
 
-#: lib/firefly_web/live/staff_live/user.ex:305
+#: lib/firefly_web/live/staff_live/user.ex:311
 #, elixir-autogen, elixir-format
 msgid "See the site as this member? It's recorded in the staff log."
 msgstr "要以该成员身份查看网站吗？此操作会记入管理日志。"
 
-#: lib/firefly_web/live/staff_live/user.ex:575
+#: lib/firefly_web/live/staff_live/user.ex:589
 #, elixir-autogen, elixir-format
 msgid "Send a notice: subject"
 msgstr "发送通知：主题行"
 
-#: lib/firefly_web/live/staff_live/user.ex:580
+#: lib/firefly_web/live/staff_live/user.ex:594
 #, elixir-autogen, elixir-format
 msgid "Send notice"
 msgstr "发送通知"
 
-#: lib/firefly_web/live/staff_live/user.ex:376
+#: lib/firefly_web/live/staff_live/user.ex:382
 #, elixir-autogen, elixir-format
 msgid "Send password reset"
 msgstr "发送密码重置"
@@ -1642,7 +1642,7 @@ msgstr "通过已配置的邮件服务发送一封简短邮件，以检查投递
 msgid "Sent log"
 msgstr "发送日志"
 
-#: lib/firefly_web/live/staff_live/user.ex:400
+#: lib/firefly_web/live/staff_live/user.ex:414
 #, elixir-autogen, elixir-format
 msgid "Set trust level"
 msgstr "设置信任级别"
@@ -1652,7 +1652,7 @@ msgstr "设置信任级别"
 msgid "Set what each group may do in each category at Categories. Members of admin and moderator are staff."
 msgstr "在“分类”中设置每个群组在各分类中的权限。admin 和 moderator 群组的成员即管理人员。"
 
-#: lib/firefly_web/live/staff_live/user.ex:492
+#: lib/firefly_web/live/staff_live/user.ex:506
 #, elixir-autogen, elixir-format
 msgid "Silence (can read, can't post)"
 msgstr "禁言（可阅读，不能发帖）"
@@ -1662,7 +1662,7 @@ msgstr "禁言（可阅读，不能发帖）"
 msgid "Silenced"
 msgstr "已禁言"
 
-#: lib/firefly_web/live/staff_live/user.ex:467
+#: lib/firefly_web/live/staff_live/user.ex:481
 #, elixir-autogen, elixir-format
 msgid "Silenced %{until}"
 msgstr "已禁言 %{until}"
@@ -1710,7 +1710,7 @@ msgstr "要停止筛查 %{value} 吗？"
 msgid "Subject"
 msgstr "主题行"
 
-#: lib/firefly_web/live/staff_live/user.ex:492
+#: lib/firefly_web/live/staff_live/user.ex:506
 #, elixir-autogen, elixir-format
 msgid "Suspend (can't log in)"
 msgstr "封禁（无法登录）"
@@ -1720,12 +1720,12 @@ msgstr "封禁（无法登录）"
 msgid "Suspended"
 msgstr "已封禁"
 
-#: lib/firefly_web/live/staff_live/user.ex:474
+#: lib/firefly_web/live/staff_live/user.ex:488
 #, elixir-autogen, elixir-format
 msgid "Suspended %{until}"
 msgstr "已封禁 %{until}"
 
-#: lib/firefly_web/live/staff_live/user.ex:422
+#: lib/firefly_web/live/staff_live/user.ex:436
 #, elixir-autogen, elixir-format
 msgid "Take away their %{role} role?"
 msgstr "要撤销其%{role}角色吗？"
@@ -1757,22 +1757,22 @@ msgstr "该账户不存在。"
 msgid "That isn't an email address."
 msgstr "这不是邮箱地址。"
 
-#: lib/firefly_web/live/staff_live/user.ex:247
+#: lib/firefly_web/live/staff_live/user.ex:253
 #, elixir-autogen, elixir-format
 msgid "The account and its posts were deleted."
 msgstr "该账户及其帖子已删除。"
 
-#: lib/firefly_web/live/staff_live/user.ex:238
+#: lib/firefly_web/live/staff_live/user.ex:244
 #, elixir-autogen, elixir-format
 msgid "The account was anonymized. Its posts stay, under a placeholder."
 msgstr "该账户已匿名化。其帖子会保留，并以占位名显示。"
 
-#: lib/firefly_web/live/staff_live/user.ex:559
+#: lib/firefly_web/live/staff_live/user.ex:573
 #, elixir-autogen, elixir-format
 msgid "Their latest, without private messages."
 msgstr "最新帖子，不含私信。"
 
-#: lib/firefly_web/live/staff_live/user.ex:315
+#: lib/firefly_web/live/staff_live/user.ex:321
 #, elixir-autogen, elixir-format
 msgid "This account waits for approval: it can read but not post."
 msgstr "此账户正在等待批准：可以阅读但不能发帖。"
@@ -1793,28 +1793,28 @@ msgstr "今日：已发送 %{sent} 封，跳过 %{skipped} 封，失败 %{failed
 msgid "Tracking"
 msgstr "跟踪中"
 
-#: lib/firefly_web/live/staff_live/user.ex:385
+#: lib/firefly_web/live/staff_live/user.ex:399
 #, elixir-autogen, elixir-format
 msgid "Trust and roles"
 msgstr "信任与角色"
 
-#: lib/firefly_web/live/staff_live/user.ex:396
+#: lib/firefly_web/live/staff_live/user.ex:410
 #: lib/firefly_web/live/staff_live/users.ex:131
 #, elixir-autogen, elixir-format
 msgid "Trust level"
 msgstr "信任级别"
 
-#: lib/firefly_web/live/staff_live/user.ex:138
+#: lib/firefly_web/live/staff_live/user.ex:139
 #, elixir-autogen, elixir-format
 msgid "Trust level set."
 msgstr "信任级别已设置。"
 
-#: lib/firefly_web/live/staff_live/user.ex:351
+#: lib/firefly_web/live/staff_live/user.ex:357
 #, elixir-autogen, elixir-format
 msgid "Turn off every second factor of this account?"
 msgstr "要关闭此账户的所有第二验证因素吗？"
 
-#: lib/firefly_web/live/staff_live/user.ex:170
+#: lib/firefly_web/live/staff_live/user.ex:171
 #, elixir-autogen, elixir-format
 msgid "Two-factor authentication was reset."
 msgstr "双重验证已重置。"
@@ -1824,7 +1824,7 @@ msgstr "双重验证已重置。"
 msgid "URLs"
 msgstr "网址"
 
-#: lib/firefly_web/live/staff_live/user.ex:495
+#: lib/firefly_web/live/staff_live/user.ex:509
 #, elixir-autogen, elixir-format
 msgid "Until (for a date)"
 msgstr "截止（按日期）"
@@ -1876,23 +1876,23 @@ msgstr "谁可以查看和发帖"
 msgid "Who sees it"
 msgstr "谁能看到它"
 
-#: lib/firefly_web/controllers/staff_controller.ex:40
+#: lib/firefly_web/controllers/staff_controller.ex:37
 #, elixir-autogen, elixir-format
 msgid "You can't impersonate that account."
 msgstr "你不能模拟登录该账户。"
 
 #: lib/firefly_web/components/layouts.ex:396
-#: lib/firefly_web/controllers/staff_controller.ex:35
+#: lib/firefly_web/controllers/staff_controller.ex:32
 #, elixir-autogen, elixir-format
 msgid "You're seeing the site as @%{username}."
 msgstr "你正在以 @%{username} 的身份查看网站。"
 
-#: lib/firefly_web/controllers/staff_controller.ex:58
+#: lib/firefly_web/controllers/staff_controller.ex:53
 #, elixir-autogen, elixir-format
 msgid "You're yourself again."
 msgstr "你已恢复为自己的身份。"
 
-#: lib/firefly_web/live/staff_live/user.ex:331
+#: lib/firefly_web/live/staff_live/user.ex:337
 #, elixir-autogen, elixir-format
 msgid "confirmed"
 msgstr "已确认"
@@ -1908,18 +1908,18 @@ msgid "failed"
 msgstr "失败"
 
 #: lib/firefly_web/live/staff_live/screening.ex:141
-#: lib/firefly_web/live/staff_live/user.ex:339
+#: lib/firefly_web/live/staff_live/user.ex:345
 #: lib/firefly_web/live/staff_live/users.ex:160
 #, elixir-autogen, elixir-format
 msgid "never"
 msgstr "从未"
 
-#: lib/firefly_web/live/staff_live/user.ex:330
+#: lib/firefly_web/live/staff_live/user.ex:336
 #, elixir-autogen, elixir-format
 msgid "none"
 msgstr "无"
 
-#: lib/firefly_web/live/staff_live/user.ex:345
+#: lib/firefly_web/live/staff_live/user.ex:351
 #, elixir-autogen, elixir-format
 msgid "password"
 msgstr "密码"
@@ -1934,7 +1934,7 @@ msgstr "待处理"
 msgid "restricted"
 msgstr "受限"
 
-#: lib/firefly_web/live/staff_live/user.ex:541
+#: lib/firefly_web/live/staff_live/user.ex:555
 #, elixir-autogen, elixir-format
 msgid "revoked"
 msgstr "已吊销"
@@ -1944,7 +1944,7 @@ msgstr "已吊销"
 msgid "sent"
 msgstr "已发送"
 
-#: lib/firefly_web/live/staff_live/user.ex:295
+#: lib/firefly_web/live/staff_live/user.ex:301
 #: lib/firefly_web/live/staff_live/users.ex:151
 #, elixir-autogen, elixir-format
 msgid "silenced"
@@ -1955,29 +1955,29 @@ msgstr "已禁言"
 msgid "skipped"
 msgstr "已跳过"
 
-#: lib/firefly_web/live/staff_live/user.ex:294
+#: lib/firefly_web/live/staff_live/user.ex:300
 #: lib/firefly_web/live/staff_live/users.ex:150
 #, elixir-autogen, elixir-format
 msgid "suspended"
 msgstr "已封禁"
 
-#: lib/firefly_web/live/staff_live/user.ex:347
+#: lib/firefly_web/live/staff_live/user.ex:353
 #, elixir-autogen, elixir-format
 msgid "two-factor"
 msgstr "双重验证"
 
-#: lib/firefly_web/live/staff_live/user.ex:332
+#: lib/firefly_web/live/staff_live/user.ex:338
 #, elixir-autogen, elixir-format
 msgid "unconfirmed"
 msgstr "未确认"
 
 #: lib/firefly_web/live/staff_live/groups.ex:254
-#: lib/firefly_web/live/staff_live/user.ex:612
+#: lib/firefly_web/live/staff_live/user.ex:626
 #, elixir-autogen, elixir-format
 msgid "username"
 msgstr "用户名"
 
-#: lib/firefly_web/live/staff_live/user.ex:293
+#: lib/firefly_web/live/staff_live/user.ex:299
 #, elixir-autogen, elixir-format
 msgid "waiting for approval"
 msgstr "等待批准"
@@ -2463,7 +2463,7 @@ msgstr "主题 HTML 中的脚本会在每个页面上、以每位成员的会话
 msgid "Scripts, event handlers and inline styles are removed."
 msgstr "脚本、事件处理程序和内联样式会被移除。"
 
-#: lib/firefly_web/live/settings_live/index.ex:705
+#: lib/firefly_web/live/settings_live/index.ex:745
 #, elixir-autogen, elixir-format
 msgid "Site theme"
 msgstr "网站主题"
@@ -2493,7 +2493,7 @@ msgstr "网站已恢复使用内置外观。"
 msgid "The site uses the built-in look: no theme is the default."
 msgstr "网站使用内置外观：没有默认主题。"
 
-#: lib/firefly_web/live/settings_live/index.ex:707
+#: lib/firefly_web/live/settings_live/index.ex:747
 #, elixir-autogen, elixir-format
 msgid "The site's default"
 msgstr "网站默认"
@@ -2508,7 +2508,7 @@ msgstr "主题组件"
 msgid "Theme deleted."
 msgstr "主题已删除。"
 
-#: lib/firefly_web/live/settings_live/index.ex:289
+#: lib/firefly_web/live/settings_live/index.ex:311
 #: lib/firefly_web/live/staff_live/theme.ex:98
 #, elixir-autogen, elixir-format
 msgid "Theme saved."
@@ -2542,7 +2542,7 @@ msgstr "最大 100 KB。用 theme-asset(名称) 引用资源，例如 background
 msgid "Use the built-in look"
 msgstr "使用内置外观"
 
-#: lib/firefly_web/live/settings_live/index.ex:709
+#: lib/firefly_web/live/settings_live/index.ex:749
 #, elixir-autogen, elixir-format
 msgid "Use this theme"
 msgstr "使用此主题"
@@ -2824,7 +2824,7 @@ msgstr "已登录"
 msgid "Logins, failed attempts and account security changes, newest first."
 msgstr "登录、失败的尝试和账户安全变更，最新的在前。"
 
-#: lib/firefly_web/live/settings_live/index.ex:1137
+#: lib/firefly_web/live/settings_live/index.ex:1231
 #, elixir-autogen, elixir-format
 msgid "Logins, failed attempts and changes to how you log in. Don't recognize one? Change your password and check your passkeys and keys."
 msgstr "登录、失败的尝试以及登录方式的变更。有不认识的记录？请更改密码并检查你的通行密钥和密钥。"
@@ -2844,7 +2844,7 @@ msgstr "新的备用码"
 msgid "No security events."
 msgstr "没有安全事件。"
 
-#: lib/firefly_web/live/settings_live/index.ex:1140
+#: lib/firefly_web/live/settings_live/index.ex:1234
 #, elixir-autogen, elixir-format
 msgid "Nothing yet."
 msgstr "暂无。"
@@ -2869,7 +2869,7 @@ msgstr "已移除通行密钥"
 msgid "Password changed"
 msgstr "密码已更改"
 
-#: lib/firefly_web/live/settings_live/index.ex:1135
+#: lib/firefly_web/live/settings_live/index.ex:1229
 #, elixir-autogen, elixir-format
 msgid "Recent security activity"
 msgstr "最近的安全活动"
@@ -3051,6 +3051,157 @@ msgstr "直到解封"
 #, elixir-autogen, elixir-format
 msgid "Why"
 msgstr "原因"
+
+#: lib/firefly_web/live/settings_live/index.ex:1180
+#, elixir-autogen, elixir-format
+msgid "Devices"
+msgstr "设备"
+
+#: lib/firefly_web/live/auth_live/identity.ex:112
+#, elixir-autogen, elixir-format
+msgid "Keep me logged in"
+msgstr "保持登录"
+
+#: lib/firefly_web/live/settings_live/index.ex:1210
+#, elixir-autogen, elixir-format
+msgid "Sign out"
+msgstr "登出"
+
+#: lib/firefly_web/live/settings_live/index.ex:1208
+#, elixir-autogen, elixir-format
+msgid "Sign out %{device}"
+msgstr "登出 %{device}"
+
+#: lib/firefly_web/live/staff_live/user.ex:390
+#, elixir-autogen, elixir-format
+msgid "Sign out everywhere"
+msgstr "在所有设备登出"
+
+#: lib/firefly_web/live/settings_live/index.ex:1221
+#, elixir-autogen, elixir-format
+msgid "Sign out of all other devices"
+msgstr "登出所有其他设备"
+
+#: lib/firefly_web/live/settings_live/index.ex:1219
+#, elixir-autogen, elixir-format
+msgid "Sign out of every other device?"
+msgstr "要登出所有其他设备吗？"
+
+#: lib/firefly_web/live/staff_live/user.ex:387
+#, elixir-autogen, elixir-format
+msgid "Sign this member out of every device?"
+msgstr "要让该成员在所有设备上登出吗？"
+
+#: lib/firefly_web/live/settings_live/index.ex:392
+#, elixir-autogen, elixir-format
+msgid "Signed out of every other device."
+msgstr "已登出所有其他设备。"
+
+#: lib/firefly_web/live/settings_live/index.ex:384
+#, elixir-autogen, elixir-format
+msgid "Signed out."
+msgstr "已登出。"
+
+#: lib/firefly_web/live/staff_live/user.ex:205
+#, elixir-autogen, elixir-format
+msgid "Signed them out of every device."
+msgstr "已让其在所有设备上登出。"
+
+#: lib/firefly_web/live/settings_live/index.ex:1182
+#, elixir-autogen, elixir-format
+msgid "The browsers you're logged in on. Sign out any you don't recognize."
+msgstr "你已登录的浏览器。登出任何你不认识的浏览器。"
+
+#: lib/firefly_web/live/settings_live/index.ex:1194
+#, elixir-autogen, elixir-format
+msgid "This browser"
+msgstr "此浏览器"
+
+#: lib/firefly_web/live/settings_live/index.ex:1192
+#: lib/firefly_web/live/settings_live/index.ex:1208
+#, elixir-autogen, elixir-format
+msgid "Unknown browser"
+msgstr "未知浏览器"
+
+#: lib/firefly_web/live/settings_live/index.ex:1199
+#, elixir-autogen, elixir-format
+msgid "last active"
+msgstr "最后活动"
+
+#: lib/firefly_web/live/settings_live/index.ex:762
+#, elixir-autogen, elixir-format
+msgid "Email me when my account is logged into from a new device"
+msgstr "当我的账户在新设备上登录时给我发邮件"
+
+#: lib/firefly_web/components/password_components.ex:31
+#, elixir-autogen, elixir-format
+msgid "Password strength"
+msgstr "密码强度"
+
+#: lib/firefly_web/components/password_components.ex:35
+#, elixir-autogen, elixir-format
+msgid "Password strength: %{label}"
+msgstr "密码强度：%{label}"
+
+#: lib/firefly_web/components/password_components.ex:50
+#, elixir-autogen, elixir-format
+msgid "fair"
+msgstr "一般"
+
+#: lib/firefly_web/components/password_components.ex:51
+#, elixir-autogen, elixir-format
+msgid "good"
+msgstr "良好"
+
+#: lib/firefly_web/components/password_components.ex:52
+#, elixir-autogen, elixir-format
+msgid "strong"
+msgstr "强"
+
+#: lib/firefly_web/components/password_components.ex:37
+#, elixir-autogen, elixir-format
+msgid "too easy to guess: add words or make it longer"
+msgstr "太容易被猜到：添加单词或加长密码"
+
+#: lib/firefly_web/components/password_components.ex:48
+#, elixir-autogen, elixir-format
+msgid "very weak"
+msgstr "非常弱"
+
+#: lib/firefly_web/components/password_components.ex:49
+#, elixir-autogen, elixir-format
+msgid "weak"
+msgstr "弱"
+
+#: lib/firefly_web/bot_challenge.ex:117
+#, elixir-autogen, elixir-format
+msgid "Checked: you can go on."
+msgstr "已验证：你可以继续了。"
+
+#: lib/firefly_web/bot_challenge.ex:123
+#, elixir-autogen, elixir-format
+msgid "Checking that you're not a bot…"
+msgstr "正在验证你不是机器人…"
+
+#: lib/firefly_web/bot_challenge.ex:118
+#, elixir-autogen, elixir-format
+msgid "The check didn't work. Reload the page to try again."
+msgstr "验证没有成功。请重新加载页面再试一次。"
+
+#: lib/firefly_web/bot_challenge.ex:66
+#, elixir-autogen, elixir-format
+msgid "The check that you're not a bot didn't pass. Please try again."
+msgstr "未通过人机验证。请再试一次。"
+
+#: lib/firefly_web/bot_challenge.ex:126
+#, elixir-autogen, elixir-format
+msgid "This check needs JavaScript."
+msgstr "此验证需要 JavaScript。"
+
+#: lib/firefly_web/bot_challenge.ex:62
+#, elixir-autogen, elixir-format
+msgid "Wait a moment for the check that you're not a bot, then try again."
+msgstr "请稍候，等人机验证完成后再试一次。"
 
 #: lib/firefly_web/unstorable_text.ex:21
 #, elixir-autogen, elixir-format

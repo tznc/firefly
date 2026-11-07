@@ -163,7 +163,7 @@ defmodule Firefly.Security.Jail do
             min: 1,
             max: 10_000,
             help:
-              "Points within the find time below that ban an address (see the README's Banning)."
+              "Points within the find time below that ban an address (see Banning in docs/security.md)."
           },
           %{
             key: "jail_#{name}_findtime",
@@ -266,6 +266,21 @@ defmodule Firefly.Security.Jail do
       {:banned, ban}
     else
       :ok
+    end
+  end
+
+  @doc """
+  The points `address` has in `jail` within its find time on this node (0
+  while the jail is off: nothing is counted then).
+  """
+  def points(address, jail, now \\ DateTime.utc_now()) do
+    with true <- configured?(),
+         %{} = parsed <- parse(address) do
+      findtime_ms = SiteSettings.get("jail_#{jail}_findtime") * 60_000
+      bucket_ms = max(div(findtime_ms, 10), 1000)
+      points(jail, parsed.key, bucket_ms, div(DateTime.to_unix(now, :millisecond), bucket_ms) - 9)
+    else
+      _ -> 0
     end
   end
 

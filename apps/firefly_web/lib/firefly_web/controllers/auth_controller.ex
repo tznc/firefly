@@ -9,7 +9,7 @@ defmodule FireflyWeb.AuthController do
 
   alias Firefly.{Accounts, RateLimit}
   alias Firefly.Accounts.{Auth, User}
-  alias FireflyWeb.{InviteController, Login}
+  alias FireflyWeb.{BotChallenge, InviteController, Login}
 
   # Ueberauth redirects GET /auth/:provider for OAuth providers before this
   # action runs; we only get here for unknown providers, or when the
@@ -28,8 +28,7 @@ defmodule FireflyWeb.AuthController do
 
   def delete(conn, _params) do
     conn
-    |> configure_session(renew: true)
-    |> clear_session()
+    |> FireflyWeb.Session.stop()
     |> put_flash(:info, "You have been logged out!")
     |> redirect(to: ~p"/")
   end
@@ -76,15 +75,24 @@ defmodule FireflyWeb.AuthController do
 
   defp identity_callback(conn, params) do
     user_params = params["user"] || %{}
+    # Slower and slower after repeated failures (see Firefly.Security.login_delay/2).
+    Process.sleep(Firefly.Security.login_delay(user_params["username"], conn.remote_ip))
 
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
+         :ok <- BotChallenge.check_login(params, conn.remote_ip),
          {:ok, user} <-
            Accounts.authenticate_by_password(user_params["username"], user_params["password"]) do
       # Registering through an invite lands where the invite says.
-      Login.complete(conn, user, ~p"/auth/identity", :password, params["return_to"] || "/")
+      conn
+      |> Login.put_remember(user_params["remember_me"] != "false")
+      |> Login.complete(user, ~p"/auth/identity", :password, params["return_to"] || "/")
     else
       {:error, :rate_limited} ->
         Login.fail(conn, ~p"/auth/identity", RateLimit.message())
+
+      # The login form shows the challenge on the way back.
+      {:error, :bot_challenge} ->
+        Login.fail(conn, ~p"/auth/identity?challenge=1", BotChallenge.failed_message())
 
       {:error, reason} ->
         Login.failed("login.failure", user_params["username"], %{method: "password"})

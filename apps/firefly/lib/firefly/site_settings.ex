@@ -48,7 +48,7 @@ defmodule Firefly.SiteSettings do
     {"Posting",
      ["Content", "Spam and new users", "Akismet", "Uploads", "Link previews", "Search"]},
     {"Email", ["Email"]},
-    {"Security", ["Rate limits", "API", "Security log", "Banning"]},
+    {"Security", ["Sessions", "Rate limits", "API", "Security log", "Banning", "Bot challenge"]},
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
@@ -1004,6 +1004,27 @@ defmodule Firefly.SiteSettings do
         help: "Automatic backups, every this many days. 0: off."
       },
       %{
+        key: "session_idle_hours",
+        section: "Sessions",
+        type: :integer,
+        label: "Log out after inactivity (hours)",
+        default: 168,
+        min: 1,
+        max: 8760,
+        help: "A browser not used for this long is logged out."
+      },
+      %{
+        key: "session_remember_days",
+        section: "Sessions",
+        type: :integer,
+        label: "Keep members logged in for (days)",
+        default: 30,
+        min: 1,
+        max: 365,
+        help:
+          "How long \"Keep me logged in\" lasts, and the longest any login lasts, however active."
+      },
+      %{
         key: "ip_retention_days",
         section: "Security log",
         type: :integer,
@@ -1396,7 +1417,8 @@ defmodule Firefly.SiteSettings do
       member_default_definitions() ++
       limit_definitions() ++
       rate_limit_definitions() ++
-      Firefly.Security.Jail.setting_definitions()
+      Firefly.Security.Jail.setting_definitions() ++
+      Firefly.Security.Challenge.setting_definitions()
   end
 
   defp appearance_definitions do
@@ -1464,6 +1486,26 @@ defmodule Firefly.SiteSettings do
         max: 72,
         help:
           "How many characters a new password must have at least (72 is the most passwords can have)."
+      },
+      %{
+        key: "min_password_score",
+        section: "Registration",
+        type: :integer,
+        label: "Weakest password allowed (0-4)",
+        default: 2,
+        min: 0,
+        max: 4,
+        help:
+          "New passwords are scored by how easily they're guessed (zxcvbn): 0 in moments, 4 hardly ever. Lower scores are refused; 0 allows any."
+      },
+      %{
+        key: "check_breached_passwords",
+        section: "Registration",
+        type: :boolean,
+        label: "Refuse passwords known from breaches",
+        default: true,
+        help:
+          "New passwords are checked against Have I Been Pwned's Pwned Passwords: only the first 5 characters of the password's SHA-1 hash are sent. If it can't be reached, the password is allowed."
       },
       %{
         key: "reserved_usernames",

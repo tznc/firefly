@@ -239,7 +239,7 @@ defmodule FireflyWeb.AccountTest do
                Accounts.register_user(%{
                  username: "Deleted-User-#{ada.id}",
                  email: "x@example.com",
-                 password: "password123"
+                 password: "tangerine-otter-galaxy"
                })
 
       assert "is reserved" in errors_on(changeset).username
@@ -306,9 +306,11 @@ defmodule FireflyWeb.AccountTest do
           "user" => %{"username" => "ada", "password" => "ada-password"}
         })
 
-      assert get_session(conn, :live_socket_id) == "users_sockets:#{ada.id}"
+      # Each login (each browser) has its own socket id.
+      assert "user_sessions:" <> _ = socket_id = get_session(conn, :live_socket_id)
+      assert session_user_id(conn) == ada.id
 
-      FireflyWeb.Endpoint.subscribe("users_sockets:#{ada.id}")
+      FireflyWeb.Endpoint.subscribe(socket_id)
       {:ok, _} = AccountDeletion.delete_account(ada, "ada-password")
       assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
     end

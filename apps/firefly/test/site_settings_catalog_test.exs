@@ -235,7 +235,7 @@ defmodule Firefly.SiteSettingsCatalogTest do
         Accounts.register_user(%{
           username: "fresh",
           email: "fresh@example.com",
-          password: "password1"
+          password: "tangerine-otter-galaxy"
         })
 
       assert %User{email_notifications: false, reply_level: "normal", keyboard_shortcuts: false} =

@@ -1020,4 +1020,71 @@ const Sortable = {
   },
 }
 
-export default {KeyboardShortcuts, Sortable, ChatComposer, ChatScroll, ReactionPicker, PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}
+// The bot challenge in a form (FireflyWeb.BotChallenge): answers it in the
+// background and puts the answer in the form's bot_challenge field. The
+// proof of work (data-mode="pow") looks for the number whose SHA-256 with
+// the salt is the challenge (ALTCHA's scheme); Turnstile and hCaptcha load
+// their script and render their widget into [data-provider]. The status
+// line (a polite live region) says when it's done.
+const hex = buffer => Array.from(new Uint8Array(buffer), byte => byte.toString(16).padStart(2, "0")).join("")
+
+async function solvePow({algorithm, challenge, maxnumber, salt, signature}, alive) {
+  const encoder = new TextEncoder()
+  for (let number = 0; number <= maxnumber; number++) {
+    if (number % 5000 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0))
+      if (!alive()) return null
+    }
+    if (hex(await crypto.subtle.digest("SHA-256", encoder.encode(salt + number))) === challenge) {
+      return btoa(JSON.stringify({algorithm, challenge, number, salt, signature}))
+    }
+  }
+  return null
+}
+
+const providerScripts = {}
+
+function loadScript(src) {
+  providerScripts[src] ||= new Promise((resolve, reject) => {
+    const script = document.createElement("script")
+    script.src = src
+    script.async = true
+    script.onload = resolve
+    script.onerror = reject
+    document.head.appendChild(script)
+  })
+  return providerScripts[src]
+}
+
+const BotChallenge = {
+  mounted() {
+    this.alive = true
+    this.input = this.el.querySelector("input[name=bot_challenge]")
+    this.status = this.el.querySelector("[data-status]")
+    const {mode} = this.el.dataset
+    const run = mode === "pow" ? this.pow() : this.provider(mode)
+    run.catch(() => this.finish(null))
+  },
+  destroyed() { this.alive = false },
+  async pow() {
+    this.finish(await solvePow(JSON.parse(this.el.dataset.challenge), () => this.alive))
+  },
+  async provider(mode) {
+    await loadScript(this.el.dataset.script)
+    const api = mode === "turnstile" ? window.turnstile : window.hcaptcha
+    api.render(this.el.querySelector("[data-provider]"), {
+      sitekey: this.el.dataset.siteKey,
+      callback: token => this.finish(token),
+      "expired-callback": () => { this.input.value = "" },
+      "error-callback": () => this.finish(null),
+    })
+  },
+  finish(answer) {
+    if (!this.alive) return
+    this.input.value = answer || ""
+    this.status.textContent = answer ? this.el.dataset.done : this.el.dataset.failed
+    this.status.classList.toggle("text-error", !answer)
+  },
+}
+
+export default {BotChallenge, KeyboardShortcuts, Sortable, ChatComposer, ChatScroll, ReactionPicker, PushNotifications, ComposerButtons, PasskeyLogin, SecurityKeyLogin, SecurityKeyRegister, EmojiPicker, PasteUpload, PluginWidget, Highlight, LocalTime, MentionAutocomplete, QuoteSelection}

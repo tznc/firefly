@@ -1,6 +1,8 @@
 defmodule FireflyWeb.Plugs.CurrentUser do
   @moduledoc """
-  A `Plug` to assign `:current_user` based on the session.
+  Assigns `:current_user` (and `:impersonator`, the admin seeing the site
+  as them, and `:user_session`) from the session, checked against the
+  database on every request (see `FireflyWeb.Session`).
   """
 
   import Plug.Conn
@@ -8,5 +10,14 @@ defmodule FireflyWeb.Plugs.CurrentUser do
 
   def init(options), do: options
 
-  def call(conn, _opts), do: assign(conn, :current_user, Session.current_user(conn))
+  def call(%{assigns: %{current_user: _}} = conn, _opts), do: conn
+
+  def call(conn, _opts) do
+    {user, impersonator, session, conn} = Session.fetch(conn)
+
+    conn
+    |> assign(:current_user, user)
+    |> assign(:impersonator, impersonator)
+    |> assign(:user_session, session)
+  end
 end

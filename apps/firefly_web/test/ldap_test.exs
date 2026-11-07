@@ -6,7 +6,7 @@ defmodule FireflyWeb.LDAPTest do
   alias Firefly.Accounts.{Auth, TwoFactor, User, UserIdentity}
 
   defp logged_in_user(conn) do
-    case get_session(conn, :current_user) do
+    case session_user_id(conn) do
       nil -> nil
       id -> Repo.get(User, id)
     end

@@ -108,7 +108,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_UPLOAD_STORAGE` | Where uploads are kept: `local` (default, a directory on disk) or `s3` |
 | `FIREFLY_UPLOAD_DIR` | The local upload directory, default `uploads` under the working directory (`/app/uploads` in the Docker image: mount a volume there) |
 | `FIREFLY_AWS_ACCESS_KEY_ID`, `FIREFLY_AWS_SECRET_ACCESS_KEY`, `FIREFLY_AWS_S3_BUCKET`, `FIREFLY_AWS_S3_REGION` | The S3 bucket for uploads, with `FIREFLY_UPLOAD_STORAGE=s3` (kept private: files are served through Firefly's access checks) |
-| `FIREFLY_CLAMAV_HOST`, `FIREFLY_CLAMAV_PORT` | Virus scanning of uploads with a [clamd](https://docs.clamav.net) daemon over TCP (port default 3310), off unless the host is set (see "Uploads" below) |
+| `FIREFLY_CLAMAV_HOST`, `FIREFLY_CLAMAV_PORT` | Virus scanning of uploads with a [clamd](https://docs.clamav.net) daemon over TCP (port default 3310), off unless the host is set (see [docs/security.md](docs/security.md), "Uploads") |
 | `FIREFLY_BACKUP_STORAGE` | Where backups (`/staff/backups`) are kept: `local` (default) or `s3` (the uploads' bucket, under `FIREFLY_BACKUP_S3_PREFIX`, default `backups/`) |
 | `FIREFLY_BACKUP_DIR` | The local backup directory, default `backups` under the working directory (`/app/backups` in the Docker image: mount a volume there) |
 | `FIREFLY_PG_BIN_DIR` | Where `pg_dump` and `pg_restore` are, for backups; they must be the database's major version or newer (the Docker image has PostgreSQL 18's, for servers up to 18). Default: the newest `/usr/lib/postgresql/*/bin`, else the `PATH` |
@@ -135,15 +135,6 @@ Image uploads are processed with [libvips](https://www.libvips.org) (through
 install it (`apt-get install libvips-dev`, `brew install vips`) and set
 `VIX_COMPILATION_MODE=PLATFORM_PROVIDED_LIBVIPS` before `mix deps.compile`. The
 Docker images include it.
-
-Uploads: the type comes from the file's content, and a file whose name or
-claimed type says otherwise is refused. SVG images are rendered to PNGs (so no
-script, `foreignObject`, event handler or external reference survives); other
-files than images are served as downloads (`Content-Disposition: attachment`),
-everything with `X-Content-Type-Options: nosniff` and a sandboxing CSP. With
-`FIREFLY_CLAMAV_HOST` set, a new upload is served to no one until clamd has
-scanned it (a background job, retried while clamd is unreachable); an infected
-file is quarantined, recorded in the staff log and refused from then on.
 
 ### Docker image
 
@@ -727,57 +718,11 @@ on every page says so). Every create, update and delete there is recorded
 in the staff log. It follows the site's light/dark choice and its active
 theme's colors.
 
-### Banning (fail2ban)
+### Security
 
-Addresses that keep failing are banned for a while: every page answers them
-with a short 403 (`Retry-After` set), before the session or anything else
-runs. Health checks and metrics are answered before that check.
-
-What counts, by *jail* (each with its own points threshold, find-time window
-and first ban length, in Settings > Security > Banning):
-
-| Jail | Signals |
-| --- | --- |
-| `auth` | failed password, two-factor and passkey logins, invalid magic links, bad API keys |
-| `rate_limit` | any request refused by a rate limit |
-| `probe` | 404s (1 point), exploit scanners' paths like `/wp-login.php`, `/.env`, `/.git/` or `*.php` (10 points, answered 404 at once) |
-| `csrf` | CSRF failures, invalid or expired confirmation, reset and unsubscribe links |
-| `spam` | Akismet spam verdicts, watched-word blocks, screening hits |
-| `signature` | inbound-email webhook token and plugin endpoint secret failures |
-| `bot` | failed bot challenges |
-| `plugin` | what plugins report (`jail.signal`, see PLUGINS.md) |
-
-Each further ban of the same address lasts `jail_bantime_factor` times
-longer (2 by default), up to `jail_max_ban_hours` (a week). IPv6 addresses
-are banned by their /64 unless `jail_ipv6_prefix` says single addresses.
-The `jail_allowlist` setting's addresses and ranges and the trusted proxies
-(`FIREFLY_TRUSTED_PROXIES`) are never banned: set the latter behind a
-proxy, or the jail sees only the proxy. Admins see the bans in force and the
-addresses closest to one at `/staff/security`, and ban or unban addresses
-and ranges there (staff-logged). Every ban is in the security log.
-
-Points are counted in memory on each node; bans are stored in the database
-(they survive restarts) and shared by every node in a cluster. Ended bans
-are forgotten after `ip_retention_days`. Prometheus has
-`firefly_security_signal_count` (by jail and kind) and
-`firefly_security_ban_count` (by jail and source), never with addresses.
-
-### Security log and IP retention
-
-The security log (`Firefly.Security`) records logins and failed attempts
-(password, two-factor, passkey, API), two-factor, passkey and password
-changes, API keys (created, first used from each address, revoked),
-suspensions and silences, IP bans and quarantined uploads, with the client's IP
-address and browser. Members see their own under Settings > Security; admins
-see everyone's at `/staff/security`, filtered by event, username or address.
-
-Full IP addresses are kept for the `ip_retention_days` setting (Security >
-Security log, default 90). An hourly job then cuts them to their network
-(/24 for IPv4, /48 for IPv6) in the security log, API keys' last use and
-Akismet checks, and deletes members' address records (`user_ips`), which are
-only useful whole. Analytics never store addresses (visitors are a salted
-hash); the Akismet check jobs carry the address until the job history is
-pruned (`job_retention_days`).
+Sessions, password and login hardening, the bot challenge, IP bans, the
+security log, upload hardening and CI's security checks: see
+[docs/security.md](docs/security.md).
 
 ### Plugins
 
@@ -952,33 +897,6 @@ mix test --include ldap
 
 `FIREFLY_IMPORT_MYSQL_URL`, `FIREFLY_IMPORT_MONGO_URL` and
 `FIREFLY_IMPORT_REDIS_URL` point them elsewhere.
-
-### Security checks
-
-CI's Security job fails on any of these; the Docker image job also scans the
-built image with [Trivy](https://trivy.dev) (HIGH and CRITICAL
-vulnerabilities that have a fix). Dependabot (`.github/dependabot.yml`)
-opens weekly updates for Hex, npm and GitHub Actions.
-
-```sh
-mix deps.audit                        # advisories against mix.lock (mix hex.audit: retired releases)
-ln -s ../../config apps/firefly_web/config   # once: Sobelow's config checks look there
-mix sobelow --root apps/firefly_web   # and apps/firefly, apps/firefly_plugins, apps/firefly_import
-docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/gitleaks/gitleaks:v8.30.1 git --redact .
-```
-
-[Sobelow](https://github.com/sobelow/sobelow) reads each app's reviewed
-`.sobelow-conf` and fails on a finding of any confidence. A finding that's
-a false positive is skipped where it is, with its reason:
-
-```elixir
-# Sobelow: the path comes from a signed token whose name is validated.
-# sobelow_skip ["Traversal.SendDownload"]
-def download(conn, params) do
-```
-
-gitleaks' reviewed exceptions (test keys, the old development keys) are in
-`.gitleaks.toml`.
 
 ## Patrons
 

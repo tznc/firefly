@@ -88,8 +88,10 @@ defmodule Firefly.Moderation.Penalties do
         end)
 
       # Enforced first: telling the user can fail (email), the penalty can't.
+      # A suspension signs them out everywhere.
       {:ok, user,
        fn ->
+         sign_out(kind, user)
          reload_pages(user)
          tell(kind, user, until, reason)
        end}
@@ -197,4 +199,7 @@ defmodule Firefly.Moderation.Penalties do
     do: Logger.error("Penalty email to user #{user.id} failed: #{inspect(error)}")
 
   defp reload_pages(user), do: UserSessions.reload_pages(user)
+
+  defp sign_out(:suspend, user), do: UserSessions.revoke_all(user, nil, %{reason: "suspended"})
+  defp sign_out(_kind, _user), do: :ok
 end

@@ -42,6 +42,7 @@ defmodule Firefly.Accounts do
       WebAuthn,
       MagicLinks,
       PasswordReset,
+      Passwords,
       EmailConfirmation,
       AccountDeletion,
       AccountExport,
@@ -49,6 +50,7 @@ defmodule Firefly.Accounts do
       Profiles,
       Visits,
       UserSessions,
+      UserSession,
       Invites,
       Invite,
       InviteRedemption,
@@ -203,6 +205,7 @@ defmodule Firefly.Accounts do
       %User{confirmed_at: confirmed_at, approved: approved_on_signup?(invited?)}
       |> struct(new_member_defaults())
       |> User.registration_changeset(attrs)
+      |> Firefly.Accounts.Passwords.validate_not_breached()
 
     case Screening.check_signup(Ecto.Changeset.get_field(changeset, :email)) do
       :ok ->
@@ -294,10 +297,13 @@ defmodule Firefly.Accounts do
 
   @doc """
   Sets a new password from a reset link. Following the emailed link proves the
-  address, so it also confirms the email.
+  address, so it also confirms the email. Every session of the user ends.
   """
   def reset_user_password(%User{} = user, attrs) do
-    changeset = User.password_changeset(user, attrs)
+    changeset =
+      user
+      |> User.password_changeset(attrs)
+      |> Firefly.Accounts.Passwords.validate_not_breached()
 
     changeset =
       if User.confirmed?(user),
@@ -306,6 +312,8 @@ defmodule Firefly.Accounts do
 
     with {:ok, user} <- Repo.update(changeset) do
       Firefly.Security.record("password.reset", user)
+      # Whoever knew the old password is signed out.
+      Firefly.Accounts.UserSessions.revoke_all(user, nil, %{reason: "password reset"})
       {:ok, user}
     end
   end

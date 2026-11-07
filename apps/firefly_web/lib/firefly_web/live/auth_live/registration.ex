@@ -4,7 +4,8 @@ defmodule FireflyWeb.AuthLive.Registration do
   created here; the form then posts to the identity callback to log in, which
   writes the session. Closed while the `allow_registrations` site setting is
   off. New accounts are always sent a confirmation link; with
-  `require_email_confirmation` off they can post before following it.
+  `require_email_confirmation` off they can post before following it. The
+  form asks for the bot challenge (see `FireflyWeb.BotChallenge`).
   """
   use FireflyWeb, :live_view
 
@@ -12,6 +13,7 @@ defmodule FireflyWeb.AuthLive.Registration do
 
   alias Firefly.{Accounts, RateLimit}
   alias Firefly.Accounts.EmailConfirmation
+  alias FireflyWeb.BotChallenge
 
   @impl true
   def mount(_params, _session, socket) do
@@ -32,6 +34,8 @@ defmodule FireflyWeb.AuthLive.Registration do
      |> assign(:page_title, gettext("Create an account"))
      |> assign(:remote_ip, FireflyWeb.ClientIP.from_socket(socket))
      |> assign(:trigger_submit, false)
+     |> assign(:registered, nil)
+     |> BotChallenge.assign_challenge()
      |> assign_form(Accounts.change_registration())}
   end
 
@@ -47,8 +51,9 @@ defmodule FireflyWeb.AuthLive.Registration do
     {:noreply, put_flash(socket, :error, gettext("Registration failed. Please try again."))}
   end
 
-  def handle_event("save", %{"user" => params}, socket) do
+  def handle_event("save", %{"user" => params} = form, socket) do
     with :ok <- RateLimit.check_register(socket.assigns.remote_ip),
+         {:ok, socket} <- BotChallenge.check(socket, form),
          {:ok, user} <- Accounts.register_user(params) do
       unless Firefly.Accounts.User.confirmed?(user), do: EmailConfirmation.deliver(user)
 
@@ -56,8 +61,12 @@ defmodule FireflyWeb.AuthLive.Registration do
       {:noreply,
        socket
        |> assign(:trigger_submit, true)
+       |> assign(:registered, BotChallenge.registered_token(user))
        |> assign(:form, to_form(params, as: :user))}
     else
+      {:error, %Phoenix.LiveView.Socket{} = socket} ->
+        {:noreply, socket}
+
       {:error, :rate_limited} ->
         {:noreply, put_flash(socket, :error, RateLimit.message())}
 
@@ -101,6 +110,13 @@ defmodule FireflyWeb.AuthLive.Registration do
             autocomplete="new-password"
             value={@form[:password].value}
           />
+          <FireflyWeb.PasswordComponents.strength_meter
+            id="password-strength"
+            password={@form[:password].value}
+            words={[@form[:username].value, @form[:email].value]}
+          />
+          <input :if={@registered} type="hidden" name="registered" value={@registered} />
+          <BotChallenge.bot_challenge id={@bot_challenge_id} widget={@bot_challenge} />
           <div class="hidden" aria-hidden="true">
             <label for="user_website">{gettext("Website")}</label>
             <input type="text" id="user_website" name="user[website]" tabindex="-1" autocomplete="off" />

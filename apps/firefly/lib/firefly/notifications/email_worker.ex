@@ -11,7 +11,7 @@ defmodule Firefly.Notifications.EmailWorker do
     queue: :mailers,
     max_attempts: 3,
     unique: [
-      keys: [:template, :notification_id, :user_id, :post_id],
+      keys: [:template, :notification_id, :user_id, :post_id, :session_id],
       period: :infinity,
       states: :all
     ]
@@ -35,6 +35,19 @@ defmodule Firefly.Notifications.EmailWorker do
       |> Firefly.Jobs.insert()
 
     Notifications.notification_emailed(notification)
+  end
+
+  @doc """
+  Queues the email telling `user` their account was logged into from a new
+  device (`session`, see `Firefly.Accounts.UserSessions`).
+  """
+  def new_device_later(%User{id: user_id}, %{id: session_id}) do
+    {:ok, _job} =
+      %{template: "new_device", user_id: user_id, session_id: session_id}
+      |> new()
+      |> Firefly.Jobs.insert()
+
+    :ok
   end
 
   @doc "Queues the mailing list email of `post` in `thread` for `user`."
@@ -76,6 +89,12 @@ defmodule Firefly.Notifications.EmailWorker do
     with %Firefly.Chat.Message{deleted_at: nil, body: body} <-
            Repo.get(Firefly.Chat.Message, args["message_id"]),
          do: Emails.chat_notification(user, args["subject"], body, args["url"])
+  end
+
+  defp build("new_device", user, args) do
+    with %Firefly.Accounts.UserSession{} = session <-
+           Repo.get(Firefly.Accounts.UserSession, args["session_id"]),
+         do: Emails.new_device(user, session)
   end
 
   defp build("mailing_list_post", user, args) do
