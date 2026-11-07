@@ -25,10 +25,32 @@ config :firefly_web, FireflyWeb.ClientIP,
 config :firefly, Firefly.Security.Jail,
   trusted_proxies: String.split(System.get_env("FIREFLY_TRUSTED_PROXIES", ""), ",", trim: true)
 
-# The secret AI providers' API keys are encrypted with at rest (see
-# Firefly.AI.Encrypted); without it, a key derived from the secret key base.
-if ai_key = System.get_env("FIREFLY_AI_ENCRYPTION_KEY") do
-  config :firefly, Firefly.AI, encryption_key: ai_key
+# Secrets in the database are encrypted at rest (see Firefly.Vault) with
+# FIREFLY_VAULT_KEY (base64 of 32 bytes: openssl rand -base64 32). Values
+# written under the keys in FIREFLY_VAULT_RETIRED_KEYS (comma-separated)
+# stay readable until `mix firefly.vault.rotate` re-encrypts them.
+vault_key = fn base64 ->
+  case Base.decode64(String.trim(base64)) do
+    {:ok, <<_::binary-32>> = key} -> key
+    _ -> raise "vault keys must be base64 of 32 bytes (openssl rand -base64 32)"
+  end
+end
+
+retired_vault_keys =
+  String.split(System.get_env("FIREFLY_VAULT_RETIRED_KEYS", ""), ",", trim: true)
+
+case {System.get_env("FIREFLY_VAULT_KEY"), config_env()} do
+  {nil, :prod} ->
+    raise "environment variable FIREFLY_VAULT_KEY is missing (openssl rand -base64 32)"
+
+  {nil, _env} when retired_vault_keys != [] ->
+    raise "FIREFLY_VAULT_RETIRED_KEYS is set without FIREFLY_VAULT_KEY"
+
+  {nil, _env} ->
+    :ok
+
+  {key, _env} ->
+    config :firefly, Firefly.Vault, keys: Enum.map([key | retired_vault_keys], vault_key)
 end
 
 # Where uploads are stored: `local` (a directory, FIREFLY_UPLOAD_DIR) or

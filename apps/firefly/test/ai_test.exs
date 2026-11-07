@@ -2,7 +2,7 @@ defmodule Firefly.AITest do
   use Firefly.DataCase
 
   alias Firefly.{AI, Reports, SiteSettings}
-  alias Firefly.AI.{Adapters, Encrypted, FakeProvider, ProviderConfig, Usage}
+  alias Firefly.AI.{Adapters, FakeProvider, ProviderConfig, Usage}
   alias Firefly.Moderation.StaffAction
 
   import Firefly.Fixtures
@@ -34,19 +34,11 @@ defmodule Firefly.AITest do
         Repo.query!("SELECT api_key FROM ai_providers WHERE id = $1", [provider.id])
 
       refute stored =~ "sk-secret"
-      assert Encrypted.decrypt(stored) == "sk-secret"
+      assert Firefly.Vault.decrypt!(stored) == "sk-secret"
 
       [entry] = Repo.all(where(StaffAction, action: "ai_provider.create"))
       assert entry.details["api_key"] == "changed"
       refute inspect(entry.details) =~ "sk-secret"
-    end
-
-    test "a key from another secret reads as nil" do
-      stored = Encrypted.encrypt("sk-secret")
-      config = Application.get_env(:firefly, Firefly.AI)
-      Application.put_env(:firefly, Firefly.AI, Keyword.put(config, :encryption_key, "another"))
-      on_exit(fn -> Application.put_env(:firefly, Firefly.AI, config) end)
-      assert Encrypted.decrypt(stored) == nil
     end
 
     test "a blank key keeps the stored one; clearing removes it", %{admin: admin} do

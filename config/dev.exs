@@ -11,6 +11,11 @@ config :firefly, Firefly.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
 
+# A fixed vault key for development (see Firefly.Vault; FIREFLY_VAULT_KEY
+# overrides it).
+config :firefly, Firefly.Vault,
+  keys: [Base.decode64!("xCOnNJiNX/tx5vR8/3QUZLERoe8J4J40UVQDdH/pPSw=")]
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 config :firefly_web, FireflyWeb.Endpoint,

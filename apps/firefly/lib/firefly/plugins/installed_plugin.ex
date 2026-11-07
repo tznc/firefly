@@ -26,7 +26,7 @@ defmodule Firefly.Plugins.InstalledPlugin do
     field(:disabled_reason, :string)
     field(:settings, :map, default: %{})
     field(:fail_closed, :boolean, default: false)
-    field(:secret, :string, redact: true)
+    field(:secret, Firefly.Encrypted.Binary, redact: true)
     belongs_to(:installed_by, User)
     belongs_to(:package, Firefly.Packages.Package)
 

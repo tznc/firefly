@@ -13,7 +13,7 @@ defmodule Firefly.Notifications.WebPush.Subscription do
     belongs_to(:user, Firefly.Accounts.User)
     field(:endpoint, :string)
     field(:p256dh, :string)
-    field(:auth, :string)
+    field(:auth, Firefly.Encrypted.Binary, redact: true)
     field(:user_agent, :string)
     field(:last_used_at, :utc_datetime)
 

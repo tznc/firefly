@@ -8,7 +8,7 @@ defmodule Firefly.Repo.Migrations.CreateDiscourseConnectClients do
   def change do
     create table(:discourse_connect_clients) do
       add :name, :string, null: false
-      add :secret, :string, null: false
+      add :secret, :binary, null: false
       add :allowed_hosts, {:array, :string}, null: false, default: []
 
       timestamps(type: :utc_datetime)

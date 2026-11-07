@@ -43,6 +43,10 @@ defmodule Firefly.MixProject do
       {:libcluster, "~> 3.5"},
       {:libcluster_postgres, "~> 0.2.0"},
       {:plug_crypto, "~> 2.1"},
+      # Encryption at rest for secrets in the database (see Firefly.Vault):
+      # AES-256-GCM with tagged keys, so keys rotate without downtime.
+      {:cloak, "~> 1.1"},
+      {:cloak_ecto, "~> 1.3"},
       # Safe HTML for rendered posts, search excerpts and emails.
       {:phoenix_html, "~> 4.4"},
       {:jason, "~> 1.4"},

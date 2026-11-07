@@ -2,8 +2,9 @@ defmodule Firefly do
   @moduledoc """
   The domain's shared kernel: the repo, the port to the web interface
   (`Firefly.Endpoint`, `Firefly.URLs`), the mailer, rate limits, local
-  times and address ranges, and text the database can store
-  (`Firefly.Text`, `Firefly.Changeset`), used by every context.
+  times and address ranges, text the database can store
+  (`Firefly.Text`, `Firefly.Changeset`), and encryption at rest for secrets
+  (`Firefly.Vault`, `Firefly.Encrypted.Binary`), used by every context.
 
   ## Bounded contexts
 
@@ -56,6 +57,8 @@ defmodule Firefly do
       IPRange,
       Telemetry,
       Text,
-      Changeset
+      Changeset,
+      Vault,
+      Encrypted.Binary
     ]
 end

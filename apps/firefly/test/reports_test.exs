@@ -55,9 +55,27 @@ defmodule Firefly.ReportsTest do
 
     assert [["Lonely", "Elixir", _date]] = rows
 
-    # A reply an hour after the topic was started.
+    # A reply an hour after the topic was started, both today: pinned to the
+    # day's start rather than backdated from now, which would cross midnight
+    # in the day's first hour.
+    started = NaiveDateTime.new!(Date.utc_today(), ~T[00:00:00])
+
     Repo.update_all(from(t in Thread, where: t.id == ^ctx.answered.id),
-      set: [inserted_at: NaiveDateTime.add(NaiveDateTime.utc_now(), -3600)]
+      set: [inserted_at: started]
+    )
+
+    Repo.update_all(
+      from(p in Firefly.Discussion.Post,
+        where: p.thread_id == ^ctx.answered.id and p.user_id == ^ctx.author.id
+      ),
+      set: [inserted_at: started]
+    )
+
+    Repo.update_all(
+      from(p in Firefly.Discussion.Post,
+        where: p.thread_id == ^ctx.answered.id and p.user_id == ^ctx.replier.id
+      ),
+      set: [inserted_at: NaiveDateTime.add(started, 3600)]
     )
 
     %{result: {:series, [%{points: points}]}} =

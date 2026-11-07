@@ -3,7 +3,7 @@ defmodule Firefly.AI.ProviderConfig do
   An AI provider an admin set up at `/staff/ai` (see `Firefly.AI`): its
   `adapter` (`"anthropic"` for the Anthropic Messages API, `"openai"` for
   any OpenAI-compatible API: OpenAI, Ollama, vLLM, LM Studio and others),
-  `base_url`, `api_key` (encrypted at rest, see `Firefly.AI.Encrypted`),
+  `base_url`, `api_key` (encrypted at rest, see `Firefly.Vault`),
   the `model` id for chat and, for embeddings, `embedding_model`, the
   most tokens an answer may have, and how long a request may take.
 
@@ -27,7 +27,7 @@ defmodule Firefly.AI.ProviderConfig do
     field(:name, :string)
     field(:adapter, :string, default: "openai")
     field(:base_url, :string)
-    field(:api_key, Firefly.AI.Encrypted, redact: true)
+    field(:api_key, Firefly.Encrypted.Binary, redact: true)
     field(:model, :string)
     field(:embedding_model, :string)
     field(:max_tokens, :integer, default: 1024)

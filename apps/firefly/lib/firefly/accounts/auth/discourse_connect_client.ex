@@ -12,7 +12,7 @@ defmodule Firefly.Accounts.Auth.DiscourseConnectClient do
 
   schema "discourse_connect_clients" do
     field(:name, :string)
-    field(:secret, :string, redact: true)
+    field(:secret, Firefly.Encrypted.Binary, redact: true)
     field(:allowed_hosts, {:array, :string}, default: [])
     # The form's `allowed_hosts`, one per line or comma-separated.
     field(:hosts, :string, virtual: true)

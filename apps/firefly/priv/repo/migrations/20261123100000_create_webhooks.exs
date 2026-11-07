@@ -6,7 +6,7 @@ defmodule Firefly.Repo.Migrations.CreateWebhooks do
   def change do
     create table(:webhooks) do
       add :payload_url, :string, size: 2000, null: false
-      add :secret, :string
+      add :secret, :binary
       add :content_type, :string, null: false, default: "application/json"
       add :wildcard, :boolean, null: false, default: false
       add :event_types, {:array, :string}, null: false, default: []

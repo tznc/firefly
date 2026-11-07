@@ -85,7 +85,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 
 | Variable | Purpose |
 |---|---|
-| `FIREFLY_DATABASE_URL`, `FIREFLY_SECRET_KEY_BASE` | Required |
+| `FIREFLY_DATABASE_URL`, `FIREFLY_SECRET_KEY_BASE`, `FIREFLY_VAULT_KEY` | Required |
 | `FIREFLY_DOMAIN` | Public domain (served over https on 443), default `firefly.tznc.dev` |
 | `FIREFLY_<PROVIDER>_CLIENT_ID`, `FIREFLY_<PROVIDER>_CLIENT_SECRET` | Social login, for `GITHUB`, `GOOGLE`, `DISCORD`, `FACEBOOK`, `X` and `SLACK`; each provider is offered only when both are set. Callback URL: `https://<domain>/auth/<provider>/callback` (lowercase) |
 | `FIREFLY_APPLE_CLIENT_ID`, `FIREFLY_APPLE_TEAM_ID`, `FIREFLY_APPLE_KEY_ID`, `FIREFLY_APPLE_PRIVATE_KEY` | Sign in with Apple (the Services ID, team, key id and the `.p8` key's contents) |
@@ -111,7 +111,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_TAGS_ADMIN_ONLY` | `true` to let only admins create new tags (members can still use existing ones); pins the "Only admins create tags" site setting |
 | `FIREFLY_SETTING_<KEY>` | Pins any site setting (e.g. `FIREFLY_SETTING_TITLE`, `FIREFLY_SETTING_ALLOW_REGISTRATIONS=false`): the value wins over the admin's, shown read-only at `/staff/settings` |
 | `FIREFLY_TRUSTED_PROXIES` | Reverse proxies or load balancers in front of Firefly (addresses or CIDR ranges, comma-separated, e.g. `10.0.0.0/8`). Their `X-Forwarded-For` header then gives the client IP for per-IP rate limits; without it, every visitor behind a proxy shares the proxy's address. Default: none (the header is ignored) |
-| `FIREFLY_AI_ENCRYPTION_KEY` | The secret AI providers' API keys (set at `/staff/ai`) are encrypted with at rest. Default: derived from `FIREFLY_SECRET_KEY_BASE`; changing either makes stored keys unreadable (enter them again) |
+| `FIREFLY_VAULT_KEY`, `FIREFLY_VAULT_RETIRED_KEYS` | Required: the key secrets in the database are encrypted with at rest (base64 of 32 bytes: `openssl rand -base64 32`); and, during a rotation, older keys still readable (comma-separated). See "Encryption at rest" |
 | `FIREFLY_PORT`, `FIREFLY_IPV6` | HTTP port (default 4000); `true` to listen on IPv6 |
 | `FIREFLY_METRICS_PORT`, `FIREFLY_METRICS_IP`, `FIREFLY_METRICS_TOKEN` | Prometheus metrics, off by default: a port of their own for `/metrics` (bound to `FIREFLY_METRICS_IP`, default `0.0.0.0`), and/or a bearer token that serves `/metrics` on the main port too (see "Metrics") |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` and the other standard `OTEL_*` variables | OpenTelemetry traces over OTLP, off without an endpoint; `FIREFLY_OTEL_METRICS=true` and `FIREFLY_OTEL_LOGS=true` add metrics and logs (see "Observability") |
@@ -143,7 +143,7 @@ docker run -d -p 4000:4000 --env-file .env firefly
 ```
 
 The image needs at least `FIREFLY_DATABASE_URL`, `FIREFLY_SECRET_KEY_BASE` (generate one with
-`mix phx.gen.secret`) and a mail adapter (`FIREFLY_MAIL_ADAPTER`, see "Email"); `FIREFLY_DOMAIN` sets the public domain. It listens on IPv4 port
+`mix phx.gen.secret`), `FIREFLY_VAULT_KEY` (`openssl rand -base64 32`) and a mail adapter (`FIREFLY_MAIL_ADAPTER`, see "Email"); `FIREFLY_DOMAIN` sets the public domain. It listens on IPv4 port
 `FIREFLY_PORT` (default 4000); set `FIREFLY_IPV6=true` to listen on IPv6 as well. Set
 `FIREFLY_DATABASE_SSL=false` for a database without TLS. Any PostgreSQL 17 or
 newer with pgvector works (a managed one too); the `supabase/postgres` image
@@ -155,6 +155,28 @@ for `GET /health` over bash's `/dev/tcp`: the image has no curl, and
 `bin/firefly rpc` would start a second VM on every check. Give it a path to
 check readiness instead (`/app/bin/healthcheck /ready`), e.g. as a compose
 `healthcheck` that `depends_on: condition: service_healthy` waits for.
+
+### Encryption at rest
+
+Secrets stored in the database are encrypted with AES-256-GCM by `Firefly.Vault`
+([Cloak](https://hexdocs.pm/cloak)): AI providers' API keys, members'
+authenticator (TOTP) secrets, secret site settings (the Akismet key), plugins'
+endpoint secrets, webhooks' signing secrets, DiscourseConnect clients' secrets
+and browser push subscriptions' auth secrets. The rest of the database isn't
+encrypted by Firefly; use the database's or disk's own encryption for that.
+
+The key is `FIREFLY_VAULT_KEY`: 32 random bytes, base64 (`openssl rand -base64
+32`), required in production. Keep it with your backups' secrets: a database
+restored without it has unreadable secrets. Development and tests use fixed keys
+from `config/dev.exs` and `config/test.exs`.
+
+**Rotating the key**: generate a new key; set it as `FIREFLY_VAULT_KEY` and put
+the old one in `FIREFLY_VAULT_RETIRED_KEYS` (comma-separated, for several);
+restart every node; then re-encrypt what's stored with
+`bin/firefly eval Firefly.Release.rotate_vault` (`mix firefly.vault.rotate` in
+development), which can run while the forum runs and again safely. Once it's
+done, remove the retired key. Each value records which key encrypted it (a
+fingerprint, not the key), so the order of the keys doesn't matter.
 
 ### Running several nodes
 
