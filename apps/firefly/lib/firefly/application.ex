@@ -11,10 +11,11 @@ defmodule Firefly.Application do
   end
 
   defp children do
-    # Start the Ecto repository and the vault for secrets stored in it (which
-    # checks the database when no key is set), then join the other nodes (when
-    # clustering is on) before anything relies on PubSub reaching them
-    [Firefly.Repo, Firefly.Vault] ++
+    # Start the Ecto repositories (the forum's and the host database's
+    # `control` schema's) and the vault for the secrets stored in them, then
+    # join the other nodes (when clustering is on) before anything relies on
+    # PubSub reaching them
+    [Firefly.Repo, Firefly.Control.Repo, Firefly.Vault] ++
       Firefly.Cluster.child_specs() ++
       [
         # Start the PubSub system

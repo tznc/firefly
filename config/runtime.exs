@@ -454,6 +454,11 @@ if config_env() == :prod do
     ssl: System.get_env("FIREFLY_DATABASE_SSL", "true") in ~w(true 1),
     socket_options: maybe_ipv6
 
+  # The host database's `control` schema: Firefly.Repo's connection settings,
+  # a pool of its own.
+  config :firefly, Firefly.Control.Repo,
+    pool_size: String.to_integer(System.get_env("FIREFLY_CONTROL_POOL_SIZE", "2"))
+
   secret_key_base =
     System.get_env("FIREFLY_SECRET_KEY_BASE") ||
       raise """

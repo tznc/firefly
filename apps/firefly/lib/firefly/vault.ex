@@ -38,9 +38,12 @@ defmodule Firefly.Vault do
   require Logger
 
   # Every encrypted column, `{table, column}`; each table has an `id` key.
-  # A test checks this matches the schemas' `Firefly.Encrypted.Binary` fields.
+  # `control.` tables are in the host database's control schema, reached
+  # through Firefly.Control.Repo. A test checks this matches the schemas'
+  # `Firefly.Encrypted.Binary` fields.
   @columns [
     {"ai_providers", "api_key"},
+    {"control.tenants", "database_url"},
     {"discourse_connect_clients", "secret"},
     {"forums_site_settings", "secret_value"},
     {"plugins", "secret"},
@@ -109,35 +112,43 @@ defmodule Firefly.Vault do
     prefix = tag_prefix(opts[:tag])
 
     Map.new(@columns, fn {table, column} = key ->
-      count = rotate_column(table, String.to_existing_atom(column), prefix, 0, 0)
+      count = rotate_column(source(table), String.to_existing_atom(column), prefix, 0, 0)
       if count > 0, do: Logger.info("Re-encrypted #{count} values in #{table}.#{column}")
       {key, count}
     end)
   end
 
-  defp rotate_column(table, column, prefix, after_id, count) do
+  defp rotate_column({repo, table, schema} = source, column, prefix, after_id, count) do
     rows =
-      Repo.all(
+      repo.all(
         from(r in table,
           where: r.id > ^after_id and not is_nil(field(r, ^column)),
           order_by: r.id,
           limit: @rotate_batch,
           select: {r.id, field(r, ^column)}
-        )
+        ),
+        prefix: schema
       )
 
     stale = for {id, value} <- rows, not String.starts_with?(value, prefix), do: {id, value}
 
     for {id, value} <- stale do
       fresh = encrypt!(decrypt!(value))
-      Repo.update_all(from(r in table, where: r.id == ^id), set: [{column, fresh}])
+
+      repo.update_all(from(r in table, where: r.id == ^id), [set: [{column, fresh}]],
+        prefix: schema
+      )
     end
 
     case rows do
       [] -> count
-      _ -> rotate_column(table, column, prefix, elem(List.last(rows), 0), count + length(stale))
+      _ -> rotate_column(source, column, prefix, elem(List.last(rows), 0), count + length(stale))
     end
   end
+
+  # The repo, table and Postgres schema of a column's table.
+  defp source("control." <> table), do: {Firefly.Control.Repo, table, "control"}
+  defp source(table), do: {Repo, table, nil}
 
   # How Cloak encodes a tag at the start of a value (type, length, tag).
   defp tag_prefix(tag), do: <<1, byte_size(tag)>> <> tag

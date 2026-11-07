@@ -16,3 +16,4 @@ if System.get_env("FIREFLY_PROPERTY_RUNS"), do: ExUnit.configure(timeout: :infin
 ExUnit.start()
 
 Ecto.Adapters.SQL.Sandbox.mode(Firefly.Repo, :manual)
+Ecto.Adapters.SQL.Sandbox.mode(Firefly.Control.Repo, :manual)

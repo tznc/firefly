@@ -45,10 +45,15 @@ defmodule Firefly.DataCase do
     long? = tags[:fuzz] || System.get_env("FIREFLY_PROPERTY_RUNS")
     timeout = if long?, do: [ownership_timeout: :infinity], else: []
 
-    pid =
-      Ecto.Adapters.SQL.Sandbox.start_owner!(Firefly.Repo, [shared: not tags[:async]] ++ timeout)
+    opts = [shared: not tags[:async]] ++ timeout
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(Firefly.Repo, opts)
+    control = Ecto.Adapters.SQL.Sandbox.start_owner!(Firefly.Control.Repo, opts)
 
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+    on_exit(fn ->
+      Ecto.Adapters.SQL.Sandbox.stop_owner(pid)
+      Ecto.Adapters.SQL.Sandbox.stop_owner(control)
+    end)
+
     pid
   end
 

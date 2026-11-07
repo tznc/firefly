@@ -53,7 +53,7 @@ and the shared configuration is in `config/`:
 
 | App | Modules | What |
 | --- | --- | --- |
-| `apps/firefly` | `Firefly.*` | The domain: the `Firefly.Repo`, schemas and bounded contexts, jobs, email, authentication, the plugin layer and core plugins. Migrations and seeds are in `apps/firefly/priv/repo`. Depends on neither of the others |
+| `apps/firefly` | `Firefly.*` | The domain: the `Firefly.Repo`, schemas and bounded contexts, jobs, email, authentication, the plugin layer and core plugins. Migrations and seeds are in `apps/firefly/priv/repo`; the host database's `control` schema (the tenant registry, `Firefly.Control.Repo`) has its own migrations in `apps/firefly/priv/control_repo`. Depends on neither of the others |
 | `apps/firefly_plugins` | `FireflyPlugins.*` | The sandbox uploaded plugins run in: QuickJS on WebAssembly via Wasmex (`priv/plugins/quickjs.wasm`, built from `wasm/quickjs`), and bundle validation. Registers itself with the domain at start |
 | `apps/firefly_web` | `FireflyWeb.*` | The web interface: endpoint, router, LiveViews (the staff admin included), controllers, channels, JSON API, assets and static files |
 | `apps/firefly_import` | `FireflyImport.*` | Importers from other forums and platforms (see "Importing"): each reads its source and hands the records to the domain's `Firefly.Import`. Apart so their database drivers stay out of the domain |
@@ -62,7 +62,7 @@ Inside `apps/firefly`, the domain is split into bounded contexts
 (`Firefly.Accounts`, `Firefly.Discussion`, `Firefly.Messaging`,
 `Firefly.Moderation`, `Firefly.Notifications`, `Firefly.Groups`,
 `Firefly.TrustLevels`, `Firefly.Badges`, `Firefly.Directory`,
-`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Jobs`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
+`Firefly.Uploads`, `Firefly.Rendering`, `Firefly.SiteSettings`, `Firefly.Analytics`, `Firefly.Reports`, `Firefly.Backups`, `Firefly.Upgrades`, `Firefly.Health`, `Firefly.Control`, `Firefly.Jobs`, `Firefly.Embedding`, `Firefly.Chat`, `Firefly.AI`,
 `Firefly.Plugins`): each one's root module and the modules it exports are
 its only public API, enforced by the [boundary](https://hexdocs.pm/boundary)
 compiler for the web and plugin apps and by `Firefly.BoundariesTest` between
@@ -75,6 +75,12 @@ its tests run on their own (`cd apps/firefly && mix test`).
 
 Run `mix` tasks from the root: `mix compile`, `mix test`, `mix ecto.migrate`,
 `mix assets.build` and the rest run in every app they apply to.
+
+The database has two Postgres schemas: `public`, the forum, and `control`, the
+server's registry of tenants (forums; see `docs/multitenancy.md`), where the
+forum in `public` is tenant 1. `mix ecto.migrate` (and `bin/migrate` in a
+release) runs the control migrations first, then the forum's;
+`mix firefly.control.rollback` rolls control back.
 
 Or with Docker: `docker compose up`.
 
@@ -118,6 +124,7 @@ variables (see `config/runtime.exs`); all are prefixed `FIREFLY_`:
 | `FIREFLY_JOBS_<QUEUE>` | Background job concurrency on this node per queue (`DEFAULT`, `MAILERS`, `NOTIFICATIONS`, `WEBHOOKS`, `PLUGINS`, `AI`, `MAINTENANCE`), e.g. `FIREFLY_JOBS_MAILERS=20`; `0` leaves that queue to other nodes (see "Background jobs") |
 | `FIREFLY_DRAIN_DELAY_MS` | On shutdown, how long `/ready` fails before the server stops listening (default 0), so load balancers take the node out first (see "Monitoring") |
 | `FIREFLY_DATABASE_SSL`, `FIREFLY_DATABASE_IPV6`, `FIREFLY_DATABASE_POOL_SIZE` | Database TLS (default `true`), IPv6, pool size (default 10) |
+| `FIREFLY_CONTROL_POOL_SIZE` | Connections to the same database for its `control` schema (the tenant registry), default 2 |
 | `FIREFLY_CLUSTER`, `FIREFLY_CLUSTER_NAME`, `FIREFLY_CLUSTER_HEARTBEAT_MS`, `FIREFLY_NODE_HOST`, `FIREFLY_DIST_PORT`, `RELEASE_COOKIE` | Running several nodes as one cluster, off by default (see "Running several nodes") |
 
 Rate limits (login attempts, posting, uploads) are kept in memory per node; see

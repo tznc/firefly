@@ -51,6 +51,7 @@ defmodule Firefly.BoundariesTest do
 
     for context <- [
           Firefly.Cluster,
+          Firefly.Control,
           Firefly.Health,
           Firefly.Jobs,
           Firefly.Packages,
@@ -61,6 +62,11 @@ defmodule Firefly.BoundariesTest do
         ] do
       assert Map.has_key?(boundaries, context), "#{inspect(context)} isn't a boundary"
     end
+
+    assert MapSet.equal?(
+             boundaries[Firefly.Control],
+             MapSet.new([Firefly.Control.Repo, Firefly.Control.Tenant, Firefly.Control.Hostname])
+           )
 
     assert MapSet.equal?(
              boundaries[Firefly.Packages],
