@@ -150,7 +150,7 @@ defmodule FireflyWeb.AuthLiveTest do
     user = user_fixture()
     conn = conn |> log_in_as(user) |> get("/auth/logout")
 
-    assert get_session(conn, :current_user) == user.id
+    assert session_user_id(conn) == user.id
     refute Phoenix.Flash.get(conn.assigns.flash, :info) == "You have been logged out!"
   end
 
@@ -161,15 +161,16 @@ defmodule FireflyWeb.AuthLiveTest do
       info: %Ueberauth.Auth.Info{nickname: "octocat", name: "Octo", email: "octo@example.com"}
     }
 
+    # Called directly, without the endpoint: its key signs the login cookie.
     conn =
-      conn
+      %{conn | secret_key_base: FireflyWeb.Endpoint.config(:secret_key_base)}
       |> Plug.Test.init_test_session(%{})
       |> fetch_flash()
       |> assign(:ueberauth_auth, auth)
       |> FireflyWeb.AuthController.callback(%{})
 
     assert redirected_to(conn) == ~p"/"
-    user = Accounts.get_user!(get_session(conn, :current_user))
+    user = Accounts.get_user!(session_user_id(conn))
     assert %{"github" => %{uid: "4242"}} = Firefly.Accounts.Auth.identities(user)
   end
 end

@@ -155,6 +155,7 @@ defmodule Firefly.Security do
     [
       {"security_events", "ip", "inserted_at", :truncate},
       {"api_keys", "last_used_ip", "last_used_at", :truncate},
+      {"user_sessions", "ip", "last_seen_at", :truncate},
       # The addresses staff look members up by: a truncated one would match
       # strangers (and collide with the per-member unique index).
       {"user_ips", "ip", "last_seen_at", :delete},

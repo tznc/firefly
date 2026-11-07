@@ -17,7 +17,10 @@ defmodule FireflyWeb.AuthLive.Identity do
      |> assign(:trigger_submit, false)
      |> assign(:passkeys, Firefly.Accounts.Passkeys.enabled?())
      |> assign(:magic_links, Firefly.Accounts.MagicLinks.enabled?())
-     |> assign(:form, to_form(%{"username" => "", "password" => ""}, as: :user))}
+     |> assign(
+       :form,
+       to_form(%{"username" => "", "password" => "", "remember_me" => "true"}, as: :user)
+     )}
   end
 
   @impl true
@@ -73,6 +76,11 @@ defmodule FireflyWeb.AuthLive.Identity do
             type="password"
             label={gettext("Password")}
             autocomplete="current-password"
+          />
+          <.input
+            field={@form[:remember_me]}
+            type="checkbox"
+            label={gettext("Keep me logged in")}
           />
           <.button variant="primary" class="btn btn-primary w-full">{gettext("Log in")}</.button>
           <p class="text-center text-sm">

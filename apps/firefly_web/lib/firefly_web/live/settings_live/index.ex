@@ -24,7 +24,9 @@ defmodule FireflyWeb.SettingsLive.Index do
       and two-factor authentication (see
       `Firefly.Accounts.TwoFactor`): an authenticator app, security keys
       (registered through the `SecurityKeyRegister` hook) and backup codes;
-      and their recent security activity (see `Firefly.Security`)
+      their devices (logged-in browsers, see `Firefly.Accounts.UserSessions`),
+      each of which they can sign out, and their recent security activity
+      (see `Firefly.Security`)
     * API keys (`/settings/api-keys`): keys for the API, with scopes,
       expiry and allowed addresses (`FireflyWeb.ApiKeysComponent`)
     * Account: downloading your data and deleting your account (both handled
@@ -37,7 +39,17 @@ defmodule FireflyWeb.SettingsLive.Index do
   import FireflyWeb.SecurityComponents, only: [events_table: 1]
 
   alias Firefly.{Accounts, Badges, RateLimit, SiteSettings, Uploads}
-  alias Firefly.Accounts.{Auth, EmailConfirmation, Ignores, Passkeys, TwoFactor, WebAuthn}
+
+  alias Firefly.Accounts.{
+    Auth,
+    EmailConfirmation,
+    Ignores,
+    Passkeys,
+    TwoFactor,
+    UserSessions,
+    WebAuthn
+  }
+
   alias Firefly.Moderation.Posting
   alias Firefly.Notifications.{Digests, MailingList, WebPush}
 
@@ -79,9 +91,10 @@ defmodule FireflyWeb.SettingsLive.Index do
   }
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     socket =
       assign(socket,
+        session_id: session_id(session),
         sections: @sections,
         image_labels: @image_labels,
         totp_secret: nil,
@@ -100,6 +113,14 @@ defmodule FireflyWeb.SettingsLive.Index do
          progress: &image_progress/3
        )
      end)}
+  end
+
+  # This browser's session, to mark it among the devices.
+  defp session_id(session) do
+    case UserSessions.get_user(session["session_token"]) do
+      {_user, user_session} -> user_session.id
+      nil -> nil
+    end
   end
 
   # The profile is public: silenced users can't change its images either.
@@ -160,6 +181,7 @@ defmodule FireflyWeb.SettingsLive.Index do
       credentials: TwoFactor.credentials(user),
       backup_codes_left: TwoFactor.backup_codes_left(user),
       passkeys: Passkeys.list(user),
+      devices: UserSessions.list(user),
       security_events: Firefly.Security.for_user(user, 30)
     )
   end
@@ -350,6 +372,24 @@ defmodule FireflyWeb.SettingsLive.Index do
       TwoFactor.disable_totp(socket.assigns.current_user, confirmation),
       "Authenticator app removed."
     )
+  end
+
+  def handle_event("sign_out_device", %{"id" => id}, socket) do
+    case UserSessions.get(socket.assigns.current_user, id) do
+      nil ->
+        {:noreply, assign_forms(socket)}
+
+      device ->
+        :ok = UserSessions.revoke(device)
+        {:noreply, socket |> assign_forms() |> put_flash(:info, gettext("Signed out."))}
+    end
+  end
+
+  def handle_event("sign_out_others", _params, socket) do
+    UserSessions.revoke_all(socket.assigns.current_user, socket.assigns.session_id)
+
+    {:noreply,
+     socket |> assign_forms() |> put_flash(:info, gettext("Signed out of every other device."))}
   end
 
   def handle_event("regenerate_backup_codes", _params, socket) do
@@ -1125,6 +1165,55 @@ defmodule FireflyWeb.SettingsLive.Index do
                 class="btn btn-sm"
               >
                 Generate new backup codes
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card border border-base-300 bg-base-100" id="devices">
+          <div class="card-body gap-3">
+            <h2 class="card-title text-base">{gettext("Devices")}</h2>
+            <p class="text-sm text-base-content/70">
+              {gettext("The browsers you're logged in on. Sign out any you don't recognize.")}
+            </p>
+            <ul class="divide-y divide-base-300">
+              <li
+                :for={device <- @devices}
+                id={"device-#{device.id}"}
+                class="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <div>
+                  <p class="font-medium">
+                    {device.device || gettext("Unknown browser")}
+                    <span :if={device.id == @session_id} class="badge badge-sm badge-success">
+                      {gettext("This browser")}
+                    </span>
+                  </p>
+                  <p class="text-xs text-base-content/70">
+                    <span class="font-mono">{device.ip}</span>
+                    · {gettext("last active")} <.time_ago at={device.last_seen_at} id={"device-#{device.id}-seen"} />
+                  </p>
+                </div>
+                <button
+                  :if={device.id != @session_id}
+                  type="button"
+                  class="btn btn-sm"
+                  phx-click="sign_out_device"
+                  phx-value-id={device.id}
+                  aria-label={gettext("Sign out %{device}", device: device.device || gettext("Unknown browser"))}
+                >
+                  {gettext("Sign out")}
+                </button>
+              </li>
+            </ul>
+            <div :if={Enum.any?(@devices, &(&1.id != @session_id))}>
+              <button
+                type="button"
+                class="btn btn-sm"
+                phx-click="sign_out_others"
+                data-confirm={gettext("Sign out of every other device?")}
+              >
+                {gettext("Sign out of all other devices")}
               </button>
             </div>
           </div>

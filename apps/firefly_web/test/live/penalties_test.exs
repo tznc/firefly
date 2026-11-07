@@ -110,7 +110,8 @@ defmodule FireflyWeb.PenaltiesTest do
       config = Application.get_env(:firefly, Firefly.Mailer)
       Application.put_env(:firefly, Firefly.Mailer, adapter: DownMailer)
       on_exit(fn -> Application.put_env(:firefly, Firefly.Mailer, config) end)
-      FireflyWeb.Endpoint.subscribe("users_sockets:#{member.id}")
+      {_token, session} = Firefly.Accounts.UserSessions.create(member)
+      FireflyWeb.Endpoint.subscribe(Firefly.Accounts.UserSessions.live_socket_id(session))
 
       log = capture_log(fn -> assert {:ok, _} = silence(member, admin) end)
 
@@ -240,12 +241,14 @@ defmodule FireflyWeb.PenaltiesTest do
 
     test "lose their sessions, open pages and API token", ctx do
       %{conn: conn, admin: admin, member: member, thread: thread} = ctx
-      FireflyWeb.Endpoint.subscribe("users_sockets:#{member.id}")
+      logged_in = log_in_as(conn, member)
+      [session] = Firefly.Accounts.UserSessions.list(member)
+      FireflyWeb.Endpoint.subscribe(Firefly.Accounts.UserSessions.live_socket_id(session))
       {:ok, _} = suspend(member, admin)
       assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+      assert Firefly.Accounts.UserSessions.list(member) == []
 
-      conn
-      |> log_in_as(member)
+      logged_in
       |> visit(~p"/")
       |> refute_has("nav a", text: "Your profile")
 

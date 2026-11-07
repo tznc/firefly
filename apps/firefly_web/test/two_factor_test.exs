@@ -35,7 +35,7 @@ defmodule FireflyWeb.TwoFactorTest do
     })
   end
 
-  defp logged_in(conn), do: get_session(conn, :current_user)
+  defp logged_in(conn), do: session_user_id(conn)
 
   describe "logging in" do
     test "a password login waits for the second factor", %{conn: conn} do
@@ -133,8 +133,9 @@ defmodule FireflyWeb.TwoFactorTest do
         info: %Ueberauth.Auth.Info{nickname: "octo"}
       }
 
+      # Called directly, without the endpoint: its key signs the login cookie.
       social = fn ->
-        build_conn()
+        %{build_conn() | secret_key_base: FireflyWeb.Endpoint.config(:secret_key_base)}
         |> Plug.Test.init_test_session(%{})
         |> fetch_flash()
         |> assign(:ueberauth_auth, auth)

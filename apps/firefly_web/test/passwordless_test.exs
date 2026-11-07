@@ -13,7 +13,7 @@ defmodule FireflyWeb.PasswordlessTest do
 
   alias Firefly.Accounts.User
 
-  defp logged_in(conn), do: get_session(conn, :current_user)
+  defp logged_in(conn), do: session_user_id(conn)
 
   defp setting(settings), do: {:ok, _} = SiteSettings.update(settings, admin_fixture())
 

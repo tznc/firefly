@@ -698,6 +698,19 @@ on every page says so). Every create, update and delete there is recorded
 in the staff log. It follows the site's light/dark choice and its active
 theme's colors.
 
+### Sessions
+
+Logins are server-side sessions (`Firefly.Accounts.UserSessions`): the
+session cookie holds only a random token, stored hashed with the browser's
+device label, address and last activity, and checked on every request and
+LiveView mount. Members see their devices under Settings > Security and sign
+any out, or all the others; that disconnects its open pages at once. A
+password reset or a suspension signs out every session, and staff can sign a
+member out everywhere from the user admin (staff-logged). A session ends
+after `session_idle_hours` without use (default a week); "Keep me logged in"
+(on by default) keeps it across browser restarts for `session_remember_days`
+(default 30), the longest any session lasts.
+
 ### Banning (fail2ban)
 
 Addresses that keep failing are banned for a while: every page answers them

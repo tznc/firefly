@@ -392,6 +392,12 @@ defmodule Firefly.Accounts.UserAdmin do
 
   ## Password reset and notices
 
+  @doc "Signs `user` out of every session, as `admin` (staff-logged)."
+  def sign_out_everywhere(%User{} = user, %User{} = admin) do
+    StaffLog.record(admin, "user.sign_out", user, %{username: user.username})
+    UserSessions.revoke_all(user, nil, %{reason: "signed out by staff", by: admin.username})
+  end
+
   @doc "Emails `user` a password reset link as `admin` (staff-logged)."
   def send_password_reset(%User{} = user, %User{} = admin) do
     with :ok <- PasswordReset.deliver(user) do

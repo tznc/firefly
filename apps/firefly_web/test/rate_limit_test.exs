@@ -46,7 +46,7 @@ defmodule FireflyWeb.RateLimitTest do
     # Even the right password is refused while locked out
     conn = attempt(conn, username, "right-password")
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "too often"
-    refute get_session(conn, :current_user)
+    refute session_user_id(conn)
   end
 
   test "limits API logins too", %{conn: conn} do

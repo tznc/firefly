@@ -48,7 +48,7 @@ defmodule Firefly.SiteSettings do
     {"Posting",
      ["Content", "Spam and new users", "Akismet", "Uploads", "Link previews", "Search"]},
     {"Email", ["Email"]},
-    {"Security", ["Rate limits", "API", "Security log", "Banning"]},
+    {"Security", ["Sessions", "Rate limits", "API", "Security log", "Banning"]},
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
@@ -1002,6 +1002,27 @@ defmodule Firefly.SiteSettings do
         min: 0,
         max: 30,
         help: "Automatic backups, every this many days. 0: off."
+      },
+      %{
+        key: "session_idle_hours",
+        section: "Sessions",
+        type: :integer,
+        label: "Log out after inactivity (hours)",
+        default: 168,
+        min: 1,
+        max: 8760,
+        help: "A browser not used for this long is logged out."
+      },
+      %{
+        key: "session_remember_days",
+        section: "Sessions",
+        type: :integer,
+        label: "Keep members logged in for (days)",
+        default: 30,
+        min: 1,
+        max: 365,
+        help:
+          "How long \"Keep me logged in\" lasts, and the longest any login lasts, however active."
       },
       %{
         key: "ip_retention_days",

@@ -2,7 +2,9 @@ defmodule FireflyWeb.UserAuth do
   @moduledoc """
   `on_mount` hooks for LiveViews:
 
-    * `:mount_current_user` - assigns `:current_user` (or nil) from the session,
+    * `:mount_current_user` - assigns `:current_user` (or nil) from the
+      session's token, checked against the database on every mount (see
+      `FireflyWeb.Session`),
       the unread notification and conversation counts, whether they may
       chat (`:chat`, for the navigation), for staff the review
       queue's count (kept live; views can export `review_changed/1` to react
@@ -32,7 +34,7 @@ defmodule FireflyWeb.UserAuth do
 
   use FireflyWeb, :verified_routes
 
-  import Phoenix.Component, only: [assign: 3, assign_new: 3]
+  import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView
 
   alias Firefly.{Accounts, Analytics, Backups, Chat, Messaging, Notifications}
@@ -89,8 +91,7 @@ defmodule FireflyWeb.UserAuth do
 
   defp mount_current_user(socket, session) do
     socket
-    |> assign_new(:current_user, fn -> Session.user_from_id(session["current_user"]) end)
-    |> assign_impersonator(session)
+    |> assign_login(session)
     |> record_visit()
     |> record_client()
     |> count_page_view()
@@ -106,12 +107,19 @@ defmodule FireflyWeb.UserAuth do
     end)
   end
 
-  # An admin seeing the site as this user (see
-  # FireflyWeb.StaffController), for the banner that ends it.
-  defp assign_impersonator(socket, session) do
-    assign_new(socket, :impersonator, fn ->
-      session["impersonator_id"] && Session.user_from_id(session["impersonator_id"])
-    end)
+  # The user, and the admin seeing the site as them (see
+  # FireflyWeb.StaffController) for the banner that ends it. The static
+  # render reuses what the request's plug found.
+  defp assign_login(%{assigns: %{current_user: _, impersonator: _}} = socket, _session),
+    do: socket
+
+  defp assign_login(socket, session) do
+    ip = if connected?(socket), do: FireflyWeb.ClientIP.from_socket(socket)
+    {user, impersonator} = Session.from_live_session(session, ip)
+
+    socket
+    |> assign(:current_user, user)
+    |> assign(:impersonator, impersonator)
   end
 
   # Once the page is live, not for the static render before it. An admin

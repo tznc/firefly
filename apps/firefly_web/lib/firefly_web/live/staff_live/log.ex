@@ -71,6 +71,7 @@ defmodule FireflyWeb.StaffLive.Log do
     "user.impersonate" => "Started impersonating",
     "user.impersonate_stop" => "Stopped impersonating",
     "user.password_reset" => "Sent password reset",
+    "user.sign_out" => "Signed user out everywhere",
     "notification.send" => "Sent a notice",
     "notification.delete" => "Deleted a notification",
     "email.test" => "Sent a test email",

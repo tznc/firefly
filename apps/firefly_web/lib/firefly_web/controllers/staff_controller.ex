@@ -4,10 +4,10 @@ defmodule FireflyWeb.StaffController do
   (an admin seeing the site as a member, see `Firefly.Accounts.UserAdmin`)
   and sending the old `/admin` URLs to `/staff`.
 
-  Impersonating keeps the admin's id in the session (`impersonator_id`)
-  next to the member's (`current_user`), so every page shows a banner to
-  stop (see `FireflyWeb.Layouts.impersonation_banner/1`), and stopping
-  restores the admin's session. Both are staff-logged. Admins can't
+  Impersonating keeps the admin's own session and puts the member's id in
+  it (`impersonate_id`, see `FireflyWeb.Session`), so every page shows a
+  banner to stop (see `FireflyWeb.Layouts.impersonation_banner/1`), and
+  stopping removes it. Both are staff-logged. Admins can't
   impersonate staff, deleted or suspended accounts, or themselves (see
   the `:impersonate` policy).
   """
@@ -15,7 +15,6 @@ defmodule FireflyWeb.StaffController do
 
   alias Firefly.Accounts
   alias Firefly.Accounts.UserAdmin
-  alias FireflyWeb.Session
 
   @doc "Starts seeing the site as the member with `id` (behind the `:admin` pipeline)."
   def impersonate(conn, %{"id" => id}) do
@@ -27,9 +26,7 @@ defmodule FireflyWeb.StaffController do
 
       conn
       |> configure_session(renew: true)
-      |> put_session(:current_user, user.id)
-      |> put_session(:impersonator_id, admin.id)
-      |> put_session(:live_socket_id, Session.live_socket_id(user))
+      |> put_session(:impersonate_id, user.id)
       |> put_flash(
         :info,
         gettext("You're seeing the site as @%{username}.", username: user.username)
@@ -44,24 +41,29 @@ defmodule FireflyWeb.StaffController do
 
   @doc "Stops impersonating: the admin's own session again, back on the member's admin page."
   def stop_impersonating(conn, _params) do
-    admin = Session.user_from_id(get_session(conn, :impersonator_id))
-    user = conn.assigns.current_user
+    %{current_user: user, impersonator: admin} = conn.assigns
 
-    if admin && Accounts.admin?(admin) do
-      if user, do: UserAdmin.stopped_impersonating(admin, user)
+    cond do
+      admin ->
+        UserAdmin.stopped_impersonating(admin, user)
 
-      conn
-      |> configure_session(renew: true)
-      |> delete_session(:impersonator_id)
-      |> put_session(:current_user, admin.id)
-      |> put_session(:live_socket_id, Session.live_socket_id(admin))
-      |> put_flash(:info, gettext("You're yourself again."))
-      |> redirect(to: if(user, do: ~p"/staff/users/#{user.id}", else: ~p"/staff/users"))
-    else
-      # Not impersonating (or that admin is gone): just log out.
-      conn
-      |> configure_session(drop: true)
-      |> redirect(to: ~p"/")
+        conn
+        |> configure_session(renew: true)
+        |> delete_session(:impersonate_id)
+        |> put_flash(:info, gettext("You're yourself again."))
+        |> redirect(to: ~p"/staff/users/#{user.id}")
+
+      # The member can't be seen as any more (deleted, suspended).
+      user && get_session(conn, :impersonate_id) ->
+        conn
+        |> delete_session(:impersonate_id)
+        |> redirect(to: ~p"/staff/users")
+
+      # Not impersonating: just log out.
+      true ->
+        conn
+        |> FireflyWeb.Session.stop()
+        |> redirect(to: ~p"/")
     end
   end
 
