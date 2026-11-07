@@ -25,7 +25,7 @@ defmodule Firefly.Security do
   useless (see `ip_tables/0`).
   """
 
-  use Boundary, top_level?: true, check: [out: false], exports: [Event, Ban, Jail]
+  use Boundary, top_level?: true, check: [out: false], exports: [Event, Ban, Jail, Challenge]
 
   import Ecto.Query
 
@@ -150,14 +150,15 @@ defmodule Firefly.Security do
   def login_delay(username, ip) do
     account =
       case is_binary(username) and username != "" and Accounts.get_user_by_username(username) do
-        %User{id: id} -> recent_failures(id)
+        %User{} = user -> recent_login_failures(user)
         _nobody -> 0
       end
 
     max(delay(account), delay(Jail.points(ip, "auth")))
   end
 
-  defp recent_failures(user_id) do
+  @doc "How many failed logins `user` had in the last 15 minutes."
+  def recent_login_failures(%User{id: user_id}) do
     since = DateTime.add(DateTime.utc_now(), -@delay_window_minutes, :minute)
 
     Repo.aggregate(

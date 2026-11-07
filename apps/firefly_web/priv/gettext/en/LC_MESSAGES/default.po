@@ -68,7 +68,7 @@ msgstr ""
 msgid "Admin"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/registration.ex:81
+#: lib/firefly_web/live/auth_live/registration.ex:90
 #, elixir-autogen, elixir-format
 msgid "Already have one?"
 msgstr ""
@@ -154,19 +154,19 @@ msgid "Contact us"
 msgstr ""
 
 #: lib/firefly_web/live/auth_live/login.ex:76
-#: lib/firefly_web/live/auth_live/registration.ex:114
+#: lib/firefly_web/live/auth_live/registration.ex:125
 #, elixir-autogen, elixir-format
 msgid "Create account"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:55
-#: lib/firefly_web/live/auth_live/registration.ex:32
-#: lib/firefly_web/live/auth_live/registration.ex:79
+#: lib/firefly_web/live/auth_live/identity.ex:84
+#: lib/firefly_web/live/auth_live/registration.ex:34
+#: lib/firefly_web/live/auth_live/registration.ex:88
 #, elixir-autogen, elixir-format
 msgid "Create an account"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/registration.ex:113
+#: lib/firefly_web/live/auth_live/registration.ex:124
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr ""
@@ -187,9 +187,9 @@ msgstr ""
 msgid "Drafts"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:46
-#: lib/firefly_web/live/auth_live/magic_link.ex:56
-#: lib/firefly_web/live/auth_live/registration.ex:96
+#: lib/firefly_web/live/auth_live/forgot_password.ex:51
+#: lib/firefly_web/live/auth_live/magic_link.ex:66
+#: lib/firefly_web/live/auth_live/registration.ex:105
 #: lib/firefly_web/live/staff_live/user.ex:334
 #: lib/firefly_web/live/staff_live/user.ex:373
 #: lib/firefly_web/live/staff_live/users.ex:130
@@ -197,13 +197,13 @@ msgstr ""
 msgid "Email"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:22
-#: lib/firefly_web/live/auth_live/magic_link.ex:43
+#: lib/firefly_web/live/auth_live/magic_link.ex:25
+#: lib/firefly_web/live/auth_live/magic_link.ex:53
 #, elixir-autogen, elixir-format
 msgid "Email login links are off."
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:89
+#: lib/firefly_web/live/auth_live/identity.ex:119
 #: lib/firefly_web/live/auth_live/login.ex:83
 #, elixir-autogen, elixir-format
 msgid "Email me a login link"
@@ -244,7 +244,7 @@ msgstr ""
 msgid "Follow my system"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:87
+#: lib/firefly_web/live/auth_live/identity.ex:117
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
 msgstr ""
@@ -291,17 +291,17 @@ msgid "Light"
 msgstr ""
 
 #: lib/firefly_web/components/layouts.ex:228
-#: lib/firefly_web/live/auth_live/identity.ex:16
-#: lib/firefly_web/live/auth_live/identity.ex:52
-#: lib/firefly_web/live/auth_live/identity.ex:85
+#: lib/firefly_web/live/auth_live/identity.ex:27
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:115
 #: lib/firefly_web/live/auth_live/login.ex:14
-#: lib/firefly_web/live/auth_live/registration.ex:82
+#: lib/firefly_web/live/auth_live/registration.ex:91
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:16
-#: lib/firefly_web/live/auth_live/magic_link.ex:52
+#: lib/firefly_web/live/auth_live/magic_link.ex:18
+#: lib/firefly_web/live/auth_live/magic_link.ex:62
 #, elixir-autogen, elixir-format
 msgid "Log in by email"
 msgstr ""
@@ -337,7 +337,7 @@ msgstr ""
 msgid "Messages"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:54
+#: lib/firefly_web/live/auth_live/identity.ex:83
 #, elixir-autogen, elixir-format
 msgid "New here?"
 msgstr ""
@@ -347,7 +347,7 @@ msgstr ""
 msgid "New password"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/registration.ex:25
+#: lib/firefly_web/live/auth_live/registration.ex:27
 #, elixir-autogen, elixir-format
 msgid "New registrations are closed."
 msgstr ""
@@ -373,8 +373,8 @@ msgstr ""
 msgid "Participating in"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:77
-#: lib/firefly_web/live/auth_live/registration.ex:100
+#: lib/firefly_web/live/auth_live/identity.ex:106
+#: lib/firefly_web/live/auth_live/registration.ex:109
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr ""
@@ -391,7 +391,7 @@ msgstr ""
 msgid "Reason: %{reason}"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/registration.ex:47
+#: lib/firefly_web/live/auth_live/registration.ex:51
 #, elixir-autogen, elixir-format
 msgid "Registration failed. Please try again."
 msgstr ""
@@ -401,8 +401,8 @@ msgstr ""
 msgid "Resend link"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:16
-#: lib/firefly_web/live/auth_live/forgot_password.ex:42
+#: lib/firefly_web/live/auth_live/forgot_password.ex:20
+#: lib/firefly_web/live/auth_live/forgot_password.ex:47
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
 msgstr ""
@@ -440,8 +440,8 @@ msgstr ""
 msgid "Search the forum"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:47
-#: lib/firefly_web/live/auth_live/magic_link.ex:57
+#: lib/firefly_web/live/auth_live/forgot_password.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:68
 #: lib/firefly_web/live/staff_live/emails.ex:217
 #: lib/firefly_web/live/staff_live/user.ex:594
 #, elixir-autogen, elixir-format
@@ -525,8 +525,8 @@ msgstr ""
 msgid "Use a passkey"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:71
-#: lib/firefly_web/live/auth_live/registration.ex:95
+#: lib/firefly_web/live/auth_live/identity.ex:100
+#: lib/firefly_web/live/auth_live/registration.ex:104
 #: lib/firefly_web/live/staff_live/user.ex:371
 #, elixir-autogen, elixir-format
 msgid "Username"
@@ -556,12 +556,12 @@ msgstr ""
 msgid "We can't find the internet"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:63
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link that logs you in."
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:43
+#: lib/firefly_web/live/auth_live/forgot_password.ex:48
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link to choose a new one."
 msgstr ""
@@ -571,7 +571,7 @@ msgstr ""
 msgid "Webhooks"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/registration.ex:110
+#: lib/firefly_web/live/auth_live/registration.ex:121
 #, elixir-autogen, elixir-format
 msgid "Website"
 msgstr ""
@@ -603,13 +603,13 @@ msgstr ""
 msgid "new"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:93
+#: lib/firefly_web/live/auth_live/identity.ex:123
 #: lib/firefly_web/live/auth_live/login.ex:70
 #, elixir-autogen, elixir-format
 msgid "or"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:58
+#: lib/firefly_web/live/auth_live/magic_link.ex:69
 #, elixir-autogen, elixir-format
 msgid "Email me a link"
 msgstr ""
@@ -624,7 +624,7 @@ msgstr ""
 msgid "Reset password"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:48
+#: lib/firefly_web/live/auth_live/forgot_password.ex:54
 #, elixir-autogen, elixir-format
 msgid "Send reset link"
 msgstr ""
@@ -3062,7 +3062,7 @@ msgstr ""
 msgid "Devices"
 msgstr ""
 
-#: lib/firefly_web/live/auth_live/identity.ex:83
+#: lib/firefly_web/live/auth_live/identity.ex:112
 #, elixir-autogen, elixir-format
 msgid "Keep me logged in"
 msgstr ""
@@ -3176,6 +3176,36 @@ msgstr ""
 #: lib/firefly_web/components/password_components.ex:49
 #, elixir-autogen, elixir-format
 msgid "weak"
+msgstr ""
+
+#: lib/firefly_web/bot_challenge.ex:117
+#, elixir-autogen, elixir-format
+msgid "Checked: you can go on."
+msgstr ""
+
+#: lib/firefly_web/bot_challenge.ex:123
+#, elixir-autogen, elixir-format
+msgid "Checking that you're not a bot…"
+msgstr ""
+
+#: lib/firefly_web/bot_challenge.ex:118
+#, elixir-autogen, elixir-format
+msgid "The check didn't work. Reload the page to try again."
+msgstr ""
+
+#: lib/firefly_web/bot_challenge.ex:66
+#, elixir-autogen, elixir-format
+msgid "The check that you're not a bot didn't pass. Please try again."
+msgstr ""
+
+#: lib/firefly_web/bot_challenge.ex:126
+#, elixir-autogen, elixir-format
+msgid "This check needs JavaScript."
+msgstr ""
+
+#: lib/firefly_web/bot_challenge.ex:62
+#, elixir-autogen, elixir-format
+msgid "Wait a moment for the check that you're not a bot, then try again."
 msgstr ""
 
 #: lib/firefly_web/unstorable_text.ex:21

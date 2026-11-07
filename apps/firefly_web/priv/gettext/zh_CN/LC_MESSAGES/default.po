@@ -65,7 +65,7 @@ msgstr "账户"
 msgid "Admin"
 msgstr "管理"
 
-#: lib/firefly_web/live/auth_live/registration.ex:81
+#: lib/firefly_web/live/auth_live/registration.ex:90
 #, elixir-autogen, elixir-format
 msgid "Already have one?"
 msgstr "已经有账户了？"
@@ -151,19 +151,19 @@ msgid "Contact us"
 msgstr "联系我们"
 
 #: lib/firefly_web/live/auth_live/login.ex:76
-#: lib/firefly_web/live/auth_live/registration.ex:114
+#: lib/firefly_web/live/auth_live/registration.ex:125
 #, elixir-autogen, elixir-format
 msgid "Create account"
 msgstr "创建账户"
 
-#: lib/firefly_web/live/auth_live/identity.ex:55
-#: lib/firefly_web/live/auth_live/registration.ex:32
-#: lib/firefly_web/live/auth_live/registration.ex:79
+#: lib/firefly_web/live/auth_live/identity.ex:84
+#: lib/firefly_web/live/auth_live/registration.ex:34
+#: lib/firefly_web/live/auth_live/registration.ex:88
 #, elixir-autogen, elixir-format
 msgid "Create an account"
 msgstr "注册账户"
 
-#: lib/firefly_web/live/auth_live/registration.ex:113
+#: lib/firefly_web/live/auth_live/registration.ex:124
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr "正在创建..."
@@ -184,9 +184,9 @@ msgstr "仪表盘"
 msgid "Drafts"
 msgstr "草稿"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:46
-#: lib/firefly_web/live/auth_live/magic_link.ex:56
-#: lib/firefly_web/live/auth_live/registration.ex:96
+#: lib/firefly_web/live/auth_live/forgot_password.ex:51
+#: lib/firefly_web/live/auth_live/magic_link.ex:66
+#: lib/firefly_web/live/auth_live/registration.ex:105
 #: lib/firefly_web/live/staff_live/user.ex:334
 #: lib/firefly_web/live/staff_live/user.ex:373
 #: lib/firefly_web/live/staff_live/users.ex:130
@@ -194,13 +194,13 @@ msgstr "草稿"
 msgid "Email"
 msgstr "邮箱"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:22
-#: lib/firefly_web/live/auth_live/magic_link.ex:43
+#: lib/firefly_web/live/auth_live/magic_link.ex:25
+#: lib/firefly_web/live/auth_live/magic_link.ex:53
 #, elixir-autogen, elixir-format
 msgid "Email login links are off."
 msgstr "邮件登录链接已关闭。"
 
-#: lib/firefly_web/live/auth_live/identity.ex:89
+#: lib/firefly_web/live/auth_live/identity.ex:119
 #: lib/firefly_web/live/auth_live/login.ex:83
 #, elixir-autogen, elixir-format
 msgid "Email me a login link"
@@ -241,7 +241,7 @@ msgstr "跟随浏览器"
 msgid "Follow my system"
 msgstr "跟随系统"
 
-#: lib/firefly_web/live/auth_live/identity.ex:87
+#: lib/firefly_web/live/auth_live/identity.ex:117
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
 msgstr "忘记密码？"
@@ -288,17 +288,17 @@ msgid "Light"
 msgstr "浅色"
 
 #: lib/firefly_web/components/layouts.ex:228
-#: lib/firefly_web/live/auth_live/identity.ex:16
-#: lib/firefly_web/live/auth_live/identity.ex:52
-#: lib/firefly_web/live/auth_live/identity.ex:85
+#: lib/firefly_web/live/auth_live/identity.ex:27
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:115
 #: lib/firefly_web/live/auth_live/login.ex:14
-#: lib/firefly_web/live/auth_live/registration.ex:82
+#: lib/firefly_web/live/auth_live/registration.ex:91
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr "登录"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:16
-#: lib/firefly_web/live/auth_live/magic_link.ex:52
+#: lib/firefly_web/live/auth_live/magic_link.ex:18
+#: lib/firefly_web/live/auth_live/magic_link.ex:62
 #, elixir-autogen, elixir-format
 msgid "Log in by email"
 msgstr "通过邮件登录"
@@ -334,7 +334,7 @@ msgstr "由 tznc.dev 制作"
 msgid "Messages"
 msgstr "消息"
 
-#: lib/firefly_web/live/auth_live/identity.ex:54
+#: lib/firefly_web/live/auth_live/identity.ex:83
 #, elixir-autogen, elixir-format
 msgid "New here?"
 msgstr "第一次来？"
@@ -344,7 +344,7 @@ msgstr "第一次来？"
 msgid "New password"
 msgstr "新密码"
 
-#: lib/firefly_web/live/auth_live/registration.ex:25
+#: lib/firefly_web/live/auth_live/registration.ex:27
 #, elixir-autogen, elixir-format
 msgid "New registrations are closed."
 msgstr "暂不开放注册。"
@@ -370,8 +370,8 @@ msgstr "打开菜单"
 msgid "Participating in"
 msgstr "参与中"
 
-#: lib/firefly_web/live/auth_live/identity.ex:77
-#: lib/firefly_web/live/auth_live/registration.ex:100
+#: lib/firefly_web/live/auth_live/identity.ex:106
+#: lib/firefly_web/live/auth_live/registration.ex:109
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "密码"
@@ -388,7 +388,7 @@ msgstr "密码已重置，请用新密码登录。"
 msgid "Reason: %{reason}"
 msgstr "原因：%{reason}"
 
-#: lib/firefly_web/live/auth_live/registration.ex:47
+#: lib/firefly_web/live/auth_live/registration.ex:51
 #, elixir-autogen, elixir-format
 msgid "Registration failed. Please try again."
 msgstr "注册失败，请重试。"
@@ -398,8 +398,8 @@ msgstr "注册失败，请重试。"
 msgid "Resend link"
 msgstr "重新发送链接"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:16
-#: lib/firefly_web/live/auth_live/forgot_password.ex:42
+#: lib/firefly_web/live/auth_live/forgot_password.ex:20
+#: lib/firefly_web/live/auth_live/forgot_password.ex:47
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
 msgstr "重置密码"
@@ -437,8 +437,8 @@ msgstr "搜索"
 msgid "Search the forum"
 msgstr "搜索论坛"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:47
-#: lib/firefly_web/live/auth_live/magic_link.ex:57
+#: lib/firefly_web/live/auth_live/forgot_password.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:68
 #: lib/firefly_web/live/staff_live/emails.ex:217
 #: lib/firefly_web/live/staff_live/user.ex:594
 #, elixir-autogen, elixir-format
@@ -522,8 +522,8 @@ msgstr "上传文件"
 msgid "Use a passkey"
 msgstr "使用通行密钥"
 
-#: lib/firefly_web/live/auth_live/identity.ex:71
-#: lib/firefly_web/live/auth_live/registration.ex:95
+#: lib/firefly_web/live/auth_live/identity.ex:100
+#: lib/firefly_web/live/auth_live/registration.ex:104
 #: lib/firefly_web/live/staff_live/user.ex:371
 #, elixir-autogen, elixir-format
 msgid "Username"
@@ -553,12 +553,12 @@ msgstr "关注中"
 msgid "We can't find the internet"
 msgstr "找不到网络连接"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:63
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link that logs you in."
 msgstr "我们会通过邮件发送一个登录链接。"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:43
+#: lib/firefly_web/live/auth_live/forgot_password.ex:48
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link to choose a new one."
 msgstr "我们会通过邮件发送设置新密码的链接。"
@@ -568,7 +568,7 @@ msgstr "我们会通过邮件发送设置新密码的链接。"
 msgid "Webhooks"
 msgstr "Webhook"
 
-#: lib/firefly_web/live/auth_live/registration.ex:110
+#: lib/firefly_web/live/auth_live/registration.ex:121
 #, elixir-autogen, elixir-format
 msgid "Website"
 msgstr "网站"
@@ -600,13 +600,13 @@ msgstr "我的资料"
 msgid "new"
 msgstr "新"
 
-#: lib/firefly_web/live/auth_live/identity.ex:93
+#: lib/firefly_web/live/auth_live/identity.ex:123
 #: lib/firefly_web/live/auth_live/login.ex:70
 #, elixir-autogen, elixir-format
 msgid "or"
 msgstr "或"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:58
+#: lib/firefly_web/live/auth_live/magic_link.ex:69
 #, elixir-autogen, elixir-format
 msgid "Email me a link"
 msgstr "给我发送链接"
@@ -621,7 +621,7 @@ msgstr "Firefly 在没有 JavaScript 时也能使用：页面、主题和搜索�
 msgid "Reset password"
 msgstr "重置密码"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:48
+#: lib/firefly_web/live/auth_live/forgot_password.ex:54
 #, elixir-autogen, elixir-format
 msgid "Send reset link"
 msgstr "发送重置链接"
@@ -3057,7 +3057,7 @@ msgstr "原因"
 msgid "Devices"
 msgstr "设备"
 
-#: lib/firefly_web/live/auth_live/identity.ex:83
+#: lib/firefly_web/live/auth_live/identity.ex:112
 #, elixir-autogen, elixir-format
 msgid "Keep me logged in"
 msgstr "保持登录"
@@ -3172,6 +3172,36 @@ msgstr "非常弱"
 #, elixir-autogen, elixir-format
 msgid "weak"
 msgstr "弱"
+
+#: lib/firefly_web/bot_challenge.ex:117
+#, elixir-autogen, elixir-format
+msgid "Checked: you can go on."
+msgstr "已验证：你可以继续了。"
+
+#: lib/firefly_web/bot_challenge.ex:123
+#, elixir-autogen, elixir-format
+msgid "Checking that you're not a bot…"
+msgstr "正在验证你不是机器人…"
+
+#: lib/firefly_web/bot_challenge.ex:118
+#, elixir-autogen, elixir-format
+msgid "The check didn't work. Reload the page to try again."
+msgstr "验证没有成功。请重新加载页面再试一次。"
+
+#: lib/firefly_web/bot_challenge.ex:66
+#, elixir-autogen, elixir-format
+msgid "The check that you're not a bot didn't pass. Please try again."
+msgstr "未通过人机验证。请再试一次。"
+
+#: lib/firefly_web/bot_challenge.ex:126
+#, elixir-autogen, elixir-format
+msgid "This check needs JavaScript."
+msgstr "此验证需要 JavaScript。"
+
+#: lib/firefly_web/bot_challenge.ex:62
+#, elixir-autogen, elixir-format
+msgid "Wait a moment for the check that you're not a bot, then try again."
+msgstr "请稍候，等人机验证完成后再试一次。"
 
 #: lib/firefly_web/unstorable_text.ex:21
 #, elixir-autogen, elixir-format

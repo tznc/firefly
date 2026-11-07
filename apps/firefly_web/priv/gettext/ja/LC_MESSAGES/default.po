@@ -65,7 +65,7 @@ msgstr "アカウント"
 msgid "Admin"
 msgstr "管理"
 
-#: lib/firefly_web/live/auth_live/registration.ex:81
+#: lib/firefly_web/live/auth_live/registration.ex:90
 #, elixir-autogen, elixir-format
 msgid "Already have one?"
 msgstr "すでにアカウントをお持ちですか？"
@@ -151,19 +151,19 @@ msgid "Contact us"
 msgstr "お問い合わせ"
 
 #: lib/firefly_web/live/auth_live/login.ex:76
-#: lib/firefly_web/live/auth_live/registration.ex:114
+#: lib/firefly_web/live/auth_live/registration.ex:125
 #, elixir-autogen, elixir-format
 msgid "Create account"
 msgstr "アカウントを作成"
 
-#: lib/firefly_web/live/auth_live/identity.ex:55
-#: lib/firefly_web/live/auth_live/registration.ex:32
-#: lib/firefly_web/live/auth_live/registration.ex:79
+#: lib/firefly_web/live/auth_live/identity.ex:84
+#: lib/firefly_web/live/auth_live/registration.ex:34
+#: lib/firefly_web/live/auth_live/registration.ex:88
 #, elixir-autogen, elixir-format
 msgid "Create an account"
 msgstr "アカウントを作成する"
 
-#: lib/firefly_web/live/auth_live/registration.ex:113
+#: lib/firefly_web/live/auth_live/registration.ex:124
 #, elixir-autogen, elixir-format
 msgid "Creating..."
 msgstr "作成中..."
@@ -184,9 +184,9 @@ msgstr "ダッシュボード"
 msgid "Drafts"
 msgstr "下書き"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:46
-#: lib/firefly_web/live/auth_live/magic_link.ex:56
-#: lib/firefly_web/live/auth_live/registration.ex:96
+#: lib/firefly_web/live/auth_live/forgot_password.ex:51
+#: lib/firefly_web/live/auth_live/magic_link.ex:66
+#: lib/firefly_web/live/auth_live/registration.ex:105
 #: lib/firefly_web/live/staff_live/user.ex:334
 #: lib/firefly_web/live/staff_live/user.ex:373
 #: lib/firefly_web/live/staff_live/users.ex:130
@@ -194,13 +194,13 @@ msgstr "下書き"
 msgid "Email"
 msgstr "メールアドレス"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:22
-#: lib/firefly_web/live/auth_live/magic_link.ex:43
+#: lib/firefly_web/live/auth_live/magic_link.ex:25
+#: lib/firefly_web/live/auth_live/magic_link.ex:53
 #, elixir-autogen, elixir-format
 msgid "Email login links are off."
 msgstr "メールのログインリンクは無効です。"
 
-#: lib/firefly_web/live/auth_live/identity.ex:89
+#: lib/firefly_web/live/auth_live/identity.ex:119
 #: lib/firefly_web/live/auth_live/login.ex:83
 #, elixir-autogen, elixir-format
 msgid "Email me a login link"
@@ -241,7 +241,7 @@ msgstr "ブラウザーに合わせる"
 msgid "Follow my system"
 msgstr "システムに合わせる"
 
-#: lib/firefly_web/live/auth_live/identity.ex:87
+#: lib/firefly_web/live/auth_live/identity.ex:117
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
 msgstr "パスワードをお忘れですか？"
@@ -288,17 +288,17 @@ msgid "Light"
 msgstr "ライト"
 
 #: lib/firefly_web/components/layouts.ex:228
-#: lib/firefly_web/live/auth_live/identity.ex:16
-#: lib/firefly_web/live/auth_live/identity.ex:52
-#: lib/firefly_web/live/auth_live/identity.ex:85
+#: lib/firefly_web/live/auth_live/identity.ex:27
+#: lib/firefly_web/live/auth_live/identity.ex:81
+#: lib/firefly_web/live/auth_live/identity.ex:115
 #: lib/firefly_web/live/auth_live/login.ex:14
-#: lib/firefly_web/live/auth_live/registration.ex:82
+#: lib/firefly_web/live/auth_live/registration.ex:91
 #, elixir-autogen, elixir-format
 msgid "Log in"
 msgstr "ログイン"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:16
-#: lib/firefly_web/live/auth_live/magic_link.ex:52
+#: lib/firefly_web/live/auth_live/magic_link.ex:18
+#: lib/firefly_web/live/auth_live/magic_link.ex:62
 #, elixir-autogen, elixir-format
 msgid "Log in by email"
 msgstr "メールでログイン"
@@ -334,7 +334,7 @@ msgstr "制作: tznc.dev"
 msgid "Messages"
 msgstr "メッセージ"
 
-#: lib/firefly_web/live/auth_live/identity.ex:54
+#: lib/firefly_web/live/auth_live/identity.ex:83
 #, elixir-autogen, elixir-format
 msgid "New here?"
 msgstr "はじめての方はこちら"
@@ -344,7 +344,7 @@ msgstr "はじめての方はこちら"
 msgid "New password"
 msgstr "新しいパスワード"
 
-#: lib/firefly_web/live/auth_live/registration.ex:25
+#: lib/firefly_web/live/auth_live/registration.ex:27
 #, elixir-autogen, elixir-format
 msgid "New registrations are closed."
 msgstr "新規登録は受け付けていません。"
@@ -370,8 +370,8 @@ msgstr "メニューを開く"
 msgid "Participating in"
 msgstr "参加中"
 
-#: lib/firefly_web/live/auth_live/identity.ex:77
-#: lib/firefly_web/live/auth_live/registration.ex:100
+#: lib/firefly_web/live/auth_live/identity.ex:106
+#: lib/firefly_web/live/auth_live/registration.ex:109
 #, elixir-autogen, elixir-format
 msgid "Password"
 msgstr "パスワード"
@@ -388,7 +388,7 @@ msgstr "パスワードを再設定しました。新しいパスワードでロ
 msgid "Reason: %{reason}"
 msgstr "理由: %{reason}"
 
-#: lib/firefly_web/live/auth_live/registration.ex:47
+#: lib/firefly_web/live/auth_live/registration.ex:51
 #, elixir-autogen, elixir-format
 msgid "Registration failed. Please try again."
 msgstr "登録できませんでした。もう一度お試しください。"
@@ -398,8 +398,8 @@ msgstr "登録できませんでした。もう一度お試しください。"
 msgid "Resend link"
 msgstr "リンクを再送する"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:16
-#: lib/firefly_web/live/auth_live/forgot_password.ex:42
+#: lib/firefly_web/live/auth_live/forgot_password.ex:20
+#: lib/firefly_web/live/auth_live/forgot_password.ex:47
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
 msgstr "パスワードを再設定"
@@ -437,8 +437,8 @@ msgstr "検索"
 msgid "Search the forum"
 msgstr "フォーラムを検索"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:47
-#: lib/firefly_web/live/auth_live/magic_link.ex:57
+#: lib/firefly_web/live/auth_live/forgot_password.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:68
 #: lib/firefly_web/live/staff_live/emails.ex:217
 #: lib/firefly_web/live/staff_live/user.ex:594
 #, elixir-autogen, elixir-format
@@ -522,8 +522,8 @@ msgstr "アップロード"
 msgid "Use a passkey"
 msgstr "パスキーを使う"
 
-#: lib/firefly_web/live/auth_live/identity.ex:71
-#: lib/firefly_web/live/auth_live/registration.ex:95
+#: lib/firefly_web/live/auth_live/identity.ex:100
+#: lib/firefly_web/live/auth_live/registration.ex:104
 #: lib/firefly_web/live/staff_live/user.ex:371
 #, elixir-autogen, elixir-format
 msgid "Username"
@@ -553,12 +553,12 @@ msgstr "ウォッチ中"
 msgid "We can't find the internet"
 msgstr "インターネットに接続できません"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:53
+#: lib/firefly_web/live/auth_live/magic_link.ex:63
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link that logs you in."
 msgstr "ログイン用のリンクをメールでお送りします。"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:43
+#: lib/firefly_web/live/auth_live/forgot_password.ex:48
 #, elixir-autogen, elixir-format
 msgid "We'll email you a link to choose a new one."
 msgstr "新しいパスワードを設定するリンクをメールでお送りします。"
@@ -568,7 +568,7 @@ msgstr "新しいパスワードを設定するリンクをメールでお送り
 msgid "Webhooks"
 msgstr "Webhook"
 
-#: lib/firefly_web/live/auth_live/registration.ex:110
+#: lib/firefly_web/live/auth_live/registration.ex:121
 #, elixir-autogen, elixir-format
 msgid "Website"
 msgstr "ウェブサイト"
@@ -600,13 +600,13 @@ msgstr "プロフィール"
 msgid "new"
 msgstr "新着"
 
-#: lib/firefly_web/live/auth_live/identity.ex:93
+#: lib/firefly_web/live/auth_live/identity.ex:123
 #: lib/firefly_web/live/auth_live/login.ex:70
 #, elixir-autogen, elixir-format
 msgid "or"
 msgstr "または"
 
-#: lib/firefly_web/live/auth_live/magic_link.ex:58
+#: lib/firefly_web/live/auth_live/magic_link.ex:69
 #, elixir-autogen, elixir-format
 msgid "Email me a link"
 msgstr "リンクをメールで送る"
@@ -621,7 +621,7 @@ msgstr "Firefly は JavaScript なしでも動きます。ページ・トピッ�
 msgid "Reset password"
 msgstr "パスワードを再設定する"
 
-#: lib/firefly_web/live/auth_live/forgot_password.ex:48
+#: lib/firefly_web/live/auth_live/forgot_password.ex:54
 #, elixir-autogen, elixir-format
 msgid "Send reset link"
 msgstr "再設定リンクを送る"
@@ -3057,7 +3057,7 @@ msgstr "理由"
 msgid "Devices"
 msgstr "デバイス"
 
-#: lib/firefly_web/live/auth_live/identity.ex:83
+#: lib/firefly_web/live/auth_live/identity.ex:112
 #, elixir-autogen, elixir-format
 msgid "Keep me logged in"
 msgstr "ログインしたままにする"
@@ -3172,6 +3172,36 @@ msgstr "とても弱い"
 #, elixir-autogen, elixir-format
 msgid "weak"
 msgstr "弱い"
+
+#: lib/firefly_web/bot_challenge.ex:117
+#, elixir-autogen, elixir-format
+msgid "Checked: you can go on."
+msgstr "確認しました。続けてください。"
+
+#: lib/firefly_web/bot_challenge.ex:123
+#, elixir-autogen, elixir-format
+msgid "Checking that you're not a bot…"
+msgstr "ボットでないことを確認しています…"
+
+#: lib/firefly_web/bot_challenge.ex:118
+#, elixir-autogen, elixir-format
+msgid "The check didn't work. Reload the page to try again."
+msgstr "確認できませんでした。ページを再読み込みしてもう一度お試しください。"
+
+#: lib/firefly_web/bot_challenge.ex:66
+#, elixir-autogen, elixir-format
+msgid "The check that you're not a bot didn't pass. Please try again."
+msgstr "ボットでないことの確認に失敗しました。もう一度お試しください。"
+
+#: lib/firefly_web/bot_challenge.ex:126
+#, elixir-autogen, elixir-format
+msgid "This check needs JavaScript."
+msgstr "この確認には JavaScript が必要です。"
+
+#: lib/firefly_web/bot_challenge.ex:62
+#, elixir-autogen, elixir-format
+msgid "Wait a moment for the check that you're not a bot, then try again."
+msgstr "ボットでないことの確認が終わるまで少し待ってから、もう一度お試しください。"
 
 #: lib/firefly_web/unstorable_text.ex:21
 #, elixir-autogen, elixir-format

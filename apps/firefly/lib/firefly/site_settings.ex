@@ -48,7 +48,7 @@ defmodule Firefly.SiteSettings do
     {"Posting",
      ["Content", "Spam and new users", "Akismet", "Uploads", "Link previews", "Search"]},
     {"Email", ["Email"]},
-    {"Security", ["Sessions", "Rate limits", "API", "Security log", "Banning"]},
+    {"Security", ["Sessions", "Rate limits", "API", "Security log", "Banning", "Bot challenge"]},
     {"Chat", ["Chat"]},
     {"AI", ["AI", "AI prompts"]},
     {"Search engines", ["Search engines", "Analytics"]},
@@ -1417,7 +1417,8 @@ defmodule Firefly.SiteSettings do
       member_default_definitions() ++
       limit_definitions() ++
       rate_limit_definitions() ++
-      Firefly.Security.Jail.setting_definitions()
+      Firefly.Security.Jail.setting_definitions() ++
+      Firefly.Security.Challenge.setting_definitions()
   end
 
   defp appearance_definitions do
