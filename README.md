@@ -711,6 +711,25 @@ after `session_idle_hours` without use (default a week); "Keep me logged in"
 (on by default) keeps it across browser restarts for `session_remember_days`
 (default 30), the longest any session lasts.
 
+### Passwords and logins
+
+New passwords (sign-up, invitations, resets) must score at least
+`min_password_score` (default 2 of 4) by
+[zxcvbn](https://github.com/techgaun/zxcvbn-elixir), which knows common
+passwords, names and the member's own username and email; the forms show the
+score as members type. With `check_breached_passwords` (on by default) they're
+also checked against Have I Been Pwned's [Pwned
+Passwords](https://haveibeenpwned.com/Passwords) by k-anonymity: only the
+first 5 hex characters of the password's SHA-1 leave the server (through the
+same guarded client as link previews, 3 second limit), and if the service
+can't be reached the password is accepted and a warning logged.
+
+Members are emailed when their account is logged into from a browser and
+network (/24 or /48) it hasn't used before; they can turn that off in their
+notification settings. Password logins slow down after repeated failures:
+nothing for 3, then 250 ms doubling with each, up to 5 seconds, counted per
+account and per address (the jail's `auth` points), whichever is more.
+
 ### Banning (fail2ban)
 
 Addresses that keep failing are banned for a while: every page answers them

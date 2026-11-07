@@ -198,6 +198,37 @@ defmodule Firefly.Notifications.Emails do
     """)
   end
 
+  @doc "Tells `user` their account was logged into from a new device (`session`)."
+  def new_device(%User{} = user, session) do
+    device = session.device || "An unknown browser"
+    when_text = Calendar.strftime(session.inserted_at, "%-d %b %Y, %H:%M UTC")
+    settings = Firefly.URLs.security_settings_url()
+
+    new()
+    |> put_private(:template, "new_device")
+    |> recipient(user.email)
+    |> from(sender())
+    |> subject("New login to your #{site()} account")
+    |> html_body("""
+    <p>Hi #{escape(user.username)},</p>
+    <p>Your #{escape(site())} account was just logged into from a device it hasn't used before:</p>
+    <p>#{escape(device)}, from #{escape(session.ip || "an unknown address")}, on #{when_text}.</p>
+    <p>If this was you, there's nothing to do. If it wasn't, #{link("sign that device out", settings)} and change your password.</p>
+    <p>You can turn these emails off in your notification settings.</p>
+    """)
+    |> text_body("""
+    Hi #{user.username},
+
+    Your #{site()} account was just logged into from a device it hasn't used before:
+
+    #{device}, from #{session.ip || "an unknown address"}, on #{when_text}.
+
+    If this was you, there's nothing to do. If it wasn't, sign that device out and change your password: #{settings}
+
+    You can turn these emails off in your notification settings.
+    """)
+  end
+
   @doc "An invitation to join, for `invite.email` (with its inviter loaded)."
   def invite(%{email: email, invited_by: %User{} = inviter}, url) do
     new()
@@ -410,6 +441,12 @@ defmodule Firefly.Notifications.Emails do
       {"invite", invite(%{email: "friend@example.com", invited_by: author}, url)},
       {"confirmation", confirmation(user, url)},
       {"password_reset", password_reset(user, url)},
+      {"new_device",
+       new_device(user, %Firefly.Accounts.UserSession{
+         device: "Firefox on Windows",
+         ip: "203.0.113.7",
+         inserted_at: DateTime.utc_now(:second)
+       })},
       {"magic_link", magic_link(user, url)},
       {"digest", digest(user, digest, url)},
       {"test_email", test_email(user.email)}

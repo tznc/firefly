@@ -72,7 +72,7 @@ defmodule FireflyWeb.SettingsLive.Index do
     "interface" => ~w(theme locale keyboard_shortcuts),
     "notifications" =>
       ~w(email_notifications allow_private_messages reply_level new_thread_level digest_frequency
-         push_only_when_away mailing_list_mode mailing_list_no_echo),
+         push_only_when_away mailing_list_mode mailing_list_no_echo new_device_emails),
     "privacy" => ~w(hide_profile hide_profile_activity hide_from_directory)
   }
 
@@ -755,6 +755,11 @@ defmodule FireflyWeb.SettingsLive.Index do
             field={@form[:email_notifications]}
             type="checkbox"
             label="Email me about new posts in threads and categories I'm watching, private messages, and when I'm mentioned"
+          />
+          <.input
+            field={@form[:new_device_emails]}
+            type="checkbox"
+            label={gettext("Email me when my account is logged into from a new device")}
           />
           <.input
             field={@form[:allow_private_messages]}

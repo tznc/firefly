@@ -140,6 +140,11 @@ defmodule FireflyWeb.InviteLive.Show do
               autocomplete="new-password"
               value={@form[:password].value}
             />
+            <FireflyWeb.PasswordComponents.strength_meter
+              id="password-strength"
+              password={@form[:password].value}
+              words={[@form[:username].value, @form[:email].value]}
+            />
             <.button variant="primary" class="btn btn-primary w-full" phx-disable-with="Creating...">
               Create account
             </.button>

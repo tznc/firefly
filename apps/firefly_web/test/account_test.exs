@@ -239,7 +239,7 @@ defmodule FireflyWeb.AccountTest do
                Accounts.register_user(%{
                  username: "Deleted-User-#{ada.id}",
                  email: "x@example.com",
-                 password: "password123"
+                 password: "tangerine-otter-galaxy"
                })
 
       assert "is reserved" in errors_on(changeset).username

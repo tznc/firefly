@@ -75,6 +75,8 @@ defmodule FireflyWeb.AuthController do
 
   defp identity_callback(conn, params) do
     user_params = params["user"] || %{}
+    # Slower and slower after repeated failures (see Firefly.Security.login_delay/2).
+    Process.sleep(Firefly.Security.login_delay(user_params["username"], conn.remote_ip))
 
     with :ok <- RateLimit.check_login(user_params["username"], conn.remote_ip),
          {:ok, user} <-

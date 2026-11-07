@@ -68,6 +68,11 @@ defmodule FireflyWeb.AuthLive.ResetPassword do
             label={gettext("New password")}
             autocomplete="new-password"
           />
+          <FireflyWeb.PasswordComponents.strength_meter
+            id="password-strength"
+            password={@form[:password].value}
+            words={[@user.username, @user.email]}
+          />
           <.input
             field={@form[:password_confirmation]}
             type="password"

@@ -26,7 +26,7 @@ defmodule FireflyWeb.SiteSettingsTest do
     Accounts.register_user(%{
       username: username,
       email: "#{username}@example.com",
-      password: "password1"
+      password: "tangerine-otter-galaxy"
     })
   end
 

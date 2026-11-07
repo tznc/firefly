@@ -114,7 +114,7 @@ defmodule FireflyWeb.PluginEventsTest do
         Accounts.register_user(%{
           username: "newbie",
           email: "newbie@example.com",
-          password: "password1"
+          password: "tangerine-otter-galaxy"
         })
 
       {:ok, qa} = Discussion.create_category(%{title: "Q&A", allow_accepted_answers: true})

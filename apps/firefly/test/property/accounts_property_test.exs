@@ -27,6 +27,14 @@ defmodule Firefly.AccountsPropertyTest do
   end
 
   describe "registration" do
+    # These are about what logs in and how passwords are measured, so any
+    # generated password goes (the strength check has its own tests,
+    # FireflyWeb.LoginHardeningTest).
+    setup do
+      {:ok, _} = Firefly.SiteSettings.update(%{"min_password_score" => "0"}, admin_fixture())
+      :ok
+    end
+
     property "never raises, whatever the fields hold" do
       check all(
               username <- one_of([username(), any_text()]),

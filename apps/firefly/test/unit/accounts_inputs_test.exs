@@ -18,7 +18,8 @@ defmodule Firefly.AccountsInputsTest do
   # bcrypt reads only the first 72 bytes: a 72-character password of
   # multibyte characters let in any other that shared those bytes.
   test "passwords are at most 72 bytes, not 72 characters" do
-    shared = String.duplicate("é", 36)
+    # Guessable passwords are refused: a strong start, accents to fill it.
+    shared = "zQ8#mR2!vK" <> String.duplicate("é", 31)
     assert byte_size(shared) == 72
 
     assert {:error, changeset} = register(shared <> "secret")
