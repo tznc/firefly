@@ -34,7 +34,7 @@ defmodule FireflyPlugins.MixProject do
       {:boundary, "~> 0.12.0", runtime: false},
       {:firefly, in_umbrella: true},
       {:jason, "~> 1.4"},
-      {:wasmex, "~> 0.15.1"}
+      {:wasmex, "~> 0.16.0"}
     ]
   end
 
