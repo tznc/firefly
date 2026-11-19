@@ -55,7 +55,7 @@ defmodule FireflyWeb.MixProject do
       # fixed buckets (memory stays flat however rarely it's scraped).
       {:telemetry_metrics, "~> 1.2"},
       {:telemetry_poller, "~> 1.3"},
-      {:peep, "~> 5.0"},
+      {:peep, "~> 6.0"},
       # OpenTelemetry (see FireflyWeb.OpenTelemetry): the SDK and OTLP
       # exporter, and spans for Bandit, Phoenix (with LiveView) and Ecto.
       {:opentelemetry, "~> 1.7"},
