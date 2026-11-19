@@ -37,7 +37,7 @@ defmodule Firefly.Umbrella.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       # Security checks CI runs from the root: Sobelow (static analysis,
       # configured in .sobelow-conf) and `mix deps.audit` (advisories).
-      {:sobelow, "~> 0.18.1", only: [:dev, :test], runtime: false},
+      {:sobelow, "~> 0.19.0", only: [:dev, :test], runtime: false},
       {:mix_audit, "~> 2.1", only: [:dev, :test], runtime: false}
     ]
   end
